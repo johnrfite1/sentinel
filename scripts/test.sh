@@ -41,9 +41,15 @@ cat <<'COVERAGE'
 GATE PASSED
 
 Coverage boundary — what this gate is evidence for right now (house rule 4):
-  covered : §5 typed payload schemas, canonical EIP-712 hashes, domain separation,
-            bound-field mutation sensitivity, fail-closed enum defaults, secret hygiene
-  NOT yet : signatures and recovery, SentinelVault, nonce consumption, replay and tamper
-            invariants, decoders, the Anvil pipeline, the conformance engine, the corpus
-Gate S1 requires the "NOT yet" line to be empty of its first five items.
+  covered : §5 typed payload schemas and canonical EIP-712 hashes; SentinelVault
+            enforcement — exact-action binding, nonce single-use, verdict gating,
+            override binding, pause, owner-only controls, signer rotation, reentrancy;
+            stateful invariants over those; secret hygiene
+  NOT yet : the decoders, the Anvil snapshot/execute/inspect pipeline, the conformance
+            engine, Case 1 end-to-end, and the fixture corpus
+
+Read the vault results narrowly: they prove the vault ENFORCES a receipt, not that the
+receipt carried a CORRECT verdict. A vault that faithfully executes a wrong decision
+passes every test here. That gap is what §7's evaluation harness exists to close, and it
+is why a green gate at this stage is not a claim about Sentinel's mechanism working.
 COVERAGE

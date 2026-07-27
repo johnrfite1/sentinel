@@ -1,0 +1,482 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.28;
+
+import {Test} from "forge-std/Test.sol";
+import {SentinelVault} from "../src/SentinelVault.sol";
+import {SentinelTypes as T} from "../src/types/SentinelTypes.sol";
+import {DemoPay} from "../src/demo/DemoPay.sol";
+
+/// @notice A target that calls straight back into the vault with a *second, independently
+///         valid* receipt for the next nonce.
+/// @dev This is the attack the nonce alone does not stop, and the reason the reentrancy
+///      guard exists. By the time the external call is made the nonce has already been
+///      bumped to N+1 — so a reentrant receipt minted for N+1 passes the nonce check.
+///      Without the guard this drains twice in one transaction while every individual
+///      credential check passes.
+contract Reenterer {
+    SentinelVault public immutable vault;
+    bytes public payload;
+    bool public armed;
+
+    constructor(SentinelVault _vault) {
+        vault = _vault;
+    }
+
+    function arm(bytes memory _payload) external {
+        payload = _payload;
+        armed = true;
+    }
+
+    // solhint-disable-next-line no-complex-fallback
+    fallback() external payable {
+        if (!armed) return;
+        armed = false;
+        (bool ok,) = address(vault).call(payload);
+        // Swallowed deliberately: we want the outer call to survive so the test can assert
+        // on final vault state rather than on a bubbled revert.
+        ok;
+    }
+
+    receive() external payable {}
+}
+
+contract SentinelVaultReentrancyTest is Test {
+    SentinelVault internal vault;
+    Reenterer internal reenterer;
+
+    uint256 internal constant OWNER_PK = 0xA11CE;
+    uint256 internal constant SIGNER_PK = 0x519E4;
+    address internal owner;
+    address internal signerAddr;
+
+    bytes32 internal constant MANDATE_HASH = keccak256("mandate-1");
+    bytes32 internal constant POLICY_HASH = keccak256("policy-1");
+    bytes4 internal constant SEL = bytes4(keccak256("anything()"));
+
+    function setUp() public {
+        owner = vm.addr(OWNER_PK);
+        signerAddr = vm.addr(SIGNER_PK);
+
+        // The reenterer needs the vault address, and the vault needs the reenterer
+        // allowlisted. Predict the reenterer's address so both can be satisfied.
+        address predicted = vm.computeCreateAddress(address(this), vm.getNonce(address(this)) + 1);
+        address[] memory targets = new address[](1);
+        targets[0] = predicted;
+        bytes4[] memory selectors = new bytes4[](1);
+        selectors[0] = SEL;
+
+        vault = new SentinelVault(owner, signerAddr, 1 ether, targets, selectors);
+        reenterer = new Reenterer(vault);
+        assertEq(address(reenterer), predicted, "address prediction failed; test is not exercising reentrancy");
+
+        vm.deal(address(vault), 10 ether);
+        vm.startPrank(owner);
+        vault.activateMandate(MANDATE_HASH);
+        vault.activatePolicy(POLICY_HASH);
+        vm.stopPrank();
+        vm.warp(1_000_000);
+    }
+
+    function _bundle(uint256 nonce, bytes memory data)
+        internal
+        view
+        returns (T.ActionPayload memory a, T.DecisionReceiptPayload memory r, bytes memory sig)
+    {
+        a = T.ActionPayload({
+            schemaVersion: 1,
+            chainId: block.chainid,
+            vault: address(vault),
+            actionNonce: nonce,
+            target: address(reenterer),
+            valueWei: 0.1 ether,
+            dataHash: keccak256(data),
+            operation: uint8(T.Operation.CALL),
+            mandateHash: MANDATE_HASH,
+            policyHash: POLICY_HASH,
+            deadline: uint64(block.timestamp + 1 hours)
+        });
+        r = T.DecisionReceiptPayload({
+            schemaVersion: 1,
+            decisionId: keccak256(abi.encode("decision", nonce)),
+            actionHash: T.hashAction(a),
+            mandateHash: MANDATE_HASH,
+            policyHash: POLICY_HASH,
+            verdict: uint8(T.Verdict.ALLOW),
+            reasonCodesHash: bytes32(0),
+            evidenceHash: bytes32(0),
+            simulationBlockNumber: block.number,
+            simulationBlockHash: bytes32(0),
+            issuedAt: uint64(block.timestamp),
+            expiresAt: uint64(block.timestamp + 10 minutes),
+            signer: signerAddr
+        });
+        bytes32 digest = T.digest(T.domainSeparator(block.chainid, address(vault)), T.hashReceipt(r));
+        (uint8 v, bytes32 rr, bytes32 ss) = vm.sign(SIGNER_PK, digest);
+        sig = abi.encodePacked(rr, ss, v);
+    }
+
+    function test_reentrantSecondReceiptCannotExecuteInTheSameTransaction() public {
+        bytes memory data = abi.encodePacked(SEL);
+
+        (T.ActionPayload memory a0, T.DecisionReceiptPayload memory r0, bytes memory s0) = _bundle(0, data);
+        (T.ActionPayload memory a1, T.DecisionReceiptPayload memory r1, bytes memory s1) = _bundle(1, data);
+
+        // Arm the target to re-enter with the *next* nonce's fully valid credential.
+        reenterer.arm(abi.encodeCall(SentinelVault.executeWithReceipt, (a1, data, r1, s1)));
+
+        uint256 balanceBefore = address(vault).balance;
+        vault.executeWithReceipt(a0, data, r0, s0);
+
+        assertEq(vault.actionNonce(), 1, "exactly one nonce may be consumed per transaction");
+        assertEq(
+            balanceBefore - address(vault).balance, 0.1 ether, "exactly one transfer may leave the vault"
+        );
+    }
+}
+
+/// @notice Handler for the stateful invariant campaign.
+///
+/// @dev DESIGN NOTE — why validity is the default path.
+///
+///      The first version of this handler randomized every dimension at once (verdict,
+///      nonce, calldata, pause, signer) inside a single `tryExecute`. Valid bundles were
+///      then a coincidence requiring five independent dice to land together, and across
+///      a 64-call run they essentially never did: the campaign made 16,384 calls and
+///      executed ZERO actions, while every invariant reported PASS. The `afterInvariant`
+///      non-vacuity guard is what surfaced that.
+///
+///      The fix is to give the fuzzer a `executeValid` action that always builds a
+///      correct bundle, and to put each adversarial case in its own action. The fuzzer
+///      then explores orderings and interleavings — which is what stateful invariant
+///      testing is actually for — instead of spending its budget rediscovering how to
+///      construct a valid signature.
+///
+///      Signer rotation cycles between two keys the handler holds, so rotation stays
+///      exercised without starving the campaign of signable receipts.
+contract VaultHandler is Test {
+    SentinelVault public immutable vault;
+    DemoPay public immutable demoPay;
+    uint256 internal immutable signerPkA;
+    uint256 internal immutable signerPkB;
+    uint256 internal currentSignerPk;
+    address public immutable owner;
+
+    bytes32 public constant MANDATE_HASH = keccak256("mandate-1");
+    bytes32 public constant POLICY_HASH = keccak256("policy-1");
+
+    // --- Ghost state ---
+    uint256 public successfulExecutions;
+    uint256 public rejectedAttempts;
+    bool public everExecutedWhilePaused;
+    bool public everExecutedNonAllowVerdict;
+    bool public everExecutedTampered;
+    mapping(bytes32 => uint256) public executionsPerActionHash;
+    bytes32[] public executedActionHashes;
+
+    constructor(SentinelVault _vault, DemoPay _demoPay, uint256 _signerPkA, uint256 _signerPkB, address _owner) {
+        vault = _vault;
+        demoPay = _demoPay;
+        signerPkA = _signerPkA;
+        signerPkB = _signerPkB;
+        currentSignerPk = _signerPkA;
+        owner = _owner;
+    }
+
+    function executedCount() external view returns (uint256) {
+        return executedActionHashes.length;
+    }
+
+    function _data(uint256 seed) internal pure returns (bytes memory) {
+        return abi.encodeCall(
+            DemoPay.purchase,
+            (
+                keccak256(abi.encode(seed)),
+                address(uint160(uint256(keccak256(abi.encode(seed, "b"))))),
+                uint64(bound(seed, 1, 30 days)),
+                seed % 2 == 0
+            )
+        );
+    }
+
+    function _bundle(uint256 seed, uint256 nonce, T.Verdict verdict, bytes memory data)
+        internal
+        view
+        returns (T.ActionPayload memory a, T.DecisionReceiptPayload memory r, bytes memory sig)
+    {
+        a = T.ActionPayload({
+            schemaVersion: 1,
+            chainId: block.chainid,
+            vault: address(vault),
+            actionNonce: nonce,
+            target: address(demoPay),
+            valueWei: bound(seed, 1, 0.01 ether),
+            dataHash: keccak256(data),
+            operation: uint8(T.Operation.CALL),
+            mandateHash: MANDATE_HASH,
+            policyHash: POLICY_HASH,
+            deadline: uint64(block.timestamp + 1 hours)
+        });
+        r = T.DecisionReceiptPayload({
+            schemaVersion: 1,
+            decisionId: keccak256(abi.encode(seed, "d")),
+            actionHash: T.hashAction(a),
+            mandateHash: MANDATE_HASH,
+            policyHash: POLICY_HASH,
+            verdict: uint8(verdict),
+            reasonCodesHash: bytes32(0),
+            evidenceHash: bytes32(0),
+            simulationBlockNumber: block.number,
+            simulationBlockHash: bytes32(0),
+            issuedAt: uint64(block.timestamp),
+            expiresAt: uint64(block.timestamp + 30 minutes),
+            signer: vault.signer()
+        });
+        bytes32 digest = T.digest(T.domainSeparator(block.chainid, address(vault)), T.hashReceipt(r));
+        (uint8 v, bytes32 rr, bytes32 ss) = vm.sign(currentSignerPk, digest);
+        sig = abi.encodePacked(rr, ss, v);
+    }
+
+    function _record(bytes32 actionHash, bool wasPaused, T.Verdict verdict, bool tampered) internal {
+        successfulExecutions++;
+        executionsPerActionHash[actionHash]++;
+        executedActionHashes.push(actionHash);
+        if (wasPaused) everExecutedWhilePaused = true;
+        if (verdict != T.Verdict.ALLOW) everExecutedNonAllowVerdict = true;
+        if (tampered) everExecutedTampered = true;
+    }
+
+    /// @notice The productive path: a correct ALLOW bundle at the current nonce.
+    function executeValid(uint256 seed) external {
+        bytes memory data = _data(seed);
+        (T.ActionPayload memory a, T.DecisionReceiptPayload memory r, bytes memory sig) =
+            _bundle(seed, vault.actionNonce(), T.Verdict.ALLOW, data);
+        bool wasPaused = vault.paused();
+        try vault.executeWithReceipt(a, data, r, sig) {
+            _record(T.hashAction(a), wasPaused, T.Verdict.ALLOW, false);
+        } catch {
+            rejectedAttempts++;
+        }
+    }
+
+    /// @notice Replay: re-submit a bundle pinned to an already-consumed nonce.
+    function executeReplay(uint256 seed) external {
+        uint256 current = vault.actionNonce();
+        if (current == 0) return;
+        bytes memory data = _data(seed);
+        (T.ActionPayload memory a, T.DecisionReceiptPayload memory r, bytes memory sig) =
+            _bundle(seed, bound(seed, 0, current - 1), T.Verdict.ALLOW, data);
+        bool wasPaused = vault.paused();
+        try vault.executeWithReceipt(a, data, r, sig) {
+            _record(T.hashAction(a), wasPaused, T.Verdict.ALLOW, true);
+        } catch {
+            rejectedAttempts++;
+        }
+    }
+
+    /// @notice A signed BLOCK or REVIEW receipt on the automatic path. Must never execute.
+    function executeNonAllow(uint256 seed, bool review) external {
+        bytes memory data = _data(seed);
+        T.Verdict verdict = review ? T.Verdict.REVIEW : T.Verdict.BLOCK;
+        (T.ActionPayload memory a, T.DecisionReceiptPayload memory r, bytes memory sig) =
+            _bundle(seed, vault.actionNonce(), verdict, data);
+        bool wasPaused = vault.paused();
+        try vault.executeWithReceipt(a, data, r, sig) {
+            _record(T.hashAction(a), wasPaused, verdict, false);
+        } catch {
+            rejectedAttempts++;
+        }
+    }
+
+    /// @notice Calldata swapped after the receipt was signed (§7.1 altered-calldata case).
+    function executeTamperedCalldata(uint256 seed) external {
+        bytes memory data = _data(seed);
+        (T.ActionPayload memory a, T.DecisionReceiptPayload memory r, bytes memory sig) =
+            _bundle(seed, vault.actionNonce(), T.Verdict.ALLOW, data);
+        bytes memory swapped = _data(seed + 1);
+        bool wasPaused = vault.paused();
+        try vault.executeWithReceipt(a, swapped, r, sig) {
+            _record(T.hashAction(a), wasPaused, T.Verdict.ALLOW, true);
+        } catch {
+            rejectedAttempts++;
+        }
+    }
+
+    /// @notice A receipt signed by a key that is not the active signer.
+    function executeForgedSignature(uint256 seed) external {
+        bytes memory data = _data(seed);
+        (T.ActionPayload memory a, T.DecisionReceiptPayload memory r,) =
+            _bundle(seed, vault.actionNonce(), T.Verdict.ALLOW, data);
+        bytes32 digest = T.digest(T.domainSeparator(block.chainid, address(vault)), T.hashReceipt(r));
+        (uint8 v, bytes32 rr, bytes32 ss) = vm.sign(uint256(keccak256(abi.encode(seed, "forge"))), digest);
+        bool wasPaused = vault.paused();
+        try vault.executeWithReceipt(a, data, r, abi.encodePacked(rr, ss, v)) {
+            _record(T.hashAction(a), wasPaused, T.Verdict.ALLOW, true);
+        } catch {
+            rejectedAttempts++;
+        }
+    }
+
+    function togglePause(bool value) external {
+        vm.prank(owner);
+        vault.setPaused(value);
+    }
+
+    /// @dev Rotates between two keys the handler holds, so rotation is exercised without
+    ///      leaving the campaign unable to sign anything.
+    function rotateSigner(bool toB) external {
+        uint256 next = toB ? signerPkB : signerPkA;
+        vm.prank(owner);
+        vault.rotateSigner(vm.addr(next));
+        currentSignerPk = next;
+    }
+
+    function warp(uint256 seconds_) external {
+        vm.warp(block.timestamp + bound(seconds_, 1, 5 minutes));
+    }
+}
+
+/// @title SentinelVault stateful invariants
+/// @notice The §7.5 gate: "Foundry fuzz and invariant tests cannot bypass SentinelVault."
+contract SentinelVaultInvariantTest is Test {
+    SentinelVault internal vault;
+    DemoPay internal demoPay;
+    VaultHandler internal handler;
+
+    uint256 internal constant OWNER_PK = 0xA11CE;
+    uint256 internal constant SIGNER_PK = 0x519E4;
+    uint256 internal constant SIGNER_PK_B = 0x519E5;
+
+    function setUp() public {
+        address owner = vm.addr(OWNER_PK);
+        demoPay = new DemoPay();
+
+        address[] memory targets = new address[](1);
+        targets[0] = address(demoPay);
+        bytes4[] memory selectors = new bytes4[](1);
+        selectors[0] = DemoPay.purchase.selector;
+
+        vault = new SentinelVault(owner, vm.addr(SIGNER_PK), 0.01 ether, targets, selectors);
+        vm.deal(address(vault), 100 ether);
+
+        vm.startPrank(owner);
+        vault.activateMandate(handlerMandate());
+        vault.activatePolicy(handlerPolicy());
+        vm.stopPrank();
+        vm.warp(1_000_000);
+
+        handler = new VaultHandler(vault, demoPay, SIGNER_PK, SIGNER_PK_B, owner);
+        targetContract(address(handler));
+        // Explicit selector list. Without it the runner also fuzzes inherited
+        // forge-std helpers on the handler, which crowd out the actions we care about.
+        bytes4[] memory sel = new bytes4[](8);
+        sel[0] = VaultHandler.executeValid.selector;
+        sel[1] = VaultHandler.executeReplay.selector;
+        sel[2] = VaultHandler.executeNonAllow.selector;
+        sel[3] = VaultHandler.executeTamperedCalldata.selector;
+        sel[4] = VaultHandler.executeForgedSignature.selector;
+        sel[5] = VaultHandler.togglePause.selector;
+        sel[6] = VaultHandler.rotateSigner.selector;
+        sel[7] = VaultHandler.warp.selector;
+        targetSelector(FuzzSelector({addr: address(handler), selectors: sel}));
+    }
+
+    function handlerMandate() internal pure returns (bytes32) {
+        return keccak256("mandate-1");
+    }
+
+    function handlerPolicy() internal pure returns (bytes32) {
+        return keccak256("policy-1");
+    }
+
+    /// @notice NON-VACUITY GUARDS.
+    ///
+    /// @dev These are ordinary tests, deliberately NOT invariants or an `afterInvariant`
+    ///      hook. That distinction cost a debugging cycle and is worth stating:
+    ///
+    ///      Non-vacuity is a property of the *campaign*, not of any reachable state. An
+    ///      `afterInvariant` assertion on "at least one action executed" looks right and
+    ///      cannot work, because Foundry shrinks a failing sequence to its minimum — and
+    ///      any one-call sequence trivially has zero executions, so the guard fails
+    ///      forever once shrinking engages, regardless of the vault.
+    ///
+    ///      The risk it was guarding against is real and was caught here: an earlier
+    ///      handler produced 16,384 calls and zero executions while every invariant below
+    ///      reported PASS. So the guard stays — as deterministic tests that prove the
+    ///      handler's valid path really executes and its adversarial paths really get
+    ///      rejected. If either breaks, these go red and the invariants stop being
+    ///      evidence for nothing.
+
+    function test_nonVacuity_validPathActuallyExecutes() public {
+        handler.executeValid(1);
+        handler.executeValid(2);
+        handler.executeValid(3);
+        assertEq(handler.successfulExecutions(), 3, "handler's valid path cannot execute");
+        assertEq(vault.actionNonce(), 3, "nonce did not advance with executions");
+        assertEq(handler.rejectedAttempts(), 0);
+    }
+
+    function test_nonVacuity_adversarialPathsAreReachedAndRejected() public {
+        handler.executeValid(1); // gives executeReplay a consumed nonce to aim at
+
+        uint256 before = handler.successfulExecutions();
+        handler.executeReplay(1);
+        handler.executeNonAllow(2, false);
+        handler.executeNonAllow(3, true);
+        handler.executeTamperedCalldata(4);
+        handler.executeForgedSignature(5);
+
+        assertEq(handler.successfulExecutions(), before, "an adversarial path executed");
+        assertEq(handler.rejectedAttempts(), 5, "an adversarial path was not actually attempted");
+        assertFalse(handler.everExecutedTampered());
+        assertFalse(handler.everExecutedNonAllowVerdict());
+    }
+
+    /// @notice Proves the paused and rotated states the campaign relies on are reachable.
+    function test_nonVacuity_ownerControlsAreReachable() public {
+        handler.togglePause(true);
+        assertTrue(vault.paused());
+        handler.executeValid(9);
+        assertEq(handler.successfulExecutions(), 0, "executed while paused");
+
+        handler.togglePause(false);
+        handler.rotateSigner(true);
+        handler.executeValid(10);
+        assertEq(handler.successfulExecutions(), 1, "rotation left the campaign unable to sign");
+    }
+
+    /// @notice Invariant §3.3(9). The nonce is the sole replay defence, so it must advance
+    ///         exactly once per execution — never skipping, never repeating.
+    function invariant_nonceEqualsSuccessfulExecutions() public view {
+        assertEq(vault.actionNonce(), handler.successfulExecutions());
+    }
+
+    /// @notice No action hash executes twice, across the whole campaign.
+    function invariant_noActionHashExecutesTwice() public view {
+        uint256 n = handler.executedCount();
+        for (uint256 i = 0; i < n; i++) {
+            assertEq(handler.executionsPerActionHash(handler.executedActionHashes(i)), 1);
+        }
+    }
+
+    function invariant_pausedNeverExecutes() public view {
+        assertFalse(handler.everExecutedWhilePaused());
+    }
+
+    /// @notice No replayed, calldata-swapped, or forged-signature attempt ever executes.
+    function invariant_tamperedAttemptsNeverExecute() public view {
+        assertFalse(handler.everExecutedTampered());
+    }
+
+    /// @notice Invariant §3.3(6): only an ALLOW receipt executes on the automatic path.
+    ///         Block and review verdicts must never get through it.
+    function invariant_onlyAllowVerdictsExecuteOnTheAutomaticPath() public view {
+        assertFalse(handler.everExecutedNonAllowVerdict());
+    }
+
+    /// @notice The owner's authority is never reachable through the execution path,
+    ///         however many actions run.
+    function invariant_ownerAndCapsAreImmutableFromExecution() public view {
+        assertEq(vault.owner(), vm.addr(OWNER_PK));
+        assertEq(vault.maxNativeValueWei(), 0.01 ether);
+    }
+}
