@@ -5,9 +5,9 @@ domains: ["ai_security", "agentic_systems", "blockchain_security", "product_desi
 project: "sentinel_protocol_lab"
 summary: "Narrowed proposal for a vendor-neutral mandate-to-effects conformance lab for agent-proposed EVM actions."
 depends_on:
-  - "Protocol Stack/Layer 1 - Domain Protocols/L1 - AI - Agentic Security.md"
-  - "Protocol Stack/Layer 1 - Domain Protocols/L1 - AI - Courtroom Verification.md"
-  - "Protocol Stack/Layer 1 - Domain Protocols/L1 - AI Operations - Bounded Autonomy.md"
+  - "../vault/Protocol Stack/Layer 1 - Domain Protocols/L1 - AI - Agentic Security.md"
+  - "../vault/Protocol Stack/Layer 1 - Domain Protocols/L1 - AI - Courtroom Verification.md"
+  - "../vault/Protocol Stack/Layer 1 - Domain Protocols/L1 - AI Operations - Bounded Autonomy.md"
 extracted_from: []
 extracted_to: []
 review_date: "2026-08-09"
@@ -19,6 +19,7 @@ changelog:
   - "2026-07-09: Reframed v0.2 around portable mandate-to-effects assertions; narrowed the MVP, corrected the market thesis, specified one enforcement substrate, and made adversarial evaluation the primary proof artifact."
   - "2026-07-27: Added Section 14 reviewer notes (Claude): independent receipt-verifier demo, predicted-vs-observed effects clarification, vendor-baseline scope reduction, mandate-fidelity limit, discovery sequencing. (Entry originally misdated 2026-07-09; corrected.)"
   - "2026-07-27: Applied John's ratified rulings — expanded §8 honest limits per 14.5 and the 14.3 claims-boundary clarification; added §14.8 recording rulings on the Section 14 ladder, gate cadence, and kill criteria. Proposal now lives in the Sentinel project repository; build launched."
+  - "2026-07-27: Post-verification fixes from the independent review pass — 14.4 ruling relabeled adopted-with-modification, dispatch ruling mirrored into §14.8, depends_on paths updated for the repository location."
 ---
 
 # Sentinel Protocol Lab
@@ -872,11 +873,12 @@ Recommendation: promote this into the §8 honest-limitation block explicitly, e.
 Recorded from the facilitated intake session on 2026-07-27. The canonical decision log for the build is `docs/decisions.md` in this repository; this subsection mirrors the rulings so the proposal is self-contained.
 
 - **14.5 — ADOPTED for v1.** Applied to §8 in this revision, together with the free half of 14.3 (claims-boundary wording: conformance is against simulated effects at a recorded block).
-- **14.4 — ADOPTED for v1.** Vendor baselines are documentation-only; executed or emulated vendor comparisons are cut from v1 scope.
+- **14.4 — ADOPTED for v1, WITH MODIFICATION.** Vendor baselines are documentation-only; executed or emulated vendor comparisons — including the free-testnet executed comparisons that 14.4 as written would have kept in v1 — are cut from v1 scope and deferred to rung 2.
 - **14.2 — DEFERRED to ladder rung 1.** The standalone receipt-verifier CLI (+10–20h) is a stated goal that must ship before the portfolio artifact is called done.
 - **Ladder rung 2 (post-MVP, discovery track):** executed vendor comparisons where free test access exists.
 - **14.3 attestation — STRETCH.** Considered only after the §7.5 gates are green.
 - **14.6 — OVERRIDDEN** by John's decision to launch the build now; the §10 discovery track proceeds in parallel under John's ownership.
 - **Gate cadence:** two mid-build facilitated sign-offs. Gate S1: vault + isolated signer + exact-action binding + Case 1 end-to-end + replay/tamper invariants green. Gate S2: full fixture corpus + §7.5 hard-gate evidence. Gates are signed only by John.
 - **Kill criteria (no token cap):** the §12 stop condition on scope expansion; a no-progress halt after 3 failed independent attempts at a gate; immediate halt if any agent modifies fixtures, ground-truth labels, or gate definitions to make a suite pass.
+- **Dispatch:** Opus 5 architects and directs subagents; John launches the build and holds all gate and veto authority. Build authorized through Gate S2.
 

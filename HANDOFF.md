@@ -3,7 +3,7 @@
 Date: 2026-07-27
 Prepared by: Claude (Fable), from the facilitated intake session with John
 For: Opus 5 (architect and build director) and its subagents
-Status: Ratified by John 2026-07-27. Build authorized through Gate S2.
+Status: Rulings ratified by John 2026-07-27 (canonical record: `docs/decisions.md`). Build authorized through Gate S2. Anything in this brief marked "agent note" is elaboration, not ratified text.
 
 ## Mission
 
@@ -29,8 +29,14 @@ In order:
 
 ## Gates
 
-- **Gate S1 — riskiest mechanism proven.** Typed payloads and canonical hashes; SentinelVault with active mandate/policy state, nonce, pause, recovery, and hard caps; the isolated signer and receipt verification; the Case 1 allow path end-to-end on local Anvil; replay and tamper invariants green. (Proposal §9 steps 1–3 plus the minimal slice of step 5.)
-- **Gate S2 — proof artifact.** Full 30–50 fixture corpus, the four demo cases, the ablation report, §7.5 hard-gate evidence, and the evidence dashboard.
+- **Gate S1 — riskiest mechanism proven (D-002).** Vault + isolated signer + exact-action binding + Case 1 end-to-end + replay/tamper invariants green. (Agent note on sequencing: reaching Case 1 end-to-end requires §9 steps 1–4 plus minimal slices of steps 5–6 — the demo contracts, a decoder, and enough of the Anvil pipeline and conformance evaluator to produce the allow receipt.)
+- **Gate S2 — proof artifact (D-002).** Full 30–50 fixture corpus plus §7.5 hard-gate evidence.
+
+Agent notes on the gates (flagged, not ratified):
+
+- Several §7.5 gates reference the demonstration cases directly (the wrong-purpose case, the contained prompt injection, the five-minute-comprehension bar), so S2 evidence will in practice include the demo cases.
+- The ablation report and evidence dashboard remain v1 deliverables (§4, §7.3, §11) but are not S2 pass conditions unless John adds them at the gate.
+- The §7.5 gate "Strong vendor-capability comparisons are reported honestly" is read under D-001 as applying to the documentation-only capability matrix — anything published must be labeled honestly — since v1 produces no executed or emulated comparisons. John may instead strike that gate at S2; his call.
 
 Prepare each gate as a facilitated sign-off session for John, with evidence bundled for review.
 
@@ -61,7 +67,7 @@ Prepare each gate as a facilitated sign-off session for John, with evidence bund
 5. Never weaken a mechanical guard to make a task pass.
 6. No secrets, credentials, or machine-specific absolute paths in repository files. Testnet keys only, and only lab-generated ones — never John's.
 7. The §9 deferral list holds. Scope additions go through John.
-8. "Sentinel" is an internal codename (§0). Nothing goes public before the rename gate.
+8. "Sentinel" is an internal codename (see the working-name warning at the top of the proposal). Nothing goes public before the rename gate.
 
 ## Flagged assumptions (agent-made, cheap to reverse — see decisions.md)
 
