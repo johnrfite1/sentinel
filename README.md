@@ -4,7 +4,7 @@ A testnet mandate-to-effects conformance lab for agent-proposed EVM actions.
 
 > The agent proposes. Sentinel evaluates. The isolated signer attests. SentinelVault enforces.
 
-- **Spec:** [Sentinel_Protocol_Lab_Proposal_v0_2.md](Sentinel_Protocol_Lab_Proposal_v0_2.md) — §14.8 records the ratified rulings
+- **Spec:** [Sentinel_Protocol_Lab_Proposal_v0_2.md](Sentinel_Protocol_Lab_Proposal_v0_2.md) — §14.8 records the intake rulings, §14.9 the build-start amendments
 - **Build handoff:** [HANDOFF.md](HANDOFF.md)
 - **Decision log:** [docs/decisions.md](docs/decisions.md)
 

@@ -5,6 +5,8 @@ Prepared by: Claude (Fable), from the facilitated intake session with John
 For: Opus 5 (architect and build director) and its subagents
 Status: Rulings ratified by John 2026-07-27 (canonical record: `docs/decisions.md`). Build authorized through Gate S2. Anything in this brief marked "agent note" is elaboration, not ratified text.
 
+Amended 2026-07-27 by Opus 5 at build start: D-007…D-011 (delegated rulings) resolve four open forks and the labeling blind spot. Sections below reflect them. Proposal mirror: §14.9.
+
 ## Mission
 
 Build Sentinel v1 as specified in `Sentinel_Protocol_Lab_Proposal_v0_2.md` — the §4 scope as amended by §14.8 — through Gate S2. The evaluation harness is the primary artifact (§7, §11). This is a testnet portfolio lab, not a production custody product.
@@ -30,15 +32,23 @@ In order:
 ## Gates
 
 - **Gate S1 — riskiest mechanism proven (D-002).** Vault + isolated signer + exact-action binding + Case 1 end-to-end + replay/tamper invariants green. (Agent note on sequencing: reaching Case 1 end-to-end requires §9 steps 1–4 plus minimal slices of steps 5–6 — the demo contracts, a decoder, and enough of the Anvil pipeline and conformance evaluator to produce the allow receipt.)
-- **Gate S2 — proof artifact (D-002).** Full 30–50 fixture corpus plus §7.5 hard-gate evidence.
+- **Gate S2 — proof artifact (D-002, amended by D-009).** Full 30–50 fixture corpus, §7.5 hard-gate evidence, the §7.3 ablation report, and the receipt-verifier CLI (D-010). Under time pressure the priority order is corpus > ablation > CLI. The evidence dashboard stays outside S2 unless John adds it at the gate.
 
-Agent notes on the gates (flagged, not ratified):
+Resolved since the first draft of this brief (see `docs/decisions.md` D-007…D-011):
 
-- Several §7.5 gates reference the demonstration cases directly (the wrong-purpose case, the contained prompt injection, the five-minute-comprehension bar), so S2 evidence will in practice include the demo cases.
-- The ablation report and evidence dashboard remain v1 deliverables (§4, §7.3, §11) but are not S2 pass conditions unless John adds them at the gate.
-- The §7.5 gate "Strong vendor-capability comparisons are reported honestly" is read under D-001 as applying to the documentation-only capability matrix — anything published must be labeled honestly — since v1 produces no executed or emulated comparisons. John may instead strike that gate at S2; his call.
+- The two previously unfalsifiable §7.5 gates now have definitions and pass thresholds — the five-minute comprehension bar and the vendor-honesty gate (**D-008**). The vendor gate was not struck; it was rewritten to be mechanically checkable under D-001's documentation-only regime.
+- "A real prompt injection changes the agent proposal and is contained" now has an operational definition including a **control run** (**D-007**). Spike it before the deep build, timeboxed to 4 hours.
+- The ablation report moved from optional to an S2 pass condition (**D-009**); the receipt-verifier CLI moved from ladder rung 1 into v1 (**D-010**).
 
-Prepare each gate as a facilitated sign-off session for John, with evidence bundled for review.
+Still an agent note, still unratified: several §7.5 gates reference the demonstration cases directly, so S2 evidence will in practice include the demo cases.
+
+Prepare each gate as a facilitated sign-off session for John, with evidence bundled for review. **Gate signing is not delegable** — the D-007…D-011 delegation covers design forks only.
+
+## Internal checkpoint (not a gate — A-006)
+
+Before evaluator work begins, §9 steps 1–3 are verified internally: typed payloads, canonical hashes, SentinelVault, the isolated signer, and replay/tamper invariants green. This consumes none of John's time and leaves D-002 unchanged. It exists because a design error in the binding layer is the most expensive kind to unwind after the corpus is built.
+
+Note on framing: D-002 calls Gate S1 the riskiest-mechanism gate. The vault, nonce, and EIP-712 binding are in fact the best-understood parts of this system and are cheap to verify with Foundry. The genuinely unproven components are the conformance engine, the corpus labels, and whether a real injection reproduces at all — which is why D-007 pulls the injection spike forward and D-011 hardens the labeling protocol. S1's ratified content is unchanged.
 
 ## Kill criteria (halt and surface to John)
 
@@ -52,7 +62,9 @@ Prepare each gate as a facilitated sign-off session for John, with evidence bund
 | Work | Verification | Autonomy |
 |---|---|---|
 | Vault, demo contracts, Foundry fuzz/invariants | cheap — suite is the bar | wide |
-| TS decoders, canonicalization, conformance engine | cheap — unit tests + corpus | wide |
+| TS decoders, canonicalization | cheap — unit tests | wide |
+| Conformance engine | cheap to **run**, expensive to **trust** — its bar is the independently labeled corpus, never its own suite (self-written tests encode the same misunderstanding twice) | wide on implementation; green light comes from outside |
+| Receipt-verifier CLI (D-010) | cheap — but must share no canonicalization or hashing code with the evaluator, and is written in a different language | wide |
 | Anvil snapshot/execute/inspect/revert pipeline | cheap — deterministic replay | wide |
 | Evidence dashboard | free — visual; independent fresh-context review | wide |
 | Fixture ground-truth labels | expensive — **this is the evaluator** | narrow — independent author, adversarial cross-check, John samples |
@@ -71,9 +83,12 @@ Prepare each gate as a facilitated sign-off session for John, with evidence bund
 
 ## Flagged assumptions (agent-made, cheap to reverse — see decisions.md)
 
-- Base Sepolia deployment deferred until the local Anvil suite is green.
-- Anthropic API, current models, for the untrusted agent under test and mandate drafting.
-- Repository stays local and private until John rules on rename and publication.
+- Base Sepolia deployment deferred until the local Anvil suite is green (A-002).
+- Anthropic API, current models, for the untrusted agent under test and mandate drafting (A-003) — now qualified by D-007, which requires the config be a documented plausibly-naive default and permits a deliberately naive configuration, labeled as such, if a frontier model resists the injection.
+- Repository stays local and private until John rules on rename and publication (A-004; verified — no git remote).
+- Signer isolation is a separate OS process with its own key material, not a same-process module (A-005).
+- Secrets in a gitignored `.env` with a committed `.env.example`, enforced by a pre-commit hook and a suite check (A-007).
+- Foundry v1.7.1, installed and smoke-tested 2026-07-27; scripts resolve `$HOME/.foundry/bin` (A-008).
 
 ## Known context
 

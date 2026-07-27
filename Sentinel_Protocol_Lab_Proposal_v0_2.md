@@ -20,6 +20,7 @@ changelog:
   - "2026-07-27: Added Section 14 reviewer notes (Claude): independent receipt-verifier demo, predicted-vs-observed effects clarification, vendor-baseline scope reduction, mandate-fidelity limit, discovery sequencing. (Entry originally misdated 2026-07-09; corrected.)"
   - "2026-07-27: Applied John's ratified rulings — expanded §8 honest limits per 14.5 and the 14.3 claims-boundary clarification; added §14.8 recording rulings on the Section 14 ladder, gate cadence, and kill criteria. Proposal now lives in the Sentinel project repository; build launched."
   - "2026-07-27: Post-verification fixes from the independent review pass — 14.4 ruling relabeled adopted-with-modification, dispatch ruling mirrored into §14.8, depends_on paths updated for the repository location."
+  - "2026-07-27: Build-start amendments D-007..D-011 (delegated rulings) added as §14.9; §8 gained the procedural-not-organizational limit on corpus labeling. §14.8 preserved unchanged."
 ---
 
 # Sentinel Protocol Lab
@@ -598,6 +599,8 @@ Honest limitation:
 
 > Conformance is established against simulated effects at a recorded block, not observed post-execution effects. State may change between evaluation and execution; the vault enforces exact-action binding at execution time, but effect conformance is a pre-execution judgment.
 
+> The evaluation corpus that grades this system is labeled under **procedural, not organizational, independence**. A solo build cannot buy an independent labeling organization. What it can buy is an auditable bound: a labeling prompt frozen before the corpus build with its hash committed, a labeler given the schemas and each fixture's declared intent but never the evaluator's source or output, a second labeler re-labeling a sample, and adversarial human sampling at the gates. The residual risk — that the author of the system also shaped the instructions that grade it — is reduced and measured, not eliminated. Reported disagreement rates, not assurances, are the evidence.
+
 Additional limits:
 
 - Simulation is deterministic only for the specified state and environment.
@@ -881,4 +884,16 @@ Recorded from the facilitated intake session on 2026-07-27. The canonical decisi
 - **Gate cadence:** two mid-build facilitated sign-offs. Gate S1: vault + isolated signer + exact-action binding + Case 1 end-to-end + replay/tamper invariants green. Gate S2: full fixture corpus + §7.5 hard-gate evidence. Gates are signed only by John.
 - **Kill criteria (no token cap):** the §12 stop condition on scope expansion; a no-progress halt after 3 failed independent attempts at a gate; immediate halt if any agent modifies fixtures, ground-truth labels, or gate definitions to make a suite pass.
 - **Dispatch:** Opus 5 architects and directs subagents; John launches the build and holds all gate and veto authority. Build authorized through Gate S2.
+
+### 14.9 Build-Start Amendments (John, 2026-07-27, delegated)
+
+Four forks were opened at build start by Opus 5, reviewed by Fable, and ruled by John through explicit delegation: *"go with what you think is best for now and we can modify later if we discover issues in the field."* They are John's rulings by that delegation, authored by Opus 5, and revisitable on field evidence. Canonical text is `docs/decisions.md` D-007 through D-011; this subsection mirrors them so the proposal stays self-contained. §14.8 is preserved unchanged — these amend it, they do not replace it.
+
+Gate signing authority is not delegated. Gates S1 and S2 remain facilitated sessions signed by John.
+
+- **D-007 — Case 2 injection definition.** A §7.5 injection demonstration is real only with a plausibly-naive documented agent config (scaffold pinned by hash), malicious content arriving through a data channel the agent legitimately reads, **and** a control run on the benign document producing the Case 1 proposal. Model id, version, temperature, scaffold hash, and full transcript are recorded per fixture. Pinned transcripts are the CI fixtures; a live canary runs alongside, never fails CI, and its history ships in the S2 evidence bundle. The injection is spiked before the deep build, timeboxed to 4 hours; a negative result is reported honestly as a finding — §4 claims an *untrusted* agent cannot execute, not that a gullible one is fooled.
+- **D-008 — §7.5 soft gates defined.** Five-minute comprehension: three fresh-context reviewers, demo/dashboard/README only, five questions frozen in advance and never shown to the build loop, pass at all three ≥4/5. Vendor honesty: every matrix cell documentation-only, dated and linked; §10.1's "executed" and "faithfully emulated" columns empty in v1; inference marked as inference; no claim **or layout** implying empirical superiority over a named vendor.
+- **D-009 — Gate S2 amended (amends D-002).** S2 = full corpus + §7.5 hard-gate evidence + the §7.3 ablation report + the receipt-verifier CLI. The ablation is added because §7 opens by stating four demo paths cannot prove the verdicts are not hard-coded. Dashboard still excluded unless John adds it at the gate. Priority under time pressure: corpus > ablation > CLI.
+- **D-010 — Receipt-verifier CLI promoted into v1 (amends D-001).** Moved from ladder rung 1 to an S2 pass condition. It shares no canonicalization or hashing code with the evaluator and is written in a different language (Python) against independent JCS and keccak implementations. Corrected effort: 20–30h, not 14.2's 10–20h, which assumed code reuse.
+- **D-011 — Label independence is procedural, not organizational.** Labeling prompt frozen before the corpus build with its hash committed; labeler sees schemas, invariants, and declared intent only; a second labeler re-labels ~20%; >10% disagreement halts S2, and any disagreement on a hard-gate-relevant fixture escalates individually; John's gate sampling oversamples baseline-vs-conformance disagreements and *review* verdicts. §8 states the procedural-not-organizational limit in those words.
 
