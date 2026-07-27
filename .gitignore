@@ -11,3 +11,6 @@ coverage/
 contracts/out/
 contracts/cache/
 foundry.lock
+
+# Node
+ts/node_modules/

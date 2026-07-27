@@ -1,0 +1,16 @@
+{
+  "name": "@sentinel/ts",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "spike": "tsx src/spike/run.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.70.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "@types/node": "^22.10.0"
+  }
+}
