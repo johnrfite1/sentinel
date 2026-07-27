@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Sentinel pre-commit hook (A-007). Install with: ./scripts/install-hooks.sh
+set -euo pipefail
+repo_root=$(git rev-parse --show-toplevel)
+exec "$repo_root/scripts/check-secrets.sh" --staged

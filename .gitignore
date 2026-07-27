@@ -6,3 +6,8 @@ out/
 cache/
 broadcast/
 coverage/
+
+# Foundry
+contracts/out/
+contracts/cache/
+foundry.lock
