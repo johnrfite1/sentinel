@@ -46,6 +46,62 @@ import {hashCallData, hashMandate, hashPolicy} from "./hashes.ts";
  * §9 step 8 corpus, labelled under D-011 by an agent with no implementation context.
  */
 
+/**
+ * Every code this engine can emit.
+ *
+ * Declared as an enumerable list, not left implicit in the `results.push` calls, so a test
+ * can assert that each one is actually reachable by some case. That is the lesson from
+ * A-016: the signer had 31 checks of which 22 were exercised by nothing, and mutation
+ * testing could not reveal it because the mutation set was written from the same reading of
+ * the code as the tests. Enumerating the declared surface is what makes coverage a
+ * structural property instead of a hope. `evaluate.checks.test.ts` fails if this list and
+ * the tested set diverge in either direction.
+ */
+export const EVAL_CODES = [
+    "EVAL_ACTION_BINDS_MANDATE_AND_POLICY",
+    "EVAL_ACTION_DEADLINE",
+    "EVAL_ALLOWANCE_EFFECT_WITHIN_CEILING",
+    "EVAL_APPROVAL_CEILING",
+    "EVAL_APPROVAL_SPENDER",
+    "EVAL_CALLDATA_BINDING",
+    "EVAL_CALLDATA_UNDECODABLE",
+    "EVAL_CALL_GRAPH_EXPECTED",
+    "EVAL_CHAIN_BOUND",
+    "EVAL_ENTITLEMENT_ADVANCED",
+    "EVAL_ENTITLEMENT_RECURRENCE",
+    "EVAL_ENTITLEMENT_UNOBSERVED",
+    "EVAL_MANDATE_ACTIVE",
+    "EVAL_MANDATE_BINDS_POLICY",
+    "EVAL_MANDATE_PRINCIPAL_IS_OWNER",
+    "EVAL_MANDATE_WINDOW",
+    "EVAL_NATIVE_DELTA_MATCHES_VALUE",
+    "EVAL_NATIVE_DELTA_UNOBSERVED",
+    "EVAL_NONCE_CURRENT",
+    "EVAL_OPERATION_SUPPORTED",
+    "EVAL_POLICY_ACTIVE",
+    "EVAL_POLICY_OPERATION",
+    "EVAL_POLICY_WINDOW",
+    "EVAL_PURCHASE_BENEFICIARY",
+    "EVAL_PURCHASE_DURATION",
+    "EVAL_PURCHASE_RECURRENCE",
+    "EVAL_PURCHASE_RESOURCE",
+    "EVAL_SELECTOR_BOUND",
+    "EVAL_SIM_CALL_TRACE_UNAVAILABLE",
+    "EVAL_SIM_STOP_IMPERSONATION_FAILED",
+    "EVAL_SIM_UNRECOGNISED",
+    "EVAL_SIMULATION_SUCCEEDS",
+    "EVAL_SIMULATION_UNAVAILABLE",
+    "EVAL_TARGET_BOUND",
+    "EVAL_TARGET_CODE_IDENTITY",
+    "EVAL_VALUE_WITHIN_MANDATE",
+    "EVAL_VALUE_WITHIN_POLICY",
+    "EVAL_VALUE_WITHIN_VAULT_CAP",
+    "EVAL_VAULT_BOUND",
+    "EVAL_VAULT_NOT_PAUSED",
+] as const;
+
+export type EvalCode = (typeof EVAL_CODES)[number];
+
 export type CheckOutcome = "PASS" | "VIOLATION" | "UNRESOLVED";
 
 export interface CheckResult {
@@ -56,6 +112,17 @@ export interface CheckResult {
 }
 
 export type Verdict = "ALLOW" | "REVIEW" | "BLOCK";
+
+/**
+ * Pipeline `unresolvedChecks` codes, mapped to declared evaluator codes.
+ *
+ * Explicit so every code the engine can emit appears in `EVAL_CODES` and is therefore
+ * covered by the exhaustiveness test.
+ */
+const SIM_CODE_MAP: Record<string, string> = {
+    SIM_CALL_TRACE_UNAVAILABLE: "EVAL_SIM_CALL_TRACE_UNAVAILABLE",
+    SIM_STOP_IMPERSONATION_FAILED: "EVAL_SIM_STOP_IMPERSONATION_FAILED",
+};
 
 /** §5.2 FailureMode: 0 = FAIL_CLOSED, 1 = REVIEW. */
 const FAILURE_MODE_REVIEW = 1n;
@@ -323,8 +390,19 @@ export function runChecks(input: ConformanceInput): CheckResult[] {
 
         // Every unresolved check from the pipeline travels into the verdict rather than
         // being summarised away.
+        //
+        // Mapped EXPLICITLY rather than by string concatenation. A dynamically built
+        // `EVAL_${code}` escapes `EVAL_CODES`, and therefore escapes the exhaustiveness test
+        // that exists to stop checks going untested — which is exactly the hole that let 24
+        // of these codes ship uncovered. An unrecognised pipeline code still travels, under
+        // a declared catch-all, so nothing is silently dropped either.
         for (const code of simulation.unresolvedChecks) {
-            results.push(unresolved(`EVAL_${code}`, "the effect pipeline could not establish this"));
+            const mapped = SIM_CODE_MAP[code];
+            results.push(
+                mapped === undefined
+                    ? unresolved("EVAL_SIM_UNRECOGNISED", `the effect pipeline reported ${code}`)
+                    : unresolved(mapped, "the effect pipeline could not establish this"),
+            );
         }
 
         // Native value actually moved, and only by what was authorised.

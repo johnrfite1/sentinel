@@ -268,5 +268,5 @@ function minOf(a: bigint, b: bigint): bigint {
 
 export {canonicalize} from "./jcs.ts";
 export type {CanonicalValue} from "./jcs.ts";
-export {runChecks, verdictOf, failingCodes} from "./checks.ts";
-export type {CheckResult, CheckOutcome, Verdict, ConformanceInput} from "./checks.ts";
+export {runChecks, verdictOf, failingCodes, EVAL_CODES} from "./checks.ts";
+export type {CheckResult, CheckOutcome, Verdict, ConformanceInput, EvalCode} from "./checks.ts";
