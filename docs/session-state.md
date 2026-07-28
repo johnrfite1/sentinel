@@ -3,7 +3,7 @@
 Rewritten at the end of each working session. **This file, not the conversation, is the
 memory.** If it disagrees with anything an agent remembers, this file wins.
 
-Last updated: 2026-07-27, after §9 step 3 (the isolated signer).
+Last updated: 2026-07-28, after §9 step 4 (the two decoders).
 
 ---
 
@@ -11,7 +11,7 @@ Last updated: 2026-07-27, after §9 step 3 (the isolated signer).
 
 1. `Sentinel_Protocol_Lab_Proposal_v0_2.md` — the spec. §14.8 (intake rulings) and §14.9
    (build-start amendments) supersede conflicting prose elsewhere in it.
-2. `docs/decisions.md` — **canonical**. D-001…D-011 ratified, A-001…A-015 agent-flagged.
+2. `docs/decisions.md` — **canonical**. D-001…D-011 ratified, A-001…A-018 agent-flagged.
 3. `HANDOFF.md` — the build brief: corridor, gates, house rules, verification partition.
 4. `../AGENTS.md` — workspace rules. Binding. Not auto-loaded.
 5. `../vault/Topics/AI-ML/prompting-agents-playbook.md` — the build-loop method.
@@ -33,8 +33,8 @@ product fork. Routine engineering judgment is yours.
 
 ## 3. Where the build actually is
 
-Green at `1a23716`, on branch **`step-3/isolated-signer`** (not merged to `main` — that is
-John's call): **43/43 Foundry tests + 98/98 TypeScript tests**. Run everything with
+On branch **`step-3/isolated-signer`** (not merged to `main` — that is John's call):
+**43/43 Foundry tests + 122/122 TypeScript tests**. Run everything with
 `./scripts/test.sh` (add `--gate` for the deep fuzz profile). It prints its own coverage
 boundary — read it, and read the second paragraph of it especially.
 
@@ -54,23 +54,26 @@ Done:
   citing it as evidence** — 6 of 8 skeptic verifications never ran (monthly spend limit),
   so most findings were adjudicated by the build loop against the spec rather than
   independently.
+- **§9 step 4** — `ts/src/decode/`, the two supported decoders. Strict and fail-closed:
+  every deviation from the exact encoding is a named refusal, and `decode.chain.test.ts`
+  measures the decoder against the compiled contracts on a live EVM. Design in **A-017**.
+  **A-018 records an open fork that is NOT settled** — whether the signer should check
+  decoded parameters, which would close Case 3 at the signer layer. It belongs to the
+  step 6 evaluator design; do not let it get answered by accident.
 - **D-007 injection spike** — `ts/src/spike/`, fixtures in `fixtures/injection/`.
 - Secret guard + pre-commit hook, project gate script.
 
-**Not started:** §9 steps 4–9. Nothing exists yet for the decoders, the Anvil pipeline,
-the conformance evaluator, the corpus, the dashboard, or the D-010 verifier CLI.
+**Not started:** §9 steps 5–9. Nothing exists yet for the Anvil pipeline, the conformance
+evaluator, the corpus, the dashboard, or the D-010 verifier CLI.
 
 **A-006 internal checkpoint is reached** (steps 1–3 green). Measured numbers are in §7.
 
 ## 4. What to do next, in order
 
-1. **§9 step 4** — DemoPay.purchase and DemoERC20.approve decoders. The signer already
-   checks the *selector*; the decoders are what let anything check the *parameters*, which
-   is the whole of Case 3.
-2. **§9 steps 5–6** — Anvil snapshot/execute/inspect/revert pipeline, then the conformance
+1. **§9 steps 5–6** — Anvil snapshot/execute/inspect/revert pipeline, then the conformance
    evaluator and evidence bundle (RFC 8785 + keccak256). The evaluator gets its **own**
    EIP-712 encoder — it must not import `ts/src/signer/eip712.ts` (A-013).
-3. Then Case 1 end-to-end from a real agent proposal → **Gate S1** (John signs).
+2. Then Case 1 end-to-end from a real agent proposal → **Gate S1** (John signs).
 
 Owed, small, do not lose:
 - `ts/src/spike/**` is quarantined from the TypeScript typecheck (A-015c). Two defects:
@@ -212,6 +215,7 @@ Wall-clock elapsed, from commit timestamps:
 | §9 step 2, vault + invariants (`41ec0fb` → `8e0034b`) | 30m |
 | Session-state record (`8e0034b` → `6fa1ba8`) | 28m |
 | §9 step 3, isolated signer (build + review + remediation) | ~3h 05m |
+| §9 step 4, the two decoders | ~35m |
 
 Produced in step 3: ~2,000 lines across 8 signer modules, ~3,000 lines across 8 test files,
 53 lines of Solidity test harness. 141 tests total (43 Foundry, 98 TypeScript). 25/25

@@ -65,8 +65,11 @@ Coverage boundary — what this gate is evidence for right now (house rule 4):
             own case, with each severity tier asserted against all three verdicts; the
             per-nonce attestation guard under real concurrency; and a TypeScript/Solidity
             EIP-712 differential across all five §5 payloads on a live EVM
-  NOT yet : the decoders, the Anvil snapshot/execute/inspect pipeline, the conformance
-            engine, Case 1 end-to-end from a real agent proposal, and the fixture corpus
+            §9 step 4 — the two supported decoders, every declared refusal triggered by its
+            own case, and a measured comparison against the real EVM showing the decoder is
+            never more permissive than the chain and stricter in exactly one place
+  NOT yet : the Anvil snapshot/execute/inspect pipeline, the conformance engine, Case 1
+            end-to-end from a real agent proposal, and the fixture corpus
 
 Read the vault results narrowly: they prove the vault ENFORCES a receipt, not that the
 receipt carried a CORRECT verdict. A vault that faithfully executes a wrong decision
@@ -82,7 +85,9 @@ wrong ALLOW passes every one of them. Case 3 — the mechanically valid purchase
 wrong resource — is not detectable anywhere in this gate yet.
 
 That last sentence is not left to prose. `ts/test/signer.e2e.test.ts` asserts it: a Case 3
-action is signed, executed, and writes the wrong entitlement with nothing objecting. When
-the decoders (§9 step 4) and the conformance evaluator (§9 step 6) land, that test fails —
-and whoever it fails for is holding the sentence above that has to change with it.
+action is signed, executed, and writes the wrong entitlement with nothing objecting. The
+decoders now exist and can SEE the wrong resource, but nothing yet compares what they see
+against the signed mandate — that comparison is the conformance evaluator (§9 step 6). Until
+it lands, the Case 3 test keeps passing and keeps this paragraph honest; when it lands, the
+test fails and whoever it fails for is holding the sentence that has to change with it.
 COVERAGE
