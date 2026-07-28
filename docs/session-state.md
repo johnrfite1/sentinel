@@ -3,7 +3,7 @@
 Rewritten at the end of each working session. **This file, not the conversation, is the
 memory.** If it disagrees with anything an agent remembers, this file wins.
 
-Last updated: 2026-07-28, after §9 step 4 (the two decoders).
+Last updated: 2026-07-28, after §9 step 5 (the effect pipeline).
 
 ---
 
@@ -11,7 +11,7 @@ Last updated: 2026-07-28, after §9 step 4 (the two decoders).
 
 1. `Sentinel_Protocol_Lab_Proposal_v0_2.md` — the spec. §14.8 (intake rulings) and §14.9
    (build-start amendments) supersede conflicting prose elsewhere in it.
-2. `docs/decisions.md` — **canonical**. D-001…D-011 ratified, A-001…A-018 agent-flagged.
+2. `docs/decisions.md` — **canonical**. D-001…D-011 ratified, A-001…A-019 agent-flagged.
 3. `HANDOFF.md` — the build brief: corridor, gates, house rules, verification partition.
 4. `../AGENTS.md` — workspace rules. Binding. Not auto-loaded.
 5. `../vault/Topics/AI-ML/prompting-agents-playbook.md` — the build-loop method.
@@ -60,6 +60,10 @@ Done:
   **A-018 records an open fork that is NOT settled** — whether the signer should check
   decoded parameters, which would close Case 3 at the signer layer. It belongs to the
   step 6 evaluator design; do not let it get answered by accident.
+- **§9 step 5** — `ts/src/simulate/`, the anchored snapshot/execute/inspect/revert
+  pipeline. Always reverts (escalating a failed revert), executes as the vault, zeroes gas
+  so the native delta is the value transfer alone, and surfaces dependency failures rather
+  than inferring them away. Design in **A-019**.
 - **D-007 injection spike** — `ts/src/spike/`, fixtures in `fixtures/injection/`.
 - Secret guard + pre-commit hook, project gate script.
 
@@ -70,9 +74,10 @@ evaluator, the corpus, the dashboard, or the D-010 verifier CLI.
 
 ## 4. What to do next, in order
 
-1. **§9 steps 5–6** — Anvil snapshot/execute/inspect/revert pipeline, then the conformance
-   evaluator and evidence bundle (RFC 8785 + keccak256). The evaluator gets its **own**
-   EIP-712 encoder — it must not import `ts/src/signer/eip712.ts` (A-013).
+1. **§9 step 6** — the conformance evaluator and evidence bundle (RFC 8785 + keccak256).
+   The evaluator gets its **own** EIP-712 encoder — it must not import
+   `ts/src/signer/eip712.ts` (A-013). This is where Case 3 finally becomes detectable, and
+   where **A-018** needs an answer.
 2. Then Case 1 end-to-end from a real agent proposal → **Gate S1** (John signs).
 
 Owed, small, do not lose:
@@ -216,6 +221,7 @@ Wall-clock elapsed, from commit timestamps:
 | Session-state record (`8e0034b` → `6fa1ba8`) | 28m |
 | §9 step 3, isolated signer (build + review + remediation) | ~3h 05m |
 | §9 step 4, the two decoders | ~35m |
+| §9 step 5, the effect pipeline | ~40m |
 
 Produced in step 3: ~2,000 lines across 8 signer modules, ~3,000 lines across 8 test files,
 53 lines of Solidity test harness. 141 tests total (43 Foundry, 98 TypeScript). 25/25
