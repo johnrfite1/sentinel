@@ -11,6 +11,7 @@ import {
     hashPolicy,
     hashReceipt,
 } from "../src/signer/eip712.ts";
+import * as evaluator from "../src/evaluate/hashes.ts";
 import type {
     ActionPayload,
     DecisionReceiptPayload,
@@ -19,7 +20,9 @@ import type {
     OverrideAuthorizationPayload,
     PolicyPayload,
 } from "../src/signer/protocol.ts";
-import {OWNER, artifact, startAnvil, type AnvilHandle} from "./harness.ts";
+import {readFileSync} from "node:fs";
+import {join} from "node:path";
+import {OWNER, REPO_ROOT, artifact, startAnvil, type AnvilHandle} from "./harness.ts";
 
 /**
  * Cross-language differential: `ts/src/signer/eip712.ts` against `SentinelTypes.sol`,
@@ -298,5 +301,54 @@ describe("TypeScript / Solidity EIP-712 differential", () => {
             assert.notEqual(hashAction(mutated), baseline, `field ${index} is not bound`);
             assert.equal(await solidity("hashAction", [mutated]), hashAction(mutated));
         }
+    });
+});
+
+describe("three-way agreement: Solidity, signer, evaluator", () => {
+    /**
+     * A-013 requires the conformance evaluator to carry its OWN EIP-712 implementation, not
+     * to import the signer's. It goes further and uses a different TECHNIQUE — the signer
+     * hand-rolls 32-byte word padding, the evaluator delegates to viem's ABI coder — because
+     * two implementations differing only in which file they live in agree on every bug they
+     * share. That is D-010's "same library behind a different flag is the same code verifying
+     * itself", applied one layer down.
+     *
+     * Three independent implementations of the §5 schema now exist here, and this is where
+     * they are held against each other. A divergence surfaces as a failing test rather than
+     * as a receipt nobody can verify months later, once the corpus has fossilised.
+     */
+    for (const seed of [2, 11, 4242, 20260728]) {
+        it(`agrees on mandate, policy, action and domain (seed ${seed})`, async () => {
+            const p = payloads(seed);
+
+            for (const [name, sol, signerSide, evalSide] of [
+                ["mandate", await solidity("hashMandate", [p.mandate]), hashMandate(p.mandate),
+                    evaluator.hashMandate(p.mandate)],
+                ["policy", await solidity("hashPolicy", [p.policy]), hashPolicy(p.policy),
+                    evaluator.hashPolicy(p.policy)],
+                ["action", await solidity("hashAction", [p.action]), hashAction(p.action),
+                    evaluator.hashAction(p.action)],
+                ["domain", await solidity("domainSeparator", [p.chainId, p.vault]),
+                    domainSeparator(p.chainId, p.vault), evaluator.domainSeparator(p.chainId, p.vault)],
+            ] as const) {
+                assert.equal(signerSide, sol, `${name}: signer disagrees with Solidity`);
+                assert.equal(evalSide, sol, `${name}: evaluator disagrees with Solidity`);
+            }
+        });
+    }
+
+    it("keeps the two TypeScript implementations genuinely separate", () => {
+        // The property A-013 actually cares about is not that they agree — it is that they
+        // could disagree. If the evaluator imported the signer's encoder, agreement would be
+        // guaranteed and meaningless.
+        const evaluatorSource = readFileSync(
+            join(REPO_ROOT, "ts", "src", "evaluate", "hashes.ts"),
+            "utf8",
+        );
+        assert.equal(
+            /from\s+["'].*signer\/eip712/.test(evaluatorSource),
+            false,
+            "the evaluator must not import the signer's EIP-712 implementation (A-013)",
+        );
     });
 });
