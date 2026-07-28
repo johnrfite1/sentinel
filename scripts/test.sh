@@ -84,10 +84,11 @@ input, supplied by the test rather than computed. A signer that faithfully attes
 wrong ALLOW passes every one of them. Case 3 — the mechanically valid purchase of the
 wrong resource — is not detectable anywhere in this gate yet.
 
-That last sentence is not left to prose. `ts/test/signer.e2e.test.ts` asserts it: a Case 3
-action is signed, executed, and writes the wrong entitlement with nothing objecting. The
-decoders now exist and can SEE the wrong resource, but nothing yet compares what they see
-against the signed mandate — that comparison is the conformance evaluator (§9 step 6). Until
-it lands, the Case 3 test keeps passing and keeps this paragraph honest; when it lands, the
-test fails and whoever it fails for is holding the sentence that has to change with it.
+Case 3 IS now detectable — `cases.e2e.test.ts` blocks it on mandate conformance while every
+representative-baseline check passes. What remains unproven is whether the verdicts are
+right in general. §7 says it directly: "Four demo paths alone cannot prove that the verdicts
+are not hard-coded." The engine's own suite cannot supply that proof, because self-written
+tests encode the same misunderstanding twice. The bar is the independently labelled corpus
+of §9 step 8 (D-011) plus the §7.3 ablation. Until those exist, a green gate means the
+mechanism runs end to end — not that it decides correctly.
 COVERAGE

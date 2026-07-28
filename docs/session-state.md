@@ -3,7 +3,8 @@
 Rewritten at the end of each working session. **This file, not the conversation, is the
 memory.** If it disagrees with anything an agent remembers, this file wins.
 
-Last updated: 2026-07-28, after §9 step 5 (the effect pipeline).
+Last updated: 2026-07-28, after §9 step 6. **Gate S1 evidence is prepared and
+awaiting John** — see `docs/gate-s1-evidence.md`.
 
 ---
 
@@ -11,7 +12,7 @@ Last updated: 2026-07-28, after §9 step 5 (the effect pipeline).
 
 1. `Sentinel_Protocol_Lab_Proposal_v0_2.md` — the spec. §14.8 (intake rulings) and §14.9
    (build-start amendments) supersede conflicting prose elsewhere in it.
-2. `docs/decisions.md` — **canonical**. D-001…D-011 ratified, A-001…A-019 agent-flagged.
+2. `docs/decisions.md` — **canonical**. D-001…D-011 ratified, A-001…A-021 agent-flagged.
 3. `HANDOFF.md` — the build brief: corridor, gates, house rules, verification partition.
 4. `../AGENTS.md` — workspace rules. Binding. Not auto-loaded.
 5. `../vault/Topics/AI-ML/prompting-agents-playbook.md` — the build-loop method.
@@ -34,7 +35,7 @@ product fork. Routine engineering judgment is yours.
 ## 3. Where the build actually is
 
 On branch **`step-3/isolated-signer`** (not merged to `main` — that is John's call):
-**43/43 Foundry tests + 122/122 TypeScript tests**. Run everything with
+**43/43 Foundry tests + 204/204 TypeScript tests**. Run everything with
 `./scripts/test.sh` (add `--gate` for the deep fuzz profile). It prints its own coverage
 boundary — read it, and read the second paragraph of it especially.
 
@@ -64,6 +65,10 @@ Done:
   pipeline. Always reverts (escalating a failed revert), executes as the vault, zeroes gas
   so the native delta is the value transfer alone, and surfaces dependency failures rather
   than inferring them away. Design in **A-019**.
+- **§9 step 6** — `ts/src/evaluate/`, the conformance engine and RFC 8785 evidence bundle.
+  All four §4.2 demonstration cases run end to end; Case 1 continues through the signer
+  into the vault. Design in **A-020**; the spec-interpretation call there is John's to
+  confirm.
 - **D-007 injection spike** — `ts/src/spike/`, fixtures in `fixtures/injection/`.
 - Secret guard + pre-commit hook, project gate script.
 
@@ -74,11 +79,16 @@ evaluator, the corpus, the dashboard, or the D-010 verifier CLI.
 
 ## 4. What to do next, in order
 
-1. **§9 step 6** — the conformance evaluator and evidence bundle (RFC 8785 + keccak256).
-   The evaluator gets its **own** EIP-712 encoder — it must not import
-   `ts/src/signer/eip712.ts` (A-013). This is where Case 3 finally becomes detectable, and
-   where **A-018** needs an answer.
-2. Then Case 1 end-to-end from a real agent proposal → **Gate S1** (John signs).
+1. **Gate S1 — John signs.** Evidence is prepared in `docs/gate-s1-evidence.md`, UNSIGNED.
+   Run it as a facilitated session; never answer or pre-fill it. It also puts A-011, A-012,
+   A-018 and A-020 to him.
+2. **§9 step 7** — wire the real agent proposal (the D-007 spike scaffold) into the
+   pipeline, so Case 1 and Case 2 are driven by an actual model rather than a constructed
+   action.
+3. **§9 step 8** — the 30–50 fixture corpus. **Freeze the labelling prompt and commit its
+   hash BEFORE building the corpus** (D-011a); the labeller sees schemas, invariants and
+   declared intent only, never evaluator source or output.
+4. **§9 step 9 + D-010** — ablation, dashboard, and the Python receipt-verifier CLI.
 
 Owed, small, do not lose:
 - `ts/src/spike/**` is quarantined from the TypeScript typecheck (A-015c). Two defects:
@@ -222,6 +232,7 @@ Wall-clock elapsed, from commit timestamps:
 | §9 step 3, isolated signer (build + review + remediation) | ~3h 05m |
 | §9 step 4, the two decoders | ~35m |
 | §9 step 5, the effect pipeline | ~40m |
+| §9 step 6, evaluator + evidence bundle + coverage fix | ~1h 25m |
 
 Produced in step 3: ~2,000 lines across 8 signer modules, ~3,000 lines across 8 test files,
 53 lines of Solidity test harness. 141 tests total (43 Foundry, 98 TypeScript). 25/25
@@ -243,3 +254,12 @@ are denominated in human hours. If the portfolio artifact is going to state effo
 publicly, what should it count — elapsed build time, John's own hours, or the human-hours
 the work would have taken? That changes what gets tracked from here, and it is a claim
 about the artifact, so it is his call rather than an agent's.
+
+## 8. Standing warning about tooling
+
+The mutation harness (session scratchpad, not the repo) once left `ts/src` **empty** by
+restoring with `rm -rf src; cp -R backup src` and being killed mid-restore. It now touches
+one file at a time and traps TERM. The generalisable rule, recorded because the next
+destructive tool will be written by someone who has not read A-021: **a repair tool must
+never have a window in which the thing it repairs does not exist**, and uncommitted work is
+the only work that cannot be recovered — commit before running anything destructive.
