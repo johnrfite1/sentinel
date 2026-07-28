@@ -3,14 +3,18 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "spike": "tsx src/spike/run.ts"
+    "spike": "tsx src/spike/run.ts",
+    "signer": "node src/signer/main.ts",
+    "test": "node --test --test-concurrency=1 \"test/**/*.test.ts\"",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.70.0"
+    "@anthropic-ai/sdk": "^0.70.0",
+    "viem": "^2.55.10"
   },
   "devDependencies": {
+    "@types/node": "^22.10.0",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2",
-    "@types/node": "^22.10.0"
+    "typescript": "^5.7.2"
   }
 }

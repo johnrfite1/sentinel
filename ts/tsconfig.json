@@ -1,0 +1,40 @@
+{
+    "compilerOptions": {
+        "target": "ES2023",
+        "lib": ["ES2023"],
+        "module": "nodenext",
+        "moduleResolution": "nodenext",
+        "types": ["node"],
+
+        "strict": true,
+        "noUncheckedIndexedAccess": true,
+        "noImplicitOverride": true,
+        "exactOptionalPropertyTypes": false,
+
+        // The signer runs under Node's native type stripping, which requires that every
+        // construct be erasable — no enums, no namespaces, no constructor parameter
+        // properties. Enforced here so the failure is a type error at build time rather
+        // than a SyntaxError when the signer process is spawned.
+        "erasableSyntaxOnly": true,
+        "verbatimModuleSyntax": true,
+        "allowImportingTsExtensions": true,
+        "rewriteRelativeImportExtensions": true,
+
+        "noEmit": true,
+        "skipLibCheck": true
+    },
+    "include": ["src/**/*.ts", "test/**/*.ts"],
+
+    // QUARANTINED, not forgotten. `src/spike/run.ts` predates this typecheck and does not
+    // pass it: it indexes a regex match without a guard, and it reads `stop_details` off a
+    // Message, which the Anthropic SDK's types do not yet declare even though the API
+    // returns it (see A-010 — that field is how a classifier refusal is distinguished from
+    // resistance, so it is not removable).
+    //
+    // AGENTS.md is explicit about this situation: quarantine the code already emitting
+    // errors before adding the guard, "otherwise the first run turns the suite red for
+    // reasons unrelated to the change in hand, and the check gets reverted rather than
+    // obeyed." Excluding it keeps the new guard enforceable on new code from day one.
+    // Recorded as a follow-up in docs/session-state.md rather than left to be rediscovered.
+    "exclude": ["src/spike/**"]
+}

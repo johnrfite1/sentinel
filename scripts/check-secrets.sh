@@ -64,14 +64,36 @@ CRED_RE='(sk-ant-[A-Za-z0-9_-]{16,}|sk-[A-Za-z0-9]{32,}|AKIA[0-9A-Z]{16}|gh[pous
 # the value is neither empty nor an obvious placeholder.
 ASSIGN_RE='(PRIVATE_KEY|PRIVKEY|SECRET_KEY|API_KEY|DEPLOYER_KEY|MNEMONIC|SEED_PHRASE|PASSWORD|ACCESS_TOKEN)["'"'"']?[[:space:]]*[:=][[:space:]]*["'"'"']?[A-Za-z0-9+/_.-]{12,}'
 
-# Publicly documented Anvil dev keys — deliberately allowed (see .env.example).
-ANVIL_ALLOW='ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80|59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d|test test test test test test test test test test test junk'
+# --- 3b. Key-shaped literals bound to a key-shaped NAME ---------------------
+# Added when the signer suite introduced `export const OWNER_KEY: Hex = "0x…"` — a real
+# private key in exactly that form would have passed every rule above. The design note
+# explains why bare 64-hex is not scanned; that reasoning does not extend to 64-hex
+# assigned to an identifier containing KEY, SECRET, or MNEMONIC, which no legitimate
+# bytes32 constant in this repository is. Typehashes, domain separators, and mandate
+# hashes are named for what they are.
+#
+# The optional `: Type` group is what makes this fire on TypeScript as well as on env
+# and JSON files.
+#
+# The name part is CASE-INSENSITIVE, written out as character classes rather than by making
+# the whole scan case-insensitive — `CRED_RE`'s prefixes (sk-ant-, AKIA, ghp_) are
+# case-bearing and would lose precision. The first version matched only uppercase, so
+# `const privateKey = "0x…"` and `{signerKey: "0x…"}` — the idiomatic TypeScript and JSON
+# forms, and the ones this repository actually writes — passed clean while the comment
+# claimed they were caught. Found by adversarial review.
+KEY_NAME='([Kk][Ee][Yy]|[Ss][Ee][Cc][Rr][Ee][Tt]|[Mm][Nn][Ee][Mm][Oo][Nn][Ii][Cc])'
+KEYLIT_RE='[A-Za-z_]*'"$KEY_NAME"'[A-Za-z_]*["'"'"']?[[:space:]]*(:[[:space:]]*[A-Za-z_.]+)?[[:space:]]*[:=][[:space:]]*["'"'"']?0x[0-9a-fA-F]{64}'
+
+# Publicly documented Anvil dev accounts 0, 1 and 2 — deliberately allowed. These ship in
+# Anvil itself and appear in its startup banner; they are test fixtures, not credentials
+# (see .env.example). Any OTHER 64-hex value bound to a key-shaped name is a finding.
+ANVIL_ALLOW='ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80|59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d|5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a|test test test test test test test test test test test junk'
 
 scan_content() {
   local label="$1" content="$2"
   local hits
   hits=$(printf '%s' "$content" \
-    | grep -nE "$CRED_RE|$ASSIGN_RE" 2>/dev/null \
+    | grep -nE "$CRED_RE|$ASSIGN_RE|$KEYLIT_RE" 2>/dev/null \
     | grep -vE "$ANVIL_ALLOW" \
     | grep -vE '=[[:space:]]*$|=[[:space:]]*["'"'"']{2}|(YOUR_|REPLACE_|EXAMPLE|PLACEHOLDER|xxx|\.\.\.)' \
     || true)

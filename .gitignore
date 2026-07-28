@@ -16,3 +16,7 @@ foundry.lock
 ts/node_modules/
 
 contracts/cache/
+
+# Isolated signer runtime state: the default Unix socket path (ts/src/signer/main.ts).
+# A socket is not a file to commit, and the directory is created at signer boot.
+.sentinel/
