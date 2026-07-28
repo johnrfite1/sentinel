@@ -33,7 +33,8 @@ product fork. Routine engineering judgment is yours.
 
 ## 3. Where the build actually is
 
-Green: **43/43 Foundry tests + 98/98 TypeScript tests**. Run everything with
+Green at `1a23716`, on branch **`step-3/isolated-signer`** (not merged to `main` — that is
+John's call): **43/43 Foundry tests + 98/98 TypeScript tests**. Run everything with
 `./scripts/test.sh` (add `--gate` for the deep fuzz profile). It prints its own coverage
 boundary — read it, and read the second paragraph of it especially.
 
