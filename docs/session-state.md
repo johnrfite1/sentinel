@@ -12,7 +12,7 @@ awaiting John** — see `docs/gate-s1-evidence.md`.
 
 1. `Sentinel_Protocol_Lab_Proposal_v0_2.md` — the spec. §14.8 (intake rulings) and §14.9
    (build-start amendments) supersede conflicting prose elsewhere in it.
-2. `docs/decisions.md` — **canonical**. D-001…D-011 ratified, A-001…A-021 agent-flagged.
+2. `docs/decisions.md` — **canonical**. D-001…D-015 ratified, A-001…A-021 agent-flagged.
 3. `HANDOFF.md` — the build brief: corridor, gates, house rules, verification partition.
 4. `../AGENTS.md` — workspace rules. Binding. Not auto-loaded.
 5. `../vault/Topics/AI-ML/prompting-agents-playbook.md` — the build-loop method.
@@ -35,7 +35,7 @@ product fork. Routine engineering judgment is yours.
 ## 3. Where the build actually is
 
 On branch **`step-3/isolated-signer`** (not merged to `main` — that is John's call):
-**43/43 Foundry tests + 204/204 TypeScript tests**. Run everything with
+**43/43 Foundry tests + 219/219 TypeScript tests**. Run everything with
 `./scripts/test.sh`; **use `--gate` for gate evidence** (20,000 fuzz runs, 262,144 calls per
 invariant). It prints its own coverage boundary, organised by layer with each layer's limit
 stated — read all of it. That block previously rotted into self-contradiction and was
@@ -61,17 +61,21 @@ Done:
 - **§9 step 4** — `ts/src/decode/`, the two supported decoders. Strict and fail-closed:
   every deviation from the exact encoding is a named refusal, and `decode.chain.test.ts`
   measures the decoder against the compiled contracts on a live EVM. Design in **A-017**.
-  **A-018 records an open fork that is NOT settled** — whether the signer should check
-  decoded parameters, which would close Case 3 at the signer layer. It belongs to the
-  step 6 evaluator design; do not let it get answered by accident.
+  A-018's fork was settled by **D-014**: the signer does NOT check conformance; it decodes
+  the calldata itself and verifies the evidence bundle's parameters match the bytes.
 - **§9 step 5** — `ts/src/simulate/`, the anchored snapshot/execute/inspect/revert
   pipeline. Always reverts (escalating a failed revert), executes as the vault, zeroes gas
   so the native delta is the value transfer alone, and surfaces dependency failures rather
   than inferring them away. Design in **A-019**.
 - **§9 step 6** — `ts/src/evaluate/`, the conformance engine and RFC 8785 evidence bundle.
   All four §4.2 demonstration cases run end to end; Case 1 continues through the signer
-  into the vault. Design in **A-020**; the spec-interpretation call there is John's to
-  confirm.
+  into the vault. The §5.2/`failureMode` reading was confirmed as **D-015** and the
+  proposal amended to match.
+- **Rulings D-012…D-015 (2026-07-28)** — the four open decisions, ruled by John after two
+  outside reviews and implemented. `ts/test/rulings.test.ts` tests each one, including
+  D-014's boundary: given calldata buying the wrong resource and a bundle describing it
+  accurately, the signer SIGNS. That is deliberate. Do not "fix" it into a conformance
+  check — that is the branch D-014 explicitly rejected.
 - **D-007 injection spike** — `ts/src/spike/`, fixtures in `fixtures/injection/`.
 - Secret guard + pre-commit hook, project gate script.
 
@@ -85,8 +89,10 @@ two outside reviewers caught. Keep it consistent with the Done list or delete on
 ## 4. What to do next, in order
 
 1. **Gate S1 — John signs.** Evidence is prepared in `docs/gate-s1-evidence.md`, UNSIGNED.
-   Run it as a facilitated session; never answer or pre-fill it. It also puts A-011, A-012,
-   A-018 and A-020 to him.
+   Run it as a facilitated session; never answer or pre-fill it. **A-011/012/018/020 are no
+   longer open** — John ruled them 2026-07-28 as D-012…D-015 and they are implemented. Two
+   questions remain for the session: the rename gate, and whether independent review of
+   steps 4–6 is an S1 condition or a named pre-S2 one.
 2. **§9 step 7** — wire the real agent proposal (the D-007 spike scaffold) into the
    pipeline, so Case 1 and Case 2 are driven by an actual model rather than a constructed
    action.

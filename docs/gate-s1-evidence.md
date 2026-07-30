@@ -95,22 +95,27 @@ parsing the test reporter's output, not a suite result. It is counted neither wa
    private. Authorised, but "nothing has left this machine" is no longer true, and the repo
    carries the colliding working name. See question 8.
 
-## 4. Decisions the build loop made that are John's to confirm or reverse
+## 4. Decisions — RULED by John, 2026-07-28
 
-Each is recorded in `docs/decisions.md` with its reasoning and is cheap to reverse now.
+All four are now closed and implemented. Canonical text: `docs/decisions.md` D-012…D-015.
+They are no longer questions for this session.
 
-| Ref | The call |
-|---|---|
-| A-011 | Signer refuses rather than downgrading; three severity tiers |
-| A-012 | Per-process best-effort: at most one live executable attestation per (chain, vault, nonce) — **not** a durable guarantee |
-| A-018 | **Open fork:** should the signer check decoded parameters? |
-| A-020 | `failureMode` governs unresolved checks, overriding §5.2's prose |
+| Was | Ruling | Implemented as |
+|---|---|---|
+| A-011 | **D-012** — confirmed, plus a recorded refusal artifact | A signed `RefusalRecord` binding action + evidence hashes, domain-separated from EIP-712 so it can never be replayed as a receipt. "Refused" is now distinguishable from "never asked". |
+| A-012 | **D-013** — mechanism confirmed, CLAIM narrowed | No code change. Per-process best-effort defence in depth, never a durable guarantee; the vault's nonce is the actual guarantee. Wording corrected, with a test making the honest limit observable. |
+| A-018 | **D-014** — resolved: NO conformance checks in the signer | The signer decodes the calldata itself and verifies the bundle's decoded parameters match the bytes. Derivation without judgement; the mandate is never consulted. A wrong-purpose ALLOW becomes detectable by the D-010 verifier without a second evaluator. |
+| A-020 | **D-015** — confirmed, and §5.2 amended | The proposal's contradicting sentence is gone, asserted mechanically by a test. Both `failureMode` configurations must appear in the demo (step 9). |
 
-## 5. Input received — recommendations, NOT answers
+Verification: 6 dedicated mutations against the two code rulings, all caught. Two earlier
+survivors in that batch were defective *mutations* rather than coverage gaps, and were
+replaced — one of them exposed a real gap in the refusal digest, now tested.
 
-Recorded so the session has the arguments in front of it. **These are input to John's
-decision, not the decision.** The two outside reviewers agree on A-011, A-012 and A-020 and
-**disagree on A-018**, which is the one genuine fork.
+## 5. How the rulings were reached — the arguments, retained
+
+Kept on the record because the reasoning matters more than the outcome, and because D-014's
+losing branch is the one a future reader is most likely to want to reopen. The two reviewers
+agreed on A-011, A-012 and A-020 and **disagreed on A-018**; John ruled for reviewer 1.
 
 | Ref | Reviewer 1 | Reviewer 2 | Build loop's own view |
 |---|---|---|---|
@@ -168,13 +173,12 @@ Left blank deliberately.
    word "end-to-end".
 3. **Independent adversarial review of steps 4–6** — an S1 condition, or a named condition
    due before S2?
-4. A-011 — confirm or reverse? Add the refusal artifact?
-5. A-012 — confirm the mechanism with narrowed wording?
-6. A-018 — how resolved? (See §5; the reviewers disagree.)
-7. A-020 — confirm the reading, and amend §5.2's prose to match?
-8. The rename gate: close it before visibility ever flips, or accept the collision?
-9. Sample check: pick any two of the four demonstration cases and have the build loop walk
+4. The rename gate: close it before visibility ever flips, or accept the collision?
+5. Sample check: pick any two of the four demonstration cases and have the build loop walk
    the actual evidence, rather than accepting the summary above.
+
+*(A-011, A-012, A-018 and A-020 were questions 4–7 here until 2026-07-28. They are ruled —
+D-012…D-015 — and §4 records the outcomes.)*
 
 ## 8. Sign-off
 
