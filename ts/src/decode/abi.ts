@@ -64,6 +64,13 @@ export class DecodeError extends Error {
 /**
  * A cursor over the argument region of a call.
  *
+ * OUTPUTS ARE LOWERCASED. Two calldata strings differing only in hex spelling are the SAME
+ * BYTES and execute identically, so they must decode to identical parameters — otherwise the
+ * decoder's headline claim, faithfulness to bytes, is false: its output would be a function
+ * of the string. A D-017 adjudicator demonstrated that an uppercase-spelled beneficiary
+ * produced a different decoded address and a spurious FATAL refusal downstream. Normalising
+ * here rather than at each call site keeps the property where it is stated.
+ *
  * Constructed only after the region has been length-checked, so a reader that exists is a
  * reader whose every `word(i)` is in bounds. Bounds are a construction-time property here
  * rather than a per-read check, because a per-read check is one someone later forgets.
@@ -100,7 +107,7 @@ export class WordReader {
 
     /** bytes32: every bit is meaningful, so there is nothing to reject. */
     bytes32(index: number): Hex {
-        return `0x${this.word(index)}` as Hex;
+        return `0x${this.word(index).toLowerCase()}` as Hex;
     }
 
     /**
@@ -115,7 +122,7 @@ export class WordReader {
         if (!/^0+$/.test(high)) {
             throw new DecodeError("DECODE_DIRTY_ADDRESS_BITS", `word ${index} = 0x${w}`);
         }
-        return `0x${w.slice(24)}` as Hex;
+        return `0x${w.slice(24).toLowerCase()}` as Hex;
     }
 
     /**

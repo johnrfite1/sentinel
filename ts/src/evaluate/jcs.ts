@@ -30,10 +30,12 @@
  *     a trap for the verifier, ASCII keys are enforced, which makes the orderings provably
  *     identical and the Python side a plain `sorted()`.
  *   - No insignificant whitespace.
- *   - Minimal string escaping, per RFC 8785 §3.2.2.2: only the two mandatory escapes, the
- *     shorthand control escapes, and \u00XX for the remaining C0 controls. Notably NOT
- *     escaping forward slash or non-ASCII — a JSON serialiser that escapes more than this
- *     is still valid JSON and still produces a different hash.
+ *   - Minimal string escaping, per RFC 8785 §3.2.2.2: the two mandatory escapes, the
+ *     shorthand control escapes, \uXXXX for the remaining C0 controls, and \uXXXX for
+ *     UNPAIRED SURROGATES — the last because RFC 8785 defers to ECMAScript's JSON.stringify,
+ *     which has been well-formed since ES2019. Notably NOT escaping forward slash or
+ *     well-formed non-ASCII: a serialiser that escapes more than this is still valid JSON and
+ *     still produces a different hash.
  *   - Arrays keep their order, since order is meaning.
  */
 
@@ -87,6 +89,14 @@ function serializeString(value: string): string {
                 break;
             default:
                 if (code < 0x20) {
+                    out += `\\u${code.toString(16).padStart(4, "0")}`;
+                } else if (code >= 0xd800 && code <= 0xdfff) {
+                    // An UNPAIRED surrogate. RFC 8785 §3.2.2.2 defers to ECMAScript's
+                    // JSON.stringify, which since ES2019 is well-formed and escapes lone
+                    // surrogates as \uXXXX rather than emitting them raw. Emitting them
+                    // verbatim produced bytes no conforming implementation would produce, and
+                    // — because the raw form is not valid UTF-8 — made evidenceHash
+                    // non-injective over bundles. Found by the D-017 review.
                     out += `\\u${code.toString(16).padStart(4, "0")}`;
                 } else {
                     out += ch;

@@ -138,9 +138,46 @@ export interface SimulateArgs {
 export class SimulationLeakError extends Error {}
 
 /**
+ * Serialises simulations on this process.
+ *
+ * WHY THE HEADLINE INVARIANT NEEDED THIS. "It always reverts" is only true one snapshot at a
+ * time. Anvil's `evm_revert` DISCARDS snapshots taken after the one being reverted, so two
+ * overlapping snapshot/revert windows cannot both be isolated. A D-017 adjudicator reproduced
+ * both consequences on a real node: an `approve` simulation whose own `valueWei` was 0
+ * reported the vault at -1000 wei — the other simulation's value, captured because its
+ * post-state read straddled the other transaction — and `SimulationLeakError` fired on a
+ * demonstrably clean chain, 11 times out of 11 in one sweep. A false leak alarm is
+ * particularly corrosive here, because the alarm exists to make a real leak unmissable.
+ *
+ * Nothing in the API or the tests previously enforced serial use; it was true only by
+ * convention, and conventions do not survive a caller who reads the type signature. This
+ * queue makes the documented invariant a property of the code.
+ *
+ * HONEST LIMIT: per-process, like the signer's nonce guard (D-013). Two processes simulating
+ * against one node still collide, and no lock here can prevent that — the node is the shared
+ * resource. Run one simulator per chain.
+ */
+let simulationQueue: Promise<unknown> = Promise.resolve();
+
+function serialise<T>(work: () => Promise<T>): Promise<T> {
+    const run = simulationQueue.then(work, work);
+    // Swallow rejection on the CHAIN only, so one failed simulation does not reject the next
+    // caller's turn. The original promise still rejects to its own caller.
+    simulationQueue = run.then(
+        () => undefined,
+        () => undefined,
+    );
+    return run;
+}
+
+/**
  * Run one action against a snapshot and return its effects, leaving the chain as found.
  */
 export async function simulateAction(args: SimulateArgs): Promise<SimulationResult> {
+    return serialise(() => runSimulation(args));
+}
+
+async function runSimulation(args: SimulateArgs): Promise<SimulationResult> {
     const {client, vault, target, valueWei, callData, decoded} = args;
     const control = args.control ?? createAnvilControl(client);
     const unresolvedChecks: string[] = [];
@@ -176,6 +213,7 @@ export async function simulateAction(args: SimulateArgs): Promise<SimulationResu
         let revertReason: string | null = null;
         let gasUsed = 0n;
         let events: EmittedEvent[] = [];
+        let revertedTxHash: Hex | null = null;
 
         try {
             // Gas is made free before sending so the measured native delta is the value
@@ -186,6 +224,12 @@ export async function simulateAction(args: SimulateArgs): Promise<SimulationResu
             txHash = await control.sendFrom({from: vault, to: target, value: valueWei, data: callData});
             const receipt = await client.waitForTransactionReceipt({hash: txHash});
             status = receipt.status === "success" ? "success" : "revert";
+            // The mined-and-reverted path is the DEFAULT for a contract revert, and it
+            // previously left `revertReason` null while the datum sat in the trace. §7.1
+            // makes "simulation revert" its own fixture class, so the reason is evidence.
+            // The raw 4-byte custom-error selector is recorded as-is; mapping selectors to
+            // error names needs a per-contract table and is S2 work.
+            revertedTxHash = status === "revert" ? txHash : null;
             gasUsed = receipt.gasUsed;
             events = receipt.logs.map((l) => ({
                 address: l.address.toLowerCase() as Hex,
@@ -210,6 +254,10 @@ export async function simulateAction(args: SimulateArgs): Promise<SimulationResu
         if (txHash !== null) {
             try {
                 callTrace = await control.traceTransaction(txHash);
+                if (revertedTxHash !== null && revertReason === null) {
+                    const raw = callTrace.revertReason ?? callTrace.output ?? null;
+                    revertReason = raw === null || raw === "0x" ? null : `revert data ${raw}`;
+                }
                 subcalls = internalCalls(callTrace).map((c) => ({
                     from: c.from.toLowerCase() as Hex,
                     to: c.to === undefined ? null : (c.to.toLowerCase() as Hex),

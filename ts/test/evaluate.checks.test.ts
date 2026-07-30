@@ -277,6 +277,10 @@ const CASES: {code: string; expect: CheckOutcome; overrides: Overrides}[] = [
      overrides: {simulation: {unresolvedChecks: ["SIM_STOP_IMPERSONATION_FAILED"]}}},
     {code: "EVAL_SIM_UNRECOGNISED", expect: "UNRESOLVED",
      overrides: {simulation: {unresolvedChecks: ["SIM_SOMETHING_NEW"]}}},
+    {code: "EVAL_ALLOWANCE_EFFECT_UNOBSERVED", expect: "UNRESOLVED",
+     overrides: {target: DEMO_ERC20, callData: approveCalldata(OWNER, 0n),
+                 mandate: {target: DEMO_ERC20, selector: "0x095ea7b3"},
+                 simulation: {allowanceDeltas: []}}},
     {code: "EVAL_ALLOWANCE_EFFECT_WITHIN_CEILING", expect: "VIOLATION",
      overrides: {simulation: {allowanceDeltas: [{token: DEMO_ERC20, owner: VAULT,
          spender: OTHER, before: 0n, after: 5n, delta: 5n}]}}},
@@ -309,6 +313,23 @@ describe("every conformance check fires on its own trigger", () => {
 });
 
 describe("the check table is exhaustive", () => {
+    /**
+     * WHAT THIS GUARD PROVES, STATED HONESTLY AFTER A D-017 REVIEWER NARROWED IT.
+     *
+     * It proves every declared code FIRES on some constructed input — that the check surface
+     * is covered and a new code cannot arrive untested. It does NOT prove every code is
+     * reachable through the COMPOSED pipeline, because the fixtures here hand-build
+     * `SimulationResult` values and can therefore express states the real `simulateAction`
+     * never returns. Several codes are in that category: the pipeline always populates
+     * `nativeBalanceDeltas` for the watched set, so `EVAL_NATIVE_DELTA_UNOBSERVED` cannot
+     * arise from it, and the same reasoning applies to the other `*_UNOBSERVED` codes.
+     *
+     * Those checks are still worth having — they are the fail-closed response to a caller
+     * that supplies a degraded simulation, which is exactly what a future non-Anvil backend
+     * or a partial-evidence path would do. But "covered" here means the surface, not
+     * end-to-end reachability, and conflating the two would overclaim. Measuring which checks
+     * a real corpus actually exercises is §7.3 ablation work, at S2.
+     */
     it("has a case for every declared EVAL_ code", () => {
         // The structural guard. A check added without a case here fails this test rather
         // than joining the 24 an adversarial mutation had to find.

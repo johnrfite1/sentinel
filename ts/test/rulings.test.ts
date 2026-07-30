@@ -359,3 +359,159 @@ describe("D-015 — the proposal no longer contradicts failureMode", () => {
         );
     });
 });
+
+describe("D-014 against REAL evaluator bundles (the gap the D-017 review found)", () => {
+    /**
+     * Every earlier D-014 test built its bundle with `evidenceStub`, which derives the
+     * decoded claim using the SAME `decodeBySelector` the signer checks against — so the two
+     * sides agreed tautologically and could never disagree. The four demonstration cases all
+     * use calldata that decodes at its target, so none traversed the mismatch path either.
+     *
+     * These tests use the REAL `evaluate()` output as the bundle, which is built from
+     * `decodeCall` (target-bound) rather than `decodeBySelector` (not). That difference is
+     * exactly what the blocking finding was about.
+     */
+    async function realBundleFixture(args: {callData: Hex; target: Hex; registryHasTarget: boolean}) {
+        const {evaluate} = await import("../src/evaluate/index.ts");
+        const {buildRegistry, decodeCall} = await import("../src/decode/index.ts");
+
+        const base = buildFixture({callData: args.callData, action: {target: args.target}});
+        const registry = args.registryHasTarget
+            ? buildRegistry({[args.target]: "DemoPay"})
+            : buildRegistry({});
+        const decode = decodeCall({target: args.target, callData: args.callData, registry});
+
+        const evaluation = evaluate({
+            mandate: base.request.mandate,
+            policy: base.request.policy,
+            action: base.request.action,
+            callData: args.callData,
+            decode,
+            simulation: null,
+            vaultState: base.state,
+            now: NOW,
+        });
+
+        return {base, decode, evaluation};
+    }
+
+    /** A supported selector (DemoPay.purchase) aimed at a target that does not host it. */
+    const PURCHASE_AT_WRONG_TARGET: Hex = (() => {
+        const w = (h: string) => h.padStart(64, "0");
+        return `0xc188528b${w(keccak256(stringToBytes("weather-basic-24h")).slice(2))}${w(
+            OTHER_ADDRESS.slice(2),
+        )}${w((86_400n).toString(16))}${w("0")}` as Hex;
+    })();
+
+    it("does not refuse a TRUTHFUL bundle that declined to decode for a target reason", async () => {
+        // THE BLOCKING DEFECT. The evaluator honestly emits decoded:"false" with
+        // DECODE_UNSUPPORTED_TARGET; the signer's selector-only decode succeeds. Requiring
+        // those to agree made the signer refuse FATALLY — no receipt of any verdict for
+        // target-substitution or wrong-operation shapes, which are the natural injection
+        // cases — and commit a "the bundle misdescribes the action" code to a hash falsely.
+        const {base, decode, evaluation} = await realBundleFixture({
+            callData: PURCHASE_AT_WRONG_TARGET,
+            target: "0x8888888888888888888888888888888888888888",
+            registryHasTarget: false,
+        });
+        assert.equal(decode.ok, false);
+        assert.equal(decode.code, "DECODE_UNSUPPORTED_TARGET");
+
+        const request = {
+            ...base.request,
+            action: {...base.request.action, target: "0x8888888888888888888888888888888888888888" as Hex},
+            evaluation: {
+                ...base.request.evaluation,
+                verdict: "BLOCK" as const,
+                evidenceCanonical: evaluation.evidenceCanonical,
+            },
+        };
+        const result = await attestorFor(base).evaluateAndSign(request);
+
+        assert.ok(
+            !(result as {signerFindings?: string[]}).signerFindings?.includes(
+                "SIGNER_EVIDENCE_DECODING_MISMATCH",
+            ),
+            "a truthful bundle must not be accused of misdescribing the action; " +
+                `findings: ${JSON.stringify((result as {signerFindings?: string[]}).signerFindings)}`,
+        );
+    });
+
+    it("still catches a bundle that lies about parameters", async () => {
+        // The narrowing must not have disabled the check it exists for.
+        const lying = JSON.stringify({
+            decodedSelectorAndParameters: {
+                decoded: "true",
+                selector: "0xc188528b",
+                schema: "DemoPay.purchase",
+                parameters: {
+                    resourceId: keccak256(stringToBytes("SOMETHING ELSE ENTIRELY")),
+                    beneficiary: OTHER_ADDRESS,
+                    durationSeconds: "86400",
+                    recurring: false,
+                },
+            },
+        });
+        const fixture = buildFixture({
+            callData: PURCHASE_AT_WRONG_TARGET,
+            evidenceCanonical: lying,
+        });
+        const result = await attestorFor(fixture).evaluateAndSign(fixture.request);
+        assert.equal(result.refused, true);
+        assert.ok((result as {signerFindings: string[]}).signerFindings.includes(
+            "SIGNER_EVIDENCE_DECODING_MISMATCH",
+        ));
+    });
+
+    it("still catches a bundle claiming a decode the bytes cannot support", async () => {
+        const lying = JSON.stringify({
+            decodedSelectorAndParameters: {decoded: "true", selector: "0xdeadbeef"},
+        });
+        const fixture = buildFixture({
+            callData: `0xdeadbeef${"00".repeat(32)}` as Hex,
+            evidenceCanonical: lying,
+        });
+        const result = await attestorFor(fixture).evaluateAndSign(fixture.request);
+        assert.equal(result.refused, true);
+        assert.ok((result as {signerFindings: string[]}).signerFindings.includes(
+            "SIGNER_EVIDENCE_DECODING_MISMATCH",
+        ));
+    });
+
+    it("still catches a decline for a reason INSIDE the signer's remit", async () => {
+        // decoded:"false" is not a blanket escape hatch. Only target-binding reasons are
+        // outside the signer's remit; a parameter-level failure code the signer can itself
+        // adjudicate must still agree with its own decode.
+        const lying = JSON.stringify({
+            decodedSelectorAndParameters: {
+                decoded: "false",
+                selector: "0xc188528b",
+                failureCode: "DECODE_NON_CANONICAL_BOOL",
+            },
+        });
+        const fixture = buildFixture({
+            callData: PURCHASE_AT_WRONG_TARGET,
+            evidenceCanonical: lying,
+        });
+        const result = await attestorFor(fixture).evaluateAndSign(fixture.request);
+        assert.equal(result.refused, true);
+        assert.ok((result as {signerFindings: string[]}).signerFindings.includes(
+            "SIGNER_EVIDENCE_DECODING_MISMATCH",
+        ));
+    });
+
+    it("decodes identically regardless of calldata hex spelling", async () => {
+        // Decoded parameters must be a function of the BYTES. Two spellings of one calldata
+        // execute identically, so they must decode identically — and must not produce a
+        // spurious FATAL refusal. LLM output is routinely EIP-55 mixed-case.
+        const {decodeBySelector} = await import("../src/decode/index.ts");
+        const lower = PURCHASE_AT_WRONG_TARGET;
+        const upper = (`0x` + lower.slice(2).toUpperCase()) as Hex;
+
+        const a = decodeBySelector(lower);
+        const b = decodeBySelector(upper);
+        assert.equal(a.ok, true);
+        assert.equal(b.ok, true);
+        assert.deepEqual(a.decoded, b.decoded, "hex spelling must not change decoded parameters");
+    });
+});

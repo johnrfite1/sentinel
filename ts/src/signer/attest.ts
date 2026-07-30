@@ -284,7 +284,10 @@ export function createAttestor(config: AttestorConfig): Attestor {
             if (action.chainId !== chainId) findings.push("SIGNER_WRONG_CHAIN");
             if (findings.length > 0) return refuse(false);
 
-            const selector = callData.slice(0, 10) as Hex;
+            // Lowercased: `callData` reaches the attestor already normalised through the RPC
+            // parser, but an in-process caller can bypass that, and a case-sensitive selector
+            // comparison produced spurious findings.
+            const selector = callData.slice(0, 10).toLowerCase() as Hex;
 
             // D-014: the signer decodes the bytes ITSELF and checks that the evidence bundle's
             // decoded-parameters claim matches. Derivation without judgement — the mandate is
@@ -504,6 +507,17 @@ function min(a: bigint, b: bigint): bigint {
  * an optional attestation is worthless, because a caller wishing to lie would simply omit
  * the field.
  */
+/**
+ * Decode failures that arise from TARGET BINDING, which D-014 assigns to the evaluator.
+ *
+ * The signer must not treat a bundle's refusal-to-decode for one of these reasons as a
+ * disagreement, because it has no opinion to disagree with — it never checks target binding.
+ */
+const TARGET_BINDING_FAILURES = new Set([
+    "DECODE_UNSUPPORTED_TARGET",
+    "DECODE_SELECTOR_TARGET_MISMATCH",
+]);
+
 function checkEvidenceDecoding(callData: Hex, evidenceCanonical: string): ReasonCode[] {
     let claim: unknown;
     try {
@@ -517,11 +531,38 @@ function checkEvidenceDecoding(callData: Hex, evidenceCanonical: string): Reason
     const claimed = claim as Record<string, unknown>;
     const mine = decodeBySelector(callData);
 
-    // Both sides must agree on WHETHER the bytes decode at all, before agreeing on what to.
-    if (claimed.decoded !== (mine.ok ? "true" : "false")) {
-        return ["SIGNER_EVIDENCE_DECODING_MISMATCH"];
+    // THE TWO SIDES ANSWER DIFFERENT QUESTIONS, AND DEMANDING EXACT AGREEMENT WAS A DEFECT.
+    //
+    // `claimed.decoded` is written by the evaluator from `decodeCall`, which ENFORCES target
+    // binding. `mine` comes from `decodeBySelector`, which deliberately does NOT — because
+    // D-014 places target binding outside the signer's remit in as many words: "the signer
+    // checks that the parameters match the bytes *given the selector*; it does not check that
+    // the selector belongs at that target, which remains the evaluator's job."
+    //
+    // The first implementation required `claimed.decoded === (mine.ok ? "true" : "false")`.
+    // For a supported selector aimed at a target that does not host it, the evaluator
+    // honestly reports `decoded:"false"` while the signer's selector-only decode succeeds —
+    // so a TRUTHFUL bundle was refused FATALLY, no receipt of any verdict could be issued for
+    // target-substitution or wrong-operation shapes (the natural injection cases), and the
+    // signed refusal record committed a reason code meaning "the bundle misdescribes the
+    // action" to a hash, which was false. Two independent reviewers found it and two
+    // independent adjudicators reproduced it (D-017 review, 2026-07-28).
+    //
+    // The correct rule follows the remit boundary rather than the truth table:
+    if (claimed.decoded === "false") {
+        const failureCode = typeof claimed.failureCode === "string" ? claimed.failureCode : "";
+        // Declined for a reason the signer is ratified not to opine on. Accept it; the
+        // evaluator owns that judgement and the D-010 verifier can still see the code.
+        if (TARGET_BINDING_FAILURES.has(failureCode)) return [];
+        // Declined for any other reason — one within the signer's remit — so the signer's own
+        // selector-level decode must also have failed. If it succeeded, the bundle is wrong
+        // about something the signer CAN adjudicate.
+        return mine.ok ? ["SIGNER_EVIDENCE_DECODING_MISMATCH"] : [];
     }
-    if (!mine.ok) return [];
+    if (claimed.decoded !== "true") return ["SIGNER_EVIDENCE_DECODING_ABSENT"];
+    // The bundle asserts a decoding. If the bytes cannot support one, that assertion is false
+    // regardless of any target question.
+    if (!mine.ok) return ["SIGNER_EVIDENCE_DECODING_MISMATCH"];
 
     if (typeof claimed.selector !== "string" || claimed.selector.toLowerCase() !== mine.selector) {
         return ["SIGNER_EVIDENCE_DECODING_MISMATCH"];
@@ -548,7 +589,14 @@ function checkEvidenceDecoding(callData: Hex, evidenceCanonical: string): Reason
 
     for (const [key, want] of Object.entries(expected)) {
         const got = p[key];
-        const match = typeof want === "boolean" ? got === want : String(got).toLowerCase() === want;
+        // Lowercase BOTH sides. The first version lowercased only the claim, so a bundle
+        // whose hex happened to be upper- or mixed-case was refused FATALLY even when it
+        // described the bytes correctly — and LLM-produced calldata is routinely EIP-55
+        // mixed-case, as this repository's own injection fixtures show.
+        const match =
+            typeof want === "boolean"
+                ? got === want
+                : String(got).toLowerCase() === want.toLowerCase();
         if (!match) return ["SIGNER_EVIDENCE_DECODING_MISMATCH"];
     }
     return [];

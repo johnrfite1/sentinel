@@ -60,6 +60,7 @@ import {hashCallData, hashMandate, hashPolicy} from "./hashes.ts";
 export const EVAL_CODES = [
     "EVAL_ACTION_BINDS_MANDATE_AND_POLICY",
     "EVAL_ACTION_DEADLINE",
+    "EVAL_ALLOWANCE_EFFECT_UNOBSERVED",
     "EVAL_ALLOWANCE_EFFECT_WITHIN_CEILING",
     "EVAL_APPROVAL_CEILING",
     "EVAL_APPROVAL_SPENDER",
@@ -449,6 +450,21 @@ export function runChecks(input: ConformanceInput): CheckResult[] {
         // "finite, oversized, and unlimited approvals" as distinct classes, and the observed
         // post-state is what a receipt can honestly claim.
         const allowance = simulation.allowanceDeltas[0];
+        // An approve action whose allowance effect was never observed must NOT reach ALLOW on
+        // silence. Every other effect class has an explicit UNRESOLVED counterpart
+        // (EVAL_NATIVE_DELTA_UNOBSERVED, EVAL_ENTITLEMENT_UNOBSERVED); this one had none, so a
+        // missing measurement simply emitted no check at all — §3.3(8) says missing state never
+        // produces an automatic allow, and an absent check is exactly missing state.
+        if (
+            allowance === undefined &&
+            decode.ok &&
+            decode.decoded.schema === "DemoERC20.approve" &&
+            simulation.outcome.status === "success"
+        ) {
+            results.push(
+                unresolved("EVAL_ALLOWANCE_EFFECT_UNOBSERVED", "no allowance delta was inspected"),
+            );
+        }
         if (allowance !== undefined && simulation.outcome.status === "success") {
             results.push(
                 require_(
