@@ -428,4 +428,35 @@ run_mutation "R6 D-014: signer starts checking resource against the mandate (rej
                 }
                 if (mandate.targetCodeHash !== state.targetCodeHash) {"
 
+run_mutation "V1 D-017 fix: restore the two-predicate comparison" \
+    "src/signer/attest.ts" \
+    "    if (claimed.decoded === \"false\") {" \
+    "    if (claimed.decoded !== (mine.ok ? \"true\" : \"false\")) return [\"SIGNER_EVIDENCE_DECODING_MISMATCH\"];
+    if (claimed.decoded === \"false\") {"
+
+run_mutation "V2 D-017 fix: treat decoded:false as a blanket escape hatch" \
+    "src/signer/attest.ts" \
+    "        return mine.ok ? [\"SIGNER_EVIDENCE_DECODING_MISMATCH\"] : [];" \
+    "        return [];"
+
+run_mutation "V3 D-017 fix: drop simulation serialisation" \
+    "src/simulate/index.ts" \
+    "    return serialise(() => runSimulation(args));" \
+    "    return runSimulation(args);"
+
+run_mutation "V4 D-017 fix: un-normalise decoded addresses" \
+    "src/decode/abi.ts" \
+    "        return \`0x\${w.slice(24).toLowerCase()}\` as Hex;" \
+    "        return \`0x\${w.slice(24)}\` as Hex;"
+
+run_mutation "V5 D-017 fix: emit unpaired surrogates verbatim again" \
+    "src/evaluate/jcs.ts" \
+    "                } else if (code >= 0xd800 && code <= 0xdfff) {" \
+    "                } else if (false) {"
+
+run_mutation "V6 D-017 fix: silence an unobserved allowance effect" \
+    "src/evaluate/checks.ts" \
+    "            allowance === undefined &&" \
+    "            false &&"
+
 echo "=== ${caught} caught, ${survived} survived, ${errored} did not apply, ${skipped} skipped ==="
