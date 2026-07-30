@@ -398,10 +398,10 @@ run_mutation "R1 D-012: refusal produces no recorded artifact" \
     "                if (attributable) {" \
     "                if (false) {"
 
-run_mutation "R2 D-012: sign refusals under the EIP-712 receipt domain" \
+run_mutation "R2 D-012: refusal digest ignores which action was refused" \
     "src/signer/eip712.ts" \
-    "        REFUSAL_DOMAIN_TAG," \
-    "        \"\\u0019\\u0001\"," \
+    "        r.actionHash," \
+    "        \"\"," \
 
 run_mutation "R3 D-014: skip the evidence-decoding bind entirely" \
     "src/signer/attest.ts" \
@@ -418,9 +418,14 @@ run_mutation "R5 D-014: ignore mismatched parameter values" \
     "        if (!match) return [\"SIGNER_EVIDENCE_DECODING_MISMATCH\"];" \
     "        if (false) return [\"SIGNER_EVIDENCE_DECODING_MISMATCH\"];"
 
-run_mutation "R6 D-014: signer starts checking the mandate (the rejected branch)" \
+run_mutation "R6 D-014: signer starts checking resource against the mandate (rejected branch)" \
     "src/signer/attest.ts" \
-    'if (mandate.selector !== selector) findings.push("SIGNER_MANDATE_SELECTOR_MISMATCH");' \
-    'if (mandate.selector !== selector) findings.push("SIGNER_MANDATE_SELECTOR_MISMATCH");'
+    "                if (mandate.targetCodeHash !== state.targetCodeHash) {" \
+    "                const mine = decodeBySelector(callData);
+                if (mine.ok && mine.decoded.schema === \"DemoPay.purchase\" &&
+                    mine.decoded.resourceId !== mandate.resourceId) {
+                    findings.push(\"SIGNER_MANDATE_SELECTOR_MISMATCH\");
+                }
+                if (mandate.targetCodeHash !== state.targetCodeHash) {"
 
 echo "=== ${caught} caught, ${survived} survived, ${errored} did not apply, ${skipped} skipped ==="

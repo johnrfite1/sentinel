@@ -157,6 +157,38 @@ describe("D-012 — a refusal leaves a recorded artifact", () => {
         );
     });
 
+    it("binds the digest to WHICH action was refused", async () => {
+        // Without this, one refusal signature would be valid for every action — the record
+        // would prove only that something was refused, not what. Found as a gap when a
+        // mutation deleting `actionHash` from the digest preimage survived.
+        const base: RefusalRecord = {
+            schemaVersion: 1n,
+            chainId: CHAIN_ID,
+            vault: VAULT,
+            actionHash: keccak256(stringToBytes("action A")),
+            evidenceHash: keccak256(stringToBytes("{}")),
+            requestedVerdict: "ALLOW",
+            reasonCodesHash: keccak256(stringToBytes("X")),
+            refusedAt: NOW,
+            signer: OTHER_ADDRESS,
+        };
+        const other = {...base, actionHash: keccak256(stringToBytes("action B"))};
+        assert.notEqual(refusalDigest(base), refusalDigest(other), "digest must bind the action");
+
+        // And every other field too, so a refusal cannot be reused across evidence, verdicts,
+        // chains, or vaults.
+        for (const mutated of [
+            {...base, evidenceHash: keccak256(stringToBytes("other evidence"))},
+            {...base, requestedVerdict: "BLOCK" as const},
+            {...base, reasonCodesHash: keccak256(stringToBytes("Y"))},
+            {...base, chainId: base.chainId + 1n},
+            {...base, vault: "0x1212121212121212121212121212121212121212" as Hex},
+            {...base, refusedAt: base.refusedAt + 1n},
+        ]) {
+            assert.notEqual(refusalDigest(base), refusalDigest(mutated));
+        }
+    });
+
     it("omits the artifact only when the request names no attributable action", async () => {
         // A payload contradicting its own calldata describes no action the signer could
         // honestly say it refused, so there is nothing to attribute the refusal to.
