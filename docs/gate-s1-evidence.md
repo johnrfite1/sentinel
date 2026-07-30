@@ -6,8 +6,8 @@ D-002 and D-004 put gate signing with John, in a facilitated session, and the D-
 delegation explicitly excluded it. This document assembles evidence, records input received,
 and asks questions. It does not record answers, and no agent may add them.
 
-Prepared 2026-07-28. Revised the same day after two outside reviews, both of which found
-real defects in the first version — see §6.
+Prepared 2026-07-28. Revised the same day after two outside reviews, then again after the
+D-017 independent review closed. All three found real defects — see §6 and A-022.
 
 ---
 
@@ -89,10 +89,10 @@ parsing the test reporter's output, not a suite result. It is counted neither wa
 5. **The A-016 adversarial review is weaker evidence than it looks.** 6 of 8 skeptic
    verifications never ran (spend limit), so most findings were adjudicated by the build
    loop against the spec rather than independently.
-6. **Independent review of steps 4–6 is an S1 CONDITION and is not yet complete** (D-017).
-   Only step 3 has had an adversarial pass. S1 cannot close until this runs against a fixed
-   commit, its material findings are independently adjudicated, and confirmed defects are
-   corrected and reverified.
+6. **Independent review of steps 4–6 is COMPLETE** (D-017; see §7 and A-022). It found one
+   S1-blocking defect, now corrected and reverified. Six further confirmed defects were also
+   corrected. Steps 1–3 were reviewed earlier under A-016, whose own verifications were
+   mostly cut short — that limit still stands and is unchanged by this review.
 7. **The repository is pushed.** `origin` is configured and both branches are on GitHub,
    private. Authorised, but "nothing has left this machine" is no longer true, and the repo
    carries the colliding working name — now governed by the D-016 publication gate (§8),
@@ -168,11 +168,27 @@ Recorded because a pack arguing for its own rigour should show its own correctio
 
 ## 7. S1 conditions still open
 
-**D-017 — independent adversarial review of §9 steps 4–6. THIS BLOCKS S1.**
-Ruled an S1 condition on 2026-07-28. It must run fresh-context and adversarial against a
-**fixed commit**, against the actual implementation and tests rather than this summary;
-material findings must be **independently adjudicated**; confirmed defects corrected and
-**reverified before S1 closes**. Status is tracked in §9 below.
+**D-017 — independent adversarial review of §9 steps 4–6. COMPLETE. Full detail: A-022.**
+
+| D-017 condition | How it was met |
+|---|---|
+| fresh-context, adversarial | 4 independent lenses, no build context |
+| fixed commit | `4b25e5d`; all 4 lenses confirmed `git rev-parse HEAD` before reviewing |
+| actual implementation and tests, not the summary | reviewers read and RAN the code; instructed not to grade this pack |
+| material findings independently adjudicated | **12 filed, 12 adjudicated.** First pass capped at 6 (my sizing error); a second pass closed the gap |
+| confirmed defects corrected and reverified | 1 blocking + 6 non-blocking corrected; 6 regression mutations, all caught; deep profile green |
+
+**Outcome: 1 blocking defect, 6 confirmed non-blocking, 4 refuted.** The blocking one — filed
+by two lenses, reproduced by two adjudicators — was the D-014 evidence bind comparing two
+different predicates, which made the signer refuse TRUTHFUL bundles fatally for exactly the
+target-substitution and wrong-operation shapes injection produces. It contradicted D-014's own
+boundary sentence. Corrected, with tests built from real evaluator bundles rather than the
+tautological stub that hid it.
+
+**Reverification found three of six regression mutations surviving on the first attempt** —
+all three real gaps in the corrections, since fixed and re-caught. That is worth weighing: it
+is the third time in this build that a confidently-written fix and a test written from the
+same understanding both failed to bite.
 
 ## 8. Not an S1 condition — the pre-publication rename gate (D-016)
 
