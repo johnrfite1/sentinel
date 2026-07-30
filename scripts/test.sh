@@ -23,6 +23,9 @@ step() { printf '\n\033[1m== %s ==\033[0m\n' "$1"; }
 step "secret guard (A-007)"
 ./scripts/check-secrets.sh || fail=1
 
+step "rename gate (D-016)"
+./scripts/check-rename-gate.sh || fail=1
+
 step "solidity build + tests (profile: $PROFILE)"
 if command -v forge >/dev/null 2>&1; then
     (cd contracts && FOUNDRY_PROFILE="$PROFILE" forge test -vv) || fail=1

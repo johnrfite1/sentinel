@@ -89,11 +89,14 @@ parsing the test reporter's output, not a suite result. It is counted neither wa
 5. **The A-016 adversarial review is weaker evidence than it looks.** 6 of 8 skeptic
    verifications never ran (spend limit), so most findings were adjudicated by the build
    loop against the spec rather than independently.
-6. **No independent review of steps 4–6.** Only step 3 has had an adversarial pass. This
-   conflicts with the project's own independent-grader principle; see question 3.
+6. **Independent review of steps 4–6 is an S1 CONDITION and is not yet complete** (D-017).
+   Only step 3 has had an adversarial pass. S1 cannot close until this runs against a fixed
+   commit, its material findings are independently adjudicated, and confirmed defects are
+   corrected and reverified.
 7. **The repository is pushed.** `origin` is configured and both branches are on GitHub,
    private. Authorised, but "nothing has left this machine" is no longer true, and the repo
-   carries the colliding working name. See question 8.
+   carries the colliding working name — now governed by the D-016 publication gate (§8),
+   which is deliberately NOT an S1 condition.
 
 ## 4. Decisions — RULED by John, 2026-07-28
 
@@ -163,7 +166,26 @@ Recorded because a pack arguing for its own rigour should show its own correctio
   and because the lesson is concrete: a number cited as evidence must come from running the
   thing, not from grepping it.
 
-## 7. Questions for the facilitated session
+## 7. S1 conditions still open
+
+**D-017 — independent adversarial review of §9 steps 4–6. THIS BLOCKS S1.**
+Ruled an S1 condition on 2026-07-28. It must run fresh-context and adversarial against a
+**fixed commit**, against the actual implementation and tests rather than this summary;
+material findings must be **independently adjudicated**; confirmed defects corrected and
+**reverified before S1 closes**. Status is tracked in §9 below.
+
+## 8. Not an S1 condition — the pre-publication rename gate (D-016)
+
+Recorded here so it is not mistaken for something S1 waits on. **The naming collision is not
+accepted.** "Sentinel" stays a private working codename, and repository visibility changes,
+public demos, published links, and portfolio or résumé references are blocked until John
+approves a replacement following domain and trademark/collision review. S1 may be signed
+while this remains open; the two are independent. Enforced mechanically by
+`scripts/check-rename-gate.sh`, which fails the project gate if the repository becomes
+public — because a rule like this is violated by one click months later, by someone who
+never read the decision log.
+
+## 9. Questions for the facilitated session
 
 Left blank deliberately.
 
@@ -171,16 +193,15 @@ Left blank deliberately.
 2. **Does constructed-action Case 1 satisfy S1**, with real-agent wiring belonging to step 7
    and S2? Both reviewers asked for this to be recorded explicitly rather than left to the
    word "end-to-end".
-3. **Independent adversarial review of steps 4–6** — an S1 condition, or a named condition
-   due before S2?
-4. The rename gate: close it before visibility ever flips, or accept the collision?
-5. Sample check: pick any two of the four demonstration cases and have the build loop walk
+3. Sample check: pick any two of the four demonstration cases and have the build loop walk
    the actual evidence, rather than accepting the summary above.
 
-*(A-011, A-012, A-018 and A-020 were questions 4–7 here until 2026-07-28. They are ruled —
-D-012…D-015 — and §4 records the outcomes.)*
+*(A-011, A-012, A-018 and A-020 were questions here until 2026-07-28; they are ruled as
+D-012…D-015 and §4 records the outcomes. The rename gate and the independent review were
+also questions here; John ruled them as D-016 and D-017 — the first is not an S1 condition,
+the second is.)*
 
-## 8. Sign-off
+## 10. Sign-off
 
 **Not to be completed by any agent.**
 
