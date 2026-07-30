@@ -3,9 +3,9 @@
 Rewritten at the end of each working session. **This file, not the conversation, is the
 memory.** If it disagrees with anything an agent remembers, this file wins.
 
-Last updated: 2026-07-28, after the D-017 independent review closed. **Gate S1 evidence is
-prepared and awaiting John, and its one blocking condition (D-017) is now MET** — see
-`docs/gate-s1-evidence.md` and A-022.
+Last updated: 2026-07-28. **GATE S1 IS SIGNED — PASS, John, 2026-07-28**, scope bounded by
+D-018. See `docs/gate-s1-evidence.md` §10 for the sign-off, the three limits named in the
+assessment, and §11 for what S1 does NOT authorise. **D-016 still blocks all publication.**
 
 ---
 
@@ -100,20 +100,22 @@ or delete one of them.)
 
 ## 4. What to do next, in order
 
-1. **Gate S1 — John signs.** Evidence is prepared in `docs/gate-s1-evidence.md`, UNSIGNED.
-   Run it as a facilitated session; never answer or pre-fill it. **All previously open
-   decisions are ruled** — A-011/012/018/020 as D-012…D-015, the rename gate as D-016, the
-   review condition as D-017 — and **D-017's blocking condition is now MET** (A-022). Three
-   questions remain for the session, all in §9 of the pack: whether the evidence satisfies
-   each D-002 condition, whether constructed-action Case 1 satisfies S1, and a sample check
-   of two demonstration cases.
-2. **§9 step 7** — wire the real agent proposal (the D-007 spike scaffold) into the
-   pipeline, so Case 1 and Case 2 are driven by an actual model rather than a constructed
-   action.
-3. **§9 step 8** — the 30–50 fixture corpus. **Freeze the labelling prompt and commit its
+1. **§9 step 7 — wire the real agent proposal into the pipeline.** Gate S1 is signed, so
+   this is the next build step. The D-007 spike scaffold (`ts/src/spike/`) already produces
+   real proposals and already demonstrates the injection flip (A-009); what does not exist is
+   the connection from a proposal to an `ActionPayload` the pipeline consumes. D-018 is
+   explicit that this belongs here and to S2, not to S1.
+2. **§9 step 8** — the 30–50 fixture corpus. **Freeze the labelling prompt and commit its
    hash BEFORE building the corpus** (D-011a); the labeller sees schemas, invariants and
    declared intent only, never evaluator source or output.
-4. **§9 step 9 + D-010** — ablation, dashboard, and the Python receipt-verifier CLI.
+3. **§9 step 9 + D-010** — ablation, dashboard, and the Python receipt-verifier CLI.
+
+Carried from the S1 assessment, for S2 rather than S1:
+- **Steps 1–3 never had a completed independent review.** A-016's verifications were mostly
+  cut short by a spend limit; only steps 4–6 got the full D-017 treatment. Worth closing
+  before S2.
+- **Three times, code shipped whose tests could not fail.** Keep the D-011 corpus labels
+  genuinely independent — that pattern is exactly what independent labelling defends against.
 
 Owed, small, do not lose:
 - `ts/src/spike/**` is quarantined from the TypeScript typecheck (A-015c). Two defects:

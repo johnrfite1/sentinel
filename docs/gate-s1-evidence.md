@@ -1,6 +1,6 @@
 # Gate S1 — Evidence Pack
 
-**Status: UNSIGNED. Prepared for John; not answered, not pre-filled.**
+**Status: SIGNED — PASS. John, 2026-07-28.** See §10.
 
 D-002 and D-004 put gate signing with John, in a facilitated session, and the D-007…D-011
 delegation explicitly excluded it. This document assembles evidence, records input received,
@@ -262,10 +262,49 @@ the second is.)*
 
 ## 10. Sign-off
 
-**Not to be completed by any agent.**
+```
+Gate S1 outcome:        PASS
+Scope:                  Bounded by D-018. "End-to-end" for S1 means constructed exact EVM
+                        action -> decode -> simulate -> evaluate -> isolated signing ->
+                        vault enforcement -> resulting onchain state. Agent proposal
+                        generation and its wiring are §9 step 7 and Gate S2.
+Conditions met at
+signing:                D-002 conditions approved with one clerical correction (§9 Q1);
+                        D-017 independent review complete, its one blocking defect and six
+                        further confirmed defects corrected and reverified (A-022);
+                        sample check run on Cases 1 and 3 at John's selection (§9 Q3).
+Signed:                 John                                   Date: 2026-07-28
+```
 
-```
-Gate S1 outcome:        [ PASS / PASS WITH CONDITIONS / FAIL ]
-Conditions, if any:
-Signed:                                        Date:
-```
+**How this was recorded.** John gave approval in the session — *"I agree and approve and
+sign, and update the doc accordingly"* — and directed the build loop to transcribe it. That
+is the principal exercising authority and instructing his agent to write it down, which is
+different from an agent signing or pre-filling a gate, and the difference is the whole point
+of D-002/D-004. **The standing rule is unchanged: no agent may enter an outcome or a
+signature here without John saying so in that session.** The prior version of this block was
+blank and marked "not to be completed by any agent"; it stayed blank until this instruction.
+
+**John made the approval conditional on the build loop's own assessment.** That assessment
+was given before recording, and it was not unqualified. Three limits were named, none of them
+S1 conditions, all carried forward:
+
+1. **Three times in this build, code shipped whose tests could not fail** — A-016, then the
+   evaluator, then the D-017 corrections themselves. Mutation testing caught each; reading
+   and review did not. This is the strongest argument for keeping the §9 step 8 corpus labels
+   genuinely independent under D-011.
+2. **Steps 1–3 never received a completed independent review.** A-016's own verifications
+   were mostly cut short by a spend limit; only steps 4–6 got the full treatment under D-017.
+   The asymmetry is real. Steps 1–3 do carry the strongest mechanical evidence in the
+   repository, which is why it is carried as an S2 item rather than an S1 blocker.
+3. **Verdict correctness remains unproven**, by design, and is Gate S2's subject.
+
+## 11. What S1 does NOT authorise
+
+- **Publication of anything, under any name.** D-016 is untouched by this signature: the
+  naming collision is not accepted, "Sentinel" remains a private working codename, and
+  repository visibility, public demos, published links, and portfolio or résumé references
+  stay blocked until John approves a replacement following domain and trademark/collision
+  review. `scripts/check-rename-gate.sh` enforces the visibility half mechanically.
+- **Any claim that Sentinel decides correctly.** S1 is about the mechanism running end to
+  end within D-018's bound. §3 of this pack still applies in full.
+- **Merging to `main`.** Still John's call; the work is on `step-3/isolated-signer`.
