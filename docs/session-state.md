@@ -3,8 +3,9 @@
 Rewritten at the end of each working session. **This file, not the conversation, is the
 memory.** If it disagrees with anything an agent remembers, this file wins.
 
-Last updated: 2026-07-28, after §9 step 6. **Gate S1 evidence is prepared and
-awaiting John** — see `docs/gate-s1-evidence.md`.
+Last updated: 2026-07-28, after the D-017 independent review closed. **Gate S1 evidence is
+prepared and awaiting John, and its one blocking condition (D-017) is now MET** — see
+`docs/gate-s1-evidence.md` and A-022.
 
 ---
 
@@ -12,7 +13,7 @@ awaiting John** — see `docs/gate-s1-evidence.md`.
 
 1. `Sentinel_Protocol_Lab_Proposal_v0_2.md` — the spec. §14.8 (intake rulings) and §14.9
    (build-start amendments) supersede conflicting prose elsewhere in it.
-2. `docs/decisions.md` — **canonical**. D-001…D-015 ratified, A-001…A-021 agent-flagged.
+2. `docs/decisions.md` — **canonical**. D-001…D-017 ratified, A-001…A-022 agent-flagged.
 3. `HANDOFF.md` — the build brief: corridor, gates, house rules, verification partition.
 4. `../AGENTS.md` — workspace rules. Binding. Not auto-loaded.
 5. `../vault/Topics/AI-ML/prompting-agents-playbook.md` — the build-loop method.
@@ -35,7 +36,7 @@ product fork. Routine engineering judgment is yours.
 ## 3. Where the build actually is
 
 On branch **`step-3/isolated-signer`** (not merged to `main` — that is John's call):
-**43/43 Foundry tests + 219/219 TypeScript tests**. Run everything with
+**43/43 Foundry tests + 227/227 TypeScript tests**. Run everything with
 `./scripts/test.sh`; **use `--gate` for gate evidence** (20,000 fuzz runs, 262,144 calls per
 invariant). It prints its own coverage boundary, organised by layer with each layer's limit
 stated — read all of it. That block previously rotted into self-contradiction and was
@@ -71,6 +72,16 @@ Done:
   All four §4.2 demonstration cases run end to end; Case 1 continues through the signer
   into the vault. The §5.2/`failureMode` reading was confirmed as **D-015** and the
   proposal amended to match.
+- **D-016 / D-017 (2026-07-28)** — the rename gate and the independent-review condition.
+  D-016 makes "Sentinel" a private working codename with publication blocked until John
+  approves a replacement; it is a PRE-PUBLICATION gate, explicitly not an S1 condition, and
+  `scripts/check-rename-gate.sh` fails the project gate if the repo goes public. D-017 made
+  independent adversarial review of steps 4–6 an S1 condition.
+- **D-017 review COMPLETE — A-022.** Ran against fixed commit `4b25e5d`; four lenses, all
+  confirming the commit; 12 findings, **all 12 independently adjudicated**. One S1-blocking
+  defect (the D-014 bind compared two different predicates, refusing truthful bundles
+  fatally) plus six non-blocking, all corrected and reverified. Read A-022's last sentence
+  before trusting any fix in this repo that has not been mutation-tested.
 - **Rulings D-012…D-015 (2026-07-28)** — the four open decisions, ruled by John after two
   outside reviews and implemented. `ts/test/rulings.test.ts` tests each one, including
   D-014's boundary: given calldata buying the wrong resource and a bundle describing it
@@ -80,19 +91,22 @@ Done:
 - Secret guard + pre-commit hook, project gate script.
 
 **Not started:** §9 steps 7–9 — the real-agent wiring, the 30–50 fixture corpus and its
-independent labels, the §7.3 ablation, the dashboard, and the D-010 verifier CLI. (Steps 5
-and 6 ARE done and are listed above; this line said otherwise for several commits, which
-two outside reviewers caught. Keep it consistent with the Done list or delete one of them.)
+independent labels, the §7.3 ablation, the dashboard, and the D-010 verifier CLI.
+(Keep this line consistent with the Done list above. It once contradicted it for several
+commits and two outside reviewers caught that; the standing rule is to rewrite both together
+or delete one of them.)
 
 **A-006 internal checkpoint is reached** (steps 1–3 green). Measured numbers are in §7.
 
 ## 4. What to do next, in order
 
 1. **Gate S1 — John signs.** Evidence is prepared in `docs/gate-s1-evidence.md`, UNSIGNED.
-   Run it as a facilitated session; never answer or pre-fill it. **A-011/012/018/020 are no
-   longer open** — John ruled them 2026-07-28 as D-012…D-015 and they are implemented. Two
-   questions remain for the session: the rename gate, and whether independent review of
-   steps 4–6 is an S1 condition or a named pre-S2 one.
+   Run it as a facilitated session; never answer or pre-fill it. **All previously open
+   decisions are ruled** — A-011/012/018/020 as D-012…D-015, the rename gate as D-016, the
+   review condition as D-017 — and **D-017's blocking condition is now MET** (A-022). Three
+   questions remain for the session, all in §9 of the pack: whether the evidence satisfies
+   each D-002 condition, whether constructed-action Case 1 satisfies S1, and a sample check
+   of two demonstration cases.
 2. **§9 step 7** — wire the real agent proposal (the D-007 spike scaffold) into the
    pipeline, so Case 1 and Case 2 are driven by an actual model rather than a constructed
    action.
@@ -191,8 +205,8 @@ Labeled so they aren't re-derived. Each cost real time.
   pinned constants appear in `ts/src/signer/eip712.ts` and are checked at process start.
 - Predicting a contract address with `vm.computeCreateAddress` to allowlist a reentrancy
   target that needs the vault address — with an `assertEq` proving the prediction held.
-- **Mutation testing as the non-vacuity check for the signer suite.** 25 deliberate defects,
-  25 caught. It found two things reading did not: a vacuous concurrency test, and an
+- **Mutation testing as the non-vacuity check.** (Counts here were the signer batch only;
+  the current whole-repo figure is in §8.) It found two things reading did not: a vacuous concurrency test, and an
   untested keystore guard the attestor structurally cannot reach. The harness lives in the
   session scratchpad, not the repo — promoting it is a decision for John, not a default.
   See the matching dead end above for what it does **not** measure.
@@ -250,6 +264,8 @@ Wall-clock elapsed, from commit timestamps:
 | §9 step 4, the two decoders | ~35m |
 | §9 step 5, the effect pipeline | ~40m |
 | §9 step 6, evaluator + evidence bundle + coverage fix | ~1h 25m |
+| Rulings D-012…D-015, implemented and tested | ~50m |
+| D-016/D-017, the D-017 review, and its corrections + reverification | ~1h 40m |
 
 Produced in step 3: ~2,000 lines across 8 signer modules, ~3,000 lines across 8 test files,
 53 lines of Solidity test harness. 141 tests total (43 Foundry, 98 TypeScript). 25/25
@@ -274,10 +290,14 @@ about the artifact, so it is his call rather than an agent's.
 
 ## 8. Verification tooling
 
-`scripts/mutate.sh` — 50 deliberate defects across signer, decoders, pipeline and evaluator.
+`scripts/mutate.sh` — 62 deliberate defects across signer, decoders, pipeline, evaluator,
+the D-012/D-014 rulings, and the D-017 corrections.
 Run `./scripts/mutate.sh` for all, or `./scripts/mutate.sh E` for one batch. **First-pass
-result: 47 caught, 3 survived** (`M18`, `S2`, `E7`), each survivor exposing a real gap since
-fixed. Cite those numbers, not "all caught" — the survivors are the evidence the technique
+result across all batches: 54 caught, 8 survived.** Five survivors were real coverage gaps,
+since fixed — `M18` (untested keystore guard), `S2` (vacuous impersonation fixture), `E7`
+(24 evaluator codes untested), and `V3`/`V4`/`V5` (the D-017 corrections shipped without
+tests). Two, `R2` and `R6`, were defective MUTATIONS rather than gaps and were replaced —
+telling those apart is part of the technique. All 62 are caught now. Cite those numbers, not "all caught" — the survivors are the evidence the technique
 works. **Get the count by running the harness, not by grepping it:** `grep -c '^run_mutation'`
 also matches the function definition, which is how this file briefly said 51/48. Promoted from session scratch into the repo because an outside reviewer correctly
 objected that a claim resting on a script nobody else has is not reproducible. Not wired into

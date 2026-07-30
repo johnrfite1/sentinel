@@ -51,20 +51,29 @@ cannot exceed.
 - **Three independent EIP-712 implementations** (Solidity, signer hand-rolled, evaluator via
   viem) agree on generated payloads, and the independence itself is asserted.
 
-**Mutation testing — the honest numbers.** 50 deliberate defects, in `scripts/mutate.sh`,
-reproducible with `./scripts/mutate.sh`. **47 were caught on first attempt. 3 survived**,
-and each survivor exposed a real gap that was then fixed:
+**Mutation testing — the honest numbers.** 62 deliberate defects, in `scripts/mutate.sh`,
+reproducible with `./scripts/mutate.sh`. **54 caught on first attempt; 8 survived.** All 62
+are caught now. The survivors are the interesting part, and they split two ways:
+
+*Five were real coverage gaps, each since fixed:*
 
 | Survivor | What it exposed |
 |---|---|
 | `M18` keystore signs a receipt naming another signer | the guard had no test at all |
 | `S2` simulate as caller instead of vault | the impersonation fixture was vacuous — an Anvil dev account, so the node signed natively |
-| `E7` drop the beneficiary check | 24 of the evaluator's 37 codes were exercised by nothing |
+| `E7` drop the beneficiary check | 24 evaluator codes were exercised by nothing |
+| `V3` drop simulation serialisation | the D-017 concurrency fix shipped with no test |
+| `V4` un-normalise decoded addresses | the case-normalisation test uppercased an address with no hex letters — a no-op |
+| `V5` emit unpaired surrogates again | the D-017 RFC 8785 fix shipped with no test |
 
-All three are now caught. The first version of this pack said "all caught at last run of each
-batch", which implied a clean sweep while not quite claiming it; a reviewer called that out and was
-right to. The 3 survivors are better evidence than a clean sweep would have been — they are
-what shows the technique finds things reading does not.
+*Two were defective MUTATIONS rather than gaps, and were replaced:* `R2` swapped a domain
+tag for bytes that could not collide anyway; `R6` was written as a no-op. Telling those apart
+from real survivors is part of the technique — a surviving mutation is a question, not a
+verdict.
+
+The first version of this pack said "all caught at last run of each batch", which implied a
+clean sweep while not quite claiming it; a reviewer called that out and was right to. The
+survivors are better evidence than a clean sweep would have been.
 
 (Separately: the very first sweep reported 14/14 surviving. That was a broken harness
 parsing the test reporter's output, not a suite result. It is counted neither way.)
@@ -82,10 +91,13 @@ parsing the test reporter's output, not a suite result. It is counted neither wa
    the word "end-to-end"; see question 2.
 3. **Effects are simulated, not observed.** §8 as amended by D-001: conformance is against
    simulated effects at a recorded block.
-4. **Twice now, a whole class of checks was untested until a mutation found it** — 22 of 31
-   in the signer (A-016), 24 of 37 in the evaluator. Both are fixed and both now have
-   structural exhaustiveness guards. The pattern is worth weighing when judging how much the
-   green suite means.
+4. **Three times now, code has shipped whose tests could not fail.** A whole class of checks
+   was untested until a mutation found it — 22 of the signer's checks (A-016), then 24 of the
+   evaluator's — and then the D-017 *corrections themselves* shipped with three untestable
+   fixes (A-022). Counts are as they stood when each was found; both surfaces now have
+   structural exhaustiveness guards. **The pattern is the single most useful thing to weigh
+   here:** a fix written confidently and a test written from the same understanding are one
+   act, not two. Mutation testing has caught this every time; reading and review have not.
 5. **The A-016 adversarial review is weaker evidence than it looks.** 6 of 8 skeptic
    verifications never ran (spend limit), so most findings were adjudicated by the build
    loop against the spec rather than independently.

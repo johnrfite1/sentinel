@@ -80,7 +80,7 @@ WHAT IS COVERED, by layer, each with the limit that layer cannot exceed:
            every one of these tests.
 
   §9 s3    Isolated signer, as a separate OS process behind a two-method 0600 socket.
-           All 31 declared checks triggered individually; every severity tier asserted
+           All 33 declared checks triggered individually; every severity tier asserted
            against all three verdicts; the per-nonce guard under real concurrency.
            LIMIT: proves the signer refuses a MIS-BOUND receipt. In these tests the
            verdict is an INPUT, so a signer faithfully attesting to a wrong ALLOW passes
@@ -97,7 +97,7 @@ WHAT IS COVERED, by layer, each with the limit that layer cannot exceed:
            LIMIT: effects are SIMULATED at a recorded block, not observed
            post-execution (§8 as amended by D-001).
 
-  §9 s6    Conformance engine + RFC 8785 evidence bundle. The §5.2 verdict fold; all 37
+  §9 s6    Conformance engine + RFC 8785 evidence bundle. The §5.2 verdict fold; all 41
            declared checks triggered individually; all four §4.2 cases end to end, with
            Case 1 continuing through the signer into the vault. Case 3 IS detected here,
            blocked on mandate conformance while every representative-baseline check
@@ -114,8 +114,11 @@ WHAT IS NOT COVERED:
     spike showed a proposal flips under injection, but proposal and pipeline are not yet
     wired together (step 7).
   - The D-010 receipt-verifier CLI, the fixture corpus, and the dashboard.
-  - Independent adversarial review of steps 4-6. Only step 3 has had one (A-016), and
-    most of that review's own verifications were cut short by a spend limit.
+  - An independent review of steps 1-3 that completed. Steps 4-6 HAVE now had a full
+    independent adversarial pass under D-017 (see A-022): fixed commit, 12 findings, all 12
+    independently adjudicated, 1 S1-blocking defect plus 6 others corrected and reverified.
+    Steps 1-3 were reviewed earlier under A-016, whose own verifications were mostly cut
+    short by a spend limit — that limit is NOT retired by the later review.
 
 A green run means the mechanism runs end to end. It does not mean Sentinel decides
 correctly. Those are different claims and only the first is in evidence here.
