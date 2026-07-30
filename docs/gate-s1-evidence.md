@@ -51,8 +51,8 @@ cannot exceed.
 - **Three independent EIP-712 implementations** (Solidity, signer hand-rolled, evaluator via
   viem) agree on generated payloads, and the independence itself is asserted.
 
-**Mutation testing — the honest numbers.** 51 deliberate defects, in `scripts/mutate.sh`,
-reproducible with `./scripts/mutate.sh`. **48 were caught on first attempt. 3 survived**,
+**Mutation testing — the honest numbers.** 50 deliberate defects, in `scripts/mutate.sh`,
+reproducible with `./scripts/mutate.sh`. **47 were caught on first attempt. 3 survived**,
 and each survivor exposed a real gap that was then fixed:
 
 | Survivor | What it exposed |
@@ -62,7 +62,7 @@ and each survivor exposed a real gap that was then fixed:
 | `E7` drop the beneficiary check | 24 of the evaluator's 37 codes were exercised by nothing |
 
 All three are now caught. The first version of this pack said "all caught at last run of each
-batch", which implied 51/51 while not quite claiming it; a reviewer called that out and was
+batch", which implied a clean sweep while not quite claiming it; a reviewer called that out and was
 right to. The 3 survivors are better evidence than a clean sweep would have been — they are
 what shows the technique finds things reading does not.
 
@@ -148,6 +148,15 @@ Recorded because a pack arguing for its own rigour should show its own correctio
   numbers and the three survivors named.
 - The mutation harness was scratch material, so its numbers were not reproducible from the
   repository. Promoted to `scripts/mutate.sh`.
+- **The mutation count itself was wrong.** This pack first said 51 defects / 48 caught. The
+  count came from `grep -c '^run_mutation'`, which also matched the function *definition*
+  line; the true figure is **50 / 47**. Found only because John asked whether the document
+  reflected the changes, and the promoted harness reported "50 skipped" on its first real
+  run — which is also the first time the promoted copy had been executed rather than merely
+  syntax-checked. Recorded rather than quietly amended, because a document arguing for its
+  own rigour miscounting its own headline number is the exact failure §7.5 exists to catch,
+  and because the lesson is concrete: a number cited as evidence must come from running the
+  thing, not from grepping it.
 
 ## 7. Questions for the facilitated session
 

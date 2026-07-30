@@ -268,11 +268,12 @@ about the artifact, so it is his call rather than an agent's.
 
 ## 8. Verification tooling
 
-`scripts/mutate.sh` — 51 deliberate defects across signer, decoders, pipeline and evaluator.
+`scripts/mutate.sh` — 50 deliberate defects across signer, decoders, pipeline and evaluator.
 Run `./scripts/mutate.sh` for all, or `./scripts/mutate.sh E` for one batch. **First-pass
-result: 48 caught, 3 survived** (`M18`, `S2`, `E7`), each survivor exposing a real gap since
+result: 47 caught, 3 survived** (`M18`, `S2`, `E7`), each survivor exposing a real gap since
 fixed. Cite those numbers, not "all caught" — the survivors are the evidence the technique
-works. Promoted from session scratch into the repo because an outside reviewer correctly
+works. **Get the count by running the harness, not by grepping it:** `grep -c '^run_mutation'`
+also matches the function definition, which is how this file briefly said 51/48. Promoted from session scratch into the repo because an outside reviewer correctly
 objected that a claim resting on a script nobody else has is not reproducible. Not wired into
 `test.sh`: a full sweep takes ~30 minutes.
 
