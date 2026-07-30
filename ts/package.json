@@ -6,7 +6,8 @@
     "spike": "tsx src/spike/run.ts",
     "signer": "node src/signer/main.ts",
     "test": "node --test --test-concurrency=1 \"test/**/*.test.ts\"",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "sample-check": "node src/tools/sample-check.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.70.0",

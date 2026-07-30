@@ -110,9 +110,11 @@ WHAT IS NOT COVERED:
   - Whether the verdicts are RIGHT. §7 states it outright: "Four demo paths alone cannot
     prove that the verdicts are not hard-coded." The bar is the §9 step 8 corpus with
     independent labels (D-011) plus the §7.3 ablation. NEITHER EXISTS YET; both are S2.
-  - Case 1 from a REAL agent proposal. The action is constructed by the test. The D-007
-    spike showed a proposal flips under injection, but proposal and pipeline are not yet
-    wired together (step 7).
+  - Case 1 from a REAL agent proposal. The action is constructed by the test. Per D-018,
+    S1's "end-to-end" deliberately means constructed-action -> decode -> simulate -> evaluate
+    -> isolated signing -> vault enforcement -> onchain state. Agent proposal generation and
+    its wiring are §9 step 7 and S2. The D-007 spike showed a proposal flips under injection;
+    proposal and pipeline have never been connected.
   - The D-010 receipt-verifier CLI, the fixture corpus, and the dashboard.
   - An independent review of steps 1-3 that completed. Steps 4-6 HAVE now had a full
     independent adversarial pass under D-017 (see A-022): fixed commit, 12 findings, all 12

@@ -55,7 +55,7 @@ cannot exceed.
 reproducible with `./scripts/mutate.sh`. **54 caught on first attempt; 8 survived.** All 62
 are caught now. The survivors are the interesting part, and they split two ways:
 
-*Five were real coverage gaps, each since fixed:*
+*Six were real coverage gaps, each since fixed:*
 
 | Survivor | What it exposed |
 |---|---|
@@ -85,10 +85,12 @@ parsing the test reporter's output, not a suite result. It is counted neither wa
    supply that proof — self-written tests encode the same misunderstanding twice. The bar is
    the §9 step 8 corpus under D-011 plus the §7.3 ablation. **Neither exists yet.** Both are
    Gate S2 conditions.
-2. **Case 1 is not agent-to-chain end-to-end.** The action is constructed by the test. The
-   D-007 spike proved an agent *proposal* flips under injection (A-009), but the proposal
-   and the pipeline have not yet been wired together. Both reviewers flagged the ambiguity in
-   the word "end-to-end"; see question 2.
+2. **Case 1 is not agent-to-chain end-to-end — and D-018 now defines that boundary.** For S1,
+   "end-to-end" means from a CONSTRUCTED exact EVM action through decoding, simulation,
+   evaluation, isolated signing, vault enforcement, and the resulting onchain state. Agent
+   proposal generation and its wiring belong to §9 step 7 and S2. The D-007 spike proved an
+   agent *proposal* flips under injection (A-009), but proposal and pipeline have never been
+   connected.
 3. **Effects are simulated, not observed.** §8 as amended by D-001: conformance is against
    simulated effects at a recorded block.
 4. **Three times now, code has shipped whose tests could not fail.** A whole class of checks
@@ -213,16 +215,45 @@ while this remains open; the two are independent. Enforced mechanically by
 public — because a rule like this is violated by one click months later, by someone who
 never read the decision log.
 
-## 9. Questions for the facilitated session
+## 9. Session record — questions asked and answered
 
-Left blank deliberately.
+Answers are John's, recorded verbatim in substance. The sign-off block in §10 remains his
+alone and is NOT filled in by this record.
 
-1. Does the evidence in §2 satisfy each D-002 condition, condition by condition?
-2. **Does constructed-action Case 1 satisfy S1**, with real-agent wiring belonging to step 7
-   and S2? Both reviewers asked for this to be recorded explicitly rather than left to the
-   word "end-to-end".
-3. Sample check: pick any two of the four demonstration cases and have the build loop walk
-   the actual evidence, rather than accepting the summary above.
+1. **Does the evidence satisfy each D-002 condition?** — *"D-002 approved with one minor
+   clerical correction: the packet says five but lists 6 gaps."* The clerical error was in
+   §2: a table of six real coverage gaps was introduced by the word "Five". Corrected to
+   "Six". The 8-survivor total was already right (6 real gaps + 2 defective mutations).
+2. **Does constructed-action Case 1 satisfy S1?** — accepted within a stated bound, now
+   ratified as **D-018**: for S1, "end-to-end" means from a CONSTRUCTED exact EVM action
+   through decoding, simulation, evaluation, isolated signing, vault enforcement, and the
+   resulting onchain state. Agent proposal generation and its wiring belong to §9 step 7
+   and S2.
+3. **Sample check** — John selected **Cases 1 and 3**. Run it yourself with:
+
+   ```bash
+   npm --prefix ts run sample-check
+   ```
+
+   It boots a real Anvil, deploys the real contracts, spawns the real isolated signer, and
+   prints the actual artifacts at each stage — not this summary. Results:
+
+   **Case 1** — decoded parameters match the mandate on all three constrained fields; the
+   simulation succeeds with the vault down exactly the authorised value; **30 checks pass, 0
+   violations, 0 unresolved**; verdict ALLOW; the signer's receipt carries an `evidenceHash`
+   equal to the evaluator's; `executeWithReceipt` EXECUTES; and the entitlement appears in
+   DemoPay's state.
+
+   **Case 3** — the decoder reports the resource DIFFERS from the mandate while beneficiary
+   and duration match; the simulation **succeeds** (this is not a call that would have
+   failed); **29 checks pass and there is exactly ONE violation, `EVAL_PURCHASE_RESOURCE`**,
+   including every representative-baseline check passing; verdict BLOCK; the signer signs a
+   BLOCK receipt as evidence; `executeWithReceipt` **REVERTS**; and the wrong entitlement is
+   never written — `premium-monthly` expiry stays 0 while the authorised resource from Case 1
+   is present.
+
+   That single-violation result is the differentiation claim in one line: a representative
+   policy baseline would have allowed this action, and only mandate conformance stops it.
 
 *(A-011, A-012, A-018 and A-020 were questions here until 2026-07-28; they are ruled as
 D-012…D-015 and §4 records the outcomes. The rename gate and the independent review were
