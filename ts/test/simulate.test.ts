@@ -397,3 +397,75 @@ describe("failure is reported, never inferred away", () => {
         assert.equal(await real.revert(snapshotToRestore!), true);
     });
 });
+
+describe("concurrent simulations do not contaminate each other", () => {
+    it("keeps overlapping simulations isolated, with no false leak alarm", async () => {
+        // THE DEFECT THIS PROVES FIXED. Anvil's evm_revert DISCARDS snapshots taken after the
+        // one being reverted, so two overlapping snapshot/revert windows cannot both be
+        // isolated. A D-017 adjudicator reproduced both consequences on a real node: an
+        // `approve` simulation whose own valueWei was 0 reported the vault at -1000 wei — the
+        // OTHER simulation's value, captured because its post-state read straddled that
+        // transaction — and SimulationLeakError fired on a demonstrably clean chain, 11 times
+        // out of 11 in one sweep.
+        //
+        // "It always reverts" was therefore true only under serial use, which nothing
+        // enforced. simulateAction now serialises. This test fires overlapping calls and
+        // asserts each result reflects only its OWN action; without the queue it fails.
+        const purchase = purchaseCalldata(OWNER.address.toLowerCase() as Hex);
+        const approve = encodeFunctionData({
+            abi: demoErc20Abi,
+            functionName: "approve",
+            args: [ATTACKER, (1n << 256n) - 1n],
+        }) as Hex;
+
+        const purchaseArgs = {
+            client: publicClient,
+            vault: VAULT,
+            target: demoPay,
+            valueWei: 1_000n,
+            callData: purchase,
+            decoded: decodeFor(demoPay, purchase),
+        };
+        const approveArgs = {
+            client: publicClient,
+            vault: VAULT,
+            target: demoErc20,
+            valueWei: 0n,
+            callData: approve,
+            decoded: decodeFor(demoErc20, approve),
+        };
+
+        // Four overlapping pairs. Launched without awaiting between them, so they genuinely
+        // contend — the mistake of writing `await` inside the array literal is recorded as a
+        // dead end in docs/session-state.md and is deliberately avoided here.
+        const pending = [
+            simulateAction(purchaseArgs),
+            simulateAction(approveArgs),
+            simulateAction(purchaseArgs),
+            simulateAction(approveArgs),
+        ];
+        const results = await Promise.all(pending);
+
+        for (const [i, r] of results.entries()) {
+            const isPurchase = i % 2 === 0;
+            const vaultDelta = r.nativeBalanceDeltas.find((d) => d.address === VAULT);
+            assert.ok(vaultDelta !== undefined);
+            assert.equal(
+                vaultDelta.delta,
+                isPurchase ? -1_000n : 0n,
+                `simulation ${i} saw the other simulation's native movement`,
+            );
+            assert.equal(r.outcome.status, "success");
+        }
+
+        // And the chain is exactly as it was — no leak, and no false alarm either, since a
+        // thrown SimulationLeakError would have rejected one of the promises above.
+        const expiry = (await publicClient.readContract({
+            address: demoPay,
+            abi: demoPayAbi,
+            functionName: "entitlementExpiry",
+            args: [OWNER.address, RESOURCE],
+        })) as bigint;
+        assert.equal(expiry, 0n, "concurrent simulations leaked entitlement state");
+    });
+});

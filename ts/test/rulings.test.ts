@@ -504,14 +504,25 @@ describe("D-014 against REAL evaluator bundles (the gap the D-017 review found)"
         // Decoded parameters must be a function of the BYTES. Two spellings of one calldata
         // execute identically, so they must decode identically — and must not produce a
         // spurious FATAL refusal. LLM output is routinely EIP-55 mixed-case.
+        //
+        // THE ADDRESS MUST CONTAIN HEX LETTERS. The first version of this test used
+        // 0x9999…9999, so `toUpperCase()` was a no-op and the test passed against the
+        // un-normalised decoder — the identical trap a D-017 adjudicator had already flagged
+        // in decode.test.ts, reproduced here while fixing it. Caught by a mutation.
         const {decodeBySelector} = await import("../src/decode/index.ts");
-        const lower = PURCHASE_AT_WRONG_TARGET;
+        const lettered: Hex = "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd";
+        const w = (h: string) => h.padStart(64, "0");
+        const lower = `0xc188528b${w(keccak256(stringToBytes("res")).slice(2))}${w(
+            lettered.slice(2),
+        )}${w((86_400n).toString(16))}${w("0")}` as Hex;
         const upper = (`0x` + lower.slice(2).toUpperCase()) as Hex;
+        assert.notEqual(lower, upper, "the fixture must actually differ in spelling");
 
         const a = decodeBySelector(lower);
         const b = decodeBySelector(upper);
         assert.equal(a.ok, true);
         assert.equal(b.ok, true);
         assert.deepEqual(a.decoded, b.decoded, "hex spelling must not change decoded parameters");
+        assert.equal((a.decoded as {beneficiary: Hex}).beneficiary, lettered);
     });
 });

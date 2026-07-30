@@ -77,6 +77,21 @@ describe("string escaping (RFC 8785 §3.2.2.2)", () => {
         assert.equal(canonicalize("日本"), '"日本"');
     });
 
+    it("escapes unpaired surrogates, as RFC 8785 requires", () => {
+        // RFC 8785 §3.2.2.2 defers to ECMAScript's JSON.stringify, which has been well-formed
+        // since ES2019 and escapes lone surrogates rather than emitting them raw. Emitting
+        // them verbatim produced bytes no conforming implementation would produce and made
+        // evidenceHash non-injective, since the raw form is not valid UTF-8. Found by the
+        // D-017 review; this test was missing when the fix landed and a mutation caught that.
+        for (const lone of ["\uD800", "\uDBFF", "\uDC00", "\uDFFF"]) {
+            assert.equal(canonicalize(lone), JSON.stringify(lone), `lone surrogate ${escape(lone)}`);
+            assert.equal(canonicalize({k: lone}), JSON.stringify({k: lone}));
+        }
+        // A WELL-FORMED pair must still pass through unescaped — over-escaping is equally
+        // a divergence from the scheme.
+        assert.equal(canonicalize("\u{1F600}"), '"\u{1F600}"');
+    });
+
     it("agrees with JSON.stringify across every code point below U+0100", () => {
         // Not a design dependency — the escaping set is written out explicitly so it can be
         // read against the RFC. This checks the claim that the two agree on permitted
