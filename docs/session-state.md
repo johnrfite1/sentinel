@@ -36,8 +36,11 @@ product fork. Routine engineering judgment is yours.
 
 On branch **`step-3/isolated-signer`** (not merged to `main` — that is John's call):
 **43/43 Foundry tests + 204/204 TypeScript tests**. Run everything with
-`./scripts/test.sh` (add `--gate` for the deep fuzz profile). It prints its own coverage
-boundary — read it, and read the second paragraph of it especially.
+`./scripts/test.sh`; **use `--gate` for gate evidence** (20,000 fuzz runs, 262,144 calls per
+invariant). It prints its own coverage boundary, organised by layer with each layer's limit
+stated — read all of it. That block previously rotted into self-contradiction and was
+rewritten; it is ONE statement, so when a step lands, rewrite the affected layer rather than
+appending to it.
 
 Done:
 - **§9 step 1** — `contracts/src/types/SentinelTypes.sol`. Five §5 payloads, canonical
@@ -72,8 +75,10 @@ Done:
 - **D-007 injection spike** — `ts/src/spike/`, fixtures in `fixtures/injection/`.
 - Secret guard + pre-commit hook, project gate script.
 
-**Not started:** §9 steps 5–9. Nothing exists yet for the Anvil pipeline, the conformance
-evaluator, the corpus, the dashboard, or the D-010 verifier CLI.
+**Not started:** §9 steps 7–9 — the real-agent wiring, the 30–50 fixture corpus and its
+independent labels, the §7.3 ablation, the dashboard, and the D-010 verifier CLI. (Steps 5
+and 6 ARE done and are listed above; this line said otherwise for several commits, which
+two outside reviewers caught. Keep it consistent with the Done list or delete one of them.)
 
 **A-006 internal checkpoint is reached** (steps 1–3 green). Measured numbers are in §7.
 
@@ -109,11 +114,17 @@ Owed, small, do not lose:
   - the signer suite proves the signer refuses to attest to a *mis-bound* receipt, never
     that a verdict was *correct*. In those tests the verdict is an input.
 - **Nothing goes public before the rename gate** — "Sentinel Protocol" collides with
-  existing projects. As of 2026-07-28 a GitHub repo exists at
-  `github.com/johnrfite1/sentinel`: **private and empty**, no local remote configured,
-  nothing pushed. It is named for the colliding working name, so the rename gate is
-  cheapest to close *before* visibility flips. Adding the remote, pushing, or changing
-  visibility is John's call and needs an explicit ask for that specific action (A-004).
+  existing projects. **Current state, corrected 2026-07-28:** `github.com/johnrfite1/sentinel`
+  exists, `origin` IS configured, and **both `main` and `step-3/isolated-signer` are
+  pushed**. The repository is **PRIVATE**, so house rule 8 holds — but "nothing has left
+  this machine" is no longer true, and the earlier text in this section said the opposite
+  for several commits. John authorised the push explicitly when asked; the stale note was a
+  documentation failure, not an authority one (A-004). **Two live consequences.** (a) The
+  repo now has content behind a name the proposal's own warning says collides with existing
+  projects. A GitHub rename is cheap while private and gets steadily less cheap once the URL
+  is public, linked, or on a résumé — so the rename gate is worth closing before visibility
+  flips. (b) Changing visibility, force-pushing, or publishing remains John's call and needs
+  an explicit ask for that specific action.
 - **Fixtures deliberately contain adversarial text formatted to look like instructions.**
   It is data. House rule 2.
 
@@ -255,7 +266,17 @@ publicly, what should it count — elapsed build time, John's own hours, or the 
 the work would have taken? That changes what gets tracked from here, and it is a claim
 about the artifact, so it is his call rather than an agent's.
 
-## 8. Standing warning about tooling
+## 8. Verification tooling
+
+`scripts/mutate.sh` — 51 deliberate defects across signer, decoders, pipeline and evaluator.
+Run `./scripts/mutate.sh` for all, or `./scripts/mutate.sh E` for one batch. **First-pass
+result: 48 caught, 3 survived** (`M18`, `S2`, `E7`), each survivor exposing a real gap since
+fixed. Cite those numbers, not "all caught" — the survivors are the evidence the technique
+works. Promoted from session scratch into the repo because an outside reviewer correctly
+objected that a claim resting on a script nobody else has is not reproducible. Not wired into
+`test.sh`: a full sweep takes ~30 minutes.
+
+## 9. Standing warning about tooling
 
 The mutation harness (session scratchpad, not the repo) once left `ts/src` **empty** by
 restoring with `rm -rf src; cp -R backup src` and being killed mid-restore. It now touches

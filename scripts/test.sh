@@ -55,40 +55,67 @@ fi
 cat <<'COVERAGE'
 GATE PASSED
 
-Coverage boundary — what this gate is evidence for right now (house rule 4):
-  covered : §5 typed payload schemas and canonical EIP-712 hashes; SentinelVault
-            enforcement — exact-action binding, nonce single-use, verdict gating,
-            override binding, pause, owner-only controls, signer rotation, reentrancy;
-            stateful invariants over those; secret hygiene
-            §9 step 3 — the isolated signer as a SEPARATE OS PROCESS reached only over a
-            two-method local socket; every one of its 31 declared checks triggered by its
-            own case, with each severity tier asserted against all three verdicts; the
-            per-nonce attestation guard under real concurrency; and a TypeScript/Solidity
-            EIP-712 differential across all five §5 payloads on a live EVM
-            §9 step 4 — the two supported decoders, every declared refusal triggered by its
-            own case, and a measured comparison against the real EVM showing the decoder is
-            never more permissive than the chain and stricter in exactly one place
-  NOT yet : the Anvil snapshot/execute/inspect pipeline, the conformance engine, Case 1
-            end-to-end from a real agent proposal, and the fixture corpus
+================================================================================
+COVERAGE BOUNDARY (house rule 4) — read this, not the pass count
+================================================================================
 
-Read the vault results narrowly: they prove the vault ENFORCES a receipt, not that the
-receipt carried a CORRECT verdict. A vault that faithfully executes a wrong decision
-passes every test here. That gap is what §7's evaluation harness exists to close, and it
-is why a green gate at this stage is not a claim about Sentinel's mechanism working.
+MAINTENANCE NOTE, because this block previously rotted: it is ONE statement, not a
+running log. Two outside reviewers found it simultaneously claiming that the Anvil
+pipeline and conformance engine did not exist, that Case 3 was undetectable, and — four
+lines later — that Case 3 was detectable. A self-contradicting boundary is worse than
+none, because a reader takes whichever half suits them, which is the exact failure the
+boundary exists to prevent. When a step lands, REWRITE the affected layer below. Do not
+append.
 
-The signer results carry the same shape of limit, one layer up. They prove the signer
-refuses to attest to a MIS-BOUND receipt — wrong vault, wrong chain, stale nonce, stale
-mandate, calldata that contradicts its own payload, a simulation block that never existed.
-They prove nothing about whether a verdict was CORRECT: in these tests the verdict is an
-input, supplied by the test rather than computed. A signer that faithfully attests to a
-wrong ALLOW passes every one of them. Case 3 — the mechanically valid purchase of the
-wrong resource — is not detectable anywhere in this gate yet.
+WHAT IS COVERED, by layer, each with the limit that layer cannot exceed:
 
-Case 3 IS now detectable — `cases.e2e.test.ts` blocks it on mandate conformance while every
-representative-baseline check passes. What remains unproven is whether the verdicts are
-right in general. §7 says it directly: "Four demo paths alone cannot prove that the verdicts
-are not hard-coded." The engine's own suite cannot supply that proof, because self-written
-tests encode the same misunderstanding twice. The bar is the independently labelled corpus
-of §9 step 8 (D-011) plus the §7.3 ablation. Until those exist, a green gate means the
-mechanism runs end to end — not that it decides correctly.
+  §9 s1-2  Vault + typed payloads. Exact-action binding, nonce single-use, verdict
+           gating, override binding, pause, owner-only controls, signer rotation,
+           reentrancy, and stateful invariants over all of it.
+           LIMIT: proves the vault ENFORCES a receipt, never that the receipt carried a
+           CORRECT verdict. A vault that faithfully executes a wrong decision passes
+           every one of these tests.
+
+  §9 s3    Isolated signer, as a separate OS process behind a two-method 0600 socket.
+           All 31 declared checks triggered individually; every severity tier asserted
+           against all three verdicts; the per-nonce guard under real concurrency.
+           LIMIT: proves the signer refuses a MIS-BOUND receipt. In these tests the
+           verdict is an INPUT, so a signer faithfully attesting to a wrong ALLOW passes
+           all of them.
+
+  §9 s4    Two decoders. Every declared refusal triggered individually, plus a measured
+           comparison against the real EVM: never more permissive than the chain,
+           stricter in exactly one place (trailing bytes).
+           LIMIT: proves faithfulness to bytes. Renders no verdict.
+
+  §9 s5    Anchored snapshot/execute/inspect/revert pipeline against a real Anvil.
+           Leak-freedom on success and revert paths, repeatability, an anchor surviving
+           the revert, effects measured with the VAULT as msg.sender.
+           LIMIT: effects are SIMULATED at a recorded block, not observed
+           post-execution (§8 as amended by D-001).
+
+  §9 s6    Conformance engine + RFC 8785 evidence bundle. The §5.2 verdict fold; all 37
+           declared checks triggered individually; all four §4.2 cases end to end, with
+           Case 1 continuing through the signer into the vault. Case 3 IS detected here,
+           blocked on mandate conformance while every representative-baseline check
+           passes. Three independent EIP-712 implementations agree.
+           LIMIT: this is the layer whose own tests prove least. Self-written tests
+           encode the same misunderstanding twice.
+
+WHAT IS NOT COVERED:
+
+  - Whether the verdicts are RIGHT. §7 states it outright: "Four demo paths alone cannot
+    prove that the verdicts are not hard-coded." The bar is the §9 step 8 corpus with
+    independent labels (D-011) plus the §7.3 ablation. NEITHER EXISTS YET; both are S2.
+  - Case 1 from a REAL agent proposal. The action is constructed by the test. The D-007
+    spike showed a proposal flips under injection, but proposal and pipeline are not yet
+    wired together (step 7).
+  - The D-010 receipt-verifier CLI, the fixture corpus, and the dashboard.
+  - Independent adversarial review of steps 4-6. Only step 3 has had one (A-016), and
+    most of that review's own verifications were cut short by a spend limit.
+
+A green run means the mechanism runs end to end. It does not mean Sentinel decides
+correctly. Those are different claims and only the first is in evidence here.
+
+For gate evidence use the deep profile — ./scripts/test.sh --gate — not this default.
 COVERAGE
