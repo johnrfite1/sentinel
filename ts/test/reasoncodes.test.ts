@@ -76,6 +76,20 @@ const CASES: {code: ReasonCode; overrides: FixtureOverrides}[] = [
         overrides: {state: {domainSeparator: domainSeparator(CHAIN_ID, OTHER_ADDRESS)}},
     },
     {code: "SIGNER_CALLDATA_TOO_SHORT", overrides: {callData: "0xa1b2"}},
+    // D-014. The fixture calldata carries an unsupported selector, so the signer's own
+    // decoding fails; a bundle claiming it decoded is a bundle misdescribing the action.
+    {
+        code: "SIGNER_EVIDENCE_DECODING_MISMATCH",
+        overrides: {
+            evidenceCanonical: JSON.stringify({
+                decodedSelectorAndParameters: {decoded: "true", selector: "0xa1b2c3d4"},
+            }),
+        },
+    },
+    {
+        code: "SIGNER_EVIDENCE_DECODING_ABSENT",
+        overrides: {evidenceCanonical: "{}"},
+    },
 
     // --- EXECUTABILITY ---
     {code: "SIGNER_NOT_ACTIVE_SIGNER", overrides: {state: {signer: OTHER_ADDRESS}}},

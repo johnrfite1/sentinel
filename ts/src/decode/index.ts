@@ -178,6 +178,57 @@ export function decodeCall(args: {
 }
 
 /**
+ * Decode parameters from calldata using the SELECTOR ALONE, with no target binding.
+ *
+ * Exists for D-014: the isolated signer independently decodes the calldata and verifies that
+ * the parameters recorded in the evidence bundle match what the bytes actually say. That is
+ * *derivation without judgement* — the signer never consults the mandate — and it makes the
+ * bundle's decoded parameters signer-attested rather than evaluator-asserted, so a
+ * wrong-purpose ALLOW becomes detectable after the fact by the D-010 verifier.
+ *
+ * BOUNDARY, STATED PRECISELY BECAUSE D-014 STATES IT PRECISELY: this checks that the
+ * parameters match the bytes *given the selector*. It does NOT check that the selector
+ * belongs at that target — that is `decodeCall`, and it remains the evaluator's job. A signer
+ * using this function must not be described as validating the call, only its parameters.
+ *
+ * Deliberately a separate entry point rather than an option on `decodeCall`: a boolean flag
+ * that silently disables target binding is exactly the kind of thing a later caller sets
+ * without reading why.
+ */
+export function decodeBySelector(callData: Hex): DecodeResult {
+    let selector: Hex | null = null;
+    try {
+        selector = selectorOf(callData);
+        const entry = Object.entries(SCHEMAS).find(([, s]) => s.selector === selector);
+        if (entry === undefined) throw new DecodeError("DECODE_UNKNOWN_SELECTOR", selector);
+        const [name, schema] = entry as [SchemaName, (typeof SCHEMAS)[SchemaName]];
+        const reader = WordReader.forSchema(callData, schema.words);
+
+        const decoded: DecodedCall =
+            name === "DemoPay.purchase"
+                ? {
+                      schema: "DemoPay.purchase",
+                      resourceId: reader.bytes32(0),
+                      beneficiary: reader.address(1),
+                      durationSeconds: reader.uint(2, 64),
+                      recurring: reader.boolean(3),
+                  }
+                : {
+                      schema: "DemoERC20.approve",
+                      spender: reader.address(0),
+                      amount: reader.uint(1, 256),
+                  };
+
+        return {ok: true, selector, decoded};
+    } catch (err) {
+        if (err instanceof DecodeError) {
+            return {ok: false, selector, code: err.code, detail: err.message};
+        }
+        throw err;
+    }
+}
+
+/**
  * A one-line, human-readable rendering of a decoded call.
  *
  * Exists for the evidence bundle and the §7.5 five-minute comprehension gate, where a

@@ -1,6 +1,6 @@
 import {generatePrivateKey, privateKeyToAccount} from "viem/accounts";
-import {digest, domainSeparator, hashReceipt} from "./eip712.ts";
-import type {DecisionReceiptPayload, Hex} from "./protocol.ts";
+import {digest, domainSeparator, hashReceipt, refusalDigest} from "./eip712.ts";
+import type {DecisionReceiptPayload, Hex, RefusalRecord} from "./protocol.ts";
 
 /**
  * Key material for the isolated signer (A-005).
@@ -38,6 +38,19 @@ export interface Keystore {
      * substitution EIP-712 domain separation exists to prevent.
      */
     signReceipt(receipt: DecisionReceiptPayload): Promise<Hex>;
+    /**
+     * The second — and only other — signing operation (D-012).
+     *
+     * Signs a RefusalRecord, which is NOT a §5 payload and NOT an EIP-712 digest. Its digest
+     * is domain-separated by a literal ASCII tag (see `refusalDigest`), and every EIP-712
+     * digest begins with the bytes 0x1901, so the two preimage spaces cannot collide. A
+     * refusal can therefore never be replayed as a receipt of any kind.
+     *
+     * It is as narrow as `signReceipt`: typed fields in, no parameter through which a caller
+     * supplies bytes to be signed. §3.1's "no generic sign-bytes method" is preserved by
+     * there being two specific methods rather than one general one.
+     */
+    signRefusal(record: RefusalRecord): Promise<Hex>;
     describe(): {address: Hex; source: KeySource};
 }
 
@@ -105,6 +118,12 @@ export function createKeystore(config: KeystoreConfig): Keystore {
                 throw new Error("refusing to sign a receipt that names a different signer");
             }
             return account.sign({hash: digest(domainSep, hashReceipt(receipt))});
+        },
+        async signRefusal(record: RefusalRecord): Promise<Hex> {
+            if (record.signer.toLowerCase() !== address) {
+                throw new Error("refusing to sign a refusal record that names a different signer");
+            }
+            return account.sign({hash: refusalDigest(record)});
         },
         describe() {
             return {address, source};

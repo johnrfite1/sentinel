@@ -393,4 +393,34 @@ run_mutation "E11 evaluate: bundle omits passing checks" \
     "policyChecks: checks.map((c) => ({" \
     'policyChecks: checks.filter((c) => c.outcome !== "PASS").map((c) => ({'
 
+run_mutation "R1 D-012: refusal produces no recorded artifact" \
+    "src/signer/attest.ts" \
+    "                if (attributable) {" \
+    "                if (false) {"
+
+run_mutation "R2 D-012: sign refusals under the EIP-712 receipt domain" \
+    "src/signer/eip712.ts" \
+    "        REFUSAL_DOMAIN_TAG," \
+    "        \"\\u0019\\u0001\"," \
+
+run_mutation "R3 D-014: skip the evidence-decoding bind entirely" \
+    "src/signer/attest.ts" \
+    "findings.push(...checkEvidenceDecoding(callData, evaluation.evidenceCanonical));" \
+    "findings.push();"
+
+run_mutation "R4 D-014: accept a bundle with no decoding claim" \
+    "src/signer/attest.ts" \
+    'if (typeof claim !== "object" || claim === null) return ["SIGNER_EVIDENCE_DECODING_ABSENT"];' \
+    'if (typeof claim !== "object" || claim === null) return [];'
+
+run_mutation "R5 D-014: ignore mismatched parameter values" \
+    "src/signer/attest.ts" \
+    "        if (!match) return [\"SIGNER_EVIDENCE_DECODING_MISMATCH\"];" \
+    "        if (false) return [\"SIGNER_EVIDENCE_DECODING_MISMATCH\"];"
+
+run_mutation "R6 D-014: signer starts checking the mandate (the rejected branch)" \
+    "src/signer/attest.ts" \
+    'if (mandate.selector !== selector) findings.push("SIGNER_MANDATE_SELECTOR_MISMATCH");' \
+    'if (mandate.selector !== selector) findings.push("SIGNER_MANDATE_SELECTOR_MISMATCH");'
+
 echo "=== ${caught} caught, ${survived} survived, ${errored} did not apply, ${skipped} skipped ==="

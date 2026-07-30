@@ -1,5 +1,6 @@
 import {keccak256, stringToBytes, toBytes} from "viem";
 import {domainSeparator, hashMandate, hashPolicy} from "../src/signer/eip712.ts";
+import {evidenceStub} from "./harness.ts";
 import type {Keystore} from "../src/signer/keystore.ts";
 import type {ChainReader, VaultState} from "../src/signer/vault.ts";
 import type {
@@ -61,6 +62,8 @@ export interface FixtureOverrides {
     simulationBlockNumber?: bigint;
     simulationBlockHash?: Hex;
     ttlSeconds?: bigint;
+    /** Overrides the evidence bundle, for the D-014 decoding-bind cases. */
+    evidenceCanonical?: string;
     /** Makes every vault read throw, for the fail-closed path. */
     vaultUnreachable?: boolean;
     /** Makes the chain report no block at the requested height. */
@@ -174,7 +177,7 @@ export function buildFixture(o: FixtureOverrides = {}): Fixture {
         evaluation: {
             verdict: o.verdict ?? "ALLOW",
             reasonCodes: o.reasonCodes ?? [],
-            evidenceCanonical: JSON.stringify({schema: "sentinel.evidence.stub.v0"}),
+            evidenceCanonical: o.evidenceCanonical ?? evidenceStub("fixture", callData),
             simulationBlockNumber: o.simulationBlockNumber ?? SIM_BLOCK_NUMBER,
             simulationBlockHash: o.simulationBlockHash ?? SIM_BLOCK_HASH,
         },
@@ -231,6 +234,12 @@ export function fakeKeystore(delayMs = 0): Keystore & {signCount: () => number} 
             count += 1;
             if (delayMs > 0) await new Promise((resolve) => setTimeout(resolve, delayMs));
             return `0x${"ab".repeat(65)}` as Hex;
+        },
+        // D-012. Deliberately NOT counted by signCount: that counter exists to assert a
+        // refused request never reached the RECEIPT-signing key, and a refusal signature is
+        // exactly what a refusal is supposed to produce.
+        async signRefusal() {
+            return `0x${"cd".repeat(65)}` as Hex;
         },
         describe() {
             return {address: SIGNER_ADDRESS, source: "injected"};

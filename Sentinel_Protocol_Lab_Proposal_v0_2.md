@@ -330,7 +330,9 @@ The MVP supports one EOA owner. The principal must equal the current vault owner
 
 The owner activates the canonical policy hash in SentinelVault.
 
-Mandate and policy constraints are intersected. Any failed rule blocks. Any unknown required check reviews. Automatic allow requires every required check to pass.
+Mandate and policy constraints are intersected. Any failed rule blocks. Any unknown required check is governed by `failureMode`: it reviews under REVIEW and blocks under FAIL_CLOSED. Automatic allow requires every required check to pass.
+
+*Amended 2026-07-28 (D-015).* This sentence previously read "Any unknown required check reviews", unconditionally, which contradicted the `failureMode` field listed above it and would have made that field nearly meaningless. The amendment records the reading the implementation follows. One consequence is worth stating here rather than leaving to be rediscovered: because §4.2 Case 4 expects a review receipt, the Case 4 policy must set `failureMode = REVIEW`; the identical evidence uncertainty blocks under FAIL_CLOSED, which is a legitimate configuration and a different demonstration.
 
 ### 5.3 ActionPayload
 

@@ -90,7 +90,15 @@ describe("keystore", () => {
         // checked in the end-to-end suite; this checks the in-process surface, so the
         // narrowness cannot be bypassed by an import rather than a socket.
         const keystore = createKeystore({chainId: CHAIN_ID, vault: VAULT, privateKey: SIGNER_KEY});
-        assert.deepEqual(Object.keys(keystore).sort(), ["address", "describe", "signReceipt"]);
+        // Two signing methods after D-012, both SPECIFIC. §3.1 forbids a generic sign-bytes
+        // method, not a second narrow one: `signRefusal` takes typed fields and derives its
+        // own digest exactly as `signReceipt` does.
+        assert.deepEqual(Object.keys(keystore).sort(), [
+            "address",
+            "describe",
+            "signReceipt",
+            "signRefusal",
+        ]);
 
         for (const name of ["sign", "signMessage", "signTypedData", "signHash", "signBytes"]) {
             assert.equal(

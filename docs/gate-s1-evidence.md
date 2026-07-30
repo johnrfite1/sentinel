@@ -102,7 +102,7 @@ Each is recorded in `docs/decisions.md` with its reasoning and is cheap to rever
 | Ref | The call |
 |---|---|
 | A-011 | Signer refuses rather than downgrading; three severity tiers |
-| A-012 | One live executable attestation per (chain, vault, nonce) |
+| A-012 | Per-process best-effort: at most one live executable attestation per (chain, vault, nonce) — **not** a durable guarantee |
 | A-018 | **Open fork:** should the signer check decoded parameters? |
 | A-020 | `failureMode` governs unresolved checks, overriding §5.2's prose |
 

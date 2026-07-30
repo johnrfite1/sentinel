@@ -2,6 +2,7 @@ import {describe, it} from "node:test";
 import assert from "node:assert/strict";
 import {keccak256, stringToBytes} from "viem";
 import {createAttestor} from "../src/signer/attest.ts";
+import {evidenceStub} from "./harness.ts";
 import {domainSeparator, hashMandate, hashPolicy} from "../src/signer/eip712.ts";
 import type {Keystore} from "../src/signer/keystore.ts";
 import type {ChainReader, VaultState} from "../src/signer/vault.ts";
@@ -128,6 +129,9 @@ function slowKeystore(delayMs: number): Keystore & {signCount: () => number} {
             await new Promise((resolve) => setTimeout(resolve, delayMs));
             return `0x${"ab".repeat(65)}` as Hex;
         },
+        async signRefusal() {
+            return `0x${"cd".repeat(65)}` as Hex;
+        },
         describe() {
             return {address: SIGNER_ADDRESS, source: "injected"};
         },
@@ -161,7 +165,7 @@ function requestFor(a: ActionPayload, callData: Hex): EvaluateAndSignRequest {
         evaluation: {
             verdict: "ALLOW",
             reasonCodes: [],
-            evidenceCanonical: "{}",
+            evidenceCanonical: evidenceStub("concurrency fixture", callData),
             simulationBlockNumber: 100n,
             simulationBlockHash: BLOCK_HASH,
         },

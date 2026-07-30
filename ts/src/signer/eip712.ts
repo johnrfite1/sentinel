@@ -6,6 +6,7 @@ import type {
     MandatePayload,
     OverrideAuthorizationPayload,
     PolicyPayload,
+    RefusalRecord,
 } from "./protocol.ts";
 
 /**
@@ -244,6 +245,46 @@ export function hashOverride(o: OverrideAuthorizationPayload): Hex {
         word.uint(o.issuedAt),
         word.uint(o.expiresAt),
     ]);
+}
+
+// ---------------------------------------------------------------------------
+// Refusal records (D-012) — deliberately NOT EIP-712
+// ---------------------------------------------------------------------------
+
+/**
+ * Domain tag for refusal records. Chosen so the preimage space cannot collide with EIP-712.
+ *
+ * Every EIP-712 digest is keccak256 over a preimage beginning with the two bytes 0x1901
+ * (EIP-191 version byte 0x01). A refusal preimage begins with this ASCII tag instead, so no
+ * refusal signature can ever be reinterpreted as a signature over any §5 payload, and no
+ * receipt signature can be presented as a refusal. That structural separation is why D-012
+ * can add a second signed artifact without weakening the "signs only the defined receipt
+ * payload" property (§3.1) — the two are not confusable.
+ */
+export const REFUSAL_DOMAIN_TAG = "sentinel.refusal.v0.2";
+
+/**
+ * Digest of a refusal record.
+ *
+ * Newline-delimited fields under an ASCII tag rather than ABI encoding. Deliberately the
+ * simplest thing a second implementation could reproduce from this comment alone — the D-010
+ * verifier will need to check these, and a refusal nobody else can verify is not evidence.
+ * Field order is part of the format and must not be reordered.
+ */
+export function refusalDigest(r: RefusalRecord): Hex {
+    const preimage = [
+        REFUSAL_DOMAIN_TAG,
+        r.schemaVersion.toString(),
+        r.chainId.toString(),
+        r.vault,
+        r.actionHash,
+        r.evidenceHash,
+        r.requestedVerdict,
+        r.reasonCodesHash,
+        r.refusedAt.toString(),
+        r.signer,
+    ].join("\n");
+    return keccak256(stringToBytes(preimage));
 }
 
 // ---------------------------------------------------------------------------

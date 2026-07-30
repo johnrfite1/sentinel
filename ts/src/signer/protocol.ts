@@ -106,6 +106,23 @@ export const REASON_SEVERITY = {
     SIGNER_DOMAIN_SEPARATOR_MISMATCH: "FATAL",
     /** callData is shorter than a 4-byte selector, so no supported call can be described. */
     SIGNER_CALLDATA_TOO_SHORT: "FATAL",
+    /**
+     * The evidence bundle's decoded parameters do not match what the calldata actually says.
+     *
+     * D-014. The signer decodes the bytes itself and compares. FATAL rather than
+     * CONFORMANCE: this is not a judgement about the action, it is a bundle that
+     * misdescribes the action it is evidence for. Attesting to it — even to say BLOCK —
+     * would put a false statement into the record the receipt commits to.
+     */
+    SIGNER_EVIDENCE_DECODING_MISMATCH: "FATAL",
+    /**
+     * The evidence bundle carries no decoded-parameters claim the signer can check.
+     *
+     * D-014 requires the bundle's decoding to be signer-attested. An optional attestation is
+     * worthless — a caller wishing to lie would simply omit the field — so an absent or
+     * unparseable claim is refused rather than skipped.
+     */
+    SIGNER_EVIDENCE_DECODING_ABSENT: "FATAL",
 
     // --- EXECUTABILITY: refuse ALLOW and REVIEW ----------------------------
     /** The vault's active signer is not this signer's address (rotated out, or never set). */
@@ -392,12 +409,46 @@ export interface SignedReceipt {
     signerFindings: ReasonCode[];
 }
 
+/**
+ * §D-012. Proof that the signer saw a request and declined it.
+ *
+ * WHY THIS EXISTS. Before D-012 a refusal produced only an absent receipt, so "the signer
+ * refused" and "the signer was never asked" were indistinguishable — meaning Gate S2 could
+ * not prove the signer had ever seen a request at all.
+ *
+ * WHY IT IS NOT A DecisionReceiptPayload. A refusal is not a decision. Reusing the receipt
+ * type would create an artifact a careless reader could mistake for one, and would put a
+ * verdict field on something that carries no verdict. It is a distinct structure with a
+ * distinct signing domain (see `refusalDigest`), so it can never be presented as a receipt
+ * and the vault can never accept it — there is no code path that would even parse it.
+ */
+export interface RefusalRecord {
+    schemaVersion: bigint;
+    chainId: bigint;
+    vault: Hex;
+    /** The action the signer was asked about, so the refusal is attributable to a request. */
+    actionHash: Hex;
+    /** Hash of the evidence the caller supplied, binding the refusal to that evidence. */
+    evidenceHash: Hex;
+    requestedVerdict: VerdictName;
+    /** keccak256 over the canonical reason-code set, same encoding as a receipt's. */
+    reasonCodesHash: Hex;
+    refusedAt: bigint;
+    signer: Hex;
+}
+
 export interface Refusal {
     refused: true;
     /** The findings that blocked attestation, with the tier each fell in. */
     blocking: {code: ReasonCode; severity: Severity}[];
     signerFindings: ReasonCode[];
     requestedVerdict: VerdictName;
+    /**
+     * The signed refusal artifact (D-012), or null when the request was too malformed to
+     * attribute — a payload contradicting its own calldata names no action the signer could
+     * honestly say it refused.
+     */
+    refusalRecord: {record: RefusalRecord; signature: Hex; reasonCodes: string[]} | null;
 }
 
 export type EvaluateAndSignResult = ({refused: false} & SignedReceipt) | Refusal;

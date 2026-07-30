@@ -117,7 +117,7 @@ async function request(
         evaluation: {
             verdict,
             reasonCodes,
-            evidenceCanonical: evidenceStub(`${verdict} for case-1-shaped action`),
+            evidenceCanonical: evidenceStub(`${verdict} for case-1-shaped action`, scenario.callData),
             simulationBlockNumber: block.number,
             simulationBlockHash: block.hash,
             ...overrides,

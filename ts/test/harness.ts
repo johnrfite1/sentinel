@@ -18,6 +18,7 @@ import {
 import {privateKeyToAccount} from "viem/accounts";
 import {anvil} from "viem/chains";
 import {hashMandate, hashPolicy} from "../src/signer/eip712.ts";
+import {decodeBySelector} from "../src/decode/index.ts";
 import type {
     ActionPayload,
     Hex,
@@ -444,9 +445,43 @@ export async function activate(stack: Stack, mandateHash: Hex, policyHash: Hex):
     }
 }
 
-/** A minimal stand-in for the §5.6 evidence bundle, until §9 step 6 builds the real one. */
-export function evidenceStub(note: string): string {
-    return JSON.stringify({note, schema: "sentinel.evidence.stub.v0"});
+/**
+ * A minimal stand-in for the §5.6 evidence bundle.
+ *
+ * It MUST carry a `decodedSelectorAndParameters` block that matches the calldata, because
+ * D-014 makes the signer decode the bytes itself and refuse a bundle whose decoding claim
+ * disagrees. A stub without one is refused as `SIGNER_EVIDENCE_DECODING_ABSENT` — which is
+ * the intended behaviour, since an optional attestation would be worthless.
+ *
+ * Derived here with the same `decodeBySelector` the signer uses, so the positive path is
+ * trivially consistent. That is fine: the assertion that matters is the deliberate MISMATCH
+ * test, which constructs a wrong block by hand.
+ */
+export function evidenceStub(note: string, callData: Hex): string {
+    const decoded = decodeBySelector(callData);
+    return JSON.stringify({
+        note,
+        schema: "sentinel.evidence.stub.v0",
+        decodedSelectorAndParameters: decoded.ok
+            ? {
+                  decoded: "true",
+                  selector: decoded.selector,
+                  schema: decoded.decoded.schema,
+                  parameters:
+                      decoded.decoded.schema === "DemoPay.purchase"
+                          ? {
+                                resourceId: decoded.decoded.resourceId,
+                                beneficiary: decoded.decoded.beneficiary,
+                                durationSeconds: decoded.decoded.durationSeconds.toString(),
+                                recurring: decoded.decoded.recurring,
+                            }
+                          : {
+                                spender: decoded.decoded.spender,
+                                amount: decoded.decoded.amount.toString(),
+                            },
+              }
+            : {decoded: "false", selector: decoded.selector ?? "", failureCode: decoded.code},
+    });
 }
 
 export function sleep(ms: number): Promise<void> {
