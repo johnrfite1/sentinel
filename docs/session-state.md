@@ -3,9 +3,12 @@
 Rewritten at the end of each working session. **This file, not the conversation, is the
 memory.** If it disagrees with anything an agent remembers, this file wins.
 
-Last updated: 2026-07-28. **GATE S1 IS SIGNED — PASS, John, 2026-07-28**, scope bounded by
+Last updated: 2026-07-30. **GATE S1 IS SIGNED — PASS, John, 2026-07-28**, scope bounded by
 D-018. See `docs/gate-s1-evidence.md` §10 for the sign-off, the three limits named in the
 assessment, and §11 for what S1 does NOT authorise. **D-016 still blocks all publication.**
+
+Since S1: **§9 step 7 is built** (D-019 ruled the design fork). Building toward Gate S2;
+steps 8 and 9 remain.
 
 ---
 
@@ -13,7 +16,7 @@ assessment, and §11 for what S1 does NOT authorise. **D-016 still blocks all pu
 
 1. `Sentinel_Protocol_Lab_Proposal_v0_2.md` — the spec. §14.8 (intake rulings) and §14.9
    (build-start amendments) supersede conflicting prose elsewhere in it.
-2. `docs/decisions.md` — **canonical**. D-001…D-017 ratified, A-001…A-022 agent-flagged.
+2. `docs/decisions.md` — **canonical**. D-001…D-019 ratified, A-001…A-022 agent-flagged.
 3. `HANDOFF.md` — the build brief: corridor, gates, house rules, verification partition.
 4. `../AGENTS.md` — workspace rules. Binding. Not auto-loaded.
 5. `../vault/Topics/AI-ML/prompting-agents-playbook.md` — the build-loop method.
@@ -36,7 +39,7 @@ product fork. Routine engineering judgment is yours.
 ## 3. Where the build actually is
 
 On branch **`step-3/isolated-signer`** (not merged to `main` — that is John's call):
-**43/43 Foundry tests + 227/227 TypeScript tests**. Run everything with
+**43/43 Foundry tests + 277/277 TypeScript tests**. Run everything with
 `./scripts/test.sh`; **use `--gate` for gate evidence** (20,000 fuzz runs, 262,144 calls per
 invariant). It prints its own coverage boundary, organised by layer with each layer's limit
 stated — read all of it. That block previously rotted into self-contradiction and was
@@ -88,10 +91,17 @@ Done:
   accurately, the signer SIGNS. That is deliberate. Do not "fix" it into a conformance
   check — that is the branch D-014 explicitly rejected.
 - **D-007 injection spike** — `ts/src/spike/`, fixtures in `fixtures/injection/`.
+- **§9 step 7 (2026-07-30)** — `ts/src/propose/`, the agent-proposal seam. Transcribes the
+  spike's `propose_evm_action` shape into exact calldata or refuses with one of seven named
+  codes; renders no verdict and is deliberately MORE permissive than the decoder, so a call
+  Sentinel cannot decode is still proposable (§3.3(8)). `propose.e2e.test.ts` drives both
+  arms of the pinned `claude-haiku-4-5` recording through decode → simulate → evaluate →
+  isolated signer → vault: the control proposal writes an entitlement onchain, the injected
+  one blocks with no executable receipt. Design fork ruled as **D-019**.
 - Secret guard + pre-commit hook, project gate script.
 
-**Not started:** §9 steps 7–9 — the real-agent wiring, the 30–50 fixture corpus and its
-independent labels, the §7.3 ablation, the dashboard, and the D-010 verifier CLI.
+**Not started:** §9 steps 8–9 — the 30–50 fixture corpus and its independent labels, the
+§7.3 ablation, the dashboard, and the D-010 verifier CLI.
 (Keep this line consistent with the Done list above. It once contradicted it for several
 commits and two outside reviewers caught that; the standing rule is to rewrite both together
 or delete one of them.)
@@ -100,15 +110,24 @@ or delete one of them.)
 
 ## 4. What to do next, in order
 
-1. **§9 step 7 — wire the real agent proposal into the pipeline.** Gate S1 is signed, so
-   this is the next build step. The D-007 spike scaffold (`ts/src/spike/`) already produces
-   real proposals and already demonstrates the injection flip (A-009); what does not exist is
-   the connection from a proposal to an `ActionPayload` the pipeline consumes. D-018 is
-   explicit that this belongs here and to S2, not to S1.
-2. **§9 step 8** — the 30–50 fixture corpus. **Freeze the labelling prompt and commit its
+1. **§9 step 8** — the 30–50 fixture corpus. **Freeze the labelling prompt and commit its
    hash BEFORE building the corpus** (D-011a); the labeller sees schemas, invariants and
    declared intent only, never evaluator source or output.
-3. **§9 step 9 + D-010** — ablation, dashboard, and the Python receipt-verifier CLI.
+2. **§9 step 9 + D-010** — ablation, dashboard, and the Python receipt-verifier CLI.
+
+Opened by step 7 and worth deciding before the corpus fossilises:
+- **D-019 left option (b) on the table** — the agent emitting both a parameter claim AND
+  calldata, with divergence recorded as evidence. It is the only option that exercises
+  §3.1's "agent-supplied parameter or purpose claims" as a live check rather than a
+  structural impossibility, and D-010's own reasoning says schema changes are cheap now and
+  expensive after the corpus exists. Adopting it means re-recording the D-007 fixtures.
+- **Should the agent's proposal provenance be IN the evidence bundle?** Model id, served
+  version, scaffold hash, and the rationale currently live outside it — §5.6's field list is
+  ratified at thirteen and the bundle emits exactly those, so adding a fourteenth is a
+  schema change that regenerates every fixture hash and touches the D-010 verifier. Not
+  taken unilaterally. Note `aiExplanation` is NOT the slot: §6 scopes it to Sentinel's own
+  non-authoritative explanation, and putting an untrusted proposer's claim there would
+  conflate the two exactly as D-012 refused to conflate refusal with verdict.
 
 Carried from the S1 assessment, for S2 rather than S1:
 - **Steps 1–3 never had a completed independent review.** A-016's verifications were mostly
@@ -217,6 +236,17 @@ Labeled so they aren't re-derived. Each cost real time.
   coverage boundary in `scripts/test.sh` claims exactly that; asserting it means the claim
   cannot rot silently — when the decoders and evaluator land, the test fails and points at
   the sentence that has to change with it.
+- **Line coverage as the check on the MUTATION set.** In step 7 all 20 mutations of the new
+  module were caught on the first pass — which looked like strong evidence and was not.
+  `node --test --experimental-test-coverage` then showed `encode.ts` at 96.3%, and the
+  uncovered lines were whole branches: `PROPOSAL_MALFORMED_SIGNATURE` and
+  `PROPOSAL_UNSUPPORTED_ARG_TYPE` are each reachable several ways, and the trigger table had
+  one entry per CODE, so the structural exhaustiveness guard was satisfied while the
+  alternate branches went unexercised. The mutations missed it for A-016's exact reason:
+  they came from the same reading of the code as the tests. **The generalisable pairing —
+  mutation testing asks whether the tests you have can fail; coverage asks which code no
+  test reaches. Neither substitutes for the other, and this repo now has three recorded
+  cases of the first passing while the second had something to say.** Cost: one command.
 - **An exhaustiveness assertion over the code's own declared surface.**
   `reasoncodes.test.ts` enumerates `REASON_SEVERITY` and fails if any code lacks a case,
   with the single unreachable-by-table exception asserted to be exactly one named code so
@@ -292,14 +322,19 @@ about the artifact, so it is his call rather than an agent's.
 
 ## 8. Verification tooling
 
-`scripts/mutate.sh` — 62 deliberate defects across signer, decoders, pipeline, evaluator,
-the D-012/D-014 rulings, and the D-017 corrections.
+`scripts/mutate.sh` — 82 deliberate defects across signer, decoders, pipeline, evaluator,
+the D-012/D-014 rulings, the D-017 corrections, and (batch `P`) the step-7 transcriber.
 Run `./scripts/mutate.sh` for all, or `./scripts/mutate.sh E` for one batch. **First-pass
 result across all batches: 54 caught, 8 survived.** Five survivors were real coverage gaps,
 since fixed — `M18` (untested keystore guard), `S2` (vacuous impersonation fixture), `E7`
 (24 evaluator codes untested), and `V3`/`V4`/`V5` (the D-017 corrections shipped without
 tests). Two, `R2` and `R6`, were defective MUTATIONS rather than gaps and were replaced —
-telling those apart is part of the technique. All 62 are caught now. Cite those numbers, not "all caught" — the survivors are the evidence the technique
+telling those apart is part of the technique. All 62 are caught now.
+**Batch `P` (step 7, 2026-07-30): 20/20 caught, no survivors on the first pass — and that
+number is the least interesting thing about the run.** Line coverage afterwards found four
+untested branches the mutation set had not probed; `P16`–`P20` were added to cover them and
+the missing tests written. Cite the sequence, not the 20/20: a clean first pass is what a
+mutation set written from the same reading as the tests looks like. See §6. Cite those numbers, not "all caught" — the survivors are the evidence the technique
 works. **Get the count by running the harness, not by grepping it:** `grep -c '^run_mutation'`
 also matches the function definition, which is how this file briefly said 51/48. Promoted from session scratch into the repo because an outside reviewer correctly
 objected that a claim resting on a script nobody else has is not reproducible. Not wired into

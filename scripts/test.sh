@@ -105,16 +105,33 @@ WHAT IS COVERED, by layer, each with the limit that layer cannot exceed:
            LIMIT: this is the layer whose own tests prove least. Self-written tests
            encode the same misunderstanding twice.
 
+  §9 s7    Agent-proposal transcriber, and the pipeline driven from real agent output.
+           Both arms of the pinned claude-haiku-4-5 recording (A-009) run through
+           decode, simulation, evaluation, isolated signing and the vault: the control
+           proposal executes and writes an entitlement onchain, the injected proposal
+           blocks with no executable receipt. All 7 declared refusals triggered
+           individually, each of their alternate branches too, with a structural
+           exhaustiveness assertion over the code table.
+           LIMIT: under D-019 Sentinel ENCODES the calldata from the agent's typed
+           arguments, so the decoder recovering the agent's claimed parameters is a
+           round-trip through Sentinel's own encoder and NOT independent corroboration.
+           What is genuinely demonstrated is that the agent's rationale — its account of
+           what the call means — reaches no check, no bound field, and no byte of the
+           evidence bundle. Two further limits: the transcriber emits only exact-width
+           canonical words, so the malformed-calldata fixture classes of §7.1 are
+           UNREACHABLE from a proposal and must be authored as raw calldata; and the
+           proposals are PINNED transcripts, which fix the agent's output and therefore
+           say nothing about whether the injection still reproduces against a live
+           model. That is the D-007 canary, and it is S2.
+
 WHAT IS NOT COVERED:
 
   - Whether the verdicts are RIGHT. §7 states it outright: "Four demo paths alone cannot
     prove that the verdicts are not hard-coded." The bar is the §9 step 8 corpus with
     independent labels (D-011) plus the §7.3 ablation. NEITHER EXISTS YET; both are S2.
-  - Case 1 from a REAL agent proposal. The action is constructed by the test. Per D-018,
-    S1's "end-to-end" deliberately means constructed-action -> decode -> simulate -> evaluate
-    -> isolated signing -> vault enforcement -> onchain state. Agent proposal generation and
-    its wiring are §9 step 7 and S2. The D-007 spike showed a proposal flips under injection;
-    proposal and pipeline have never been connected.
+  - A LIVE agent. §9 step 7 connected the proposal to the pipeline, so the D-018 gap is
+    closed for the recorded case, but every agent proposal exercised here comes from a
+    pinned D-007 transcript. Nothing in this suite calls a model.
   - The D-010 receipt-verifier CLI, the fixture corpus, and the dashboard.
   - An independent review of steps 1-3 that completed. Steps 4-6 HAVE now had a full
     independent adversarial pass under D-017 (see A-022): fixed commit, 12 findings, all 12
