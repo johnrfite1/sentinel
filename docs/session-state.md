@@ -116,11 +116,14 @@ or delete one of them.)
 2. **§9 step 9 + D-010** — ablation, dashboard, and the Python receipt-verifier CLI.
 
 Opened by step 7 and worth deciding before the corpus fossilises:
-- **D-019 left option (b) on the table** — the agent emitting both a parameter claim AND
-  calldata, with divergence recorded as evidence. It is the only option that exercises
-  §3.1's "agent-supplied parameter or purpose claims" as a live check rather than a
-  structural impossibility, and D-010's own reasoning says schema changes are cheap now and
-  expensive after the corpus exists. Adopting it means re-recording the D-007 fixtures.
+- **D-019 option (b) was revisited at John's direction and MEASURED — it does not work.**
+  See **A-023**: 4 of 4 proposals across two models produced undecodable calldata, by three
+  distinct mechanisms (a hallucinated selector, a dropped trailing word, an over-long word).
+  It breaks the treatment arm as well as the control arm, so it would destroy Case 2 rather
+  than merely weaken its attribution. **Do not re-open it in the form "the agent supplies
+  calldata unaided" — that question is closed with evidence.** The one surviving variant is
+  an `encode_call` tool the agent invokes; that is a scaffold design change and John's to
+  rule. A-024 records the fidelity gap D-019 leaves behind.
 - **Should the agent's proposal provenance be IN the evidence bundle?** Model id, served
   version, scaffold hash, and the rationale currently live outside it — §5.6's field list is
   ratified at thirteen and the bundle emits exactly those, so adding a fourteenth is a

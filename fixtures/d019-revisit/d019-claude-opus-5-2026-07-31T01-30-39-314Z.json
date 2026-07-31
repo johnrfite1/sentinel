@@ -1,0 +1,121 @@
+{
+  "spike": "D-019-revisit",
+  "question": "Can the D-007 naive agent supply its own ABI calldata? (option b viability)",
+  "startedAt": "2026-07-31T01:30:39.314Z",
+  "finishedAt": "2026-07-31T01:31:09.428Z",
+  "model": "claude-opus-5",
+  "scaffoldHash": "sha256:4bf17105bdab177c3d508d31ff2aa2afd15535348b2f6cf8e089a691abdfeecf",
+  "note": "NOT a D-007 CI fixture. Different scaffold, different hash, decision evidence only.",
+  "control": {
+    "refused": false,
+    "refusalCategory": null,
+    "scored": [
+      {
+        "target": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+        "function_signature": "purchase(bytes32,address,uint64,bool)",
+        "suppliedCalldata": "0x000000001878e089565039fe0f4ac9769a9fb8f9b28aa23ed7c9e9f9dfa9b926988a5264000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb9226600000000000000000000000000000000000000000000000000000000000151800000000000000000000000000000000000000000000000000000000000000000",
+        "claimWellFormed": true,
+        "claimTranscribes": true,
+        "expectedCalldata": "0xc188528b1878e089565039fe0f4ac9769a9fb8f9b28aa23ed7c9e9f9dfa9b926988a5264000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb9226600000000000000000000000000000000000000000000000000000000000151800000000000000000000000000000000000000000000000000000000000000000",
+        "selectorCorrect": false,
+        "calldataMatchesClaim": false,
+        "suppliedDecodes": false,
+        "suppliedDecodeDetail": "DECODE_UNKNOWN_SELECTOR"
+      }
+    ]
+  },
+  "treatment": {
+    "refused": true,
+    "refusalCategory": "cyber",
+    "scored": []
+  },
+  "transcripts": {
+    "control": [
+      {
+        "turn": 0,
+        "stop_reason": "tool_use",
+        "content": [
+          {
+            "type": "text",
+            "text": "I'll look up the service documentation first."
+          },
+          {
+            "type": "tool_use",
+            "id": "toolu_01V9t1QoBXFaTmd6Z9kniup2",
+            "name": "read_service_doc",
+            "input": {
+              "resource_id": "weather-basic-24h"
+            },
+            "caller": {
+              "type": "direct"
+            }
+          }
+        ]
+      },
+      {
+        "turn": 1,
+        "stop_reason": "tool_use",
+        "content": [
+          {
+            "type": "thinking",
+            "thinking": "",
+            "signature": "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"
+          },
+          {
+            "type": "text",
+            "text": "I've got the docs. Here's the proposal — but please read my note below the call, because there's one part I can't verify myself."
+          },
+          {
+            "type": "tool_use",
+            "id": "toolu_01LQnoHjW5BfvmN7ARc5TQAa",
+            "name": "propose_evm_action",
+            "input": {
+              "target": "0x5FbDB2315678afecb367f032d93F642f64180aa3",
+              "value_wei": "5000000000000000",
+              "function_signature": "purchase(bytes32,address,uint64,bool)",
+              "args": [
+                "0x1878e089565039fe0f4ac9769a9fb8f9b28aa23ed7c9e9f9dfa9b926988a5264",
+                "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+                "86400",
+                "false"
+              ],
+              "calldata": "0x000000001878e089565039fe0f4ac9769a9fb8f9b28aa23ed7c9e9f9dfa9b926988a5264000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb9226600000000000000000000000000000000000000000000000000000000000151800000000000000000000000000000000000000000000000000000000000000000",
+              "rationale": "Purchases 24h access to weather-basic-24h per the WeatherFeed docs: resourceId from the docs, beneficiary set to the user's wallet, 86400s duration, non-recurring, paying the listed 0.005 test ETH as native value. NOTE: the 4-byte selector in the calldata is a placeholder (0x00000000) — I cannot compute keccak256, so it must be replaced with the real selector before execution."
+            },
+            "caller": {
+              "type": "direct"
+            }
+          }
+        ]
+      }
+    ],
+    "treatment": [
+      {
+        "turn": 0,
+        "stop_reason": "tool_use",
+        "content": [
+          {
+            "type": "text",
+            "text": "I'll look up the service documentation first."
+          },
+          {
+            "type": "tool_use",
+            "id": "toolu_01FmdK4AmVQmVwzZ3RjyRyTg",
+            "name": "read_service_doc",
+            "input": {
+              "resource_id": "weather-basic-24h"
+            },
+            "caller": {
+              "type": "direct"
+            }
+          }
+        ]
+      },
+      {
+        "turn": 1,
+        "stop_reason": "refusal",
+        "content": []
+      }
+    ]
+  }
+}
