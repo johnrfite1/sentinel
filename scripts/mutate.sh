@@ -459,4 +459,87 @@ run_mutation "V6 D-017 fix: silence an unobserved allowance effect" \
     "            allowance === undefined &&" \
     "            false &&"
 
+# --- P: the agent-proposal transcriber (§9 step 7, D-019) -------------------
+#
+# The transcriber is TRUSTED under D-019 (§3.1 "canonical schema encoders"), which raises
+# the stakes on this batch: there is no second encoding to disagree with it, so a defect
+# here silently changes what Sentinel evaluates relative to what the agent proposed.
+
+run_mutation "P1 encode: bytesN right-aligned instead of left-aligned" \
+    "src/propose/encode.ts" \
+    '    return text.slice(2).toLowerCase().padEnd(WORD_HEX, "0");' \
+    '    return text.slice(2).toLowerCase().padStart(WORD_HEX, "0");'
+
+run_mutation "P2 encode: trim whitespace in a signature instead of refusing" \
+    "src/propose/encode.ts" \
+    '    if (/\s/.test(signature)) {
+        throw new ProposalError("PROPOSAL_MALFORMED_SIGNATURE", "contains whitespace");
+    }' \
+    '    signature = signature.replace(/\s/g, "");'
+
+run_mutation "P3 encode: accept non-canonical decimals (leading zeros)" \
+    "src/propose/encode.ts" \
+    'const DECIMAL_RE = /^(0|[1-9][0-9]*)$/;' \
+    'const DECIMAL_RE = /^[0-9]+$/;'
+
+run_mutation "P4 encode: drop the uint width check" \
+    "src/propose/encode.ts" \
+    '    if (value > (bits === 256 ? MAX_UINT256 : (1n << BigInt(bits)) - 1n)) {' \
+    '    if (false) {'
+
+run_mutation "P5 encode: any non-false spelling becomes true" \
+    "src/propose/encode.ts" \
+    '        if (text === "true") return "1".padStart(WORD_HEX, "0");' \
+    '        if (text !== "false") return "1".padStart(WORD_HEX, "0");'
+
+run_mutation "P6 encode: address word keeps its source spelling" \
+    "src/propose/encode.ts" \
+    '        return text.slice(2).toLowerCase().padStart(WORD_HEX, "0");' \
+    '        return text.slice(2).padStart(WORD_HEX, "0");'
+
+run_mutation "P7 encode: skip the arity check" \
+    "src/propose/encode.ts" \
+    '    if (args.length !== types.length) {' \
+    '    if (false) {'
+
+run_mutation "P8 encode: unsupported argument types pass through" \
+    "src/propose/encode.ts" \
+    '    for (const type of types) assertSupportedType(type);' \
+    '    for (const type of types) void type;'
+
+run_mutation "P9 encode: selector takes 3 bytes, not 4" \
+    "src/propose/encode.ts" \
+    '    return keccak256(stringToBytes(signature)).slice(0, 10) as Hex;' \
+    '    return keccak256(stringToBytes(signature)).slice(0, 8) as Hex;'
+
+run_mutation "P10 propose: bind a constant nonce instead of the vault's" \
+    "src/propose/index.ts" \
+    '        actionNonce: args.vaultState.actionNonce,' \
+    '        actionNonce: 0n,'
+
+run_mutation "P11 propose: bind the mandate the agent's action names, not the active one" \
+    "src/propose/index.ts" \
+    '        mandateHash: args.vaultState.activeMandateHash,' \
+    '        mandateHash: args.vaultState.activePolicyHash,'
+
+run_mutation "P12 propose: dataHash over the signature instead of the calldata" \
+    "src/propose/index.ts" \
+    '        dataHash: keccak256(toBytes(args.proposal.callData)),' \
+    '        dataHash: keccak256(toBytes(args.proposal.signature)),'
+
+run_mutation "P13 propose: skip target validation, pass the raw claim through" \
+    "src/propose/index.ts" \
+    '        const target = parseTarget(proposal.target);' \
+    '        const target = proposal.target as Hex;'
+
+run_mutation "P14 schema: coerce a non-string value_wei instead of refusing" \
+    "src/propose/schema.ts" \
+    '    if (typeof r.value_wei !== "string") return null;' \
+    '    if (false) return null;'
+
+run_mutation "P15 fixtures: drop malformed tool calls instead of recording them" \
+    "src/propose/fixtures.ts" \
+    '                out.push(readProposal(b.input));' \
+    '                const parsed = readProposal(b.input); if (parsed) out.push(parsed);'
+
 echo "=== ${caught} caught, ${survived} survived, ${errored} did not apply, ${skipped} skipped ==="
