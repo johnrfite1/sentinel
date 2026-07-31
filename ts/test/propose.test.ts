@@ -146,6 +146,97 @@ describe("every declared refusal fires on its own trigger", () => {
     });
 });
 
+/**
+ * Second and later paths to a code that already has a trigger above.
+ *
+ * The exhaustiveness guard is per-CODE, and a code can be reached by more than one branch —
+ * so a table with one entry per code satisfies the guard while leaving whole branches
+ * untested. Line coverage found these; the 15-mutation P batch did not, because the
+ * mutations were written from the same reading of the code as the triggers were. That is
+ * A-016's lesson reproduced exactly, and these cases are the correction.
+ */
+describe("each refusal's other paths", () => {
+    const cases: {code: ProposalFailureCode; why: string; p: AgentProposal}[] = [
+        {
+            code: "PROPOSAL_MALFORMED_SIGNATURE",
+            why: "no parentheses at all — the regex path, not the whitespace path",
+            p: proposal({function_signature: "purchase"}),
+        },
+        {
+            code: "PROPOSAL_MALFORMED_SIGNATURE",
+            why: "a name that is not an identifier",
+            p: proposal({function_signature: "9purchase(bool)", args: ["true"]}),
+        },
+        {
+            code: "PROPOSAL_UNSUPPORTED_ARG_TYPE",
+            why: "uint7 is not a multiple of 8 — the width path, not the unknown-type path",
+            p: proposal({function_signature: "f(uint7)", args: ["1"]}),
+        },
+        {
+            code: "PROPOSAL_UNSUPPORTED_ARG_TYPE",
+            why: "uint512 is over the maximum width",
+            p: proposal({function_signature: "f(uint512)", args: ["1"]}),
+        },
+        {
+            code: "PROPOSAL_UNSUPPORTED_ARG_TYPE",
+            why: "uint08 is a non-canonical spelling of a valid width",
+            p: proposal({function_signature: "f(uint08)", args: ["1"]}),
+        },
+        {
+            code: "PROPOSAL_UNSUPPORTED_ARG_TYPE",
+            why: "bytes0 is not a real type",
+            p: proposal({function_signature: "f(bytes0)", args: ["0x"]}),
+        },
+        {
+            code: "PROPOSAL_UNSUPPORTED_ARG_TYPE",
+            why: "bytes33 is over the maximum width",
+            p: proposal({function_signature: "f(bytes33)", args: ["0x00"]}),
+        },
+        {
+            code: "PROPOSAL_UNSUPPORTED_ARG_TYPE",
+            why: "bare `uint` is refused rather than read as uint256",
+            p: proposal({function_signature: "f(uint)", args: ["1"]}),
+        },
+        {
+            code: "PROPOSAL_MALFORMED_ARG",
+            why: "a bytes32 argument of the wrong length",
+            p: proposal({args: ["0xdeadbeef", OWNER, "86400", "false"]}),
+        },
+        {
+            code: "PROPOSAL_MALFORMED_ARG",
+            why: "a uint argument that is not decimal at all",
+            p: proposal({args: [RESOURCE, OWNER, "0x15180", "false"]}),
+        },
+        {
+            code: "PROPOSAL_MALFORMED_ARG",
+            why: "a negative duration",
+            p: proposal({args: [RESOURCE, OWNER, "-1", "false"]}),
+        },
+    ];
+
+    for (const {code, why, p} of cases) {
+        it(`${code} — ${why}`, () => {
+            assert.equal(refusalOf(p), code);
+        });
+    }
+
+    it("accepts every canonical width it claims to support", () => {
+        assert.equal(refusalOf(proposal({function_signature: "f(uint8)", args: ["255"]})), null);
+        assert.equal(refusalOf(proposal({function_signature: "f(uint256)", args: ["1"]})), null);
+        assert.equal(refusalOf(proposal({function_signature: "f(bytes1)", args: ["0xff"]})), null);
+        assert.equal(refusalOf(proposal({function_signature: "f(bytes32)", args: [RESOURCE]})), null);
+    });
+});
+
+describe("loadSpikeFixture says why it cannot load", () => {
+    it("names the fixtures it does have when nothing matches", () => {
+        assert.throws(
+            () => loadSpikeFixture("claude-nonexistent-9"),
+            /no spike fixture matching .*have: .*\.json/,
+        );
+    });
+});
+
 // ---------------------------------------------------------------------------
 // The round-trip. Under D-019 this is the load-bearing test of the whole module.
 // ---------------------------------------------------------------------------

@@ -542,4 +542,33 @@ run_mutation "P15 fixtures: drop malformed tool calls instead of recording them"
     '                out.push(readProposal(b.input));' \
     '                const parsed = readProposal(b.input); if (parsed) out.push(parsed);'
 
+# P16-P20 target paths that LINE COVERAGE found untested after P1-P15 all passed.
+# Recorded that way deliberately: 15/15 caught looked like strong evidence, and it was
+# evidence only about the branches the mutation author had already thought of.
+
+run_mutation "P16 encode: any signature shape parses" \
+    "src/propose/encode.ts" \
+    'const SIGNATURE_RE = /^([A-Za-z_$][A-Za-z0-9_$]*)\((.*)\)$/;' \
+    'const SIGNATURE_RE = /^(.*?)\(?(.*?)\)?$/;'
+
+run_mutation "P17 encode: accept any uint width" \
+    "src/propose/encode.ts" \
+    '        if (bits >= 8 && bits <= 256 && bits % 8 === 0 && String(bits) === uint[1]) return;' \
+    '        return;'
+
+run_mutation "P18 encode: accept any bytesN width" \
+    "src/propose/encode.ts" \
+    '        if (size >= 1 && size <= 32 && String(size) === bytes[1]) return;' \
+    '        return;'
+
+run_mutation "P19 encode: skip the bytesN argument length check" \
+    "src/propose/encode.ts" \
+    '    const re = new RegExp(`^0x[0-9a-fA-F]{${size * 2}}$`);' \
+    '    const re = /^0x[0-9a-fA-F]*$/;'
+
+run_mutation "P20 fixtures: fall back to any fixture when the name does not match" \
+    "src/propose/fixtures.ts" \
+    '    const file = exact ?? byModel;' \
+    '    const file = exact ?? byModel ?? files[0];'
+
 echo "=== ${caught} caught, ${survived} survived, ${errored} did not apply, ${skipped} skipped ==="
