@@ -40,7 +40,7 @@
         }
       ],
       "failing": [],
-      "micros": 3.334
+      "micros": 3.542
     },
     {
       "layer": "L2_policy_plus_effects",
@@ -118,7 +118,7 @@
         }
       ],
       "failing": [],
-      "micros": 121.792
+      "micros": 117.792
     },
     {
       "layer": "L3_full_conformance",
@@ -192,7 +192,7 @@
         {
           "code": "EVAL_MANDATE_WINDOW",
           "outcome": "VIOLATION",
-          "detail": "now 1786824480 is outside the mandate window"
+          "detail": "now 1786827275 is outside the mandate window"
         },
         {
           "code": "EVAL_POLICY_WINDOW",
@@ -278,7 +278,7 @@
       "failing": [
         "EVAL_MANDATE_WINDOW"
       ],
-      "micros": 99.334
+      "micros": 95.792
     }
   ]
 }

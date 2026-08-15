@@ -40,7 +40,7 @@
         }
       ],
       "failing": [],
-      "micros": 4.041
+      "micros": 4.167
     },
     {
       "layer": "L2_policy_plus_effects",
@@ -121,7 +121,7 @@
         "EVAL_ACTION_DEADLINE",
         "EVAL_POLICY_WINDOW"
       ],
-      "micros": 126.5
+      "micros": 118.625
     },
     {
       "layer": "L3_full_conformance",
@@ -194,8 +194,8 @@
         },
         {
           "code": "EVAL_MANDATE_WINDOW",
-          "outcome": "VIOLATION",
-          "detail": "now 4000000001 is outside the mandate window"
+          "outcome": "PASS",
+          "detail": ""
         },
         {
           "code": "EVAL_POLICY_WINDOW",
@@ -280,10 +280,9 @@
       ],
       "failing": [
         "EVAL_ACTION_DEADLINE",
-        "EVAL_MANDATE_WINDOW",
         "EVAL_POLICY_WINDOW"
       ],
-      "micros": 100.541
+      "micros": 95.667
     }
   ]
 }

@@ -40,7 +40,7 @@
         }
       ],
       "failing": [],
-      "micros": 4.708
+      "micros": 3.541
     },
     {
       "layer": "L2_policy_plus_effects",
@@ -121,7 +121,7 @@
         "EVAL_SIMULATION_SUCCEEDS",
         "EVAL_SIM_CALL_TRACE_UNAVAILABLE"
       ],
-      "micros": 137.209
+      "micros": 123.542
     },
     {
       "layer": "L3_full_conformance",
@@ -272,7 +272,7 @@
         "EVAL_SIMULATION_SUCCEEDS",
         "EVAL_SIM_CALL_TRACE_UNAVAILABLE"
       ],
-      "micros": 108.75
+      "micros": 103.167
     }
   ]
 }

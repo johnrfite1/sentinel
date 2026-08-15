@@ -47,11 +47,11 @@
       "failing": [
         "BASE_CALLDATA_UNDECODABLE"
       ],
-      "micros": 6
+      "micros": 5.708
     },
     {
       "layer": "L2_policy_plus_effects",
-      "verdict": "BLOCK",
+      "verdict": "REVIEW",
       "checks": [
         {
           "code": "EVAL_POLICY_ACTIVE",
@@ -115,24 +115,28 @@
         },
         {
           "code": "EVAL_SIMULATION_SUCCEEDS",
-          "outcome": "VIOLATION",
-          "detail": "simulated execution reverted: revert data 0x776cceeb"
+          "outcome": "PASS",
+          "detail": ""
         },
         {
           "code": "EVAL_CALL_GRAPH_EXPECTED",
           "outcome": "PASS",
           "detail": ""
+        },
+        {
+          "code": "EVAL_NATIVE_DELTA_MATCHES_VALUE",
+          "outcome": "PASS",
+          "detail": ""
         }
       ],
       "failing": [
-        "EVAL_CALLDATA_UNDECODABLE",
-        "EVAL_SIMULATION_SUCCEEDS"
+        "EVAL_CALLDATA_UNDECODABLE"
       ],
-      "micros": 127.833
+      "micros": 123.084
     },
     {
       "layer": "L3_full_conformance",
-      "verdict": "BLOCK",
+      "verdict": "REVIEW",
       "checks": [
         {
           "code": "EVAL_MANDATE_ACTIVE",
@@ -241,20 +245,24 @@
         },
         {
           "code": "EVAL_SIMULATION_SUCCEEDS",
-          "outcome": "VIOLATION",
-          "detail": "simulated execution reverted: revert data 0x776cceeb"
+          "outcome": "PASS",
+          "detail": ""
         },
         {
           "code": "EVAL_CALL_GRAPH_EXPECTED",
           "outcome": "PASS",
           "detail": ""
+        },
+        {
+          "code": "EVAL_NATIVE_DELTA_MATCHES_VALUE",
+          "outcome": "PASS",
+          "detail": ""
         }
       ],
       "failing": [
-        "EVAL_CALLDATA_UNDECODABLE",
-        "EVAL_SIMULATION_SUCCEEDS"
+        "EVAL_CALLDATA_UNDECODABLE"
       ],
-      "micros": 100.25
+      "micros": 99.958
     }
   ]
 }

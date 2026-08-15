@@ -283,8 +283,8 @@
     "class": "malformed-calldata-or-unknown-selector",
     "verdicts": {
       "L1_baseline": "ALLOW",
-      "L2_policy_plus_effects": "BLOCK",
-      "L3_full_conformance": "BLOCK"
+      "L2_policy_plus_effects": "REVIEW",
+      "L3_full_conformance": "REVIEW"
     }
   },
   {

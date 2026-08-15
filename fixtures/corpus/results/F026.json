@@ -40,7 +40,7 @@
         }
       ],
       "failing": [],
-      "micros": 4.209
+      "micros": 4.792
     },
     {
       "layer": "L2_policy_plus_effects",
@@ -118,7 +118,7 @@
         }
       ],
       "failing": [],
-      "micros": 113.875
+      "micros": 127.458
     },
     {
       "layer": "L3_full_conformance",
@@ -176,8 +176,8 @@
         },
         {
           "code": "EVAL_ACTION_BINDS_MANDATE_AND_POLICY",
-          "outcome": "VIOLATION",
-          "detail": "action does not bind the presented mandate and policy"
+          "outcome": "PASS",
+          "detail": ""
         },
         {
           "code": "EVAL_MANDATE_BINDS_POLICY",
@@ -276,10 +276,9 @@
         }
       ],
       "failing": [
-        "EVAL_ACTION_BINDS_MANDATE_AND_POLICY",
         "EVAL_MANDATE_ACTIVE"
       ],
-      "micros": 95.083
+      "micros": 91.459
     }
   ]
 }

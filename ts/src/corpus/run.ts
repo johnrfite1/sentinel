@@ -431,13 +431,6 @@ for (const spec of CORPUS) {
         if (env.advancePastMandateWindow || env.advancePastPolicyWindow) await rpc("evm_mine", []);
         if (env.pauseVault) await ownerCall("setPaused", [true]);
         if (env.rotateSigner) await ownerCall("rotateSigner", [OTHER_SIGNER.address]);
-        if (env.supersedeMandate) {
-            await ownerCall("activateMandate", [keccak256(stringToBytes("a replacement mandate"))]);
-        }
-        if (env.supersedePolicy) {
-            await ownerCall("activatePolicy", [keccak256(stringToBytes("a replacement policy"))]);
-        }
-
         const reader = createChainReader(rpcUrl);
         const selector = (callData.length >= 10 ? callData.slice(0, 10) : "0x00000000") as Hex;
         const vaultState = await reader.readVaultState(vault, target, selector);
@@ -457,10 +450,35 @@ for (const spec of CORPUS) {
             ...spec.action,
         };
 
+        // Superseding AFTER the action is bound is the whole point of the class, and the
+        // evaluator must then read the vault AGAIN — otherwise both the action and the
+        // evaluator's view of "active" come from the same pre-supersede snapshot, they agree
+        // trivially, and the fixture measures nothing. The real scenario is three points in
+        // time: the action is bound at T, the owner supersedes at T+1, evaluation happens at
+        // T+2 against what the vault says then.
+        //
+        // The first version activated the replacement BEFORE reading vault state, so the
+        // action picked up the replacement's hash and pointed at the CURRENT mandate — the
+        // fixture's declared intent said "superseded" while its data said otherwise, and an
+        // independent labeller caught the contradiction by comparing the two. Ordering is
+        // the entire content of this scenario.
+        if (env.supersedeMandate) {
+            await ownerCall("activateMandate", [keccak256(stringToBytes("a replacement mandate"))]);
+        }
+        if (env.supersedePolicy) {
+            await ownerCall("activatePolicy", [keccak256(stringToBytes("a replacement policy"))]);
+        }
+
         // Applied AFTER the dataHash was computed, which is the whole point of the class.
         if (env.tamperCalldataAfterBinding) {
             callData = buildCallData({...spec, call: {kind: "purchase", resource: "wrong"}});
         }
+
+        // Re-read after any owner action that changes what the vault reports as active.
+        const evalVaultState =
+            env.supersedeMandate || env.supersedePolicy
+                ? await reader.readVaultState(vault, target, selector)
+                : vaultState;
 
         const decode = decodeCall({target, callData, registry});
 
@@ -499,7 +517,7 @@ for (const spec of CORPUS) {
             callData,
             decode,
             simulation,
-            vaultState,
+            vaultState: evalVaultState,
             now: latest.timestamp,
         };
 
@@ -514,16 +532,16 @@ for (const spec of CORPUS) {
             policy,
             action: {...action, callData},
             observedEnvironment: {
-                vaultPaused: vaultState.paused,
-                vaultActiveMandateHash: vaultState.activeMandateHash,
-                vaultActivePolicyHash: vaultState.activePolicyHash,
-                vaultCurrentActionNonce: vaultState.actionNonce,
-                vaultAuthorisedSigner: vaultState.signer,
-                vaultOwner: vaultState.owner,
-                vaultMaxNativeValueWei: vaultState.maxNativeValueWei,
-                targetOnVaultAllowlist: vaultState.targetAllowed,
-                selectorOnVaultAllowlist: vaultState.selectorAllowed,
-                targetRuntimeCodeHashOnChain: vaultState.targetCodeHash,
+                vaultPaused: evalVaultState.paused,
+                vaultActiveMandateHash: evalVaultState.activeMandateHash,
+                vaultActivePolicyHash: evalVaultState.activePolicyHash,
+                vaultCurrentActionNonce: evalVaultState.actionNonce,
+                vaultAuthorisedSigner: evalVaultState.signer,
+                vaultOwner: evalVaultState.owner,
+                vaultMaxNativeValueWei: evalVaultState.maxNativeValueWei,
+                targetOnVaultAllowlist: evalVaultState.targetAllowed,
+                selectorOnVaultAllowlist: evalVaultState.selectorAllowed,
+                targetRuntimeCodeHashOnChain: evalVaultState.targetCodeHash,
                 simulationPerformed: simulation !== null,
                 simulationOutcome: simulation === null ? null : simulation.outcome.status,
                 simulationRevertReason: simulation === null ? null : simulation.outcome.revertReason,

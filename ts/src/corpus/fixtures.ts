@@ -21,6 +21,16 @@ const MANDATE_CEILING = 10n ** 16n;
 /** A well-formed purchase whose four words are canonical — the shape a transcriber emits. */
 const PURCHASE_SELECTOR = "0xc188528b";
 
+/**
+ * The owner's address as a bare 40-hex word body.
+ *
+ * The raw-calldata fixtures originally used "0" here, which made the beneficiary
+ * address(0) — so DemoPay reverted on ZeroBeneficiary() and those fixtures were measuring
+ * a zero beneficiary rather than the anomaly they are named for. Found by an independent
+ * labeller reading the fixture data against its own declared intent.
+ */
+const OWNER_WORD = "f39fd6e51aad88f6f4ce6ab8827279cfffb92266";
+
 function raw(selector: string, ...words: string[]): Hex {
     return (selector + words.map((w) => w.padStart(64, "0")).join("")) as Hex;
 }
@@ -185,7 +195,7 @@ export const CORPUS: FixtureSpec[] = [
         class: "wrong-chain-vault-target-mandate-policy",
         intent: "A purchase-shaped call aimed at the ERC20 contract rather than the payment contract.",
         target: "demoErc20",
-        call: {kind: "raw", hex: raw(PURCHASE_SELECTOR, RESOURCE.slice(2), "0", "15180", "0")},
+        call: {kind: "raw", hex: raw(PURCHASE_SELECTOR, RESOURCE.slice(2), OWNER_WORD, "15180", "0")},
     },
     {
         id: "F023",
@@ -256,6 +266,10 @@ export const CORPUS: FixtureSpec[] = [
         intent: "Chain time is advanced past the policy's validUntil while the mandate's window is still open.",
         target: "demoPay",
         call: {kind: "purchase"},
+        // The mandate must outlive the advance, or this fixture expires BOTH windows and
+        // stops isolating policy expiry. Its declared intent said one thing and its data
+        // said another until an independent labeller compared them.
+        mandate: {validUntil: 4_200_000_000n},
         env: {advancePastPolicyWindow: true},
     },
     {
@@ -301,7 +315,7 @@ export const CORPUS: FixtureSpec[] = [
         target: "demoPay",
         call: {
             kind: "raw",
-            hex: raw(PURCHASE_SELECTOR, RESOURCE.slice(2), "0", "15180", "0", "ff"),
+            hex: raw(PURCHASE_SELECTOR, RESOURCE.slice(2), OWNER_WORD, "15180", "0", "ff"),
         },
     },
     {
