@@ -571,4 +571,54 @@ run_mutation "P20 fixtures: fall back to any fixture when the name does not matc
     '    const file = exact ?? byModel;' \
     '    const file = exact ?? byModel ?? files[0];'
 
+# --- B: the §7.2 baseline and §7.3 layer partition -------------------------
+#
+# These mutations matter more than their size suggests. The ablation's headline claim is a
+# COMPARISON, so a defect in the weaker arm does not produce a wrong number in one cell — it
+# produces a wrong story about which layer does the work.
+
+run_mutation "B1 baseline: stop enforcing the native-value ceiling" \
+    "src/ablation/baseline.ts" \
+    "        action.valueWei <= config.maxNativeValueWei" \
+    "        true"
+
+run_mutation "B2 baseline: stop blocking unlimited approvals" \
+    "src/ablation/baseline.ts" \
+    "                decode.decoded.amount === MAX_UINT256" \
+    "                false"
+
+run_mutation "B3 baseline: ignore the target allowlist" \
+    "src/ablation/baseline.ts" \
+    "        config.allowedTargets.some((t) => t.toLowerCase() === target)" \
+    "        true"
+
+run_mutation "B4 baseline: undecodable calldata becomes a block, not an abstention" \
+    "src/ablation/baseline.ts" \
+    '            unresolved("BASE_CALLDATA_UNDECODABLE", `${decode.code}: the baseline cannot read this call`),' \
+    '            violation("BASE_CALLDATA_UNDECODABLE", `${decode.code}: the baseline cannot read this call`),'
+
+run_mutation "B5 baseline: an unresolved check starts blocking (verdict fold)" \
+    "src/ablation/baseline.ts" \
+    '    return results.some((r) => r.outcome === "VIOLATION") ? "BLOCK" : "ALLOW";' \
+    '    return results.some((r) => r.outcome !== "PASS") ? "BLOCK" : "ALLOW";'
+
+run_mutation "B6 layers: L2 keeps the wrong-resource check (partition leak)" \
+    "src/ablation/layers.ts" \
+    '    "EVAL_PURCHASE_RESOURCE",' \
+    '    "EVAL_PURCHASE_RESOURCE_TYPO",'
+
+run_mutation "B7 layers: L1 is handed the simulation after all" \
+    "src/ablation/layers.ts" \
+    "        checks = runBaseline({...input, simulation: null}, baselineConfig);" \
+    "        checks = runBaseline(input, baselineConfig);"
+
+run_mutation "B8 layers: L3 silently becomes L2" \
+    "src/ablation/layers.ts" \
+    "        checks = runChecks(input);
+        verdict = verdictOf(checks, input.policy);
+    }" \
+    "        checks = runChecks(input).filter((c) => !MANDATE_CONFORMANCE_CODES.has(c.code));
+        verdict = verdictOf(checks, input.policy);
+    }"
+
 echo "=== ${caught} caught, ${survived} survived, ${errored} did not apply, ${skipped} skipped ==="
