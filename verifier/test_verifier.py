@@ -18,6 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import eip712  # noqa: E402
 import jcs  # noqa: E402
+import reasoncodes  # noqa: E402
 import verify  # noqa: E402
 from keccak import keccak256_hex  # noqa: E402
 from secp256k1 import G, N, point_mul, public_key_to_address  # noqa: E402
@@ -256,12 +257,24 @@ class TestSamples(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 class TestTamper(unittest.TestCase):
-    def test_every_tamper_mode_is_rejected(self):
+    def test_every_tamper_mode_behaves_as_specified(self):
+        # Most modes must be rejected. The modes in TAMPER_MUST_STILL_VERIFY
+        # are controls that must NOT break verification -- see
+        # TestReasonCodeTamper.test_pure_reorder_still_verifies.
+        exercised = 0
         for path in sample_dirs():
             for mode in verify.TAMPER_MODES:
                 with self.subTest(sample=os.path.basename(path), mode=mode):
-                    ok, _ = verify.verify_sample(path, tamper=mode)
-                    self.assertFalse(ok, f"{mode} tamper was WRONGLY ACCEPTED")
+                    try:
+                        ok, _ = verify.verify_sample(path, tamper=mode)
+                    except verify.NotApplicable:
+                        continue  # this sample's shape cannot express the mode
+                    exercised += 1
+                    if mode in verify.TAMPER_MUST_STILL_VERIFY:
+                        self.assertTrue(ok, f"{mode} was WRONGLY REJECTED")
+                    else:
+                        self.assertFalse(ok, f"{mode} was WRONGLY ACCEPTED")
+        self.assertEqual(exercised, 32, "expected 32 applicable tamper cases")
 
     def test_evidence_tamper_breaks_the_receipt_binding(self):
         # Specifically: it must fail the receipt.evidenceHash check, not merely
@@ -449,10 +462,199 @@ class TestDerivedConstants(unittest.TestCase):
         )
 
     def test_empty_reason_codes_hash_is_keccak_of_empty(self):
-        # case-1 has no reason codes and its reasonCodesHash is keccak256(""),
-        # which REPORT.md F-3 flags as an unstated convention.
+        # §5.4 as amended by D-022 states this explicitly; case-1 pins it.
         doc = read_json(SAMPLES, "case-1-allow", "receipt.json")
+        self.assertEqual(doc["reasonCodes"], [])
         self.assertEqual(doc["receipt"]["reasonCodesHash"], keccak256_hex(b""))
+        self.assertEqual(reasoncodes.reason_codes_hash_hex([]), keccak256_hex(b""))
+
+
+# ---------------------------------------------------------------------------
+# reasonCodesHash — §5.4 as amended by D-022 (was F-3, NOT VERIFIABLE)
+# ---------------------------------------------------------------------------
+
+class TestReasonCodes(unittest.TestCase):
+    def test_every_sample_reason_codes_hash_matches(self):
+        for path in sample_dirs():
+            with self.subTest(sample=os.path.basename(path)):
+                doc = read_json(path, "receipt.json")
+                self.assertIn("reasonCodes", doc, "sample must publish reasonCodes")
+                self.assertEqual(
+                    reasoncodes.reason_codes_hash_hex(doc["reasonCodes"]),
+                    doc["receipt"]["reasonCodesHash"],
+                )
+
+    def test_signer_findings_are_inside_the_committed_set(self):
+        for path in sample_dirs():
+            with self.subTest(sample=os.path.basename(path)):
+                doc = read_json(path, "receipt.json")
+                self.assertTrue(
+                    set(doc["signerFindings"]) <= set(doc["reasonCodes"]),
+                    "§5.4 defines the committed set as the union of evaluator "
+                    "codes and signer findings",
+                )
+
+    def test_samples_cover_both_halves_of_the_union(self):
+        # The union rule is only exercised if some sample actually carries a
+        # signer finding the evaluator did not raise.
+        signer_only = set()
+        for path in sample_dirs():
+            doc = read_json(path, "receipt.json")
+            evaluator = {c for c in doc["reasonCodes"] if not c.startswith("SIGNER_")}
+            signer_only |= {c for c in doc["signerFindings"] if c not in evaluator}
+        self.assertTrue(signer_only, "no sample exercises the signer half of the union")
+
+    def test_published_lists_are_already_canonical(self):
+        for path in sample_dirs():
+            with self.subTest(sample=os.path.basename(path)):
+                doc = read_json(path, "receipt.json")
+                self.assertEqual(
+                    doc["reasonCodes"],
+                    reasoncodes.committed_set(doc["reasonCodes"]),
+                )
+
+    def test_join_has_no_trailing_delimiter(self):
+        self.assertEqual(reasoncodes.preimage(["A", "B"]), b"A\nB")
+        self.assertEqual(reasoncodes.preimage(["A"]), b"A")
+        self.assertEqual(reasoncodes.preimage([]), b"")
+
+    def test_dedup_and_sort_are_applied(self):
+        a = reasoncodes.reason_codes_hash_hex(["B", "A", "B"])
+        b = reasoncodes.reason_codes_hash_hex(["A", "B"])
+        self.assertEqual(a, b)
+
+    def test_sort_is_byte_order_so_case_matters(self):
+        # Byte order, not case-insensitive collation: uppercase sorts first.
+        self.assertEqual(reasoncodes.committed_set(["a", "B"]), ["B", "a"])
+
+    def test_invalid_identifiers_are_rejected_not_sanitised(self):
+        for bad in ["EVAL OK", "EVAL/OK", "", "A" * 65, "ÉVAL", "EVAL\nOK",
+                    "EVAL_OK\n", None, 7, ["EVAL_OK"]]:
+            with self.subTest(bad=bad):
+                with self.assertRaises(reasoncodes.ReasonCodeError):
+                    reasoncodes.validate(bad)
+
+    def test_valid_identifiers_are_accepted(self):
+        for good in ["A", "EVAL_TARGET_BOUND", "a.b:c-d_e", "A" * 64, "0"]:
+            with self.subTest(good=good):
+                self.assertEqual(reasoncodes.validate(good), good)
+
+    def test_trailing_newline_is_rejected_despite_the_printed_pattern(self):
+        # REPORT.md F-3: the printed pattern ^[A-Za-z0-9_.:-]{1,64}$ does NOT
+        # reject a trailing newline under Python's re.match, because `$` matches
+        # before one. Guard that this implementation uses absolute anchors.
+        import re
+        self.assertIsNotNone(re.match(r"^[A-Za-z0-9_.:-]{1,64}$", "EVAL_OK\n"))
+        with self.assertRaises(reasoncodes.ReasonCodeError):
+            reasoncodes.validate("EVAL_OK\n")
+
+    def test_delimiter_injection_would_collide(self):
+        # Demonstrates why the grammar is load-bearing rather than cosmetic:
+        # an identifier containing the delimiter makes two distinct committed
+        # sets hash identically. The validator is the only thing preventing it.
+        from keccak import keccak256_hex
+        self.assertEqual(
+            keccak256_hex("EVIL\nINJECTED".encode()),
+            reasoncodes.reason_codes_hash_hex(["EVIL", "INJECTED"]),
+        )
+        with self.assertRaises(reasoncodes.ReasonCodeError):
+            reasoncodes.validate("EVIL\nINJECTED")
+
+
+class TestReasonCodeTamper(unittest.TestCase):
+    REJECT_MODES = ("reasons-substitute", "reasons-add", "reasons-remove")
+
+    def test_substitution_addition_removal_are_rejected(self):
+        for path in sample_dirs():
+            for mode in self.REJECT_MODES:
+                with self.subTest(sample=os.path.basename(path), mode=mode):
+                    try:
+                        ok, checks = verify.verify_sample(path, tamper=mode)
+                    except verify.NotApplicable:
+                        continue  # empty reason-code list; nothing to mutate
+                    self.assertFalse(ok, f"{mode} was WRONGLY ACCEPTED")
+                    hashes = [c for c in checks
+                              if "reasonCodesHash recomputed" in c.name]
+                    self.assertEqual(len(hashes), 1)
+                    self.assertFalse(hashes[0].ok)
+
+    def test_pure_reorder_still_verifies(self):
+        # The control case. The committed set is sorted before hashing, so the
+        # order of the published list carries no information and must not be
+        # able to fail an otherwise-good receipt.
+        applied = 0
+        for path in sample_dirs():
+            with self.subTest(sample=os.path.basename(path)):
+                try:
+                    ok, checks = verify.verify_sample(path, tamper="reasons-reorder")
+                except verify.NotApplicable:
+                    continue
+                applied += 1
+                self.assertTrue(
+                    ok, "a pure reorder was rejected: this verifier is hashing "
+                        "the list as given, not the set")
+                hashes = [c for c in checks if "reasonCodesHash recomputed" in c.name]
+                self.assertTrue(hashes and hashes[0].ok)
+        self.assertGreaterEqual(applied, 4, "reorder must be exercised")
+
+    def test_removing_a_signer_finding_is_detected(self):
+        # Pins the union-vs-published design choice (REPORT.md F-3). If the
+        # verifier re-unioned reasonCodes with signerFindings instead of hashing
+        # the published list, dropping a code that also appears in
+        # signerFindings would be silently repaired and go undetected.
+        import shutil
+        path = os.path.join(SAMPLES, "case-4-review-failmode-review")
+        doc = read_json(path, "receipt.json")
+        victim = doc["signerFindings"][0]
+        self.assertIn(victim, doc["reasonCodes"])
+        doc["reasonCodes"] = [c for c in doc["reasonCodes"] if c != victim]
+
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp)
+        target = os.path.join(tmp, "case-dropped")
+        shutil.copytree(path, target)
+        shutil.copy(os.path.join(SAMPLES, "domain.json"), tmp)
+        with open(os.path.join(target, "receipt.json"), "w") as handle:
+            json.dump(doc, handle)
+
+        ok, checks = verify.verify_sample(target)
+        self.assertFalse(ok, "a dropped signer finding was accepted")
+        self.assertTrue(any("reasonCodesHash recomputed" in c.name and not c.ok
+                            for c in checks))
+        self.assertTrue(any("signerFindings" in c.name and not c.ok
+                            for c in checks),
+                        "the subset invariant should also have caught it")
+
+    def test_missing_reason_codes_array_fails(self):
+        import shutil
+        doc = read_json(sample_dirs()[0], "receipt.json")
+        doc.pop("reasonCodes", None)
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp)
+        target = os.path.join(tmp, "case-nolist")
+        shutil.copytree(sample_dirs()[0], target)
+        shutil.copy(os.path.join(SAMPLES, "domain.json"), tmp)
+        with open(os.path.join(target, "receipt.json"), "w") as handle:
+            json.dump(doc, handle)
+        ok, checks = verify.verify_sample(target)
+        self.assertFalse(ok, "a receipt with no reasonCodes list was accepted")
+
+    def test_malformed_identifier_fails_verification(self):
+        import shutil
+        doc = read_json(os.path.join(SAMPLES, "case-3-wrong-purpose-block"),
+                        "receipt.json")
+        doc["reasonCodes"] = doc["reasonCodes"] + ["BAD CODE WITH SPACES"]
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp)
+        target = os.path.join(tmp, "case-badid")
+        shutil.copytree(os.path.join(SAMPLES, "case-3-wrong-purpose-block"), target)
+        shutil.copy(os.path.join(SAMPLES, "domain.json"), tmp)
+        with open(os.path.join(target, "receipt.json"), "w") as handle:
+            json.dump(doc, handle)
+        ok, checks = verify.verify_sample(target)
+        self.assertFalse(ok)
+        grammar = [c for c in checks if "identifier matches" in c.name]
+        self.assertTrue(grammar and not grammar[0].ok)
 
 
 if __name__ == "__main__":

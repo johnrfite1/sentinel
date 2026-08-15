@@ -398,6 +398,24 @@ SignedOverrideAuthorization contains OverrideAuthorizationPayload plus ownerSign
 
 The vault accepts an override only with the matching signed review receipt. A block receipt cannot be overridden.
 
+### 5.9 Enumerations (normative)
+
+*Added 2026-07-30 (D-024), because all three of these were undocumented and the document's own prose ordering implies the wrong values for the first.*
+
+    Verdict:      BLOCK = 0,        REVIEW = 1,   ALLOW = 2
+    FailureMode:  FAIL_CLOSED = 0,  REVIEW = 1
+    Operation:    CALL = 0,         DELEGATECALL = 1 (unsupported),  CREATE = 2 (unsupported)
+
+All three are `uint8` and all three are **fail-closed by construction**: the zero value is the most restrictive member, so an uninitialised, truncated, or defaulted field denies rather than permits.
+
+> **Warning: the `Verdict` numbering is the REVERSE of the order this document presents the verdicts in.** §4.2 introduces the demonstration cases allow-first; §5.4 and §5.7 say "allow, block, or review". A reader inferring the enum from that prose ordering gets `ALLOW = 0` — precisely inverted, on the field §5.4 makes security-critical ("Only an allow receipt is executable on the automatic path"). The prose ordering is narrative, chosen so a reader meets the mechanism through the conforming case; the numbering is fail-closed. Both are deliberate and they do not agree.
+>
+> This inversion is worth stating explicitly because **it is the one error in §5 that fails silently in both directions.** `verdict` is a `uint8` inside the signed struct, so a reader's *interpretation* of it does not affect the encoded bytes or the digest. A verifier holding the enum backwards passes the signature check, passes the evidence hash, confirms the mandate binding — and then reports the opposite verdict. Nothing in the cryptography can surface it.
+
+`FailureMode` governs unresolved checks (§5.2 as amended by D-015), and `Operation` is the §5.3 `operation` field and the §5.2 `allowedOperation` field. §4 fixes v1 at one supported top-level operation, CALL; the other two members exist so an unsupported operation has a defined encoding rather than an undefined one, and neither ever executes.
+
+---
+
 ### 5.8 EIP-712 Type Strings (normative)
 
 *Added 2026-07-30 (D-023), after an independent reimplementation established that §5 as written was not sufficient to build a verifier.*
