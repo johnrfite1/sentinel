@@ -124,8 +124,16 @@ WHAT IS COVERED, by layer, each with the limit that layer cannot exceed:
            What is genuinely demonstrated is that the agent's rationale — its account of
            what the call means — reaches no check, no bound field, and no byte of the
            evidence bundle. Two further limits: the transcriber emits only exact-width
-           canonical words, so the malformed-calldata fixture classes of §7.1 are
-           UNREACHABLE from a proposal and must be authored as raw calldata; and the
+           canonical words for the SIGNATURE THE AGENT SUPPLIED — but that is not the
+           same as the word count the decoder expects, because the decoder keys off a
+           4-byte truncated keccak of that signature. A selector collision inside the
+           transcriber's own grammar therefore makes §7.1's malformed-calldata class
+           REACHABLE from a proposal; an adversarial review demonstrated one
+           (`fUXSEz2ajwh(bytes32)` collides with `purchase(...)`, found in 106 seconds).
+           It fails CLOSED — the decode failure is UNRESOLVED, so no wrong ALLOW — but the
+           earlier wording here claimed unreachability as an absolute and was false. See
+           A-028. The malformed classes are still authored as raw calldata in the corpus;
+           the
            proposals are PINNED transcripts, which fix the agent's output and therefore
            say nothing about whether the injection still reproduces against a live
            model. That is the D-007 canary, and it is S2.

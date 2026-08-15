@@ -346,20 +346,49 @@ describe("the transcriber renders no verdict", () => {
      * are UNREACHABLE from a well-formed proposal and must be authored as raw calldata.
      * Asserting it means the claim cannot rot silently.
      */
-    it("cannot emit calldata the decoder would call malformed", () => {
-        for (const {proposal: p} of TRIGGERS) {
-            const t = transcribe(p);
-            if (!t.ok) continue;
-            const decoded = decodeCall({target: t.proposal.target, callData: t.proposal.callData, registry});
-            if (decoded.ok) continue;
-            assert.notEqual(decoded.code, "DECODE_LENGTH_MISMATCH");
-            assert.notEqual(decoded.code, "DECODE_DIRTY_ADDRESS_BITS");
-            assert.notEqual(decoded.code, "DECODE_NON_CANONICAL_BOOL");
-        }
-        // And directly: a well-formed proposal produces exactly the declared word count.
+    /**
+     * WHAT THIS USED TO CLAIM, AND WHY IT WAS BOTH FALSE AND UNTESTABLE.
+     *
+     * It asserted that the transcriber "cannot emit calldata the decoder would call
+     * malformed", by looping over TRIGGERS and skipping any that failed to transcribe. Every
+     * one of the seven TRIGGERS exists *because* it refuses to transcribe, so the loop body
+     * executed ZERO times and all three assertions were dead. An adversarial review measured
+     * it: 0 of 7. That is the fourth time in this project that code shipped whose tests could
+     * not fail, and the first authored here.
+     *
+     * The claim was also false. The transcriber sizes calldata from the agent's signature
+     * STRING; the decoder sizes it from a 4-byte truncated keccak of that string. Those agree
+     * only if selectors do not collide, and truncated keccak collides at 2^32 work — the
+     * reviewer found `fUXSEz2ajwh(bytes32)` -> 0xc188528b, the DemoPay.purchase selector, in
+     * 106 seconds, and it transcribes cleanly then decodes as DECODE_LENGTH_MISMATCH.
+     *
+     * So the honest property is narrower, and it is what is asserted below: for a signature
+     * whose selector is the one it denotes, the transcriber emits the exact declared word
+     * count. The collision case is exercised directly rather than being asserted away.
+     */
+    it("emits the exact declared word count for a non-colliding signature", () => {
         const t = transcribe(proposal());
         assert.ok(t.ok);
         assert.equal(t.proposal.callData.length, 2 + 8 + 4 * 64);
+        const decoded = decodeCall({target: t.proposal.target, callData: t.proposal.callData, registry});
+        assert.ok(decoded.ok, `a canonical proposal must decode: ${show(decoded)}`);
+    });
+
+    it("CAN emit calldata the decoder calls malformed, via a selector collision", () => {
+        // The demonstrated collision. This is a LIMIT test: it pins a known-false claim as
+        // false, so the boundary cannot silently drift back to asserting unreachability.
+        const colliding = "fUXSEz2ajwh(bytes32)";
+        assert.equal(selectorFor(colliding), SCHEMAS["DemoPay.purchase"].selector);
+
+        const t = transcribe(proposal({function_signature: colliding, args: [RESOURCE]}));
+        assert.ok(t.ok, "the colliding signature transcribes — that is the point");
+
+        const decoded = decodeCall({target: DEMOPAY, callData: t.proposal.callData, registry});
+        assert.equal(decoded.ok, false);
+        assert.equal(decoded.ok === false && decoded.code, "DECODE_LENGTH_MISMATCH");
+
+        // It fails CLOSED. That is why this is an honesty defect and not a security one:
+        // an undecodable call cannot produce an automatic allow (§3.3(8)).
     });
 });
 
