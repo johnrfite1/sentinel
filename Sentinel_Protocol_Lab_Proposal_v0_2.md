@@ -374,6 +374,14 @@ SignedDecisionReceipt contains DecisionReceiptPayload plus sentinelSignature.
 
 Only an allow receipt is executable on the automatic path.
 
+*Added 2026-07-30 (D-022).* **`reasonCodesHash` is defined as follows, because §5.4 previously named the field and nothing else, leaving it unverifiable by any independent party.**
+
+The committed set is the **union of the evaluator's reason codes and the isolated signer's own findings** — not the evaluator's codes alone. This is the part a reader would not guess, and it is deliberate: the signer appends what it found so the receipt commits to the whole record rather than to the evaluator's half of it.
+
+That set is de-duplicated, sorted in ascending byte order of the identifier, joined with a single `\n` (U+000A) between elements, encoded UTF-8, and hashed with keccak256. The empty set hashes to `keccak256("")` = `0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470`. Each identifier matches `^[A-Za-z0-9_.:-]{1,64}$`, which is enforced at the signer's RPC boundary and is what removes the delimiter and the collation as sources of disagreement between implementations.
+
+The receipt commits to a hash, not to the list, so **the full ordered list travels alongside the receipt** and a verifier must be given it. A receipt transmitted without its reason-code list can have its signature and evidence checked but not its stated reasons.
+
 ### 5.5 OverrideAuthorizationPayload
 
     schemaVersion
