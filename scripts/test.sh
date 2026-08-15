@@ -26,6 +26,9 @@ step "secret guard (A-007)"
 step "rename gate (D-016)"
 ./scripts/check-rename-gate.sh || fail=1
 
+step "labelling-prompt freeze (D-011a)"
+./scripts/check-label-prompt.sh || fail=1
+
 step "solidity build + tests (profile: $PROFILE)"
 if command -v forge >/dev/null 2>&1; then
     (cd contracts && FOUNDRY_PROFILE="$PROFILE" forge test -vv) || fail=1
