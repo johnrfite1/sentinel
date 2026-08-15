@@ -1,0 +1,11 @@
+{
+  "id": "case-4-review-failmode-review",
+  "title": "§4.2 Case 4 — evidence uncertainty, failureMode = REVIEW",
+  "note": "Target code hash does not match the mandate's pin. Unresolved, not violated.",
+  "verdict": "REVIEW",
+  "reasonCodes": [
+    "EVAL_TARGET_CODE_IDENTITY"
+  ],
+  "failureMode": "REVIEW",
+  "signerRefused": false
+}

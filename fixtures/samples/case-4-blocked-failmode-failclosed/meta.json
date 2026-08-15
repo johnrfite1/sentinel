@@ -1,0 +1,11 @@
+{
+  "id": "case-4-blocked-failmode-failclosed",
+  "title": "§4.2 Case 4 — identical evidence, failureMode = FAIL_CLOSED",
+  "note": "The same code-hash uncertainty under the other legitimate policy setting.",
+  "verdict": "BLOCK",
+  "reasonCodes": [
+    "EVAL_TARGET_CODE_IDENTITY"
+  ],
+  "failureMode": "FAIL_CLOSED",
+  "signerRefused": false
+}

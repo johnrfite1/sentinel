@@ -1,0 +1,9 @@
+{
+  "id": "case-1-allow",
+  "title": "§4.2 Case 1 — exact mandate, allow",
+  "note": "The conforming purchase. Every required check passes; the receipt is executable.",
+  "verdict": "ALLOW",
+  "reasonCodes": [],
+  "failureMode": "REVIEW",
+  "signerRefused": false
+}

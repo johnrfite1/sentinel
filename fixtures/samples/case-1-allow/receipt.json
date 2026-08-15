@@ -1,0 +1,19 @@
+{
+  "refused": false,
+  "receipt": {
+    "schemaVersion": "1",
+    "decisionId": "0x201b6367b01210ca1991bf60c7b4a3baa93bb9e671758f169ea26eccfacd6db3",
+    "actionHash": "0x6f6308334b65aec3ed9c0d90e47629d3057e1d82ad23267552e180896f84140d",
+    "mandateHash": "0x6a5147a3add511ac685f08b7cfe41d30e7f2bd02caa4a6d8acb1e116067d580a",
+    "policyHash": "0x8abd037dc7df8d7fa4dce928139c9c1306555aa6853d82b58daa8891a13b0bff",
+    "verdict": "2",
+    "reasonCodesHash": "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470",
+    "evidenceHash": "0x941d493dd79e8f87b0ffe76dab403d8fd64e22c7c53a6adb06e6cdb52f8ecac9",
+    "simulationBlockNumber": "5",
+    "simulationBlockHash": "0x8afeb74d36e79b553b008b4147a584d97d9a24b0fa120bf455db24513ec70100",
+    "issuedAt": "1786823825",
+    "expiresAt": "1786824125",
+    "signer": "0x70997970c51812dc3a010c7d01b50e0d17dc79c8"
+  },
+  "signature": "0x69d7d801b1b8e528125cbe0197718a37d85ee023ba2c2d366098e6860b8b686e6887daa2087e056cf8da1c7568459ccb7508b206382d580d2617214354421fd11c"
+}

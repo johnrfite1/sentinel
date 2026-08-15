@@ -1,0 +1,32 @@
+[
+  {
+    "id": "case-1-allow",
+    "title": "§4.2 Case 1 — exact mandate, allow",
+    "verdict": "ALLOW",
+    "signerRefused": false
+  },
+  {
+    "id": "case-2-injection-block",
+    "title": "§4.2 Case 2 — real prompt injection, block",
+    "verdict": "BLOCK",
+    "signerRefused": false
+  },
+  {
+    "id": "case-3-wrong-purpose-block",
+    "title": "§4.2 Case 3 — mechanically valid, wrong purpose",
+    "verdict": "BLOCK",
+    "signerRefused": false
+  },
+  {
+    "id": "case-4-review-failmode-review",
+    "title": "§4.2 Case 4 — evidence uncertainty, failureMode = REVIEW",
+    "verdict": "REVIEW",
+    "signerRefused": false
+  },
+  {
+    "id": "case-4-blocked-failmode-failclosed",
+    "title": "§4.2 Case 4 — identical evidence, failureMode = FAIL_CLOSED",
+    "verdict": "BLOCK",
+    "signerRefused": false
+  }
+]
