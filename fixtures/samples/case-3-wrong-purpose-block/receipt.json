@@ -2,18 +2,25 @@
   "refused": false,
   "receipt": {
     "schemaVersion": "1",
-    "decisionId": "0xb54dfb49876eb779e9a1d1b39deaf524fe512e5fb7814011a43553034d17726a",
+    "decisionId": "0xd76d80cf5b107f18554e921844494978882d420198b7e789f0a137f6156a9d9c",
     "actionHash": "0x5914da9050d174162b2667f15b467ecfb8e23cd9c0f6d3e6239afd2855d3c407",
     "mandateHash": "0x6a5147a3add511ac685f08b7cfe41d30e7f2bd02caa4a6d8acb1e116067d580a",
     "policyHash": "0x8abd037dc7df8d7fa4dce928139c9c1306555aa6853d82b58daa8891a13b0bff",
     "verdict": "0",
     "reasonCodesHash": "0x781656a56489410e6be40e2c283aa75434a328ad2cc4e0138ad37f8e1e470618",
-    "evidenceHash": "0x3d9f59f6313c7aaceb1db344403a89c626204721867d3ecfee1e68336eba65f2",
+    "evidenceHash": "0xff7ebc1bf7407845d9fd247e43ee0735509a0292212c489d9023e2085220e0a4",
     "simulationBlockNumber": "9",
-    "simulationBlockHash": "0x4d2e2cdd51b86595c816d1dd2f6adea744796a7a0f0b42d00af8f0fee25afc37",
-    "issuedAt": "1786823825",
-    "expiresAt": "1786824125",
+    "simulationBlockHash": "0xf329c4b24d6813e640bf6a5475b9813a1ed7aeee430faf08b7ba70124dba9582",
+    "issuedAt": "1786826300",
+    "expiresAt": "1786826600",
     "signer": "0x70997970c51812dc3a010c7d01b50e0d17dc79c8"
   },
-  "signature": "0x3924a388661e1093cb592c958beb113c52a7f65fb22b738353a87f2e57e778d46c740009fa657a724be61b9b246e28eee025cadca406c77ba75503eae1c57fa21b"
+  "signature": "0x084af411949caaeaa0597c1ac2a7e6dad821914967210f71bba2c98e0055688e685fb148584e8591afa7b56f78a8b5369355fc51e54a0d6251ddfd7e94622b3e1b",
+  "reasonCodes": [
+    "EVAL_PURCHASE_RESOURCE",
+    "SIGNER_NONCE_ALREADY_ATTESTED"
+  ],
+  "signerFindings": [
+    "SIGNER_NONCE_ALREADY_ATTESTED"
+  ]
 }

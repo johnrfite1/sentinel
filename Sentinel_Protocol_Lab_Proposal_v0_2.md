@@ -334,6 +334,8 @@ The owner activates the canonical policy hash in SentinelVault.
 
 Mandate and policy constraints are intersected. Any failed rule blocks. Any unknown required check is governed by `failureMode`: it reviews under REVIEW and blocks under FAIL_CLOSED. Automatic allow requires every required check to pass.
 
+*Amended 2026-07-30 (D-021).* A **reverting simulation is a failed rule** and therefore blocks; it is not an "unknown required check" and does not follow `failureMode`. The reasoning: a revert is a determinate observed fact — the simulation succeeded in reporting that the call does not execute — so nothing about it is unknown. The consequence is stated because it is sharp and was argued against: §3.3(7) makes a block remediable only by a new mandate or policy, so an action that reverts for a trivially correctable reason costs a new mandate rather than a corrected re-proposal.
+
 *Amended 2026-07-28 (D-015).* This sentence previously read "Any unknown required check reviews", unconditionally, which contradicted the `failureMode` field listed above it and would have made that field nearly meaningless. The amendment records the reading the implementation follows. One consequence is worth stating here rather than leaving to be rediscovered: because §4.2 Case 4 expects a review receipt, the Case 4 policy must set `failureMode = REVIEW`; the identical evidence uncertainty blocks under FAIL_CLOSED, which is a legitimate configuration and a different demonstration.
 
 ### 5.3 ActionPayload

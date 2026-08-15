@@ -349,7 +349,19 @@ for (const spec of SAMPLES) {
 
     const receiptOut = signed.refused
         ? signed
-        : {refused: false, receipt: signed.receipt, signature: signed.signature};
+        : {
+              refused: false,
+              receipt: signed.receipt,
+              signature: signed.signature,
+              // The exact ordered set `reasonCodesHash` commits to — the evaluator's codes
+              // UNIONED with the signer's own findings. Omitting it was a fixture bug that
+              // cost the D-010 verifier a BLOCKER finding: it correctly guessed the encoding
+              // and could not match, because it was hashing the evaluator's codes alone
+              // while the receipt commits to the union. Without this field a receipt's
+              // reason codes are genuinely unverifiable by a third party.
+              reasonCodes: signed.reasonCodes,
+              signerFindings: signed.signerFindings,
+          };
     writeFileSync(join(dir, "receipt.json"), j(receiptOut));
 
     writeFileSync(
