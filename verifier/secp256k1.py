@@ -131,3 +131,42 @@ def recover_address(digest: bytes, signature: str) -> str:
 def is_low_s(s: int) -> bool:
     """EIP-2 malleability rule: canonical signatures have s <= N/2."""
     return s <= N // 2
+
+
+def sign_digest(digest: bytes, private_key: int) -> str:
+    """Sign a 32-byte digest. TEST SUPPORT ONLY.
+
+    This exists so the tamper suite can produce a *valid but wrong-key*
+    signature -- the difference between "the signature is malformed" and "the
+    signature is perfectly good and belongs to somebody else" is the whole point
+    of the §3.3(7) property, and a flipped byte cannot test it.
+
+    The nonce is derived deterministically from the key and digest. That is
+    sufficient for a fixed test vector but this routine has no side-channel
+    hardening and must never be used to sign anything real.
+    """
+    e = int.from_bytes(digest, "big")
+    counter = 0
+    while True:
+        k = int.from_bytes(
+            keccak256(private_key.to_bytes(32, "big") + digest
+                      + counter.to_bytes(4, "big")), "big"
+        ) % N
+        counter += 1
+        if k == 0:
+            continue
+        point = point_mul(k, G)
+        if point is None:
+            continue
+        x, y = point
+        r = x % N
+        if r == 0:
+            continue
+        s = (_inv(k, N) * (e + r * private_key)) % N
+        if s == 0:
+            continue
+        recovery_id = (y & 1) ^ (0 if s <= N // 2 else 1)
+        if s > N // 2:  # enforce EIP-2 low-s
+            s = N - s
+        return "0x" + r.to_bytes(32, "big").hex() + s.to_bytes(32, "big").hex() \
+               + bytes([27 + recovery_id]).hex()

@@ -626,4 +626,37 @@ run_mutation "B8 layers: L3 silently becomes L2" \
         verdict = verdictOf(checks, input.policy);
     }"
 
+# --- C: the corpus integrity guards ----------------------------------------
+#
+# These protect the D-011(b) split and the "no fixture carries its own answer" rule. A defect
+# here does not produce a wrong number — it produces a meaningless one that reads as success,
+# because the corpus is the only evidence bearing on whether the verdicts are RIGHT.
+
+run_mutation "C1 leakage: compare the key case-sensitively again (the real bug)" \
+    "src/corpus/leakage.ts" \
+    "        if (haystack.includes(\`\"\${key.toLowerCase()}\"\`)) {" \
+    "        if (haystack.includes(\`\"\${key}\"\`)) {"
+
+run_mutation "C2 leakage: empty the denylist" \
+    "src/corpus/leakage.ts" \
+    "export const FORBIDDEN_KEYS = [
+    \"verdict\"," \
+    "export const FORBIDDEN_KEYS = [
+    \"__never__\","
+
+run_mutation "C3 leakage: match values as well as keys (false positives)" \
+    "src/corpus/leakage.ts" \
+    "        if (haystack.includes(\`\"\${key.toLowerCase()}\"\`)) {" \
+    "        if (haystack.includes(key.toLowerCase())) {"
+
+run_mutation "C4 corpus: drop the §7.1 size bound" \
+    "src/corpus/fixtures.ts" \
+    "    if (CORPUS.length < 30 || CORPUS.length > 50) {" \
+    "    if (false) {"
+
+run_mutation "C5 corpus: stop checking class coverage" \
+    "src/corpus/fixtures.ts" \
+    "    const missing = FIXTURE_CLASSES.filter((c) => !covered.has(c));" \
+    "    const missing: string[] = [];"
+
 echo "=== ${caught} caught, ${survived} survived, ${errored} did not apply, ${skipped} skipped ==="

@@ -104,6 +104,24 @@ ACTION_FIELDS: List[Tuple[str, str]] = [
 ]
 
 
+# §5.5 / §5.8. Unlike everything above, this one was NOT recovered by search --
+# it is transcribed from the §5.8 published type string, which is the point of
+# D-023: checking the published spec is sufficient to build from. It was, on the
+# first attempt, with no search required. See REPORT.md F-2 resolution.
+OVERRIDE_STRUCT_NAME = "OverrideAuthorizationPayload"
+OVERRIDE_FIELDS: List[Tuple[str, str]] = [
+    ("uint16", "schemaVersion"),
+    ("bytes32", "reviewReceiptHash"),
+    ("bytes32", "actionHash"),
+    ("bytes32", "mandateHash"),
+    ("bytes32", "policyHash"),
+    ("uint256", "actionNonce"),
+    ("bytes32", "reasonHash"),
+    ("uint64", "issuedAt"),
+    ("uint64", "expiresAt"),
+]
+
+
 class EncodingError(ValueError):
     pass
 
@@ -196,6 +214,17 @@ def mandate_hash(mandate: Dict) -> bytes:
 
 def policy_hash(policy: Dict) -> bytes:
     return struct_hash(POLICY_STRUCT_NAME, POLICY_FIELDS, policy)
+
+
+def override_hash(override: Dict) -> bytes:
+    return struct_hash(OVERRIDE_STRUCT_NAME, OVERRIDE_FIELDS, override)
+
+
+def override_digest(domain: Dict, override: Dict) -> bytes:
+    """The EIP-712 digest the OWNER signs for an override authorization."""
+    return keccak256(
+        b"\x19\x01" + domain_separator(domain) + override_hash(override)
+    )
 
 
 def action_hash(action: Dict) -> bytes:

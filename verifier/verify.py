@@ -25,7 +25,9 @@ import eip712  # noqa: E402
 import jcs  # noqa: E402
 import reasoncodes  # noqa: E402
 from keccak import keccak256  # noqa: E402
-from secp256k1 import RecoveryError, is_low_s, parse_signature, recover_address  # noqa: E402
+from secp256k1 import (  # noqa: E402
+    RecoveryError, is_low_s, parse_signature, recover_address, sign_digest,
+)
 
 # §5.4 lists `verdict` with no enumeration and no encoding. The receipts carry
 # it numerically. Recovered from the samples against index.json/meta.json:
@@ -92,6 +94,8 @@ def _find_domain(sample_dir, override):
 TAMPER_MODES = (
     "evidence", "receipt", "signature",
     "reasons-substitute", "reasons-add", "reasons-remove", "reasons-reorder",
+    "override-reviewreceipt", "override-nonce", "override-wrongkey",
+    "override-otherchain",
 )
 
 # Modes whose mutation must NOT break verification. A pure reorder of the
@@ -115,6 +119,7 @@ def verify_sample(sample_dir, domain_path=None, tamper=None):
     receipt_doc = _read_json(os.path.join(sample_dir, "receipt.json"))
     domain = _read_json(_find_domain(sample_dir, domain_path))
 
+    override_tamper = None
     evidence = jcs.parse_bytes(evidence_raw)
     if tamper == "evidence":
         evidence = _tamper_json(evidence)
@@ -132,6 +137,12 @@ def verify_sample(sample_dir, domain_path=None, tamper=None):
             sig = receipt_doc["signature"]
             flipped = "%02x" % (int(sig[2:4], 16) ^ 0x01)
             receipt_doc["signature"] = "0x" + flipped + sig[4:]
+    elif tamper and tamper.startswith("override-"):
+        if not os.path.isfile(os.path.join(sample_dir, "override.json")):
+            raise NotApplicable(
+                f"{tamper} needs an override.json; this sample has none"
+            )
+        override_tamper = tamper
     elif tamper and tamper.startswith("reasons-"):
         receipt_doc, applied = _tamper_reasons(receipt_doc, tamper)
         if not applied:
@@ -254,6 +265,9 @@ def verify_sample(sample_dir, domain_path=None, tamper=None):
     # ---- 7. reason codes (§5.4 as amended by D-022) ----------------------
     checks.extend(_reason_code_checks(receipt_doc, receipt))
 
+    # ---- 8. override authorization (§5.5 / §5.8, D-023) ------------------
+    checks.extend(_override_checks(sample_dir, receipt, domain, override_tamper))
+
     return all(c.ok for c in checks), checks
 
 
@@ -336,6 +350,92 @@ def _chain_checks(sample_dir, receipt, evidence):
             "" if ok else f"evidence says {evidence['verdict']}, receipt decodes to {expected}",
         ))
 
+    return out
+
+
+def _override_checks(sample_dir, receipt, domain, tamper=None):
+    """§5.5 OverrideAuthorizationPayload, using the §5.8 published type string.
+
+    Only runs when the sample carries an override.json. §5.5: "The vault accepts
+    an override only with the matching signed review receipt. A block receipt
+    cannot be overridden."
+    """
+    path = os.path.join(sample_dir, "override.json")
+    if not os.path.isfile(path):
+        return []
+    doc = _read_json(path)
+    out = []
+    if tamper:
+        doc, domain = _tamper_override(doc, domain, tamper)
+    override = doc.get("override")
+    signature = doc.get("ownerSignature")
+    owner = _norm_hex(doc.get("ownerAddress", ""))
+    if not override or not signature:
+        return [Check("override.json is well formed", False,
+                      "missing `override` or `ownerSignature`")]
+
+    # 1. Signature: recompute the digest and recover the owner.
+    try:
+        struct = eip712.override_hash(override)
+        digest = eip712.override_digest(domain, override)
+        recovered = recover_address(digest, signature)
+        err = None
+    except (eip712.EncodingError, RecoveryError, ValueError) as exc:
+        struct = digest = recovered = None
+        err = str(exc)
+
+    if err:
+        out.append(Check("override EIP-712 digest recomputed from §5.8", False, err))
+        return out
+
+    out.append(Check(
+        "override EIP-712 digest recomputed from the §5.8 type string", True,
+        f"hashStruct 0x{struct.hex()}\ndigest     0x{digest.hex()}",
+    ))
+    ok = recovered == owner
+    out.append(Check("override signature recovers ownerAddress", ok,
+                     f"recovered {recovered}" + ("" if ok else f"\ndeclared  {owner}")))
+
+    # 2. §3.3(7): the override is a credential the isolated signer cannot mint.
+    #    If the owner were the Sentinel signer, an override would be forgeable by
+    #    the very component the review verdict is protecting against.
+    signer = _norm_hex(receipt.get("signer", ""))
+    out.append(Check(
+        "override owner is NOT the Sentinel signer (§3.3(7))",
+        recovered != signer,
+        f"owner {recovered}\nsigner {signer}" if recovered == signer else "",
+    ))
+
+    # 3. Bindings.
+    receipt_struct = "0x" + eip712.receipt_struct_hash(receipt).hex()
+    ok = _norm_hex(override.get("reviewReceiptHash", "")) == receipt_struct
+    out.append(Check(
+        "override.reviewReceiptHash == this receipt's EIP-712 hashStruct", ok,
+        "" if ok else f"override {override.get('reviewReceiptHash')}\n"
+                      f"receipt  {receipt_struct}",
+    ))
+    for field in ("actionHash", "mandateHash", "policyHash"):
+        ok = _norm_hex(override.get(field, "")) == _norm_hex(receipt.get(field, ""))
+        out.append(Check(f"override.{field} == receipt.{field}", ok))
+
+    action_path = os.path.join(sample_dir, "action.json")
+    if os.path.isfile(action_path):
+        action = _read_json(action_path)
+        ok = str(override.get("actionNonce")) == str(action.get("actionNonce"))
+        out.append(Check(
+            "override.actionNonce == action.actionNonce", ok,
+            "" if ok else f"override {override.get('actionNonce')}, "
+                          f"action {action.get('actionNonce')}"))
+
+    # 4. §5.5: "A block receipt cannot be overridden."
+    verdict = VERDICT_NAMES.get(int(receipt["verdict"]))
+    out.append(Check(
+        "override targets a REVIEW receipt, not a BLOCK (§5.5)",
+        verdict == "REVIEW",
+        "" if verdict == "REVIEW" else
+        f"receipt verdict is {verdict}; §5.5 says a block receipt cannot be "
+        "overridden",
+    ))
     return out
 
 
@@ -456,6 +556,42 @@ def _verdict_check(sample_dir, receipt):
         ok,
         "" if ok else f"case label says {expected}, receipt decodes to {name}",
     )
+
+
+# Anvil account #1 -- the Sentinel signer's key, which is a *published* test key
+# and deliberately not the owner's. Used by the override-wrongkey tamper mode to
+# forge a perfectly valid signature from the wrong party. This is the §3.3(7)
+# attack in its exact form: the isolated signer attempting to mint the owner
+# credential that overrides its own review verdict.
+_SENTINEL_SIGNER_TEST_KEY = (
+    0x59C6995E998F97A5A0044966F0945389DC9E86DAE88C7A8412F4603B6B78690D
+)
+
+
+def _tamper_override(doc, domain, mode):
+    """Mutate the override, or the deployment it is presented against."""
+    doc = copy.deepcopy(doc)
+    override = doc.get("override") or {}
+    if mode == "override-reviewreceipt":
+        # Point the authorization at a different review receipt.
+        h = override["reviewReceiptHash"]
+        override["reviewReceiptHash"] = "0x" + ("%02x" % (int(h[2:4], 16) ^ 0x01)) + h[4:]
+    elif mode == "override-nonce":
+        # Replay the same authorization at the next action nonce.
+        override["actionNonce"] = str(int(override["actionNonce"]) + 1)
+    elif mode == "override-wrongkey":
+        # A *valid* signature over the *unmodified* payload, from the Sentinel
+        # signer instead of the owner. Nothing is malformed; only the party is
+        # wrong. A byte-flip cannot test this.
+        digest = eip712.override_digest(domain, override)
+        doc["ownerSignature"] = sign_digest(digest, _SENTINEL_SIGNER_TEST_KEY)
+    elif mode == "override-otherchain":
+        # Lift the untouched, genuinely-signed override to another deployment.
+        domain = dict(domain)
+        domain["chainId"] = "8453"
+    else:
+        raise ValueError(f"unknown override tamper mode {mode!r}")
+    return doc, domain
 
 
 class NotApplicable(Exception):

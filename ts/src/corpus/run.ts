@@ -25,6 +25,7 @@ import {LAYERS, runLayer, type LayerResult} from "../ablation/layers.ts";
 import type {BaselineConfig} from "../ablation/baseline.ts";
 import {CORPUS, ATTACKER, RESOURCE, WRONG_RESOURCE, CONFORMING_VALUE, MANDATE_CEILING} from "./fixtures.ts";
 import type {FixtureSpec} from "./spec.ts";
+import {assertNoLeakage} from "./leakage.ts";
 
 /**
  * Execute the §7.1 corpus against a real chain and emit two separate views.
@@ -347,23 +348,6 @@ rmSync(OUT + "/results", {recursive: true, force: true});
 mkdirSync(join(OUT, "for-labelling"), {recursive: true});
 mkdirSync(join(OUT, "results"), {recursive: true});
 
-/**
- * Guard the labeller/evaluator split mechanically.
- *
- * A labeller view that leaked a verdict would silently turn the corpus into a self-graded
- * suite, and the leak would be invisible in a green run — the exact failure shape this
- * project has hit three times. So the keys are checked rather than trusted.
- */
-function assertNoLeakage(view: unknown, id: string): void {
-    const forbidden = ["verdict", "checks", "reasonCodes", "failing", "outcome", "label", "expected", "layers"];
-    const seen = j(view).toLowerCase();
-    for (const key of forbidden) {
-        if (seen.includes(`"${key}"`)) {
-            throw new Error(`labeller view for ${id} leaks an evaluator-shaped key: ${key}`);
-        }
-    }
-}
-
 const outcomes: RunOutcome[] = [];
 
 for (const spec of CORPUS) {
@@ -571,8 +555,9 @@ for (const spec of CORPUS) {
                 calldataDecodeFailureReason: decode.ok ? null : decode.code,
             },
         };
-        assertNoLeakage(labellerView, spec.id);
-        writeFileSync(join(OUT, "for-labelling", `${spec.id}.json`), j(labellerView));
+        const labellerJson = j(labellerView);
+        assertNoLeakage(labellerJson, spec.id);
+        writeFileSync(join(OUT, "for-labelling", `${spec.id}.json`), labellerJson);
 
         writeFileSync(
             join(OUT, "results", `${spec.id}.json`),
