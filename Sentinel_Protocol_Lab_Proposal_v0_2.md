@@ -398,6 +398,42 @@ SignedOverrideAuthorization contains OverrideAuthorizationPayload plus ownerSign
 
 The vault accepts an override only with the matching signed review receipt. A block receipt cannot be overridden.
 
+### 5.8 EIP-712 Type Strings (normative)
+
+*Added 2026-07-30 (D-023), after an independent reimplementation established that §5 as written was not sufficient to build a verifier.*
+
+Every payload hash named in §5 — `mandateHash`, `policyHash`, `actionHash`, `reviewReceiptHash` — is the EIP-712 `hashStruct` of the corresponding payload: `keccak256(typeHash ‖ abi.encode(fields in the order listed))`. These are **not** RFC 8785 JSON hashes; RFC 8785 applies only to the EvidenceBundle (§5.6). The document's use of the word "canonical" for both is a known source of confusion and is why this subsection exists.
+
+They are **bare `hashStruct` values**: no `\x19\x01` prefix and no domain separator is applied. Chain and vault binding for these hashes therefore comes solely from the `chainId` and `vault` members of the payloads themselves. The full EIP-712 digest — `keccak256("\x19\x01" ‖ domainSeparator ‖ hashStruct)` — is applied only where a signature is produced.
+
+The type strings are **normative and byte-exact**. A single differing character changes the typehash, the digest, and the recovered address.
+
+    EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)
+
+    MandatePayload(uint16 schemaVersion,bytes32 mandateId,address principal,address vault,uint256 chainId,address target,bytes32 targetCodeHash,bytes4 selector,uint256 maxNativeValueWei,bytes32 purposeKind,bytes32 resourceId,address beneficiary,uint64 durationSeconds,bool recurringAllowed,uint64 validAfter,uint64 validUntil,bytes32 policyHash)
+
+    PolicyPayload(uint16 schemaVersion,uint32 policyVersion,address vault,uint256 chainId,uint8 allowedOperation,bytes32 allowedTargetsHash,bytes32 allowedSelectorsHash,uint256 maxNativeValueWei,uint256 maxAllowanceIncreaseBaseUnits,bytes32 allowedCallGraphHash,uint64 validAfter,uint64 validUntil,uint8 failureMode)
+
+    ActionPayload(uint16 schemaVersion,uint256 chainId,address vault,uint256 actionNonce,address target,uint256 valueWei,bytes32 dataHash,uint8 operation,bytes32 mandateHash,bytes32 policyHash,uint64 deadline)
+
+    DecisionReceiptPayload(uint16 schemaVersion,bytes32 decisionId,bytes32 actionHash,bytes32 mandateHash,bytes32 policyHash,uint8 verdict,bytes32 reasonCodesHash,bytes32 evidenceHash,uint256 simulationBlockNumber,bytes32 simulationBlockHash,uint64 issuedAt,uint64 expiresAt,address signer)
+
+    OverrideAuthorizationPayload(uint16 schemaVersion,bytes32 reviewReceiptHash,bytes32 actionHash,bytes32 mandateHash,bytes32 policyHash,uint256 actionNonce,bytes32 reasonHash,uint64 issuedAt,uint64 expiresAt)
+
+The domain uses no `salt`. `EIP712Domain` field values for a deployment are `name = "Sentinel"`, `version = "0.2"`, and the deployment's own `chainId` and `verifyingContract` (the SentinelVault address).
+
+**Warnings a reimplementer needs, each of which cost the independent verifier real time:**
+
+- **`uintN` widths do not change the encoded data.** Every `uintN` occupies one left-padded 32-byte word, so `uint16 schemaVersion` and `uint256 schemaVersion` encode identically. The width changes only the type string, and therefore the digest. **A width mismatch is indistinguishable from an invalid signature** — the verifier reports a signer mismatch and an operator reasonably concludes the receipt is forged. The widths above are not uniform: `schemaVersion` is `uint16` while `policyVersion` is `uint32`; `actionNonce` is `uint256` while `deadline` is `uint64`.
+- **`bytesN` is RIGHT-padded** to 32 bytes, while `uintN` and `address` are LEFT-padded. `selector` is `bytes4`, not `bytes32` and not a string.
+- **ActionPayload's accompanying `callData` is not a member of the signed struct.** It travels alongside and is bound only through `dataHash = keccak256(callData)`.
+- **`signer` is a member of the DecisionReceiptPayload struct as well as the recovered address.** This is deliberate: the signature commits to the claimed signer rather than merely recovering some address, so a swapped `signer` field fails rather than quietly recovering another key.
+- **`keccak256` here means the EVM's keccak256** — original Keccak with `pad10*1` domain byte `0x01` — **not** FIPS-202 SHA3-256 (`0x06`). The two produce different digests for every input and the same output length. Python's standard library ships `sha3_256` and no keccak; reaching for it produces a plausible digest that is wrong for every input.
+
+**Known asymmetry, recorded rather than resolved.** `MandatePayload`, `PolicyPayload` and `ActionPayload` each carry `chainId` and `vault`. `DecisionReceiptPayload` and `OverrideAuthorizationPayload` carry neither. The receipt's chain and contract binding lives entirely in the EIP-712 domain separator, which is what domain separation is for — but it has an operational consequence: **a receipt is not self-describing.** A deployment must publish its domain field values alongside the SentinelVault address, and a receipt transmitted outside the lab must be accompanied by them. A verifier not told the domain cannot verify a receipt, and one that guesses will report a valid receipt as forged. The override carries chain and vault only transitively, through the `mandateHash` and `policyHash` it references; whether that is sufficient is being measured rather than assumed (D-023).
+
+---
+
 ### 5.6 EvidenceBundle
 
     normalizedAction
