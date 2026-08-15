@@ -229,7 +229,103 @@ def verify_sample(sample_dir, domain_path=None, tamper=None):
     # ---- 5. verdict sanity ----------------------------------------------
     checks.append(_verdict_check(sample_dir, receipt))
 
+    # ---- 6. the rest of the hash chain ----------------------------------
+    checks.extend(_chain_checks(sample_dir, receipt, evidence))
+
     return all(c.ok for c in checks), checks
+
+
+def _chain_checks(sample_dir, receipt, evidence):
+    """Recompute every other hash the receipt commits to.
+
+    §5 does not say these are EIP-712 hashStruct values; that was recovered by
+    search (REPORT.md F-5). Without these, a receipt could be correctly signed
+    over the *wrong* mandate and still pass every other check in this file.
+    """
+    out = []
+
+    def load(name):
+        path = os.path.join(sample_dir, name)
+        return _read_json(path) if os.path.isfile(path) else None
+
+    mandate, policy, action = load("mandate.json"), load("policy.json"), load("action.json")
+
+    for doc, fn, field, label in (
+        (mandate, eip712.mandate_hash, "mandateHash", "§5.1 MandatePayload"),
+        (policy, eip712.policy_hash, "policyHash", "§5.2 PolicyPayload"),
+        (action, eip712.action_hash, "actionHash", "§5.3 ActionPayload"),
+    ):
+        if doc is None:
+            out.append(Check(f"recomputed {field} from {label}", True,
+                             "payload file not present in this sample", skipped=True))
+            continue
+        try:
+            computed = "0x" + fn(doc).hex()
+        except eip712.EncodingError as exc:
+            out.append(Check(f"recomputed {field} from {label}", False, str(exc)))
+            continue
+        declared = _norm_hex(receipt.get(field, ""))
+        ok = computed == declared
+        out.append(Check(
+            f"recomputed {field} from {label} matches the receipt",
+            ok,
+            "" if ok else f"computed {computed}\nreceipt  {declared}",
+        ))
+
+    # calldata -> dataHash, the one place the raw call is bound.
+    if action and "callData" in action:
+        computed = "0x" + keccak256(bytes.fromhex(_norm_hex(action["callData"])[2:])).hex()
+        ok = computed == _norm_hex(action.get("dataHash", ""))
+        out.append(Check("keccak256(callData) matches action.dataHash", ok,
+                         "" if ok else f"computed {computed}\naction   {action.get('dataHash')}"))
+
+    # Cross-references that §5 lists as fields but never requires to agree.
+    if mandate and policy:
+        out.append(Check(
+            "mandate.policyHash == receipt.policyHash",
+            _norm_hex(mandate.get("policyHash", "")) == _norm_hex(receipt.get("policyHash", "")),
+        ))
+    if action:
+        out.append(Check(
+            "action binds the same mandate and policy as the receipt",
+            _norm_hex(action.get("mandateHash", "")) == _norm_hex(receipt.get("mandateHash", ""))
+            and _norm_hex(action.get("policyHash", "")) == _norm_hex(receipt.get("policyHash", "")),
+        ))
+
+    # Evidence-bundle fields §5.6 does not list, and never requires to agree
+    # with the receipt (REPORT.md F-3). Checked anyway: if they can disagree,
+    # the dashboard and the receipt can tell an operator different stories.
+    anchor = evidence.get("anchor") if isinstance(evidence, dict) else None
+    if isinstance(anchor, dict):
+        ok = (str(anchor.get("blockNumber")) == str(receipt.get("simulationBlockNumber"))
+              and _norm_hex(anchor.get("blockHash", "")) == _norm_hex(receipt.get("simulationBlockHash", "")))
+        out.append(Check(
+            "evidence.anchor matches the receipt's simulation block",
+            ok,
+            "" if ok else f"anchor  {anchor}\nreceipt {receipt.get('simulationBlockNumber')} "
+                          f"{receipt.get('simulationBlockHash')}",
+        ))
+    if isinstance(evidence, dict) and "verdict" in evidence:
+        expected = VERDICT_NAMES.get(int(receipt["verdict"]))
+        ok = evidence["verdict"] == expected
+        out.append(Check(
+            "evidence.verdict agrees with the receipt's verdict enum",
+            ok,
+            "" if ok else f"evidence says {evidence['verdict']}, receipt decodes to {expected}",
+        ))
+
+    # The one binding this verifier cannot check. Stated loudly rather than
+    # quietly omitted: see REPORT.md F-6.
+    out.append(Check(
+        "reasonCodesHash recomputed from the evidence bundle",
+        True,
+        "NOT VERIFIABLE: §5.4 names reasonCodesHash but never defines its "
+        "preimage, so an independent party cannot recompute it. A receipt "
+        "signed over the correct evidence with a substituted reason-code set "
+        "would pass every other check here.",
+        skipped=True,
+    ))
+    return out
 
 
 def _verdict_check(sample_dir, receipt):

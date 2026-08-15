@@ -307,15 +307,50 @@ class TestTamper(unittest.TestCase):
         # Guards the F-1 finding: the uint widths §5 omits are load-bearing.
         # Swapping uint16 schemaVersion for uint256 changes only the type
         # string, yet the digest and therefore the recovered address change.
-        original = eip712.RECEIPT_TYPE
+        original = eip712.RECEIPT_FIELDS
         try:
-            eip712.RECEIPT_TYPE = original.replace(
-                "uint16 schemaVersion", "uint256 schemaVersion"
-            )
+            eip712.RECEIPT_FIELDS = [
+                ("uint256", name) if name == "schemaVersion" else (t, name)
+                for t, name in original
+            ]
             ok, _ = verify.verify_sample(sample_dirs()[0])
-            self.assertFalse(ok, "the type string is apparently not load-bearing")
+            self.assertFalse(ok, "the uint widths are apparently not load-bearing")
         finally:
-            eip712.RECEIPT_TYPE = original
+            eip712.RECEIPT_FIELDS = original
+
+    def test_all_receipt_uint_widths_are_load_bearing(self):
+        # Every uintN in the type string changes the digest if widened, even
+        # though the *encoded bytes* are identical (all left-padded to 32).
+        # This is the F-1 trap, tested field by field.
+        original = eip712.RECEIPT_FIELDS
+        widened = [(t, n) for t, n in original if t.startswith("uint") and t != "uint256"]
+        self.assertTrue(widened, "expected some non-uint256 fields")
+        try:
+            for target_type, target_name in widened:
+                with self.subTest(field=target_name, was=target_type):
+                    eip712.RECEIPT_FIELDS = [
+                        ("uint256", n) if n == target_name else (t, n)
+                        for t, n in original
+                    ]
+                    ok, _ = verify.verify_sample(sample_dirs()[0])
+                    self.assertFalse(ok)
+        finally:
+            eip712.RECEIPT_FIELDS = original
+
+    def test_mandate_hash_is_load_bearing(self):
+        # Swapping in another sample's mandate must fail, or the receipt is not
+        # actually bound to the mandate it claims.
+        import shutil
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp)
+        target = os.path.join(tmp, "case-swapped")
+        shutil.copytree(sample_dirs()[0], target)
+        shutil.copy(os.path.join(SAMPLES, "domain.json"), tmp)
+        other = os.path.join(SAMPLES, "case-4-review-failmode-review", "mandate.json")
+        shutil.copy(other, os.path.join(target, "mandate.json"))
+        ok, checks = verify.verify_sample(target)
+        self.assertFalse(ok, "a swapped mandate was accepted")
+        self.assertTrue(any("mandateHash" in c.name and not c.ok for c in checks))
 
     def test_unknown_receipt_field_is_rejected(self):
         with self.assertRaises(eip712.EncodingError):
@@ -375,6 +410,17 @@ class TestRefusedShape(unittest.TestCase):
 class TestDerivedConstants(unittest.TestCase):
     """Pins the values REPORT.md documents as derived rather than specified, so
     that a later §5 amendment that contradicts them breaks the suite loudly."""
+
+    def test_mandate_policy_action_type_strings(self):
+        self.assertEqual(
+            eip712.MANDATE_STRUCT_NAME + "(" + ",".join(
+                f"{t} {n}" for t, n in eip712.MANDATE_FIELDS) + ")",
+            "MandatePayload(uint16 schemaVersion,bytes32 mandateId,"
+            "address principal,address vault,uint256 chainId,address target,"
+            "bytes32 targetCodeHash,bytes4 selector,uint256 maxNativeValueWei,"
+            "bytes32 purposeKind,bytes32 resourceId,address beneficiary,"
+            "uint64 durationSeconds,bool recurringAllowed,uint64 validAfter,"
+            "uint64 validUntil,bytes32 policyHash)")
 
     def test_receipt_type_string(self):
         self.assertEqual(
