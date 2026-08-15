@@ -103,6 +103,33 @@ export const EVAL_CODES = [
 
 export type EvalCode = (typeof EVAL_CODES)[number];
 
+/**
+ * The EXECUTABILITY class (D-026): checks whose failure makes the receipt unusable, rather
+ * than establishing that the action violates the owner's mandate.
+ *
+ * WHY THIS EXISTS SEPARATELY FROM THE OTHER FAILURES. §3.3(7) says a block "requires a new
+ * mandate or policy". That is true of a conformance violation and FALSE of everything here:
+ * a paused vault is cleared by unpausing, a rotated signer by the current signer signing, a
+ * value over the vault's hard cap by proposing less. Three independent labellers converged
+ * on this gap — the §5.2 dichotomy of failed-rule versus unknown-check has no home for a
+ * fact that is known, adverse, and says nothing about the mandate.
+ *
+ * The concept is not new here. A-011 built exactly this distinction into the isolated signer
+ * as its EXECUTABILITY severity tier ("EXECUTABILITY is only for facts that make the receipt
+ * unusable"), and D-012 ratified it. It simply existed in one layer and not in the spec or
+ * the evaluator. D-026 puts it in both.
+ *
+ * THIS CHANGES NO VERDICT. These codes still block, and the bundle already carries them, so
+ * nothing about the evidence schema or any receipt hash changes. What changes is that the
+ * REMEDY becomes derivable by a reader holding the amended §3.3(7) and this list.
+ */
+export const EVAL_EXECUTABILITY_CODES: ReadonlySet<string> = new Set([
+    "EVAL_VAULT_NOT_PAUSED",
+    "EVAL_NONCE_CURRENT",
+    "EVAL_VALUE_WITHIN_VAULT_CAP",
+    "EVAL_ACTION_DEADLINE",
+]);
+
 export type CheckOutcome = "PASS" | "VIOLATION" | "UNRESOLVED";
 
 export interface CheckResult {

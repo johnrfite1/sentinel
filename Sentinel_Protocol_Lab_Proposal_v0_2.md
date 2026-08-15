@@ -193,7 +193,7 @@ The signer exposes no generic sign-bytes method. It independently recomputes the
 4. Authorization binds the exact chain, vault, action nonce, target, native value, operation, calldata hash, mandate hash, policy hash, and deadline.
 5. Any mutation to a bound field invalidates authorization.
 6. The automatic path accepts only a current, unexpired allow receipt from the active signer.
-7. A review path requires both the signed review receipt and a separate owner-signed OverrideAuthorization for that exact action. A block requires a new mandate or policy; it cannot be overridden directly.
+7. A review path requires both the signed review receipt and a separate owner-signed OverrideAuthorization for that exact action. **A block cannot be overridden directly.** *Amended 2026-08-15 (D-026): the remedy for a block depends on what failed.* A **conformance** block — the action does not match the signed mandate — requires a new mandate or policy. An **executability** block — the vault is paused, the signer has been rotated, the action's nonce is not the vault's, the deadline has passed, or the value exceeds the vault's own hard cap — is cleared by changing the vault state or the action, and needs no new mandate. Both are non-overridable; only the remedy differs. The previous text said a block "requires a new mandate or policy" without qualification, which is true of the first kind and false of the second, and three independent labellers converged on the gap. The executability class is enumerated in §5.7 and mirrors the isolated signer's EXECUTABILITY severity tier.
 8. Missing or conflicting state, unsupported calls, undecodable calldata, stale mandate or policy, code-identity mismatch, or critical dependency failure never produces automatic allow.
 9. A single monotonically increasing action nonce stored in SentinelVault prevents receipt and override replay and is consumed before the external call.
 10. Owner-only mandate revocation, policy activation, pause, recovery, and signer rotation remain outside agent authority.
@@ -485,7 +485,7 @@ EvidenceBundle uses RFC 8785 JSON canonicalization and keccak256 for evidenceHas
 Supported deterministic checks:
 
 - Active owner, mandate, policy, and signer.
-- Exact chain, vault, nonce, target, operation, value, selector, and code hash.
+- Exact chain, vault, nonce, target, operation, value, selector, and code hash. *Qualified 2026-08-15 (D-027): the **code-hash** comparison is an EVIDENCE check, not a failed rule.* Its failure is UNRESOLVED and follows `failureMode`, per D-015 and §4.2 Case 4 — "Sentinel does not label the target malicious. It reports insufficient evidence for automatic approval." Listing it beside the exact-equality checks read against that ruling, which is what this qualifier removes. The other items in this line are equality checks whose failure is a failed rule.
 - Native-value ceiling.
 - DemoERC20 approval parameters and allowance ceiling.
 - DemoPay resource, beneficiary, duration, and recurrence.
@@ -495,6 +495,10 @@ Supported deterministic checks:
 - Allowed top-level and internal call graph.
 
 *Qualified 2026-08-15 (D-025).* In v1 this check enforces an **empty** call graph, which is the conforming graph for both supported schemas — neither DemoPay nor DemoERC20 makes an internal call. `PolicyPayload.allowedCallGraphHash` (§5.2) is **reserved and not yet consulted**: a policy declaring any other call graph has no effect in v1. Stated rather than left implicit because a declared-but-unenforced field is one an owner could reasonably believe they had constrained something with. The consequence for evaluation is recorded too: §7.1's unexpected-internal-call class cannot be driven to a positive case in v1, so no corpus fixture demonstrates it and the §7.3 ablation does not count it as a detection.
+
+*Added 2026-08-15 (D-026) — the EXECUTABILITY class.* Of the checks above, these say the receipt could not be used rather than that the action violates the mandate: **vault not paused, action nonce is the vault's current nonce, action deadline not passed, and value within the vault's own hard cap.** They block, they are not overridable, and per §3.3(7) as amended their remedy is a change of vault state or of the action — never a new mandate. This mirrors the isolated signer's EXECUTABILITY severity tier (A-011, D-012), which has always drawn this line; the classification simply did not exist in the specification or the conformance engine until now. Note that the vault's hard cap is a THIRD ceiling, independent of the mandate-and-policy intersection §5.2 describes.
+
+*Added 2026-08-15 (D-028) — undecodable calldata is an evidence gap.* Calldata that does not decode under a supported schema is an UNRESOLVED check and follows `failureMode`: it reviews under REVIEW and blocks under FAIL_CLOSED. §3.3(8) is satisfied either way, since neither produces an automatic allow. **An apparent asymmetry is worth naming so it is not read as inconsistency:** a call so malformed it carries no usable selector will usually also fail a determinate check — the selector is not on the vault's allowlist — and therefore blocks, while a call that is merely non-canonical but still executable reviews. Those are two different reasons that happen to co-occur in one fixture class, not undecodability behaving two ways. The reviewable case is real and deliberate: §4.2's override path exists precisely for an action the owner recognises and Sentinel cannot parse. Note the one place this bites hardest — trailing bytes past the declared arguments are the single case where Sentinel is stricter than the EVM, so under REVIEW an owner may override something Sentinel deliberately refused to parse.
 
 Supported effects:
 

@@ -8,7 +8,7 @@ import {
     type BaselineConfig,
 } from "../src/ablation/baseline.ts";
 import {LAYERS, MANDATE_CONFORMANCE_CODES, runLayer} from "../src/ablation/layers.ts";
-import {EVAL_CODES, runChecks, verdictOf, type ConformanceInput} from "../src/evaluate/checks.ts";
+import {EVAL_CODES, EVAL_EXECUTABILITY_CODES, runChecks, verdictOf, type ConformanceInput} from "../src/evaluate/checks.ts";
 import {decodeCall, buildRegistry, MAX_UINT256} from "../src/decode/index.ts";
 import {hashMandate, hashPolicy} from "../src/evaluate/hashes.ts";
 import type {Hex, MandatePayload, PolicyPayload, ActionPayload} from "../src/signer/protocol.ts";
@@ -297,6 +297,26 @@ describe("the §7.3 layer partition", () => {
             [],
             "a code here that the engine does not declare silently leaves a check inside L2",
         );
+    });
+
+    /**
+     * Same structural guard as MANDATE_CONFORMANCE_CODES, and for the same reason: a hand-
+     * written Set of strings never fails to match a name that does not exist. An entry here
+     * that the engine does not declare would make §3.3(7)'s amended remedy clause point at a
+     * code nobody can ever see, and nothing else would notice.
+     */
+    it("EVAL_EXECUTABILITY_CODES names only codes the engine declares (D-026)", () => {
+        const declared = new Set<string>(EVAL_CODES);
+        const unknown = [...EVAL_EXECUTABILITY_CODES].filter((c) => !declared.has(c));
+        assert.deepEqual(unknown, [], "an executability code the engine does not declare");
+        assert.ok(EVAL_EXECUTABILITY_CODES.size > 0);
+    });
+
+    it("keeps executability and mandate-conformance disjoint (D-026)", () => {
+        // A code in both classes would make the remedy ambiguous — the whole point of the
+        // classification is that one needs a new mandate and the other does not.
+        const overlap = [...EVAL_EXECUTABILITY_CODES].filter((c) => MANDATE_CONFORMANCE_CODES.has(c));
+        assert.deepEqual(overlap, [], "a code cannot be both executability and mandate conformance");
     });
 
     it("removes something — L2 is not just L3 under another name", () => {
