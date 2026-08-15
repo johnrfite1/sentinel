@@ -415,6 +415,8 @@ Supported deterministic checks:
 - Native-value ceiling.
 - DemoERC20 approval parameters and allowance ceiling.
 - DemoPay resource, beneficiary, duration, and recurrence.
+
+*Amended 2026-07-30 (D-020).* These four are compared for **equality**, not as ceilings. Only fields named `max*` — `maxNativeValueWei`, `maxAllowanceIncreaseBaseUnits` — are ceilings the action may come in under. The previous text said the fields were "checked" without stating the relation, which left open whether a purchase for less duration than the mandate authorises conforms. It does not. The reasoning is recorded because it is not the obvious one: DemoPay accepts any non-zero payment and grants exactly the duration requested, so price does not scale with duration — a shorter duration at the same price is the owner paying in full for less access, and a longer one is the owner receiving more than they authorised. Neither direction is benign.
 - Mandate and receipt validity.
 - Allowed top-level and internal call graph.
 
