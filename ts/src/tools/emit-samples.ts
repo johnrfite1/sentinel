@@ -19,7 +19,14 @@ import {hashMandate, hashPolicy} from "../evaluate/hashes.ts";
 import {simulateAction} from "../simulate/index.ts";
 import {createChainReader} from "../signer/vault.ts";
 import {connectSigner} from "../signer/client.ts";
-import type {ActionPayload, Hex, MandatePayload, PolicyPayload} from "../signer/protocol.ts";
+import type {
+    ActionPayload,
+    Hex,
+    MandatePayload,
+    OverrideAuthorizationPayload,
+    PolicyPayload,
+} from "../signer/protocol.ts";
+import {digest, domainSeparator, hashOverride, hashReceipt} from "../signer/eip712.ts";
 
 /**
  * Emit signed sample artifacts for the D-010 independent verifier.
@@ -363,6 +370,47 @@ for (const spec of SAMPLES) {
               signerFindings: signed.signerFindings,
           };
     writeFileSync(join(dir, "receipt.json"), j(receiptOut));
+
+    // §5.5 — the owner's exact-action override, emitted for any REVIEW receipt.
+    //
+    // D-023(b). Before this, OverrideAuthorizationPayload was the one §5 payload nothing had
+    // ever verified: no sample exercised it, so the D-010 verifier could neither recover its
+    // type string nor test its binding, and its observation that the override carries neither
+    // `chainId` nor `vault` stayed a reasoned concern rather than a measurement.
+    //
+    // NOTE WHO SIGNS THIS. The OWNER, not the Sentinel signer. §3.3(7) requires a credential
+    // the isolated signer cannot mint, and it cannot — the keystore signs receipts and
+    // nothing else. A sample in which the signer produced this would misrepresent the
+    // security property the override exists to carry.
+    if (!signed.refused && evaluation.verdict === "REVIEW") {
+        const auth: OverrideAuthorizationPayload = {
+            schemaVersion: 1n,
+            reviewReceiptHash: hashReceipt(signed.receipt),
+            actionHash: signed.actionHash,
+            mandateHash: action.mandateHash,
+            policyHash: action.policyHash,
+            actionNonce: action.actionNonce,
+            reasonHash: keccak256(stringToBytes("owner accepts the code-identity risk")),
+            issuedAt: 0n,
+            expiresAt: FAR_FUTURE,
+        };
+        const ownerSignature = await OWNER.sign({
+            hash: digest(domainSeparator(chainId, vault), hashOverride(auth)),
+        });
+        writeFileSync(
+            join(dir, "override.json"),
+            j({
+                note:
+                    "§5.5 OverrideAuthorizationPayload, signed by the OWNER (not the Sentinel " +
+                    "signer). Verifies against the same EIP-712 domain as the receipt; its " +
+                    "chain and vault binding is transitive, through the mandateHash and " +
+                    "policyHash it references.",
+                override: auth,
+                ownerSignature,
+                ownerAddress: OWNER.address,
+            }),
+        );
+    }
 
     writeFileSync(
         join(dir, "meta.json"),
