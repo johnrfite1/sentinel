@@ -14,6 +14,7 @@ import {
     type Hex,
     type ReasonCode,
     type RefusalRecord,
+    type VerdictName,
 } from "./protocol.ts";
 
 /**
@@ -298,7 +299,9 @@ export function createAttestor(config: AttestorConfig): Attestor {
             //
             // BOUNDARY: this checks the parameters against the bytes GIVEN THE SELECTOR. It does
             // not check that the selector belongs at the target — that stays with the evaluator.
-            findings.push(...checkEvidenceDecoding(callData, evaluation.evidenceCanonical));
+            findings.push(
+                ...checkEvidenceDecoding(callData, evaluation.evidenceCanonical, evaluation.verdict),
+            );
 
             // --- Chain state. An unreadable vault is FATAL, never a default (§3.3(8)).
             let state: VaultState;
@@ -518,7 +521,11 @@ const TARGET_BINDING_FAILURES = new Set([
     "DECODE_SELECTOR_TARGET_MISMATCH",
 ]);
 
-function checkEvidenceDecoding(callData: Hex, evidenceCanonical: string): ReasonCode[] {
+function checkEvidenceDecoding(
+    callData: Hex,
+    evidenceCanonical: string,
+    requestedVerdict: VerdictName,
+): ReasonCode[] {
     let claim: unknown;
     try {
         claim = (JSON.parse(evidenceCanonical) as Record<string, unknown>)
@@ -551,9 +558,33 @@ function checkEvidenceDecoding(callData: Hex, evidenceCanonical: string): Reason
     // The correct rule follows the remit boundary rather than the truth table:
     if (claimed.decoded === "false") {
         const failureCode = typeof claimed.failureCode === "string" ? claimed.failureCode : "";
-        // Declined for a reason the signer is ratified not to opine on. Accept it; the
-        // evaluator owns that judgement and the D-010 verifier can still see the code.
-        if (TARGET_BINDING_FAILURES.has(failureCode)) return [];
+        if (TARGET_BINDING_FAILURES.has(failureCode)) {
+            // Declined for a reason the signer is ratified not to opine on. Accept it for a
+            // BLOCK or a REVIEW — the evaluator owns that judgement and the D-010 verifier
+            // can still see the code.
+            //
+            // BUT NOT FOR AN ALLOW, AND THIS WAS A LIVE DEFECT (A-028 F1). The early return
+            // was unconditional, so any composer of a request could switch the whole D-014
+            // attestation off with a two-field lie: claim `decoded:"false"` with a target
+            // failureCode, and the signer recorded nothing. An adversarial reviewer signed an
+            // ALLOW for a wrong-resource purchase that way and executed it — the wrong
+            // entitlement landed onchain, under a receipt whose evidenceHash committed to a
+            // bundle carrying no decoded parameters at all. The party who could do it is
+            // exactly the compromised evaluator D-014 names as the threat.
+            //
+            // An ALLOW here is INTERNALLY INCONSISTENT by the evaluator's own construction,
+            // which is why refusing it is inside the signer's remit and is not the conformance
+            // judgement D-014 bars: `decode.ok === false` yields EVAL_CALLDATA_UNDECODABLE as
+            // UNRESOLVED, and `verdictOf` can only return ALLOW when nothing is unresolved
+            // (§3.3(8): undecodable calldata never produces an automatic allow). So no honest
+            // evaluator can emit this pair.
+            //
+            // This does NOT re-break D-017. That defect refused TRUTHFUL target-mismatch
+            // bundles fatally, leaving no receipt of any verdict for target-substitution
+            // shapes — the natural injection cases. Those ask for BLOCK or REVIEW and are
+            // untouched here; only the combination no honest evaluator produces is refused.
+            return requestedVerdict === "ALLOW" ? ["SIGNER_EVIDENCE_DECODING_MISMATCH"] : [];
+        }
         // Declined for any other reason — one within the signer's remit — so the signer's own
         // selector-level decode must also have failed. If it succeeded, the bundle is wrong
         // about something the signer CAN adjudicate.

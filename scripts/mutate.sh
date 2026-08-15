@@ -434,10 +434,23 @@ run_mutation "V1 D-017 fix: restore the two-predicate comparison" \
     "    if (claimed.decoded !== (mine.ok ? \"true\" : \"false\")) return [\"SIGNER_EVIDENCE_DECODING_MISMATCH\"];
     if (claimed.decoded === \"false\") {"
 
-run_mutation "V2 D-017 fix: treat decoded:false as a blanket escape hatch" \
+# V2 was NAMED for the target-binding escape hatch and mutated a different branch — the
+# non-target one — so it reported "caught" throughout while the hatch it is named for sat
+# open (A-028 F1). Renamed to what it actually tests, and V2b added for the real hole.
+run_mutation "V2 D-017 fix: non-target decline stops being adjudicated" \
     "src/signer/attest.ts" \
     "        return mine.ok ? [\"SIGNER_EVIDENCE_DECODING_MISMATCH\"] : [];" \
     "        return [];"
+
+run_mutation "V2b A-028 F1: restore the unconditional target-binding escape hatch" \
+    "src/signer/attest.ts" \
+    "            return requestedVerdict === \"ALLOW\" ? [\"SIGNER_EVIDENCE_DECODING_MISMATCH\"] : [];" \
+    "            return [];"
+
+run_mutation "V2c A-028 F1: refuse truthful target-mismatch bundles again (re-break D-017)" \
+    "src/signer/attest.ts" \
+    "            return requestedVerdict === \"ALLOW\" ? [\"SIGNER_EVIDENCE_DECODING_MISMATCH\"] : [];" \
+    "            return [\"SIGNER_EVIDENCE_DECODING_MISMATCH\"];"
 
 run_mutation "V3 D-017 fix: drop simulation serialisation" \
     "src/simulate/index.ts" \

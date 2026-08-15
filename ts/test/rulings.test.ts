@@ -12,6 +12,7 @@ import {
     VAULT,
     buildFixture,
     fakeKeystore,
+    type FixtureOverrides,
 } from "./fakes.ts";
 import {SIGNER_KEY, evidenceStub} from "./harness.ts";
 
@@ -524,5 +525,115 @@ describe("D-014 against REAL evaluator bundles (the gap the D-017 review found)"
         assert.equal(b.ok, true);
         assert.deepEqual(a.decoded, b.decoded, "hex spelling must not change decoded parameters");
         assert.equal((a.decoded as {beneficiary: Hex}).beneficiary, lettered);
+    });
+});
+
+/** In-process attestor run, mirroring reasoncodes.test.ts's harness. */
+async function run(overrides: FixtureOverrides): Promise<EvaluateAndSignResult> {
+    const {request, chain} = buildFixture(overrides);
+    const attestor = createAttestor({
+        chainId: CHAIN_ID,
+        vault: VAULT,
+        keystore: fakeKeystore(),
+        chain,
+        now: () => NOW,
+        randomBytes32: () => keccak256(stringToBytes("decision")),
+    });
+    return attestor.evaluateAndSign(request);
+}
+
+function findingsOf(result: EvaluateAndSignResult): string[] {
+    return result.signerFindings as string[];
+}
+
+describe("D-014: the target-binding escape hatch cannot switch off the attestation (A-028 F1)", () => {
+    /**
+     * THE DEFECT, and why a green suite said nothing about it.
+     *
+     * `checkEvidenceDecoding` accepts a bundle that declines to decode for a TARGET reason,
+     * because D-014 places target binding outside the signer's remit and D-017's blocking
+     * defect was caused by refusing exactly those truthful bundles. But the acceptance was
+     * UNCONDITIONAL. Any composer of an `evaluateAndSign` request could therefore switch the
+     * whole D-014 attestation off with a two-field lie — claim `decoded:"false"` with a
+     * target failureCode — and the signer recorded nothing.
+     *
+     * An adversarial reviewer ran it end to end against a real Anvil, vault and signer
+     * process: an ALLOW was signed for a wrong-resource purchase, it executed, and the wrong
+     * entitlement landed onchain under a receipt whose `evidenceHash` committed to a bundle
+     * carrying no decoded parameters at all. The party able to do it is exactly the
+     * compromised evaluator D-014 names as the threat, which is the ruling's whole subject.
+     *
+     * The project's own mutation harness has a mutation NAMED for this hole (V2, "treat
+     * decoded:false as a blanket escape hatch") that mutates a different branch and reported
+     * caught throughout. Reproduction preserved at docs/review-2026-08-15/artifacts/attack.ts.
+     */
+    const targetFailureBundle = (failureCode: string) =>
+        JSON.stringify({
+            decodedSelectorAndParameters: {decoded: "false", selector: "0xc188528b", failureCode},
+        });
+
+    /**
+     * Calldata the signer CAN decode. This is the whole attack: well-formed bytes paired with
+     * a bundle that lies about being unable to read them.
+     *
+     * The fixture default is `0xa1b2c3d4…`, an unsupported selector — against which the
+     * signer's own decode fails too, so bundle and signer honestly agree and nothing fires.
+     * Using it here would have made these tests pass for the wrong reason, which is the
+     * failure mode this whole review round was about.
+     */
+    const w = (h: string) => h.padStart(64, "0");
+    const decodableCallData = `0xc188528b${w(keccak256(stringToBytes("res")).slice(2))}${w(
+        "f39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+    )}${w((86_400n).toString(16))}${w("0")}` as Hex;
+
+    for (const failureCode of ["DECODE_UNSUPPORTED_TARGET", "DECODE_SELECTOR_TARGET_MISMATCH"]) {
+        it(`refuses an ALLOW whose bundle declines to decode (${failureCode})`, async () => {
+            const result = await run({
+                verdict: "ALLOW",
+                callData: decodableCallData,
+                evidenceCanonical: targetFailureBundle(failureCode),
+            });
+            assert.equal(result.refused, true, "the attack must not yield a signed ALLOW");
+            assert.ok(
+                findingsOf(result).includes("SIGNER_EVIDENCE_DECODING_MISMATCH"),
+                `expected the decoding mismatch finding, got ${findingsOf(result).join(",")}`,
+            );
+        });
+
+        /**
+         * The other half, and the one that keeps D-017 fixed. A TRUTHFUL target-mismatch
+         * bundle asks for BLOCK or REVIEW — never ALLOW, because `decode.ok === false` makes
+         * EVAL_CALLDATA_UNDECODABLE unresolved and `verdictOf` only returns ALLOW when nothing
+         * is unresolved (§3.3(8)). Those must still get their receipt: refusing them was
+         * precisely the D-017 blocking defect, which left no receipt of any verdict for
+         * target-substitution shapes — the natural injection cases.
+         */
+        for (const verdict of ["BLOCK", "REVIEW"] as const) {
+            it(`still issues a ${verdict} receipt for a truthful ${failureCode} bundle`, async () => {
+                const result = await run({
+                    verdict,
+                    callData: decodableCallData,
+                    evidenceCanonical: targetFailureBundle(failureCode),
+                });
+                assert.equal(
+                    findingsOf(result).includes("SIGNER_EVIDENCE_DECODING_MISMATCH"),
+                    false,
+                    "a truthful target-mismatch bundle must not be accused of misdescribing",
+                );
+            });
+        }
+    }
+
+    it("still refuses a non-target decline the signer CAN adjudicate", async () => {
+        // The control: the hole was specific to the two target codes. A bundle declining for
+        // a reason inside the signer's remit, on calldata the signer decodes fine, was always
+        // caught — and must stay caught.
+        const result = await run({
+            verdict: "ALLOW",
+            callData: decodableCallData,
+            evidenceCanonical: targetFailureBundle("DECODE_UNKNOWN_SELECTOR"),
+        });
+        assert.equal(result.refused, true);
+        assert.ok(findingsOf(result).includes("SIGNER_EVIDENCE_DECODING_MISMATCH"));
     });
 });
