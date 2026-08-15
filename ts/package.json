@@ -9,7 +9,8 @@
     "typecheck": "tsc --noEmit",
     "sample-check": "node src/tools/sample-check.ts",
     "emit-samples": "node src/tools/emit-samples.ts",
-    "corpus": "node src/corpus/run.ts"
+    "corpus": "node src/corpus/run.ts",
+    "ablation": "node src/ablation/report.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.70.0",

@@ -45,6 +45,65 @@ RECEIPT_TYPE = (
 )
 
 
+# §5.1 / §5.2 / §5.3. Same situation as §5.4: names from the spec, types
+# recovered by search against the samples. Recovering these turned the CLI from
+# "checks the signature" into "checks the whole chain", so they are worth
+# carrying even though nothing in §5 says the receipt's mandateHash/policyHash/
+# actionHash are hashStruct values. See REPORT.md F-5.
+MANDATE_STRUCT_NAME = "MandatePayload"
+MANDATE_FIELDS: List[Tuple[str, str]] = [
+    ("uint16", "schemaVersion"),
+    ("bytes32", "mandateId"),
+    ("address", "principal"),
+    ("address", "vault"),
+    ("uint256", "chainId"),
+    ("address", "target"),
+    ("bytes32", "targetCodeHash"),
+    ("bytes4", "selector"),
+    ("uint256", "maxNativeValueWei"),
+    ("bytes32", "purposeKind"),
+    ("bytes32", "resourceId"),
+    ("address", "beneficiary"),
+    ("uint64", "durationSeconds"),
+    ("bool", "recurringAllowed"),
+    ("uint64", "validAfter"),
+    ("uint64", "validUntil"),
+    ("bytes32", "policyHash"),
+]
+
+POLICY_STRUCT_NAME = "PolicyPayload"
+POLICY_FIELDS: List[Tuple[str, str]] = [
+    ("uint16", "schemaVersion"),
+    ("uint32", "policyVersion"),
+    ("address", "vault"),
+    ("uint256", "chainId"),
+    ("uint8", "allowedOperation"),
+    ("bytes32", "allowedTargetsHash"),
+    ("bytes32", "allowedSelectorsHash"),
+    ("uint256", "maxNativeValueWei"),
+    ("uint256", "maxAllowanceIncreaseBaseUnits"),
+    ("bytes32", "allowedCallGraphHash"),
+    ("uint64", "validAfter"),
+    ("uint64", "validUntil"),
+    ("uint8", "failureMode"),
+]
+
+ACTION_STRUCT_NAME = "ActionPayload"
+ACTION_FIELDS: List[Tuple[str, str]] = [
+    ("uint16", "schemaVersion"),
+    ("uint256", "chainId"),
+    ("address", "vault"),
+    ("uint256", "actionNonce"),
+    ("address", "target"),
+    ("uint256", "valueWei"),
+    ("bytes32", "dataHash"),
+    ("uint8", "operation"),
+    ("bytes32", "mandateHash"),
+    ("bytes32", "policyHash"),
+    ("uint64", "deadline"),
+]
+
+
 class EncodingError(ValueError):
     pass
 
@@ -55,11 +114,15 @@ def _bits(solidity_type: str) -> int:
 
 def encode_value(solidity_type: str, value) -> bytes:
     """abi.encode a single EIP-712 atomic value into one 32-byte word."""
-    if solidity_type == "bytes32":
+    if solidity_type.startswith("bytes") and solidity_type[5:].isdigit():
+        width = int(solidity_type[5:])
         raw = bytes.fromhex(_strip0x(value))
-        if len(raw) != 32:
-            raise EncodingError(f"bytes32 value is {len(raw)} bytes: {value!r}")
-        return raw
+        if len(raw) != width:
+            raise EncodingError(
+                f"{solidity_type} value is {len(raw)} bytes: {value!r}"
+            )
+        # bytesN is right-padded (EIP-712 / ABI), unlike uintN and address.
+        return raw.ljust(32, b"\x00")
     if solidity_type == "address":
         raw = bytes.fromhex(_strip0x(value))
         if len(raw) != 20:
@@ -103,19 +166,44 @@ def domain_separator(domain: Dict) -> bytes:
     )
 
 
-def receipt_struct_hash(receipt: Dict) -> bytes:
-    parts = [type_hash(RECEIPT_TYPE)]
-    for solidity_type, name in RECEIPT_FIELDS:
-        if name not in receipt:
-            raise EncodingError(f"receipt is missing required field {name!r}")
-        parts.append(encode_value(solidity_type, receipt[name]))
-    extra = [k for k in receipt if k not in {n for _, n in RECEIPT_FIELDS}]
-    if extra:
-        raise EncodingError(
-            f"receipt carries fields not in the §5.4 payload: {sorted(extra)}; "
-            "refusing to hash an under-determined struct"
-        )
+def struct_hash(struct_name: str, fields: List[Tuple[str, str]], payload: Dict,
+                strict: bool = True, ignore: Tuple[str, ...] = ()) -> bytes:
+    """EIP-712 hashStruct: keccak256(typeHash || abi.encode(field values))."""
+    type_string = struct_name + "(" + ",".join(f"{t} {n}" for t, n in fields) + ")"
+    parts = [type_hash(type_string)]
+    for solidity_type, name in fields:
+        if name not in payload:
+            raise EncodingError(f"{struct_name} is missing required field {name!r}")
+        parts.append(encode_value(solidity_type, payload[name]))
+    if strict:
+        known = {n for _, n in fields} | set(ignore)
+        extra = [k for k in payload if k not in known]
+        if extra:
+            raise EncodingError(
+                f"{struct_name} carries fields not in its §5 payload list: "
+                f"{sorted(extra)}; refusing to hash an under-determined struct"
+            )
     return keccak256(b"".join(parts))
+
+
+def receipt_struct_hash(receipt: Dict) -> bytes:
+    return struct_hash(RECEIPT_STRUCT_NAME, RECEIPT_FIELDS, receipt)
+
+
+def mandate_hash(mandate: Dict) -> bytes:
+    return struct_hash(MANDATE_STRUCT_NAME, MANDATE_FIELDS, mandate)
+
+
+def policy_hash(policy: Dict) -> bytes:
+    return struct_hash(POLICY_STRUCT_NAME, POLICY_FIELDS, policy)
+
+
+def action_hash(action: Dict) -> bytes:
+    # §5.3: "The complete calldata accompanies the payload." It rides alongside
+    # the struct rather than inside it, so callData is excluded from the hash
+    # and committed to indirectly through dataHash.
+    return struct_hash(ACTION_STRUCT_NAME, ACTION_FIELDS, action,
+                       ignore=("callData",))
 
 
 def receipt_digest(domain: Dict, receipt: Dict) -> bytes:
