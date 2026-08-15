@@ -49,7 +49,7 @@ RECEIPT_TYPE = (
 # recovered by search against the samples. Recovering these turned the CLI from
 # "checks the signature" into "checks the whole chain", so they are worth
 # carrying even though nothing in §5 says the receipt's mandateHash/policyHash/
-# actionHash are hashStruct values. See REPORT.md F-5.
+# actionHash are hashStruct values. See REPORT.md F-2.
 MANDATE_STRUCT_NAME = "MandatePayload"
 MANDATE_FIELDS: List[Tuple[str, str]] = [
     ("uint16", "schemaVersion"),

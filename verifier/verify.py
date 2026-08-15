@@ -29,7 +29,7 @@ from secp256k1 import RecoveryError, is_low_s, parse_signature, recover_address 
 # §5.4 lists `verdict` with no enumeration and no encoding. The receipts carry
 # it numerically. Recovered from the samples against index.json/meta.json:
 #   0 = BLOCK, 1 = REVIEW, 2 = ALLOW.
-# See REPORT.md F-2: the spec never states this and §4.2 lists the cases in the
+# See REPORT.md F-4: the spec never states this and §4.2 lists the cases in the
 # opposite order, so ALLOW=0 is an equally defensible misreading.
 VERDICT_NAMES = {0: "BLOCK", 1: "REVIEW", 2: "ALLOW"}
 
@@ -239,7 +239,7 @@ def _chain_checks(sample_dir, receipt, evidence):
     """Recompute every other hash the receipt commits to.
 
     §5 does not say these are EIP-712 hashStruct values; that was recovered by
-    search (REPORT.md F-5). Without these, a receipt could be correctly signed
+    search (REPORT.md F-2). Without these, a receipt could be correctly signed
     over the *wrong* mandate and still pass every other check in this file.
     """
     out = []
@@ -293,7 +293,7 @@ def _chain_checks(sample_dir, receipt, evidence):
         ))
 
     # Evidence-bundle fields §5.6 does not list, and never requires to agree
-    # with the receipt (REPORT.md F-3). Checked anyway: if they can disagree,
+    # with the receipt (REPORT.md F-5). Checked anyway: if they can disagree,
     # the dashboard and the receipt can tell an operator different stories.
     anchor = evidence.get("anchor") if isinstance(evidence, dict) else None
     if isinstance(anchor, dict):
@@ -315,7 +315,7 @@ def _chain_checks(sample_dir, receipt, evidence):
         ))
 
     # The one binding this verifier cannot check. Stated loudly rather than
-    # quietly omitted: see REPORT.md F-6.
+    # quietly omitted: see REPORT.md F-3.
     out.append(Check(
         "reasonCodesHash recomputed from the evidence bundle",
         True,

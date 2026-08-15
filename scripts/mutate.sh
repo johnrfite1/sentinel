@@ -584,8 +584,8 @@ run_mutation "B1 baseline: stop enforcing the native-value ceiling" \
 
 run_mutation "B2 baseline: stop blocking unlimited approvals" \
     "src/ablation/baseline.ts" \
-    "                decode.decoded.amount === MAX_UINT256" \
-    "                false"
+    "    if (config.blockUnlimitedApproval && decode.decoded.schema === \"DemoERC20.approve\") {" \
+    "    if (false) {"
 
 run_mutation "B3 baseline: ignore the target allowlist" \
     "src/ablation/baseline.ts" \
@@ -607,10 +607,15 @@ run_mutation "B6 layers: L2 keeps the wrong-resource check (partition leak)" \
     '    "EVAL_PURCHASE_RESOURCE",' \
     '    "EVAL_PURCHASE_RESOURCE_TYPO",'
 
-run_mutation "B7 layers: L1 is handed the simulation after all" \
+# B7 originally removed the `simulation: null` guard on L1. It SURVIVED, and it was a
+# defective mutation rather than a coverage gap: runBaseline reads no simulation field, so
+# the change has no observable behaviour today. The guard is defence in depth for a
+# post-state check added later, and its untestability is now stated in ablation.test.ts.
+# Replaced with a mutation that is observable.
+run_mutation "B7 layers: L1 verdict fold swapped for the engine's" \
     "src/ablation/layers.ts" \
-    "        checks = runBaseline({...input, simulation: null}, baselineConfig);" \
-    "        checks = runBaseline(input, baselineConfig);"
+    "        verdict = baselineVerdict(checks);" \
+    "        verdict = verdictOf(checks, input.policy);"
 
 run_mutation "B8 layers: L3 silently becomes L2" \
     "src/ablation/layers.ts" \

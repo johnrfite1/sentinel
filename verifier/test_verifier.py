@@ -87,7 +87,7 @@ class TestJCSNumbers(unittest.TestCase):
     """RFC 8785 appendix B number vectors.
 
     None of these are exercised by the Sentinel fixtures, which carry every
-    number as a JSON string (REPORT.md F-4). They are tested anyway because the
+    number as a JSON string (REPORT.md F-6). They are tested anyway because the
     schema does not forbid a real number appearing later.
     """
 
@@ -365,7 +365,7 @@ class TestTamper(unittest.TestCase):
 # ---------------------------------------------------------------------------
 
 class TestRefusedShape(unittest.TestCase):
-    """No shipped sample sets refused=true (REPORT.md F-7), so the shape is
+    """No shipped sample sets refused=true (REPORT.md F-13), so the shape is
     synthesised here rather than left untested."""
 
     def _refused_copy(self, body):
@@ -450,7 +450,7 @@ class TestDerivedConstants(unittest.TestCase):
 
     def test_empty_reason_codes_hash_is_keccak_of_empty(self):
         # case-1 has no reason codes and its reasonCodesHash is keccak256(""),
-        # which REPORT.md F-6 flags as an unstated convention.
+        # which REPORT.md F-3 flags as an unstated convention.
         doc = read_json(SAMPLES, "case-1-allow", "receipt.json")
         self.assertEqual(doc["receipt"]["reasonCodesHash"], keccak256_hex(b""))
 

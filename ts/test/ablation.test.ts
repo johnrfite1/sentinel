@@ -200,8 +200,20 @@ describe("the §7.2 baseline enforces what §7.2 grants it", () => {
     }
 
     it("BASE_CALLDATA_UNDECODABLE — calldata it cannot read", () => {
-        const results = runBaseline(input({callData: "0xc188" as Hex}), config);
+        // An ALLOWLISTED selector carrying the wrong number of argument words. Two-byte
+        // calldata would not isolate this: the baseline blocks it on BASE_SELECTOR_ALLOWLISTED
+        // first, which is correct behaviour and would have made the verdict assertion below
+        // pass for the wrong reason.
+        const short = ("0xc188528b" + RESOURCE.slice(2) + "0".repeat(64)) as Hex;
+        const results = runBaseline(input({callData: short}), config);
         assert.ok(codesOf(results, "UNRESOLVED").includes("BASE_CALLDATA_UNDECODABLE"));
+        // The verdict, not just the code. Mutation B5 changed the baseline's fold so an
+        // UNRESOLVED check blocks, and the suite stayed green: the code was asserted and the
+        // consequence was not. That consequence is the whole point — a wallet policy that
+        // cannot decode a call applies the rules it could evaluate rather than holding the
+        // transaction, which is what makes this a FALSE ALLOW in the ablation and what stops
+        // the baseline being quietly credited with a detection it never made.
+        assert.equal(baselineVerdict(results), "ALLOW");
     });
 
     it("allows the conforming action", () => {
@@ -305,8 +317,22 @@ describe("the §7.3 layer partition", () => {
         assert.equal(l3.verdict, verdictOf(direct, i.policy));
     });
 
-    it("L1 never consults the simulation", () => {
-        // Passed a simulation object that would throw if any property were read.
+    /**
+     * THIS ASSERTION CANNOT CURRENTLY OBSERVE THE DEFECT IT IS NAMED FOR, and that is
+     * recorded here rather than left for someone to discover.
+     *
+     * `runLayer` passes L1 an input with `simulation: null` so the baseline structurally
+     * cannot see post-state. Mutation B7 removed that and handed the real simulation
+     * through; the suite stayed green, because `runBaseline` reads no simulation field at
+     * all, so the trap below never fires either way.
+     *
+     * The `simulation: null` is therefore defence in depth, not currently-load-bearing code:
+     * it is what would stop a post-state check added to the baseline later from silently
+     * violating §7.2's "no post-state constraint". Kept for that reason, with its
+     * untestability stated, per the AGENTS.md rule that a test which cannot detect its own
+     * bug must say so in the test file. The trap still guards the day someone does read it.
+     */
+    it("L1 never consults the simulation (see comment: cannot fail today)", () => {
         const trap = new Proxy(
             {},
             {
@@ -317,6 +343,12 @@ describe("the §7.3 layer partition", () => {
         );
         const i = {...input({}), simulation: trap as never};
         assert.doesNotThrow(() => runLayer("L1_baseline", i, config));
+
+        // What IS observable: the baseline's own output must not mention any post-state code.
+        const codes = runBaseline(i, config).map((c) => c.code);
+        for (const code of codes) {
+            assert.equal(code.startsWith("BASE_"), true, `${code} is not a baseline-namespaced code`);
+        }
     });
 
     it("catches the wrong-purpose action at L3 and not at L1 or L2", () => {
