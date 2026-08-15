@@ -23,6 +23,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import eip712  # noqa: E402
 import jcs  # noqa: E402
+import reasoncodes  # noqa: E402
 from keccak import keccak256  # noqa: E402
 from secp256k1 import RecoveryError, is_low_s, parse_signature, recover_address  # noqa: E402
 
@@ -88,7 +89,18 @@ def _find_domain(sample_dir, override):
     )
 
 
-TAMPER_MODES = ("evidence", "receipt", "signature")
+TAMPER_MODES = (
+    "evidence", "receipt", "signature",
+    "reasons-substitute", "reasons-add", "reasons-remove", "reasons-reorder",
+)
+
+# Modes whose mutation must NOT break verification. A pure reorder of the
+# published reasonCodes list is the control case: the committed set is sorted
+# before hashing, so order in the published list carries no information. If a
+# reorder were rejected, this verifier would be hashing the list as given rather
+# than the set, and would reject honest receipts whose producer emitted the
+# codes in evaluation order.
+TAMPER_MUST_STILL_VERIFY = frozenset({"reasons-reorder"})
 
 
 def verify_sample(sample_dir, domain_path=None, tamper=None):
@@ -120,6 +132,13 @@ def verify_sample(sample_dir, domain_path=None, tamper=None):
             sig = receipt_doc["signature"]
             flipped = "%02x" % (int(sig[2:4], 16) ^ 0x01)
             receipt_doc["signature"] = "0x" + flipped + sig[4:]
+    elif tamper and tamper.startswith("reasons-"):
+        receipt_doc, applied = _tamper_reasons(receipt_doc, tamper)
+        if not applied:
+            raise NotApplicable(
+                f"{tamper} cannot be applied to a sample with "
+                f"{len(receipt_doc.get('reasonCodes') or [])} reason code(s)"
+            )
     elif tamper is not None:
         raise ValueError(f"unknown tamper mode {tamper!r}")
 
@@ -232,6 +251,9 @@ def verify_sample(sample_dir, domain_path=None, tamper=None):
     # ---- 6. the rest of the hash chain ----------------------------------
     checks.extend(_chain_checks(sample_dir, receipt, evidence))
 
+    # ---- 7. reason codes (§5.4 as amended by D-022) ----------------------
+    checks.extend(_reason_code_checks(receipt_doc, receipt))
+
     return all(c.ok for c in checks), checks
 
 
@@ -314,17 +336,93 @@ def _chain_checks(sample_dir, receipt, evidence):
             "" if ok else f"evidence says {evidence['verdict']}, receipt decodes to {expected}",
         ))
 
-    # The one binding this verifier cannot check. Stated loudly rather than
-    # quietly omitted: see REPORT.md F-3.
+    return out
+
+
+def _reason_code_checks(receipt_doc, receipt):
+    """§5.4 as amended by D-022. Was NOT VERIFIABLE before the amendment."""
+    out = []
+    published = receipt_doc.get("reasonCodes")
+    findings = receipt_doc.get("signerFindings")
+
+    if published is None:
+        # §5.4: "the full ordered list travels alongside the receipt and a
+        # verifier must be given it." Not being given it is a verification
+        # failure for a signed receipt, not a reason to pass quietly.
+        out.append(Check(
+            "reasonCodesHash recomputed from the published reason codes",
+            False,
+            "receipt.json carries no `reasonCodes` array. §5.4 requires the "
+            "list to travel alongside the receipt; without it the "
+            "reasonCodesHash commitment cannot be checked.",
+        ))
+        return out
+    if not isinstance(published, list):
+        out.append(Check("reasonCodes is a list", False,
+                         f"got {type(published).__name__}"))
+        return out
+
+    # 1. Identifier grammar. Fail rather than sanitise.
+    try:
+        reasoncodes.validate_all(published)
+        if findings is not None:
+            reasoncodes.validate_all(findings)
+        out.append(Check(
+            "every reason-code identifier matches ^[A-Za-z0-9_.:-]{1,64}$",
+            True,
+            f"{len(published)} identifier(s) validated with absolute anchors",
+        ))
+    except reasoncodes.ReasonCodeError as exc:
+        out.append(Check(
+            "every reason-code identifier matches ^[A-Za-z0-9_.:-]{1,64}$",
+            False, str(exc)))
+        return out
+
+    # 2. The commitment itself.
+    computed = reasoncodes.reason_codes_hash_hex(published)
+    declared = _norm_hex(receipt.get("reasonCodesHash", ""))
+    ok = computed == declared
+    canonical = reasoncodes.committed_set(published)
+    detail = f"{len(canonical)} code(s) committed"
+    if not ok:
+        detail = f"computed {computed}\nreceipt  {declared}"
     out.append(Check(
-        "reasonCodesHash recomputed from the evidence bundle",
-        True,
-        "NOT VERIFIABLE: §5.4 names reasonCodesHash but never defines its "
-        "preimage, so an independent party cannot recompute it. A receipt "
-        "signed over the correct evidence with a substituted reason-code set "
-        "would pass every other check here.",
-        skipped=True,
-    ))
+        "reasonCodesHash recomputed from the published reason codes",
+        ok, detail))
+
+    # 3. signerFindings must be inside the committed set. §5.4 says the set is
+    #    the union of the evaluator's codes and the signer's findings, so a
+    #    finding outside `reasonCodes` means the two are not in fact unioned --
+    #    and the receipt would be committing to the evaluator's half only.
+    if findings is None:
+        out.append(Check("signerFindings ⊆ reasonCodes", True,
+                         "receipt.json carries no `signerFindings` array",
+                         skipped=True))
+    else:
+        missing = sorted(set(findings) - set(published))
+        out.append(Check(
+            "signerFindings ⊆ the committed reason-code set",
+            not missing,
+            "" if not missing else
+            f"signer findings absent from reasonCodes: {missing}\n"
+            "§5.4 defines the committed set as the union of the evaluator's "
+            "codes and the signer's findings, so this receipt does not commit "
+            "to the signer's own findings.",
+        ))
+
+    # 4. Advisory: the published list should already be in canonical form.
+    #    The hash is order- and duplicate-insensitive by construction, so this
+    #    cannot be a failure -- but a drifting producer is worth surfacing.
+    if published != canonical:
+        reason = ("contains duplicates" if len(set(published)) != len(published)
+                  else "is not in ascending byte order")
+        out.append(Check(
+            "published reasonCodes list is already in canonical order",
+            True,
+            f"the list {reason}; the hash is unaffected because the set is "
+            "de-duplicated and sorted before hashing, so this is advisory only",
+            skipped=True,
+        ))
     return out
 
 
@@ -358,6 +456,47 @@ def _verdict_check(sample_dir, receipt):
         ok,
         "" if ok else f"case label says {expected}, receipt decodes to {name}",
     )
+
+
+class NotApplicable(Exception):
+    """A tamper mode that this sample's shape cannot express."""
+
+
+def _tamper_reasons(receipt_doc, mode):
+    """Mutate the published reasonCodes list. Returns (doc, applied).
+
+    The receipt body -- and therefore the committed reasonCodesHash and the
+    signature -- is left untouched. Only the list travelling alongside is
+    changed, which is exactly the substitution an attacker would attempt.
+    """
+    doc = copy.deepcopy(receipt_doc)
+    codes = doc.get("reasonCodes")
+    if not isinstance(codes, list):
+        return doc, False
+
+    if mode == "reasons-add":
+        # Always applicable, including to an empty list.
+        doc["reasonCodes"] = codes + ["EVAL_FABRICATED_EXTRA_CODE"]
+        return doc, True
+    if mode == "reasons-remove":
+        if not codes:
+            return doc, False
+        doc["reasonCodes"] = codes[1:]
+        return doc, True
+    if mode == "reasons-substitute":
+        if not codes:
+            return doc, False
+        # Swap one identifier for a different, still well-formed one, keeping
+        # the list length identical.
+        doc["reasonCodes"] = ["EVAL_SUBSTITUTED_CODE"] + codes[1:]
+        return doc, True
+    if mode == "reasons-reorder":
+        # Needs at least two distinct codes for a reversal to change anything.
+        if len(set(codes)) < 2:
+            return doc, False
+        doc["reasonCodes"] = list(reversed(codes))
+        return doc, True
+    raise ValueError(f"unknown reason-code tamper mode {mode!r}")
 
 
 def _tamper_json(evidence):
@@ -413,6 +552,11 @@ def run(sample_dir, domain_path=None, tamper=None, quiet=False, verbose=True):
     label = os.path.basename(os.path.abspath(sample_dir))
     try:
         ok, checks = verify_sample(sample_dir, domain_path, tamper)
+    except NotApplicable as exc:
+        if not quiet:
+            print(f"{label} {_color('[tamper: ' + tamper + ']', YELLOW)}")
+            print(f"  => {_color('N/A', YELLOW)}: {exc}\n")
+        return True, []
     except Exception as exc:  # noqa: BLE001 - a crash is a verification failure
         if not quiet:
             print(f"{label}: {_color('ERROR', RED)} {type(exc).__name__}: {exc}")
@@ -425,13 +569,20 @@ def run(sample_dir, domain_path=None, tamper=None, quiet=False, verbose=True):
             for check in checks:
                 print(check.render())
     if tamper:
-        rejected = not ok
+        must_verify = tamper in TAMPER_MUST_STILL_VERIFY
+        as_expected = ok if must_verify else not ok
         if not quiet:
-            outcome = _color("PASS", GREEN) if rejected else _color("FAIL", RED)
-            print(f"  => tamper self-test {outcome}: "
-                  f"{'correctly rejected' if rejected else 'WRONGLY ACCEPTED'} "
-                  f"the mutated {tamper}\n")
-        return rejected, checks
+            outcome = _color("PASS", GREEN) if as_expected else _color("FAIL", RED)
+            if must_verify:
+                verdict = ("correctly still verified" if ok
+                           else "WRONGLY REJECTED")
+                note = (" (order in the published list must not matter)")
+            else:
+                verdict = "correctly rejected" if not ok else "WRONGLY ACCEPTED"
+                note = ""
+            print(f"  => tamper self-test {outcome}: {verdict} "
+                  f"the mutated {tamper}{note}\n")
+        return as_expected, checks
 
     if not quiet:
         print(f"  => {_color('PASS', GREEN) if ok else _color('FAIL', RED)}\n")
@@ -439,12 +590,12 @@ def run(sample_dir, domain_path=None, tamper=None, quiet=False, verbose=True):
 
 
 def run_tamper_suite(sample_dir, domain_path=None, quiet=False, verbose=False):
-    """Every tamper mode must be rejected. Returns True only if all are."""
+    """Every tamper mode must produce its expected outcome."""
     results = []
     for mode in TAMPER_MODES:
-        rejected, _ = run(sample_dir, domain_path, tamper=mode,
-                          quiet=quiet, verbose=verbose)
-        results.append(rejected)
+        as_expected, _ = run(sample_dir, domain_path, tamper=mode,
+                             quiet=quiet, verbose=verbose)
+        results.append(as_expected)
     return all(results)
 
 
@@ -488,7 +639,7 @@ def main(argv=None):
     failed = [t for t, ok in zip(targets, oks) if not ok]
     passed = len(oks) - len(failed)
     print(f"{passed}/{len(oks)} sample(s) "
-          f"{'rejected every tamper mode' if args.tamper else 'verified'}")
+          f"{'behaved as expected under every tamper mode' if args.tamper else 'verified'}")
     for target in failed:
         print(f"  {_color('FAILED', RED)}: {target}")
     return 1 if failed else 0

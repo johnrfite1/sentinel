@@ -130,16 +130,43 @@ WHAT IS COVERED, by layer, each with the limit that layer cannot exceed:
            say nothing about whether the injection still reproduces against a live
            model. That is the D-007 canary, and it is S2.
 
+  §9 s8    The §7.1 corpus and the §7.3 ablation. 50 fixtures across all 20 declared
+           classes, executed against a real chain with per-fixture snapshot isolation, and
+           INDEPENDENTLY LABELLED under the D-011a frozen prompt by agents denied the
+           implementation, the tests, and each other's work. Measured against those labels:
+           false allows 38 (baseline) / 19 (policy+effects) / 1 (full). Detection
+           contribution — baseline alone 9, effect extraction adds 18, mandate conformance
+           adds 20. Inter-labeller disagreement 10.0%.
+           LIMIT: this is the first evidence in the repository that bears on whether the
+           verdicts are RIGHT rather than merely produced, and it is bounded by the corpus.
+           50 fixtures over two demo contracts and two call schemas is not an accuracy claim
+           about EVM transactions (§7.3: "do not claim general transaction-safety accuracy").
+           The single full-configuration false allow is F035, whose enforcement is the
+           isolated signer rather than the engine. Four fixtures' labels are OWED a re-label
+           under D-021, which reclassified a reverting simulation after they were labelled.
+
+  D-010    The independent Python receipt verifier, in `verifier/`. Zero third-party
+           dependencies; its own RFC 8785, Keccak-f[1600] and secp256k1 recovery, built by
+           an agent that never read this repository's TypeScript. 5/5 samples verify, all
+           tamper modes rejected, 39/39 of its own tests pass. Its keccak is pinned to
+           published vectors and its JCS to RFC 8785's appendix-B vectors, so green means
+           agreement with the STANDARD, not with itself.
+           LIMIT: it verifies that a bundle is the one a receipt commits to and that the
+           receipt is correctly signed. It CANNOT confirm the bundle's factual content
+           against a chain — that needs an archive node at the anchored block. Verifying a
+           receipt is not verifying the simulation. The corpus exercises no JSON numbers and
+           no non-ASCII, so RFC 8785's number and code-unit-ordering paths — its two most
+           error-prone branches — are untested by anything (REPORT.md F-6).
+
 WHAT IS NOT COVERED:
 
-  - Whether the verdicts are RIGHT. §7 states it outright: "Four demo paths alone cannot
-    prove that the verdicts are not hard-coded." The bar is the §9 step 8 corpus with
-    independent labels (D-011) plus the §7.3 ablation. NEITHER EXISTS YET; both are S2.
   - A LIVE agent. §9 step 7 connected the proposal to the pipeline, so the D-018 gap is
     closed for the recorded case, but every agent proposal exercised here comes from a
     pinned D-007 transcript. Nothing in this suite calls a model.
-  - The D-010 receipt-verifier CLI, the fixture corpus, and the dashboard.
-  - An independent review of steps 1-3 that completed. Steps 4-6 HAVE now had a full
+  - The evidence dashboard (outside S2 unless John adds it at the gate, D-009), and the
+    §7.5 hard-gate evidence pack.
+  - An independent review of steps 7-8, which have had NONE, and of steps 1-3 that
+    completed. Steps 4-6 HAVE now had a full
     independent adversarial pass under D-017 (see A-022): fixed commit, 12 findings, all 12
     independently adjudicated, 1 S1-blocking defect plus 6 others corrected and reverified.
     Steps 1-3 were reviewed earlier under A-016, whose own verifications were mostly cut
