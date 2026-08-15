@@ -7,6 +7,17 @@ Last updated: 2026-08-15. **GATE S1 IS SIGNED — PASS, John, 2026-07-28**, scop
 D-018. See `docs/gate-s1-evidence.md` §10 for the sign-off, the three limits named in the
 assessment, and §11 for what S1 does NOT authorise. **D-016 still blocks all publication.**
 
+> ## ⚠ READ BEFORE TOUCHING ANYTHING — A-028
+> Four independent adversarial reviews ran at commit `9059346` on 2026-08-15 and found **one
+> LIVE code defect inside Gate S1's signed scope** (`checkEvidenceDecoding` in
+> `ts/src/signer/attest.ts` — a two-field lie in the evidence bundle switches the whole D-014
+> attestation off; reproduced end to end to a wrong entitlement onchain), plus 29 of 45
+> mutations surviving a green suite on steps 1–3, a vacuous test and a false published claim
+> in step 7, a contaminated label set, a leakage guard that is bypassed by any prefixed key
+> **and already leaking**, and several ablation overstatements. **NOTHING HAS BEEN REMEDIATED.**
+> Read A-028 in `docs/decisions.md` in full before building on any of this. The F1 remedy
+> needs a new non-blocking severity tier, which is John's design call and not the build loop's.
+
 Since S1: **§9 steps 7 and 8 are built, and most of step 9.** D-019 ruled the step-7 fork.
 The 50-fixture corpus is built and **independently labelled**, the §7.3 ablation has run, and
 the **D-010 Python verifier is complete**. Building toward Gate S2 — which only John signs.
