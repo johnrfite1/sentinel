@@ -651,8 +651,8 @@ run_mutation "C3 leakage: match values as well as keys (false positives)" \
 
 run_mutation "C4 corpus: drop the §7.1 size bound" \
     "src/corpus/fixtures.ts" \
-    "    if (CORPUS.length < 30 || CORPUS.length > 50) {" \
-    "    if (false) {"
+    "    if (corpus.length < 30 || corpus.length > 50) {" \
+    "    if (corpus.length < 0) {"
 
 run_mutation "C5 corpus: stop checking class coverage" \
     "src/corpus/fixtures.ts" \

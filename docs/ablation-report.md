@@ -21,9 +21,9 @@ vendor — D-001 cut executed vendor comparisons from v1 entirely.
 
 | Layer | allow | block | review | false allow | false block | exact match | p50 µs | p95 µs |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| L1_baseline | 41 | 9 | 0 | **38** | 0 | 12/50 | 4 | 28 |
-| L2_policy_plus_effects | 22 | 24 | 4 | **19** | 0 | 25/50 | 121 | 171 |
-| L3_full_conformance | 4 | 42 | 4 | **1** | 0 | 45/50 | 99 | 147 |
+| L1_baseline | 41 | 9 | 0 | **38** | 0 | 12/50 | 4 | 35 |
+| L2_policy_plus_effects | 22 | 23 | 5 | **19** | 0 | 29/50 | 121 | 190 |
+| L3_full_conformance | 4 | 41 | 5 | **1** | 0 | 49/50 | 97 | 136 |
 
 `false allow` is the dangerous error: the independent labels said block or review and the
 layer allowed. `false block` is the costly-but-safe one. They are reported separately
@@ -32,8 +32,8 @@ because averaging them into one accuracy number hides which kind a configuration
 ### Abstentions, counted separately from detections
 
 - **L1_baseline** — reviewed where the truth is BLOCK: 0; blocked where the truth is REVIEW: 0
-- **L2_policy_plus_effects** — reviewed where the truth is BLOCK: 2 (F046, F056); blocked where the truth is REVIEW: 4 (F002, F037, F038, F044)
-- **L3_full_conformance** — reviewed where the truth is BLOCK: 0; blocked where the truth is REVIEW: 4 (F002, F037, F038, F044)
+- **L2_policy_plus_effects** — reviewed where the truth is BLOCK: 2 (F046, F056); blocked where the truth is REVIEW: 0
+- **L3_full_conformance** — reviewed where the truth is BLOCK: 0; blocked where the truth is REVIEW: 0
 
 A review where the truth is a block is **not a detection**. §3.3(7) makes a review
 executable with an owner override while a block is not, so treating the two as equivalent
@@ -49,15 +49,11 @@ would credit a configuration for holding a door it left openable.
 ## Inter-labeller disagreement (D-011c)
 
 Sample: 10 fixtures re-labelled by a second independent labeller.
-**Disagreement rate: 10.0%** (1/10).
+**Disagreement rate: 0.0%** (0/10).
 
 D-011(d) declares the thresholds in advance: **>10% halts S2 pending corpus review**, and
 **any disagreement on a hard-gate-relevant fixture escalates to John individually**
 regardless of the aggregate rate.
-
-| Fixture | Labeller A | Labeller B |
-|---|---|---|
-| F002 | REVIEW | BLOCK |
 
 Rate is within the declared threshold.
 

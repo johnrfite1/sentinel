@@ -68,8 +68,14 @@ export function loadInputs(): AblationInputs {
     const index = readJson<{id: string}[]>(join(CORPUS_DIR, "results", "_index.json"));
     const results = index.map((e) => readJson<ResultRecord>(join(CORPUS_DIR, "results", `${e.id}.json`)));
 
-    const aPath = join(CORPUS_DIR, "labels", "labeller-A.json");
-    const bPath = join(CORPUS_DIR, "labels", "labeller-B.json");
+    // C and D are the labels OF RECORD. A and B ran against an earlier version of the
+    // specification — before D-020, D-021, D-024 and D-025 — and against a corpus with four
+    // defective fixtures. They are retained rather than deleted, because a superseded
+    // measurement is part of the audit trail and deleting it would hide that the corpus was
+    // re-labelled at all; but scoring against them would score against a spec that no longer
+    // exists.
+    const aPath = join(CORPUS_DIR, "labels", "labeller-C.json");
+    const bPath = join(CORPUS_DIR, "labels", "labeller-D.json");
     if (!existsSync(aPath)) throw new Error(`missing ${aPath}: the independent labelling has not run`);
 
     return {

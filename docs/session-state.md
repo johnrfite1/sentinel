@@ -105,11 +105,19 @@ Done:
   directories and `assertNoLeakage` fails the run if an evaluator-shaped key reaches the
   former. Labelling prompt frozen and hash-pinned FIRST (D-011a), guarded by
   `scripts/check-label-prompt.sh` in the project gate.
-- **Independent labelling COMPLETE (D-011)** — labeller A on all 50, labeller B on a
-  sha256-ranked 20% sample, both denied the implementation, the tests, and each other's work.
-  **Disagreement 10.0% (1/10)** — see §4, this sits exactly on the ratified threshold.
+- **Independent labelling COMPLETE (D-011), and RE-RUN after the spec amendments.** Labellers
+  **C and D are the labels of record**; A and B ran against the pre-amendment spec and a
+  corpus with four defective fixtures, and are retained as audit trail rather than deleted —
+  deleting them would hide that the corpus was re-labelled at all. All four were denied the
+  implementation, the results, and each other's work. **Disagreement fell from 10.0% to
+  0.0%**, which is the amendments doing exactly what they were ruled to do: the sole earlier
+  disagreement was a spec gap (D-021), not a labelling error.
 - **§7.2 baseline + §7.3 ablation** — `ts/src/ablation/`, report at `docs/ablation-report.md`.
   The baseline is a SEPARATE implementation, not a filter over the evaluator's codes.
+  **Measured against the labels of record: false allows 38 / 19 / 1 across the three layers;
+  exact match 12 / 29 / 49 of 50; detection contribution — baseline alone 9, effect
+  extraction adds 18, mandate conformance adds 20.** L3's single false allow is F035, whose
+  enforcement is the isolated signer rather than the engine.
 - **D-010 verifier COMPLETE** — `verifier/`, Python, zero third-party dependencies, built by
   an agent that never opened `ts/`. 5/5 samples verify, 15/15 tamper cases rejected, 39/39
   tests. **`verifier/REPORT.md` is the most important document produced this session** — 13
