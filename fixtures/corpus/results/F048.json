@@ -1,0 +1,257 @@
+{
+  "fixtureId": "F048",
+  "class": "conflicting-block-state",
+  "intent": "Fresh bytecode is deployed at the target address after the mandate pinned its code hash, so the pin and the chain now disagree.",
+  "primaryEnforcement": "conformance-engine",
+  "decode": {
+    "ok": true,
+    "schema": "DemoPay.purchase"
+  },
+  "simulated": false,
+  "layers": [
+    {
+      "layer": "L1_baseline",
+      "verdict": "ALLOW",
+      "checks": [
+        {
+          "code": "BASE_CHAIN_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "BASE_VAULT_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "BASE_TARGET_ALLOWLISTED",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "BASE_SELECTOR_ALLOWLISTED",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "BASE_VALUE_CEILING",
+          "outcome": "PASS",
+          "detail": ""
+        }
+      ],
+      "failing": [],
+      "micros": 3.25
+    },
+    {
+      "layer": "L2_policy_plus_effects",
+      "verdict": "REVIEW",
+      "checks": [
+        {
+          "code": "EVAL_POLICY_ACTIVE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VAULT_NOT_PAUSED",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_CHAIN_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VAULT_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_NONCE_CURRENT",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_OPERATION_SUPPORTED",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_POLICY_WINDOW",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_ACTION_DEADLINE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VALUE_WITHIN_POLICY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VALUE_WITHIN_VAULT_CAP",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_POLICY_OPERATION",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_SIMULATION_UNAVAILABLE",
+          "outcome": "UNRESOLVED",
+          "detail": "no simulation was produced"
+        }
+      ],
+      "failing": [
+        "EVAL_SIMULATION_UNAVAILABLE"
+      ],
+      "micros": 106.625
+    },
+    {
+      "layer": "L3_full_conformance",
+      "verdict": "REVIEW",
+      "checks": [
+        {
+          "code": "EVAL_MANDATE_ACTIVE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_POLICY_ACTIVE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_MANDATE_PRINCIPAL_IS_OWNER",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VAULT_NOT_PAUSED",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_CHAIN_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VAULT_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_NONCE_CURRENT",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_TARGET_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_OPERATION_SUPPORTED",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_CALLDATA_BINDING",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_ACTION_BINDS_MANDATE_AND_POLICY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_MANDATE_BINDS_POLICY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_TARGET_CODE_IDENTITY",
+          "outcome": "UNRESOLVED",
+          "detail": "target code hash 0xf8b07b083341d3a7667e38718918d301f47d62f82d8186f4ccd7ed7424a64ef3 is not the pinned 0x28b986ea45370917941b4baa7c9f4c3131216a87d1543071acdc841c39b5b726; the target's behaviour is no longer established"
+        },
+        {
+          "code": "EVAL_MANDATE_WINDOW",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_POLICY_WINDOW",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_ACTION_DEADLINE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VALUE_WITHIN_MANDATE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VALUE_WITHIN_POLICY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VALUE_WITHIN_VAULT_CAP",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_POLICY_OPERATION",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_SELECTOR_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_PURCHASE_RESOURCE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_PURCHASE_BENEFICIARY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_PURCHASE_DURATION",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_PURCHASE_RECURRENCE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_SIMULATION_UNAVAILABLE",
+          "outcome": "UNRESOLVED",
+          "detail": "no simulation was produced"
+        }
+      ],
+      "failing": [
+        "EVAL_SIMULATION_UNAVAILABLE",
+        "EVAL_TARGET_CODE_IDENTITY"
+      ],
+      "micros": 102.25
+    }
+  ]
+}

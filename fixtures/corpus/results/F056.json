@@ -1,0 +1,271 @@
+{
+  "fixtureId": "F056",
+  "class": "reentrancy-attempt",
+  "intent": "A purchase aimed at a target that is not a registry-known contract, standing in for a callee that would attempt to re-enter the vault.",
+  "primaryEnforcement": "vault-foundry-invariants",
+  "decode": {
+    "ok": false,
+    "code": "DECODE_UNSUPPORTED_TARGET"
+  },
+  "simulated": true,
+  "layers": [
+    {
+      "layer": "L1_baseline",
+      "verdict": "BLOCK",
+      "checks": [
+        {
+          "code": "BASE_CHAIN_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "BASE_VAULT_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "BASE_TARGET_ALLOWLISTED",
+          "outcome": "VIOLATION",
+          "detail": "0x000000000000000000000000000000000000beef is not on the allowlist"
+        },
+        {
+          "code": "BASE_SELECTOR_ALLOWLISTED",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "BASE_VALUE_CEILING",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "BASE_CALLDATA_UNDECODABLE",
+          "outcome": "UNRESOLVED",
+          "detail": "DECODE_UNSUPPORTED_TARGET: the baseline cannot read this call"
+        }
+      ],
+      "failing": [
+        "BASE_CALLDATA_UNDECODABLE",
+        "BASE_TARGET_ALLOWLISTED"
+      ],
+      "micros": 8
+    },
+    {
+      "layer": "L2_policy_plus_effects",
+      "verdict": "REVIEW",
+      "checks": [
+        {
+          "code": "EVAL_POLICY_ACTIVE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VAULT_NOT_PAUSED",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_CHAIN_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VAULT_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_NONCE_CURRENT",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_OPERATION_SUPPORTED",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_POLICY_WINDOW",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_ACTION_DEADLINE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VALUE_WITHIN_POLICY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VALUE_WITHIN_VAULT_CAP",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_POLICY_OPERATION",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_CALLDATA_UNDECODABLE",
+          "outcome": "UNRESOLVED",
+          "detail": "DECODE_UNSUPPORTED_TARGET: target is not a supported contract: 0x000000000000000000000000000000000000beef"
+        },
+        {
+          "code": "EVAL_SIMULATION_SUCCEEDS",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_CALL_GRAPH_EXPECTED",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_NATIVE_DELTA_MATCHES_VALUE",
+          "outcome": "PASS",
+          "detail": ""
+        }
+      ],
+      "failing": [
+        "EVAL_CALLDATA_UNDECODABLE"
+      ],
+      "micros": 112.25
+    },
+    {
+      "layer": "L3_full_conformance",
+      "verdict": "BLOCK",
+      "checks": [
+        {
+          "code": "EVAL_MANDATE_ACTIVE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_POLICY_ACTIVE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_MANDATE_PRINCIPAL_IS_OWNER",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VAULT_NOT_PAUSED",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_CHAIN_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VAULT_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_NONCE_CURRENT",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_TARGET_BOUND",
+          "outcome": "VIOLATION",
+          "detail": "action target 0x000000000000000000000000000000000000beef is not the mandate's 0x5fbdb2315678afecb367f032d93f642f64180aa3"
+        },
+        {
+          "code": "EVAL_OPERATION_SUPPORTED",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_CALLDATA_BINDING",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_ACTION_BINDS_MANDATE_AND_POLICY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_MANDATE_BINDS_POLICY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_TARGET_CODE_IDENTITY",
+          "outcome": "UNRESOLVED",
+          "detail": "target code hash 0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470 is not the pinned 0x28b986ea45370917941b4baa7c9f4c3131216a87d1543071acdc841c39b5b726; the target's behaviour is no longer established"
+        },
+        {
+          "code": "EVAL_MANDATE_WINDOW",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_POLICY_WINDOW",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_ACTION_DEADLINE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VALUE_WITHIN_MANDATE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VALUE_WITHIN_POLICY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VALUE_WITHIN_VAULT_CAP",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_POLICY_OPERATION",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_CALLDATA_UNDECODABLE",
+          "outcome": "UNRESOLVED",
+          "detail": "DECODE_UNSUPPORTED_TARGET: target is not a supported contract: 0x000000000000000000000000000000000000beef"
+        },
+        {
+          "code": "EVAL_SIMULATION_SUCCEEDS",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_CALL_GRAPH_EXPECTED",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_NATIVE_DELTA_MATCHES_VALUE",
+          "outcome": "PASS",
+          "detail": ""
+        }
+      ],
+      "failing": [
+        "EVAL_CALLDATA_UNDECODABLE",
+        "EVAL_TARGET_BOUND",
+        "EVAL_TARGET_CODE_IDENTITY"
+      ],
+      "micros": 93.709
+    }
+  ]
+}

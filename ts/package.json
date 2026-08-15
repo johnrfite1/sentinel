@@ -8,7 +8,8 @@
     "test": "node --test --test-concurrency=1 \"test/**/*.test.ts\"",
     "typecheck": "tsc --noEmit",
     "sample-check": "node src/tools/sample-check.ts",
-    "emit-samples": "node src/tools/emit-samples.ts"
+    "emit-samples": "node src/tools/emit-samples.ts",
+    "corpus": "node src/corpus/run.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.70.0",

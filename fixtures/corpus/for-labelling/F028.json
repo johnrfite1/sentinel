@@ -1,0 +1,98 @@
+{
+  "fixtureId": "F028",
+  "scenarioClass": "stale-or-reused-action-nonce",
+  "declaredIntent": "The action carries a nonce five ahead of the vault's current value.",
+  "mandate": {
+    "schemaVersion": "1",
+    "mandateId": "0xaf4d3ec4e450c3a2329304c4dd2572c6804df66bf8b1e87140a7aedfdec364df",
+    "principal": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+    "vault": "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512",
+    "chainId": "31337",
+    "target": "0x5fbdb2315678afecb367f032d93f642f64180aa3",
+    "targetCodeHash": "0x28b986ea45370917941b4baa7c9f4c3131216a87d1543071acdc841c39b5b726",
+    "selector": "0xc188528b",
+    "maxNativeValueWei": "10000000000000000",
+    "purposeKind": "0x4336b7f13de4d1e4bd8f722e5afab30ffc50665228344405ba944d77957fb614",
+    "resourceId": "0x1878e089565039fe0f4ac9769a9fb8f9b28aa23ed7c9e9f9dfa9b926988a5264",
+    "beneficiary": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+    "durationSeconds": "86400",
+    "recurringAllowed": false,
+    "validAfter": "0",
+    "validUntil": "3000000000",
+    "policyHash": "0x8abd037dc7df8d7fa4dce928139c9c1306555aa6853d82b58daa8891a13b0bff"
+  },
+  "policy": {
+    "schemaVersion": "1",
+    "policyVersion": "1",
+    "vault": "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512",
+    "chainId": "31337",
+    "allowedOperation": "0",
+    "allowedTargetsHash": "0xb73a8fa98fa2f83e67843710c2e55b44b03c7ce8131b9c74f17bc6ea9e6f48bd",
+    "allowedSelectorsHash": "0x5df20c98bb1f5d95e7f2d8d65c352745743f65f64e761da96098a682bc436b73",
+    "maxNativeValueWei": "10000000000000000",
+    "maxAllowanceIncreaseBaseUnits": "0",
+    "allowedCallGraphHash": "0x2dd6702379ffadfc4954198f2c29d82da042f017eb8136a44ff32b3bfd650911",
+    "validAfter": "0",
+    "validUntil": "4000000000",
+    "failureMode": "1"
+  },
+  "action": {
+    "schemaVersion": "1",
+    "chainId": "31337",
+    "vault": "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512",
+    "actionNonce": "5",
+    "target": "0x5fbdb2315678afecb367f032d93f642f64180aa3",
+    "valueWei": "1000000000000000",
+    "dataHash": "0xac6dee83c35da5f0a5a889e34b35b34c0457e3db0cd5ae2f886054f0006aa95a",
+    "operation": "0",
+    "mandateHash": "0x377bf0a9888b7d87679e5446b5ce3c443729677fb982199901deb79596ca1f9b",
+    "policyHash": "0x8abd037dc7df8d7fa4dce928139c9c1306555aa6853d82b58daa8891a13b0bff",
+    "deadline": "4000000000",
+    "callData": "0xc188528b1878e089565039fe0f4ac9769a9fb8f9b28aa23ed7c9e9f9dfa9b926988a5264000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb9226600000000000000000000000000000000000000000000000000000000000151800000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "observedEnvironment": {
+    "vaultPaused": false,
+    "vaultActiveMandateHash": "0x377bf0a9888b7d87679e5446b5ce3c443729677fb982199901deb79596ca1f9b",
+    "vaultActivePolicyHash": "0x8abd037dc7df8d7fa4dce928139c9c1306555aa6853d82b58daa8891a13b0bff",
+    "vaultCurrentActionNonce": "0",
+    "vaultAuthorisedSigner": "0x70997970c51812dc3a010c7d01b50e0d17dc79c8",
+    "vaultOwner": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+    "vaultMaxNativeValueWei": "10000000000000000",
+    "targetOnVaultAllowlist": true,
+    "selectorOnVaultAllowlist": true,
+    "targetRuntimeCodeHashOnChain": "0x28b986ea45370917941b4baa7c9f4c3131216a87d1543071acdc841c39b5b726",
+    "simulationPerformed": true,
+    "simulationOutcome": "success",
+    "simulationRevertReason": null,
+    "nativeBalanceDeltas": [
+      {
+        "address": "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512",
+        "delta": "-1000000000000000"
+      },
+      {
+        "address": "0x5fbdb2315678afecb367f032d93f642f64180aa3",
+        "delta": "1000000000000000"
+      },
+      {
+        "address": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+        "delta": "0"
+      }
+    ],
+    "allowanceDeltas": [],
+    "entitlements": [
+      {
+        "contract": "0x5fbdb2315678afecb367f032d93f642f64180aa3",
+        "beneficiary": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+        "resourceId": "0x1878e089565039fe0f4ac9769a9fb8f9b28aa23ed7c9e9f9dfa9b926988a5264",
+        "expiryBefore": "0",
+        "expiryAfter": "1786910880",
+        "recurringBefore": false,
+        "recurringAfter": false
+      }
+    ],
+    "internalCallCount": 0,
+    "simulationAnchorBlock": "5",
+    "calldataDecodedByASupportedSchema": true,
+    "calldataDecodeFailureReason": null
+  }
+}

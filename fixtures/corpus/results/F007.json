@@ -1,0 +1,288 @@
+{
+  "fixtureId": "F007",
+  "class": "boundary-and-over-limit-native-value",
+  "intent": "Native value above the vault's own constructor-set hard cap, which is independent of both mandate and policy.",
+  "primaryEnforcement": "conformance-engine",
+  "decode": {
+    "ok": true,
+    "schema": "DemoPay.purchase"
+  },
+  "simulated": true,
+  "layers": [
+    {
+      "layer": "L1_baseline",
+      "verdict": "BLOCK",
+      "checks": [
+        {
+          "code": "BASE_CHAIN_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "BASE_VAULT_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "BASE_TARGET_ALLOWLISTED",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "BASE_SELECTOR_ALLOWLISTED",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "BASE_VALUE_CEILING",
+          "outcome": "VIOLATION",
+          "detail": "100000000000000000 wei exceeds ceiling 10000000000000000"
+        }
+      ],
+      "failing": [
+        "BASE_VALUE_CEILING"
+      ],
+      "micros": 9.459
+    },
+    {
+      "layer": "L2_policy_plus_effects",
+      "verdict": "BLOCK",
+      "checks": [
+        {
+          "code": "EVAL_POLICY_ACTIVE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VAULT_NOT_PAUSED",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_CHAIN_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VAULT_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_NONCE_CURRENT",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_OPERATION_SUPPORTED",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_POLICY_WINDOW",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_ACTION_DEADLINE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VALUE_WITHIN_POLICY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VALUE_WITHIN_VAULT_CAP",
+          "outcome": "VIOLATION",
+          "detail": "value 100000000000000000 exceeds the vault's immutable cap"
+        },
+        {
+          "code": "EVAL_POLICY_OPERATION",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_SIMULATION_SUCCEEDS",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_CALL_GRAPH_EXPECTED",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_NATIVE_DELTA_MATCHES_VALUE",
+          "outcome": "PASS",
+          "detail": ""
+        }
+      ],
+      "failing": [
+        "EVAL_VALUE_WITHIN_VAULT_CAP"
+      ],
+      "micros": 137.292
+    },
+    {
+      "layer": "L3_full_conformance",
+      "verdict": "BLOCK",
+      "checks": [
+        {
+          "code": "EVAL_MANDATE_ACTIVE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_POLICY_ACTIVE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_MANDATE_PRINCIPAL_IS_OWNER",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VAULT_NOT_PAUSED",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_CHAIN_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VAULT_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_NONCE_CURRENT",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_TARGET_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_OPERATION_SUPPORTED",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_CALLDATA_BINDING",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_ACTION_BINDS_MANDATE_AND_POLICY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_MANDATE_BINDS_POLICY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_TARGET_CODE_IDENTITY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_MANDATE_WINDOW",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_POLICY_WINDOW",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_ACTION_DEADLINE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VALUE_WITHIN_MANDATE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VALUE_WITHIN_POLICY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VALUE_WITHIN_VAULT_CAP",
+          "outcome": "VIOLATION",
+          "detail": "value 100000000000000000 exceeds the vault's immutable cap"
+        },
+        {
+          "code": "EVAL_POLICY_OPERATION",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_SELECTOR_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_PURCHASE_RESOURCE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_PURCHASE_BENEFICIARY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_PURCHASE_DURATION",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_PURCHASE_RECURRENCE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_SIMULATION_SUCCEEDS",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_CALL_GRAPH_EXPECTED",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_NATIVE_DELTA_MATCHES_VALUE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_ENTITLEMENT_ADVANCED",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_ENTITLEMENT_RECURRENCE",
+          "outcome": "PASS",
+          "detail": ""
+        }
+      ],
+      "failing": [
+        "EVAL_VALUE_WITHIN_VAULT_CAP"
+      ],
+      "micros": 105.084
+    }
+  ]
+}

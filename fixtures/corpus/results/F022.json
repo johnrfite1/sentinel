@@ -1,0 +1,262 @@
+{
+  "fixtureId": "F022",
+  "class": "wrong-chain-vault-target-mandate-policy",
+  "intent": "A purchase-shaped call aimed at the ERC20 contract rather than the payment contract.",
+  "primaryEnforcement": "conformance-engine",
+  "decode": {
+    "ok": false,
+    "code": "DECODE_SELECTOR_TARGET_MISMATCH"
+  },
+  "simulated": true,
+  "layers": [
+    {
+      "layer": "L1_baseline",
+      "verdict": "ALLOW",
+      "checks": [
+        {
+          "code": "BASE_CHAIN_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "BASE_VAULT_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "BASE_TARGET_ALLOWLISTED",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "BASE_SELECTOR_ALLOWLISTED",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "BASE_VALUE_CEILING",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "BASE_CALLDATA_UNDECODABLE",
+          "outcome": "UNRESOLVED",
+          "detail": "DECODE_SELECTOR_TARGET_MISMATCH: the baseline cannot read this call"
+        }
+      ],
+      "failing": [
+        "BASE_CALLDATA_UNDECODABLE"
+      ],
+      "micros": 27.834
+    },
+    {
+      "layer": "L2_policy_plus_effects",
+      "verdict": "BLOCK",
+      "checks": [
+        {
+          "code": "EVAL_POLICY_ACTIVE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VAULT_NOT_PAUSED",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_CHAIN_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VAULT_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_NONCE_CURRENT",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_OPERATION_SUPPORTED",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_POLICY_WINDOW",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_ACTION_DEADLINE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VALUE_WITHIN_POLICY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VALUE_WITHIN_VAULT_CAP",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_POLICY_OPERATION",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_CALLDATA_UNDECODABLE",
+          "outcome": "UNRESOLVED",
+          "detail": "DECODE_SELECTOR_TARGET_MISMATCH: selector is not supported at this target: purchase(bytes32,address,uint64,bool) is DemoPay's, but 0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0 is DemoERC20"
+        },
+        {
+          "code": "EVAL_SIMULATION_SUCCEEDS",
+          "outcome": "VIOLATION",
+          "detail": "simulated execution reverted: no reason"
+        },
+        {
+          "code": "EVAL_CALL_GRAPH_EXPECTED",
+          "outcome": "PASS",
+          "detail": ""
+        }
+      ],
+      "failing": [
+        "EVAL_CALLDATA_UNDECODABLE",
+        "EVAL_SIMULATION_SUCCEEDS"
+      ],
+      "micros": 121.292
+    },
+    {
+      "layer": "L3_full_conformance",
+      "verdict": "BLOCK",
+      "checks": [
+        {
+          "code": "EVAL_MANDATE_ACTIVE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_POLICY_ACTIVE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_MANDATE_PRINCIPAL_IS_OWNER",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VAULT_NOT_PAUSED",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_CHAIN_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VAULT_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_NONCE_CURRENT",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_TARGET_BOUND",
+          "outcome": "VIOLATION",
+          "detail": "action target 0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0 is not the mandate's 0x5fbdb2315678afecb367f032d93f642f64180aa3"
+        },
+        {
+          "code": "EVAL_OPERATION_SUPPORTED",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_CALLDATA_BINDING",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_ACTION_BINDS_MANDATE_AND_POLICY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_MANDATE_BINDS_POLICY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_TARGET_CODE_IDENTITY",
+          "outcome": "UNRESOLVED",
+          "detail": "target code hash 0x3715c0836193ddf75afe858ba6d9ea4744ea3f450c56bab3ddbf41e577c9b0cd is not the pinned 0x28b986ea45370917941b4baa7c9f4c3131216a87d1543071acdc841c39b5b726; the target's behaviour is no longer established"
+        },
+        {
+          "code": "EVAL_MANDATE_WINDOW",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_POLICY_WINDOW",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_ACTION_DEADLINE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VALUE_WITHIN_MANDATE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VALUE_WITHIN_POLICY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VALUE_WITHIN_VAULT_CAP",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_POLICY_OPERATION",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_CALLDATA_UNDECODABLE",
+          "outcome": "UNRESOLVED",
+          "detail": "DECODE_SELECTOR_TARGET_MISMATCH: selector is not supported at this target: purchase(bytes32,address,uint64,bool) is DemoPay's, but 0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0 is DemoERC20"
+        },
+        {
+          "code": "EVAL_SIMULATION_SUCCEEDS",
+          "outcome": "VIOLATION",
+          "detail": "simulated execution reverted: no reason"
+        },
+        {
+          "code": "EVAL_CALL_GRAPH_EXPECTED",
+          "outcome": "PASS",
+          "detail": ""
+        }
+      ],
+      "failing": [
+        "EVAL_CALLDATA_UNDECODABLE",
+        "EVAL_SIMULATION_SUCCEEDS",
+        "EVAL_TARGET_BOUND",
+        "EVAL_TARGET_CODE_IDENTITY"
+      ],
+      "micros": 92.917
+    }
+  ]
+}

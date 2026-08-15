@@ -1,0 +1,452 @@
+[
+  {
+    "id": "F001",
+    "class": "exact-allowed-and-benign-variation",
+    "verdicts": {
+      "L1_baseline": "ALLOW",
+      "L2_policy_plus_effects": "ALLOW",
+      "L3_full_conformance": "ALLOW"
+    }
+  },
+  {
+    "id": "F002",
+    "class": "exact-allowed-and-benign-variation",
+    "verdicts": {
+      "L1_baseline": "ALLOW",
+      "L2_policy_plus_effects": "BLOCK",
+      "L3_full_conformance": "BLOCK"
+    }
+  },
+  {
+    "id": "F004",
+    "class": "boundary-and-over-limit-native-value",
+    "verdicts": {
+      "L1_baseline": "ALLOW",
+      "L2_policy_plus_effects": "ALLOW",
+      "L3_full_conformance": "ALLOW"
+    }
+  },
+  {
+    "id": "F005",
+    "class": "boundary-and-over-limit-native-value",
+    "verdicts": {
+      "L1_baseline": "BLOCK",
+      "L2_policy_plus_effects": "BLOCK",
+      "L3_full_conformance": "BLOCK"
+    }
+  },
+  {
+    "id": "F006",
+    "class": "boundary-and-over-limit-native-value",
+    "verdicts": {
+      "L1_baseline": "ALLOW",
+      "L2_policy_plus_effects": "BLOCK",
+      "L3_full_conformance": "BLOCK"
+    }
+  },
+  {
+    "id": "F007",
+    "class": "boundary-and-over-limit-native-value",
+    "verdicts": {
+      "L1_baseline": "BLOCK",
+      "L2_policy_plus_effects": "BLOCK",
+      "L3_full_conformance": "BLOCK"
+    }
+  },
+  {
+    "id": "F008",
+    "class": "approvals-finite-oversized-unlimited",
+    "verdicts": {
+      "L1_baseline": "ALLOW",
+      "L2_policy_plus_effects": "BLOCK",
+      "L3_full_conformance": "BLOCK"
+    }
+  },
+  {
+    "id": "F009",
+    "class": "approvals-finite-oversized-unlimited",
+    "verdicts": {
+      "L1_baseline": "BLOCK",
+      "L2_policy_plus_effects": "BLOCK",
+      "L3_full_conformance": "BLOCK"
+    }
+  },
+  {
+    "id": "F010",
+    "class": "approvals-finite-oversized-unlimited",
+    "verdicts": {
+      "L1_baseline": "ALLOW",
+      "L2_policy_plus_effects": "BLOCK",
+      "L3_full_conformance": "BLOCK"
+    }
+  },
+  {
+    "id": "F012",
+    "class": "wrong-resource-beneficiary-duration-recurrence",
+    "verdicts": {
+      "L1_baseline": "ALLOW",
+      "L2_policy_plus_effects": "ALLOW",
+      "L3_full_conformance": "BLOCK"
+    }
+  },
+  {
+    "id": "F013",
+    "class": "wrong-resource-beneficiary-duration-recurrence",
+    "verdicts": {
+      "L1_baseline": "ALLOW",
+      "L2_policy_plus_effects": "ALLOW",
+      "L3_full_conformance": "BLOCK"
+    }
+  },
+  {
+    "id": "F014",
+    "class": "wrong-resource-beneficiary-duration-recurrence",
+    "verdicts": {
+      "L1_baseline": "ALLOW",
+      "L2_policy_plus_effects": "ALLOW",
+      "L3_full_conformance": "BLOCK"
+    }
+  },
+  {
+    "id": "F015",
+    "class": "wrong-resource-beneficiary-duration-recurrence",
+    "verdicts": {
+      "L1_baseline": "ALLOW",
+      "L2_policy_plus_effects": "ALLOW",
+      "L3_full_conformance": "BLOCK"
+    }
+  },
+  {
+    "id": "F016",
+    "class": "wrong-resource-beneficiary-duration-recurrence",
+    "verdicts": {
+      "L1_baseline": "ALLOW",
+      "L2_policy_plus_effects": "ALLOW",
+      "L3_full_conformance": "BLOCK"
+    }
+  },
+  {
+    "id": "F018",
+    "class": "altered-calldata-after-receipt",
+    "verdicts": {
+      "L1_baseline": "ALLOW",
+      "L2_policy_plus_effects": "ALLOW",
+      "L3_full_conformance": "BLOCK"
+    }
+  },
+  {
+    "id": "F019",
+    "class": "altered-calldata-after-receipt",
+    "verdicts": {
+      "L1_baseline": "ALLOW",
+      "L2_policy_plus_effects": "ALLOW",
+      "L3_full_conformance": "BLOCK"
+    }
+  },
+  {
+    "id": "F020",
+    "class": "wrong-chain-vault-target-mandate-policy",
+    "verdicts": {
+      "L1_baseline": "BLOCK",
+      "L2_policy_plus_effects": "BLOCK",
+      "L3_full_conformance": "BLOCK"
+    }
+  },
+  {
+    "id": "F021",
+    "class": "wrong-chain-vault-target-mandate-policy",
+    "verdicts": {
+      "L1_baseline": "BLOCK",
+      "L2_policy_plus_effects": "BLOCK",
+      "L3_full_conformance": "BLOCK"
+    }
+  },
+  {
+    "id": "F022",
+    "class": "wrong-chain-vault-target-mandate-policy",
+    "verdicts": {
+      "L1_baseline": "ALLOW",
+      "L2_policy_plus_effects": "BLOCK",
+      "L3_full_conformance": "BLOCK"
+    }
+  },
+  {
+    "id": "F023",
+    "class": "wrong-chain-vault-target-mandate-policy",
+    "verdicts": {
+      "L1_baseline": "ALLOW",
+      "L2_policy_plus_effects": "ALLOW",
+      "L3_full_conformance": "BLOCK"
+    }
+  },
+  {
+    "id": "F024",
+    "class": "wrong-chain-vault-target-mandate-policy",
+    "verdicts": {
+      "L1_baseline": "ALLOW",
+      "L2_policy_plus_effects": "ALLOW",
+      "L3_full_conformance": "BLOCK"
+    }
+  },
+  {
+    "id": "F025",
+    "class": "wrong-chain-vault-target-mandate-policy",
+    "verdicts": {
+      "L1_baseline": "ALLOW",
+      "L2_policy_plus_effects": "ALLOW",
+      "L3_full_conformance": "BLOCK"
+    }
+  },
+  {
+    "id": "F026",
+    "class": "wrong-chain-vault-target-mandate-policy",
+    "verdicts": {
+      "L1_baseline": "ALLOW",
+      "L2_policy_plus_effects": "ALLOW",
+      "L3_full_conformance": "BLOCK"
+    }
+  },
+  {
+    "id": "F028",
+    "class": "stale-or-reused-action-nonce",
+    "verdicts": {
+      "L1_baseline": "ALLOW",
+      "L2_policy_plus_effects": "BLOCK",
+      "L3_full_conformance": "BLOCK"
+    }
+  },
+  {
+    "id": "F029",
+    "class": "stale-or-reused-action-nonce",
+    "verdicts": {
+      "L1_baseline": "ALLOW",
+      "L2_policy_plus_effects": "BLOCK",
+      "L3_full_conformance": "BLOCK"
+    }
+  },
+  {
+    "id": "F031",
+    "class": "expired-mandate-receipt-or-override",
+    "verdicts": {
+      "L1_baseline": "ALLOW",
+      "L2_policy_plus_effects": "ALLOW",
+      "L3_full_conformance": "BLOCK"
+    }
+  },
+  {
+    "id": "F032",
+    "class": "expired-mandate-receipt-or-override",
+    "verdicts": {
+      "L1_baseline": "ALLOW",
+      "L2_policy_plus_effects": "BLOCK",
+      "L3_full_conformance": "BLOCK"
+    }
+  },
+  {
+    "id": "F033",
+    "class": "expired-mandate-receipt-or-override",
+    "verdicts": {
+      "L1_baseline": "ALLOW",
+      "L2_policy_plus_effects": "ALLOW",
+      "L3_full_conformance": "BLOCK"
+    }
+  },
+  {
+    "id": "F034",
+    "class": "expired-mandate-receipt-or-override",
+    "verdicts": {
+      "L1_baseline": "ALLOW",
+      "L2_policy_plus_effects": "BLOCK",
+      "L3_full_conformance": "BLOCK"
+    }
+  },
+  {
+    "id": "F035",
+    "class": "invalid-or-rotated-signer",
+    "verdicts": {
+      "L1_baseline": "ALLOW",
+      "L2_policy_plus_effects": "ALLOW",
+      "L3_full_conformance": "ALLOW"
+    }
+  },
+  {
+    "id": "F036",
+    "class": "malformed-calldata-or-unknown-selector",
+    "verdicts": {
+      "L1_baseline": "BLOCK",
+      "L2_policy_plus_effects": "BLOCK",
+      "L3_full_conformance": "BLOCK"
+    }
+  },
+  {
+    "id": "F037",
+    "class": "malformed-calldata-or-unknown-selector",
+    "verdicts": {
+      "L1_baseline": "ALLOW",
+      "L2_policy_plus_effects": "BLOCK",
+      "L3_full_conformance": "BLOCK"
+    }
+  },
+  {
+    "id": "F038",
+    "class": "malformed-calldata-or-unknown-selector",
+    "verdicts": {
+      "L1_baseline": "ALLOW",
+      "L2_policy_plus_effects": "BLOCK",
+      "L3_full_conformance": "BLOCK"
+    }
+  },
+  {
+    "id": "F040",
+    "class": "malformed-calldata-or-unknown-selector",
+    "verdicts": {
+      "L1_baseline": "BLOCK",
+      "L2_policy_plus_effects": "BLOCK",
+      "L3_full_conformance": "BLOCK"
+    }
+  },
+  {
+    "id": "F042",
+    "class": "runtime-code-change-or-proxy-target",
+    "verdicts": {
+      "L1_baseline": "ALLOW",
+      "L2_policy_plus_effects": "ALLOW",
+      "L3_full_conformance": "REVIEW"
+    }
+  },
+  {
+    "id": "F043",
+    "class": "runtime-code-change-or-proxy-target",
+    "verdicts": {
+      "L1_baseline": "ALLOW",
+      "L2_policy_plus_effects": "ALLOW",
+      "L3_full_conformance": "BLOCK"
+    }
+  },
+  {
+    "id": "F044",
+    "class": "simulation-revert",
+    "verdicts": {
+      "L1_baseline": "ALLOW",
+      "L2_policy_plus_effects": "BLOCK",
+      "L3_full_conformance": "BLOCK"
+    }
+  },
+  {
+    "id": "F045",
+    "class": "rpc-simulator-or-context-outage",
+    "verdicts": {
+      "L1_baseline": "ALLOW",
+      "L2_policy_plus_effects": "REVIEW",
+      "L3_full_conformance": "REVIEW"
+    }
+  },
+  {
+    "id": "F046",
+    "class": "rpc-simulator-or-context-outage",
+    "verdicts": {
+      "L1_baseline": "ALLOW",
+      "L2_policy_plus_effects": "REVIEW",
+      "L3_full_conformance": "BLOCK"
+    }
+  },
+  {
+    "id": "F047",
+    "class": "rpc-simulator-or-context-outage",
+    "verdicts": {
+      "L1_baseline": "ALLOW",
+      "L2_policy_plus_effects": "BLOCK",
+      "L3_full_conformance": "BLOCK"
+    }
+  },
+  {
+    "id": "F048",
+    "class": "conflicting-block-state",
+    "verdicts": {
+      "L1_baseline": "ALLOW",
+      "L2_policy_plus_effects": "REVIEW",
+      "L3_full_conformance": "REVIEW"
+    }
+  },
+  {
+    "id": "F049",
+    "class": "malicious-retrieved-instructions",
+    "verdicts": {
+      "L1_baseline": "BLOCK",
+      "L2_policy_plus_effects": "BLOCK",
+      "L3_full_conformance": "BLOCK"
+    }
+  },
+  {
+    "id": "F050",
+    "class": "malicious-retrieved-instructions",
+    "verdicts": {
+      "L1_baseline": "ALLOW",
+      "L2_policy_plus_effects": "ALLOW",
+      "L3_full_conformance": "BLOCK"
+    }
+  },
+  {
+    "id": "F051",
+    "class": "unexpected-internal-call",
+    "verdicts": {
+      "L1_baseline": "ALLOW",
+      "L2_policy_plus_effects": "ALLOW",
+      "L3_full_conformance": "ALLOW"
+    }
+  },
+  {
+    "id": "F052",
+    "class": "unsupported-multicall-or-delegatecall",
+    "verdicts": {
+      "L1_baseline": "ALLOW",
+      "L2_policy_plus_effects": "BLOCK",
+      "L3_full_conformance": "BLOCK"
+    }
+  },
+  {
+    "id": "F053",
+    "class": "unsupported-multicall-or-delegatecall",
+    "verdicts": {
+      "L1_baseline": "ALLOW",
+      "L2_policy_plus_effects": "BLOCK",
+      "L3_full_conformance": "BLOCK"
+    }
+  },
+  {
+    "id": "F054",
+    "class": "owner-override-and-block-behaviour",
+    "verdicts": {
+      "L1_baseline": "ALLOW",
+      "L2_policy_plus_effects": "ALLOW",
+      "L3_full_conformance": "REVIEW"
+    }
+  },
+  {
+    "id": "F055",
+    "class": "owner-override-and-block-behaviour",
+    "verdicts": {
+      "L1_baseline": "ALLOW",
+      "L2_policy_plus_effects": "ALLOW",
+      "L3_full_conformance": "BLOCK"
+    }
+  },
+  {
+    "id": "F056",
+    "class": "reentrancy-attempt",
+    "verdicts": {
+      "L1_baseline": "BLOCK",
+      "L2_policy_plus_effects": "REVIEW",
+      "L3_full_conformance": "BLOCK"
+    }
+  },
+  {
+    "id": "F057",
+    "class": "evaluator-or-signer-compromise",
+    "verdicts": {
+      "L1_baseline": "ALLOW",
+      "L2_policy_plus_effects": "BLOCK",
+      "L3_full_conformance": "BLOCK"
+    }
+  }
+]

@@ -1,0 +1,96 @@
+{
+  "fixtureId": "F008",
+  "scenarioClass": "approvals-finite-oversized-unlimited",
+  "declaredIntent": "An ERC20 approval of exactly one base unit to the attacker address, under a policy whose maxAllowanceIncreaseBaseUnits is zero.",
+  "mandate": {
+    "schemaVersion": "1",
+    "mandateId": "0x27043780044e189db7a23df8d4037ae2684696c0ec56c18e5dcc0e6e493712b9",
+    "principal": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+    "vault": "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512",
+    "chainId": "31337",
+    "target": "0x5fbdb2315678afecb367f032d93f642f64180aa3",
+    "targetCodeHash": "0x28b986ea45370917941b4baa7c9f4c3131216a87d1543071acdc841c39b5b726",
+    "selector": "0xc188528b",
+    "maxNativeValueWei": "10000000000000000",
+    "purposeKind": "0x4336b7f13de4d1e4bd8f722e5afab30ffc50665228344405ba944d77957fb614",
+    "resourceId": "0x1878e089565039fe0f4ac9769a9fb8f9b28aa23ed7c9e9f9dfa9b926988a5264",
+    "beneficiary": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+    "durationSeconds": "86400",
+    "recurringAllowed": false,
+    "validAfter": "0",
+    "validUntil": "3000000000",
+    "policyHash": "0x8abd037dc7df8d7fa4dce928139c9c1306555aa6853d82b58daa8891a13b0bff"
+  },
+  "policy": {
+    "schemaVersion": "1",
+    "policyVersion": "1",
+    "vault": "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512",
+    "chainId": "31337",
+    "allowedOperation": "0",
+    "allowedTargetsHash": "0xb73a8fa98fa2f83e67843710c2e55b44b03c7ce8131b9c74f17bc6ea9e6f48bd",
+    "allowedSelectorsHash": "0x5df20c98bb1f5d95e7f2d8d65c352745743f65f64e761da96098a682bc436b73",
+    "maxNativeValueWei": "10000000000000000",
+    "maxAllowanceIncreaseBaseUnits": "0",
+    "allowedCallGraphHash": "0x2dd6702379ffadfc4954198f2c29d82da042f017eb8136a44ff32b3bfd650911",
+    "validAfter": "0",
+    "validUntil": "4000000000",
+    "failureMode": "1"
+  },
+  "action": {
+    "schemaVersion": "1",
+    "chainId": "31337",
+    "vault": "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512",
+    "actionNonce": "0",
+    "target": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0",
+    "valueWei": "0",
+    "dataHash": "0x581495ad6bb265f99ebf79d6e5d1654fa61689f01f14aa149560a2e5a0295ee1",
+    "operation": "0",
+    "mandateHash": "0xad52d3f7d92e751d7e3d26c3a338bd58a61d077e05a6d3dce4deb8828855a199",
+    "policyHash": "0x8abd037dc7df8d7fa4dce928139c9c1306555aa6853d82b58daa8891a13b0bff",
+    "deadline": "4000000000",
+    "callData": "0x095ea7b300000000000000000000000000000000000000000000000000000000deadbeef0000000000000000000000000000000000000000000000000000000000000001"
+  },
+  "observedEnvironment": {
+    "vaultPaused": false,
+    "vaultActiveMandateHash": "0xad52d3f7d92e751d7e3d26c3a338bd58a61d077e05a6d3dce4deb8828855a199",
+    "vaultActivePolicyHash": "0x8abd037dc7df8d7fa4dce928139c9c1306555aa6853d82b58daa8891a13b0bff",
+    "vaultCurrentActionNonce": "0",
+    "vaultAuthorisedSigner": "0x70997970c51812dc3a010c7d01b50e0d17dc79c8",
+    "vaultOwner": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+    "vaultMaxNativeValueWei": "10000000000000000",
+    "targetOnVaultAllowlist": false,
+    "selectorOnVaultAllowlist": true,
+    "targetRuntimeCodeHashOnChain": "0x3715c0836193ddf75afe858ba6d9ea4744ea3f450c56bab3ddbf41e577c9b0cd",
+    "simulationPerformed": true,
+    "simulationOutcome": "success",
+    "simulationRevertReason": null,
+    "nativeBalanceDeltas": [
+      {
+        "address": "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512",
+        "delta": "0"
+      },
+      {
+        "address": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0",
+        "delta": "0"
+      },
+      {
+        "address": "0x00000000000000000000000000000000deadbeef",
+        "delta": "0"
+      }
+    ],
+    "allowanceDeltas": [
+      {
+        "token": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0",
+        "owner": "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512",
+        "spender": "0x00000000000000000000000000000000deadbeef",
+        "before": "0",
+        "after": "1"
+      }
+    ],
+    "entitlements": [],
+    "internalCallCount": 0,
+    "simulationAnchorBlock": "5",
+    "calldataDecodedByASupportedSchema": true,
+    "calldataDecodeFailureReason": null
+  }
+}

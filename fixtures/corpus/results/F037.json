@@ -1,0 +1,260 @@
+{
+  "fixtureId": "F037",
+  "class": "malformed-calldata-or-unknown-selector",
+  "intent": "A well-formed purchase followed by 32 bytes of trailing data past the declared arguments.",
+  "primaryEnforcement": "conformance-engine",
+  "decode": {
+    "ok": false,
+    "code": "DECODE_LENGTH_MISMATCH"
+  },
+  "simulated": true,
+  "layers": [
+    {
+      "layer": "L1_baseline",
+      "verdict": "ALLOW",
+      "checks": [
+        {
+          "code": "BASE_CHAIN_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "BASE_VAULT_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "BASE_TARGET_ALLOWLISTED",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "BASE_SELECTOR_ALLOWLISTED",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "BASE_VALUE_CEILING",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "BASE_CALLDATA_UNDECODABLE",
+          "outcome": "UNRESOLVED",
+          "detail": "DECODE_LENGTH_MISMATCH: the baseline cannot read this call"
+        }
+      ],
+      "failing": [
+        "BASE_CALLDATA_UNDECODABLE"
+      ],
+      "micros": 6
+    },
+    {
+      "layer": "L2_policy_plus_effects",
+      "verdict": "BLOCK",
+      "checks": [
+        {
+          "code": "EVAL_POLICY_ACTIVE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VAULT_NOT_PAUSED",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_CHAIN_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VAULT_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_NONCE_CURRENT",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_OPERATION_SUPPORTED",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_POLICY_WINDOW",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_ACTION_DEADLINE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VALUE_WITHIN_POLICY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VALUE_WITHIN_VAULT_CAP",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_POLICY_OPERATION",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_CALLDATA_UNDECODABLE",
+          "outcome": "UNRESOLVED",
+          "detail": "DECODE_LENGTH_MISMATCH: argument region is not the exact declared length: expected 4 words (128 bytes), got 160 bytes"
+        },
+        {
+          "code": "EVAL_SIMULATION_SUCCEEDS",
+          "outcome": "VIOLATION",
+          "detail": "simulated execution reverted: revert data 0x776cceeb"
+        },
+        {
+          "code": "EVAL_CALL_GRAPH_EXPECTED",
+          "outcome": "PASS",
+          "detail": ""
+        }
+      ],
+      "failing": [
+        "EVAL_CALLDATA_UNDECODABLE",
+        "EVAL_SIMULATION_SUCCEEDS"
+      ],
+      "micros": 127.833
+    },
+    {
+      "layer": "L3_full_conformance",
+      "verdict": "BLOCK",
+      "checks": [
+        {
+          "code": "EVAL_MANDATE_ACTIVE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_POLICY_ACTIVE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_MANDATE_PRINCIPAL_IS_OWNER",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VAULT_NOT_PAUSED",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_CHAIN_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VAULT_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_NONCE_CURRENT",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_TARGET_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_OPERATION_SUPPORTED",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_CALLDATA_BINDING",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_ACTION_BINDS_MANDATE_AND_POLICY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_MANDATE_BINDS_POLICY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_TARGET_CODE_IDENTITY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_MANDATE_WINDOW",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_POLICY_WINDOW",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_ACTION_DEADLINE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VALUE_WITHIN_MANDATE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VALUE_WITHIN_POLICY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VALUE_WITHIN_VAULT_CAP",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_POLICY_OPERATION",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_CALLDATA_UNDECODABLE",
+          "outcome": "UNRESOLVED",
+          "detail": "DECODE_LENGTH_MISMATCH: argument region is not the exact declared length: expected 4 words (128 bytes), got 160 bytes"
+        },
+        {
+          "code": "EVAL_SIMULATION_SUCCEEDS",
+          "outcome": "VIOLATION",
+          "detail": "simulated execution reverted: revert data 0x776cceeb"
+        },
+        {
+          "code": "EVAL_CALL_GRAPH_EXPECTED",
+          "outcome": "PASS",
+          "detail": ""
+        }
+      ],
+      "failing": [
+        "EVAL_CALLDATA_UNDECODABLE",
+        "EVAL_SIMULATION_SUCCEEDS"
+      ],
+      "micros": 100.25
+    }
+  ]
+}
