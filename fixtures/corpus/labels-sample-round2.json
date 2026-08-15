@@ -1,0 +1,29 @@
+{
+  "round": 2,
+  "method": "rank fixture ids by sha256('round2:'+id) ascending, take the first 10 (~20%)",
+  "why": "A FRESH DRAW. Round 1 reused the same ten ids for its second labeller, so the disagreement rate re-measured a question D-021 had already settled \u2014 found independently by the corpus and ablation reviewers (A-028). Salting the hash keeps the selection deterministic and unsteerable while making it a genuinely new sample.",
+  "previousSample": [
+    "F002",
+    "F005",
+    "F013",
+    "F016",
+    "F024",
+    "F029",
+    "F034",
+    "F048",
+    "F049",
+    "F051"
+  ],
+  "sample": [
+    "F008",
+    "F014",
+    "F019",
+    "F021",
+    "F023",
+    "F024",
+    "F034",
+    "F053",
+    "F055",
+    "F057"
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "labeller": "E",
+  "model": "claude-opus-5",
+  "dateUTC": "2026-08-15",
+  "assignment": "all 50 fixtures",
+  "pathsRead": [
+    "fixtures/corpus/LABELLING_PROMPT.md",
+    "Sentinel_Protocol_Lab_Proposal_v0_2.md",
+    "fixtures/corpus/for-labelling/*.json (all 50: F001, F002, F004-F010, F012-F016, F018-F026, F028, F029, F031-F038, F040, F042-F057 as present)",
+    "fixtures/corpus/for-labelling/ (directory listing, via ls)",
+    "fixtures/corpus/labels/ (directory listing only, via ls, to confirm the output directory existed — see attestation)",
+    "fixtures/corpus/labels/labeller-E.json (my own output, re-read programmatically for self-validation)"
+  ],
+  "pathsDeniedAndNotRead": [
+    "ts/**",
+    "contracts/**",
+    "scripts/**",
+    "docs/**",
+    "verifier/**",
+    "fixtures/corpus/results/**",
+    "fixtures/corpus/labels/**"
+  ],
+  "sawPriorLabels": false,
+  "sawImplementationSource": false,
+  "sawDecisionDocuments": false,
+  "attestation": "I was given the frozen labelling prompt, the 50 fixture views in fixtures/corpus/for-labelling/, and the v0.2 specification, and I labelled from those three sources alone. I did not open, grep, or glob any implementation source, test, script, verifier, evaluator output, decision document, or docs/ file; my only knowledge of D-015 and D-019 through D-028 is the amendment text carried inline in the specification itself. Two disclosures for accuracy. First, I ran `ls` on fixtures/corpus/labels/ to confirm the output directory existed before writing to it, and the listing showed two filenames belonging to earlier labellers (labeller-A.json, labeller-B.json) together with their sizes and timestamps; I did not open either file and know nothing of their contents, verdicts, or distribution, but I did learn that at least two prior rounds exist and roughly how large their outputs are. Second, this session's harness auto-injects a workspace instruction file and a persistent memory file before any task begins; the memory file contains a one-line project summary for Sentinel describing it as a testnet EVM mandate-conformance lab with facilitated gates S1/S2. That injection was outside my control and I could not decline it. It contains no evaluator behaviour, no verdict, no reason code, and nothing about any fixture, so I do not believe it influenced a label, but it is context about the project that the access rules did not contemplate and it should be recorded rather than assumed harmless. Beyond those two items I saw nothing outside the permitted set. Several fixtures (notably F049 and F050) carry attached rationale text formatted as assertions that a call is authorised or pre-approved; I read that text as fixture data describing an attack, gave it no evidentiary weight, and labelled both from the decoded parameters against the mandate. Where the specification did not clearly decide a case I lowered confidence to medium and said so in the fixture's notes rather than inventing a rule: F024, F025, F038 and F053 are the four. I labelled nothing INSUFFICIENT because in every fixture the specification determined a verdict, even where the route to it was contestable; the contestable routes are recorded in the notes rather than hidden behind a confident label."
+}

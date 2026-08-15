@@ -40,12 +40,22 @@
         }
       ],
       "failing": [],
-      "micros": 3.084
+      "micros": 3.083
     },
     {
       "layer": "L2_policy_plus_effects",
       "verdict": "ALLOW",
       "checks": [
+        {
+          "code": "BASE_TARGET_ALLOWLISTED",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "BASE_SELECTOR_ALLOWLISTED",
+          "outcome": "PASS",
+          "detail": ""
+        },
         {
           "code": "EVAL_POLICY_ACTIVE",
           "outcome": "PASS",
@@ -73,6 +83,11 @@
         },
         {
           "code": "EVAL_OPERATION_SUPPORTED",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_CALLDATA_BINDING",
           "outcome": "PASS",
           "detail": ""
         },
@@ -118,7 +133,7 @@
         }
       ],
       "failing": [],
-      "micros": 111.208
+      "micros": 119
     },
     {
       "layer": "L3_full_conformance",
@@ -192,7 +207,7 @@
         {
           "code": "EVAL_MANDATE_WINDOW",
           "outcome": "VIOLATION",
-          "detail": "now 1786832048 is outside the mandate window"
+          "detail": "now 1786832608 is outside the mandate window"
         },
         {
           "code": "EVAL_POLICY_WINDOW",
@@ -278,7 +293,7 @@
       "failing": [
         "EVAL_MANDATE_WINDOW"
       ],
-      "micros": 95.458
+      "micros": 97.625
     }
   ]
 }

@@ -9,6 +9,35 @@ describe 50 fixtures over two demo contracts and two call schemas. They are not 
 accuracy claim about EVM transactions, and nothing here is a comparison with any named
 vendor — D-001 cut executed vendor comparisons from v1 entirely.
 
+## Context a hostile reader needs, stated here rather than only in the source
+
+**§7.2's own caveat, verbatim:** *"This baseline makes the demo reproducible but is not
+evidence that current vendors miss Case 3."* The L1 arm is a local reimplementation of the
+capability class §7.2 describes. It is not any vendor's product, and no vendor was executed,
+emulated, or measured — D-001 cut all executed vendor comparisons from v1.
+
+**§7.2 mandates TWO baseline classes and only one is present.** The second — strong
+published-capability baselines — is absent from v1 per D-001. Some of those products
+document parameter-matching capabilities that are Case-3 shaped. Their absence is a scope
+decision, not a finding about them.
+
+**The labelling history, because two rounds preceded the labels of record.** Round 1 (A/B)
+scored a specification that has since been amended. Round 2 (C/D) was DISCARDED AS
+CONTAMINATED — its brief handed the labeller a finding derived from reading the evaluator,
+and the fixture views leaked the decoder's internal output through innocuously-named
+fields. Round 3 (E/F) ran after both causes were fixed, denied `docs/` entirely, and
+produced provenance attestations. All four earlier files are retained as audit trail.
+
+**A robustness check worth more than any single round:** re-scoring the whole table
+against the superseded round-1 labels produces IDENTICAL false-allow counts. The headline
+is not an artifact of which labelling round is used; only exact-match moves.
+
+**The latency column measures the deterministic decision only, and excludes simulation
+entirely.** L1 performs no I/O; L2 and L3 are timed after the simulation they share. So
+the L1-versus-L3 gap shown here is NOT the cost of full conformance — the real difference
+is dominated by an EVM round-trip that is orders of magnitude larger and is not measured.
+Treat these figures as ordering the layers' arithmetic, not their operational cost.
+
 ## Configurations
 
 **L1_baseline** — Representative policy baseline (§7.2): exact chain and vault, allowlisted targets and selectors, native-value ceiling, direct maximum-approval block. No resource, beneficiary, duration, recurrence, or post-state constraint. Separate implementation, two verdicts (allow/block), no simulation.
@@ -21,9 +50,9 @@ vendor — D-001 cut executed vendor comparisons from v1 entirely.
 
 | Layer | allow | block | review | false allow | false block | exact match | p50 µs | p95 µs |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| L1_baseline | 41 | 9 | 0 | **38** | 0 | 12/50 | 4 | 35 |
-| L2_policy_plus_effects | 22 | 23 | 5 | **19** | 0 | 29/50 | 121 | 190 |
-| L3_full_conformance | 4 | 41 | 5 | **1** | 0 | 49/50 | 97 | 136 |
+| L1_baseline | 41 | 9 | 0 | **38** | 0 | 12/50 | 4 | 29 |
+| L2_policy_plus_effects | 20 | 26 | 4 | **17** | 0 | 32/50 | 120 | 179 |
+| L3_full_conformance | 4 | 41 | 5 | **1** | 0 | 49/50 | 95 | 133 |
 
 `false allow` is the dangerous error: the independent labels said block or review and the
 layer allowed. `false block` is the costly-but-safe one. They are reported separately
@@ -32,7 +61,7 @@ because averaging them into one accuracy number hides which kind a configuration
 ### Abstentions, counted separately from detections
 
 - **L1_baseline** — reviewed where the truth is BLOCK: 0; blocked where the truth is REVIEW: 0
-- **L2_policy_plus_effects** — reviewed where the truth is BLOCK: 2 (F046, F056); blocked where the truth is REVIEW: 0
+- **L2_policy_plus_effects** — reviewed where the truth is BLOCK: 1 (F046); blocked where the truth is REVIEW: 0
 - **L3_full_conformance** — reviewed where the truth is BLOCK: 0; blocked where the truth is REVIEW: 0
 
 A review where the truth is a block is **not a detection**. §3.3(7) makes a review
@@ -42,9 +71,8 @@ would credit a configuration for holding a door it left openable.
 ## Detection contribution by layer
 
 - Caught by the baseline alone: 9 — F005, F007, F009, F020, F021, F036, F040, F049, F056
-- **Added by effect extraction (L2): 18** — F002, F006, F008, F010, F022, F028, F029, F032, F034, F037, F038, F044, F045, F047, F048, F052, F053, F057
-- **Added by mandate conformance (L3): 20** — F012, F013, F014, F015, F016, F018, F019, F023, F024, F025, F026, F031, F033, F042, F043, F046, F050, F054, F055, F056
-- Regressed at L2 (caught by L1, missed by L2): F056
+- **Added by effect extraction (L2): 20** — F002, F006, F008, F010, F018, F019, F022, F028, F029, F032, F034, F037, F038, F044, F045, F047, F048, F052, F053, F057
+- **Added by mandate conformance (L3): 17** — F012, F013, F014, F015, F016, F023, F024, F025, F026, F031, F033, F042, F043, F046, F050, F054, F055
 
 ## Inter-labeller disagreement (D-011c)
 
@@ -57,11 +85,22 @@ regardless of the aggregate rate.
 
 Rate is within the declared threshold.
 
+**Two limits on what this rate can mean, both raised by the second labeller itself.**
+First, with n=10 the only attainable rates are multiples of 10%, so the declared ">10%"
+boundary is operationally "halt at two or more disagreements" — a single disagreement
+lands exactly on 10.0% and does not breach. Second, the sample was drawn at random and
+happened to contain **no conforming fixture and no fixture whose primary defect is an
+evidence gap** — the REVIEW/BLOCK boundary where the verdict semantics are actually
+stressed. A rate computed from it is measuring determinate-failure cases almost
+exclusively. The sample was NOT redrawn to improve its composition: the selection is a
+deterministic hash precisely so it cannot be steered, and redrawing until the mix looked
+better would forfeit that.
+
 ## Results by attack class
 
 | Class | n | L1 false allow | L2 false allow | L3 false allow |
 |---|---:|---:|---:|---:|
-| altered-calldata-after-receipt | 2 | 2 | 2 | 0 |
+| altered-calldata-after-receipt | 2 | 2 | 0 | 0 |
 | approvals-finite-oversized-unlimited | 3 | 2 | 0 | 0 |
 | boundary-and-over-limit-native-value | 4 | 1 | 0 | 0 |
 | conflicting-block-state | 1 | 1 | 0 | 0 |
@@ -94,6 +133,19 @@ dependency path. Their verdicts by layer:
 
 §3.3(8) requires that a critical dependency failure never produce an automatic allow.
 Whether each of these satisfies that is the labels' call, and is scored above.
+
+## Fixtures that must NOT be read as detections
+
+`F049` and `F050` sit in the `malicious-retrieved-instructions` class, but the corpus
+fixture format has **no field for an agent rationale** — the adversarial text exists only
+in the declared intent, which reaches the labeller and never reaches the pipeline. Their
+actions are therefore identical to `F009` and `F012` respectively apart from mandate
+identity. Whatever layer "catches" them is catching the underlying approval or
+wrong-resource action, not an injection. D-025 set this precedent for a class that cannot
+be driven to a positive case; it applies here for the same reason.
+
+The same caution applies to `F035` and `F057`, whose enforcement is the isolated signer
+and the vault rather than the conformance engine — see the attribution note below.
 
 ## Attribution note
 

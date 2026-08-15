@@ -1,0 +1,34 @@
+{
+  "labeller": "F",
+  "model": "claude-opus-5",
+  "dateUTC": "2026-08-15",
+  "assignment": "10-fixture sample (F008 F014 F019 F021 F023 F024 F034 F053 F055 F057)",
+  "pathsRead": [
+    "fixtures/corpus/LABELLING_PROMPT.md (full)",
+    "fixtures/corpus/for-labelling/ (directory listing only)",
+    "fixtures/corpus/for-labelling/F008.json",
+    "fixtures/corpus/for-labelling/F014.json",
+    "fixtures/corpus/for-labelling/F019.json",
+    "fixtures/corpus/for-labelling/F021.json",
+    "fixtures/corpus/for-labelling/F023.json",
+    "fixtures/corpus/for-labelling/F024.json",
+    "fixtures/corpus/for-labelling/F034.json",
+    "fixtures/corpus/for-labelling/F053.json",
+    "fixtures/corpus/for-labelling/F055.json",
+    "fixtures/corpus/for-labelling/F057.json",
+    "Sentinel_Protocol_Lab_Proposal_v0_2.md (heading outline via grep; lines 129-528 covering §3-§5; lines 554-663 covering §7-§8; lines 663-792 covering §8-§10; lines 955-985 covering §14.7-§14.9)"
+  ],
+  "pathsDeniedAndNotRead": [
+    "ts/**",
+    "contracts/**",
+    "scripts/**",
+    "docs/**",
+    "verifier/**",
+    "fixtures/corpus/results/**",
+    "fixtures/corpus/labels/**"
+  ],
+  "sawPriorLabels": false,
+  "sawImplementationSource": false,
+  "sawDecisionDocuments": false,
+  "attestation": "I was given the frozen labelling prompt, the ten assigned fixture files, and the amended specification Sentinel_Protocol_Lab_Proposal_v0_2.md, and I read all three. I did not open, grep, glob or list any denied path: no implementation or test source, no evaluator results, no docs/ directory including decisions.md, and no other labeller's file. I wrote my two output files into fixtures/corpus/labels/ but did not read or list that directory, so I have not seen the concurrent labeller's work or any prior round. The only decision-log content I saw is the material quoted inside the permitted specification itself — the dated Amended/Added/Qualified notes in §3.3(7), §5.2, §5.4, §5.7 and §5.9, and the §14.8/§14.9 mirrors of the intake rulings — which the specification states are reproduced there so the proposal stays self-contained, and which are within the permitted file. My reasoning is entirely from the specification text; where the specification did not decide, I recorded the ambiguity rather than resolving it by guessing what the code likely does. Two things a reviewer should weigh. First, I ran external verification of the fixture data using the Foundry `cast` binary (`cast keccak`, `cast abi-encode`) and short scripts I wrote to a session scratchpad outside the repository: I recomputed keccak256 of each fixture's callData against its declared dataHash, and recomputed each MandatePayload and PolicyPayload hashStruct from the §5.8 type strings against the fixtures' action and vault-state hashes. `cast` is a general-purpose EVM utility, not project code, and the type strings came from the permitted specification; no project source was read, imported or executed. This found exactly one discrepancy — F019's declared dataHash — which matched its declared intent, and confirmed the other nine self-consistent, so it strengthened rather than substituted for spec-based reasoning. Second, and against my own result: all ten of my labels are BLOCK, so this sample cannot detect a systematic bias toward BLOCK in either the corpus or a labeller, and it contains no conforming fixture and no fixture whose primary defect is an evidence gap resolved by failureMode. My draw simply contained no such case; I did not decline any fixture and did not label any INSUFFICIENT. Nothing else that I am aware of compromises independence."
+}

@@ -40,12 +40,22 @@
         }
       ],
       "failing": [],
-      "micros": 3.375
+      "micros": 3.292
     },
     {
       "layer": "L2_policy_plus_effects",
       "verdict": "ALLOW",
       "checks": [
+        {
+          "code": "BASE_TARGET_ALLOWLISTED",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "BASE_SELECTOR_ALLOWLISTED",
+          "outcome": "PASS",
+          "detail": ""
+        },
         {
           "code": "EVAL_POLICY_ACTIVE",
           "outcome": "PASS",
@@ -73,6 +83,11 @@
         },
         {
           "code": "EVAL_OPERATION_SUPPORTED",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_CALLDATA_BINDING",
           "outcome": "PASS",
           "detail": ""
         },
@@ -278,7 +293,7 @@
       "failing": [
         "EVAL_PURCHASE_RESOURCE"
       ],
-      "micros": 92.958
+      "micros": 92.083
     }
   ]
 }

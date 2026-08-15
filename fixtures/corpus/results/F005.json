@@ -42,12 +42,22 @@
       "failing": [
         "BASE_VALUE_CEILING"
       ],
-      "micros": 34.5
+      "micros": 35.708
     },
     {
       "layer": "L2_policy_plus_effects",
       "verdict": "BLOCK",
       "checks": [
+        {
+          "code": "BASE_TARGET_ALLOWLISTED",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "BASE_SELECTOR_ALLOWLISTED",
+          "outcome": "PASS",
+          "detail": ""
+        },
         {
           "code": "EVAL_POLICY_ACTIVE",
           "outcome": "PASS",
@@ -75,6 +85,11 @@
         },
         {
           "code": "EVAL_OPERATION_SUPPORTED",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_CALLDATA_BINDING",
           "outcome": "PASS",
           "detail": ""
         },
@@ -285,7 +300,7 @@
         "EVAL_VALUE_WITHIN_POLICY",
         "EVAL_VALUE_WITHIN_VAULT_CAP"
       ],
-      "micros": 127.541
+      "micros": 133.291
     }
   ]
 }

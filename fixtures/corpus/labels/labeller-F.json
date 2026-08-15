@@ -1,0 +1,82 @@
+[
+  {
+    "fixtureId": "F008",
+    "label": "BLOCK",
+    "primaryReason": "The simulated approval raises the spender's allowance from 0 to 1 base unit, exceeding the policy's maxAllowanceIncreaseBaseUnits ceiling of 0.",
+    "specBasis": "§5.7 DemoERC20 approval parameters and allowance ceiling; §5.2 'Any failed rule blocks' (mandate/policy intersection)",
+    "confidence": "high",
+    "notes": "Several independent sufficient grounds, any one of which blocks: the action target 0x9fe4... (DemoERC20) is not the mandate's target 0x5fbd... (DemoPay); the calldata selector 0x095ea7b3 (approve) is not the mandate's selector 0xc188528b; and targetOnVaultAllowlist is false. The observed runtime code hash also differs from the mandate's targetCodeHash, but per D-027 a code-hash mismatch alone is an EVIDENCE check that would follow failureMode (= REVIEW here) — it is subsumed by the determinate failures, since §5.2 gives a failed rule priority over an unresolved one. Conformance-class block per §3.3(7) as amended by D-026: the remedy is a new mandate or policy. I recomputed keccak256(callData) and it matches the declared dataHash, and recomputed the §5.8 mandate and policy hashStructs, which match the action and the vault's active hashes."
+  },
+  {
+    "fixtureId": "F014",
+    "label": "BLOCK",
+    "primaryReason": "The decoded purchase duration of 2,592,000 seconds does not equal the mandate's durationSeconds of 86,400, and duration is an equality check rather than a ceiling.",
+    "specBasis": "§5.7 DemoPay resource, beneficiary, duration and recurrence, as amended by D-020; §5.2 'Any failed rule blocks'",
+    "confidence": "high",
+    "notes": "Every other bound field conforms: chain, vault, nonce, target, operation, selector, code hash, value (1e15, within both the mandate's and the policy's 1e16 ceilings), beneficiary, resourceId, recurrence false. I recomputed keccak256(callData) against the declared dataHash (match) and the §5.8 mandate and policy hashes (match, and both are the vault's active hashes). One observation for the corpus rather than a doubt about this label: a pre-D-020 'ceiling' reading of duration would also block here, since 30 days exceeds the mandated 1 day, so this fixture does not discriminate the ceiling reading from the equality reading. Only a purchase for LESS duration than mandated would, and D-020 exists precisely to settle that direction."
+  },
+  {
+    "fixtureId": "F019",
+    "label": "BLOCK",
+    "primaryReason": "The action's declared dataHash does not equal keccak256 of the accompanying calldata, so a field the authorization binds has been mutated.",
+    "specBasis": "§3.3(4) authorization binds the calldata hash and §3.3(5) any mutation to a bound field invalidates authorization; §5.3; §5.2 'Any failed rule blocks'",
+    "confidence": "high",
+    "notes": "Verified rather than taken from the declared intent: I recomputed keccak256(callData) as 0xac6dee83c35da5f0a5a889e34b35b34c0457e3db0cd5ae2f886054f0006aa95a against the declared dataHash 0x6e313b3931f514dc210755b6cee1f7d978872c5bed36bcd83b9788d0916bd774. This was the only one of my ten fixtures where the two differ. The accompanying calldata is itself fully conforming; the defect is that the ActionPayload does not describe the calldata it carries, and §5.3 makes the vault recompute dataHash precisely so this is caught. It is determinate, so it is a failed rule and not an unresolved check under failureMode. Second reading considered and rejected: one could argue this is executability-class (a defect the agent could correct by re-proposing, cf. D-026) rather than conformance-class, but D-026's executability list is enumerated and closed — pause, nonce, deadline, vault hard cap — and dataHash is not in it. The verdict is BLOCK under either classification; only the remedy differs."
+  },
+  {
+    "fixtureId": "F021",
+    "label": "BLOCK",
+    "primaryReason": "The action's vault field is 0x000000000000000000000000000000000000dead, not the deployed vault 0xe7f1725e7734ce288f8367e1bb143e90bb3f0512, failing the exact-vault binding check.",
+    "specBasis": "§5.7 exact chain, vault, nonce, target, operation, value, selector; §3.3(4)–(5); §5.2 'Any failed rule blocks'",
+    "confidence": "high",
+    "notes": "A determinate equality failure against a value the environment reports unambiguously; nothing here is unknown, so failureMode is not reached. The mandate and the policy both name the real vault, so the intersection cannot authorise an action addressed elsewhere. §5.8 sharpens why this field is load-bearing rather than cosmetic: the payload hashes are bare hashStruct values with no domain separator applied, so chain and vault binding for mandate, policy and action comes solely from the chainId and vault members of the payloads themselves. Every other field conforms, and dataHash, mandate hash and policy hash all recompute correctly."
+  },
+  {
+    "fixtureId": "F023",
+    "label": "BLOCK",
+    "primaryReason": "The action references mandateHash 0x0d6d4a2a..., which is not the vault's active mandate 0x85beec29..., so no active mandate authorises the action.",
+    "specBasis": "§5.7 active owner, mandate, policy and signer; §3.3(8) stale mandate; §5.2 'Any failed rule blocks'",
+    "confidence": "high",
+    "notes": "I recomputed the supplied MandatePayload's §5.8 hashStruct as 0x85beec29571f83a609d5db233c693ea573fbf5bc8c2ed402c3a514babfaeb276 — that mandate IS the vault's active one, but the action does not reference it. So this is not an evidence gap dressed as a mismatch: both the referenced hash and the active hash are observed and they differ determinately, which makes it a failed rule rather than an unknown check following failureMode = REVIEW. Conformance-class block under §3.3(7) as amended by D-026: the remedy is activating a mandate that actually covers the action. Note that §3.3(8) on its own would not settle this — it forbids automatic allow without choosing between BLOCK and REVIEW — so the label rests on §5.2's failed-rule clause, not on §3.3(8)."
+  },
+  {
+    "fixtureId": "F024",
+    "label": "BLOCK",
+    "primaryReason": "The mandate's principal (0x00000000000000000000000000000000deadbeef) is not the vault's current owner (0xf39fd6e5...), so the mandate is not the owner's signed authorization.",
+    "specBasis": "§5.1 'The principal must equal the current vault owner'; §5.7 active owner; §3.3(3)",
+    "confidence": "medium",
+    "notes": "The hardest fixture in my sample and the one place I think the specification is genuinely underdetermined. §5.1 states the principal-equals-owner requirement as a condition on ACTIVATION, yet the observed environment shows this exact mandate active: I recomputed its §5.8 hash as 0x7ca7afa6c6ede94b10c639ec5aa136728a01a5031f5714b0e06d2c0a3b2c2f5c, equal to both action.mandateHash and vaultActiveMandateHash. So the fixture posits a vault that activated a mandate §5.1 says it must not have. Two readings. (a) The evaluator independently re-checks 'active owner' per §5.7 — which is also what catches an owner rotation after activation — the comparison is fully determinate, and a failed rule blocks. That is my label. (b) The discrepancy is 'missing or conflicting state' under §3.3(8), which by the frozen prompt's own note does not choose between BLOCK and REVIEW, and would therefore be an unresolved check reviewing under this policy's failureMode = REVIEW. Reading (b) gains some force from D-027 and D-028 having since reclassified two other members of the same §3.3(8) list — code-identity mismatch and undecodable calldata — as evidence gaps; it loses force because other members of that list, such as a stale mandate, are plainly determinate, so the list is mixed rather than uniformly evidential. ALLOW is untenable on either reading, given §3.3(3). I would flag this for gate sampling: whichever way it resolves, the spec should say so explicitly, because 'conflicting state' currently has no stated BLOCK/REVIEW rule of its own."
+  },
+  {
+    "fixtureId": "F034",
+    "label": "BLOCK",
+    "primaryReason": "The action's own deadline (1) has passed, which D-026 enumerates as an EXECUTABILITY check that blocks.",
+    "specBasis": "§5.7 EXECUTABILITY class added by D-026; §3.3(4) deadline is a bound field; §3.3(7) as amended by D-026",
+    "confidence": "high",
+    "notes": "Executability-class rather than conformance-class: per D-026 and §3.3(7) as amended, the remedy is a corrected action rather than a new mandate, and it is non-overridable either way. The fixture supplies no explicit current timestamp, but the simulated entitlement expiryAfter of 1786918449 (≈2026) places evaluation time far beyond a deadline of 1, so the check is determinate and not an evidence gap. Everything else conforms: chain, vault, nonce 0 = vault's current nonce, target, operation, selector, code hash, value, and all four DemoPay parameters. dataHash, mandate hash and policy hash all recompute correctly."
+  },
+  {
+    "fixtureId": "F053",
+    "label": "BLOCK",
+    "primaryReason": "The action's operation CALL (0) does not equal the policy's allowedOperation DELEGATECALL (1), failing the exact-operation check.",
+    "specBasis": "§5.7 exact operation; §5.9 Operation enumeration (CALL = 0, DELEGATECALL = 1); §5.2 intersection",
+    "confidence": "high",
+    "notes": "Resolved via §5.9's normative enumeration rather than by inference, since the document warns that prose ordering implies the wrong values. Determinate equality failure, so it blocks rather than following failureMode. §3.3(11)'s 'denied or reviewed by default' does not compete here: it governs an unsupported operation proposed by the ACTION, and this action's operation is CALL, which §4 makes the one supported top-level operation. A spec observation worth recording rather than a doubt about the label: this policy admits only an operation §5.9 says is unsupported and 'never executes', so no action whatsoever can pass it — the fixture is effectively a policy that authorises nothing, and the spec does not say whether such a policy should be rejected at activation. I confirmed the policy really is the active one by recomputing its §5.8 hash as 0xd4cd8d4edb8262ad2b4510cde3bf65b1284057465cdae597c474623b8bfc0e12, matching the action, the mandate's policyHash reference, and vaultActivePolicyHash."
+  },
+  {
+    "fixtureId": "F055",
+    "label": "BLOCK",
+    "primaryReason": "The decoded resourceId 0xfa61acd2...09ed does not equal the mandate's resourceId 0x1878e089...5264, and the simulated entitlement post-state grants that wrong resource.",
+    "specBasis": "§5.7 DemoPay resource (equality per D-020); §4.2 Case 3 mandate-conformance block; §5.2 'Any failed rule blocks'",
+    "confidence": "high",
+    "notes": "The declared intent's framing — 'presented for the owner-override path' — does not affect the verdict, and the specification is explicit that it cannot: §3.3(7) and §5.5 both state that a block is not overridable and that the override attaches only to a signed REVIEW receipt. I treated that framing as fixture data describing the scenario under test, per the frozen prompt's rule 2, not as an instruction. Conformance-class block (D-026): the remedy is a new mandate or policy, not an override. The entitlement post-state corroborates the decode independently, which matters because §5.7 states that conformance checks resulting contract state rather than emitted events. All hashes recompute correctly and every other bound field conforms."
+  },
+  {
+    "fixtureId": "F057",
+    "label": "BLOCK",
+    "primaryReason": "The vault is paused, which D-026 enumerates as an EXECUTABILITY check that blocks.",
+    "specBasis": "§5.7 EXECUTABILITY class added by D-026; §3.3(2) and §3.3(7) as amended; §3.3 Foundry invariant 'Paused execution always fails'",
+    "confidence": "high",
+    "notes": "The action is otherwise fully conforming — chain, vault, nonce, target, operation, selector, code hash, value, and all four DemoPay parameters match, and dataHash, mandate hash and policy hash all recompute correctly — so pause is the sole ground. Executability-class: the remedy is a change of vault state, not a new mandate, and it is non-overridable. I considered and rejected a reading in which pause is purely a vault execution-time backstop, leaving the evaluator free to issue an allow receipt that simply cannot execute: D-026 places 'vault not paused' among the supported deterministic checks that block, and an executable allow receipt outstanding against a paused vault would also sit badly with §7.5's hard gate. The pause being owner-initiated (§3.3(2), §3.3(10)) is what makes this a legitimate, non-anomalous block rather than a dependency failure."
+  }
+]

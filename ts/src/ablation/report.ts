@@ -68,14 +68,21 @@ export function loadInputs(): AblationInputs {
     const index = readJson<{id: string}[]>(join(CORPUS_DIR, "results", "_index.json"));
     const results = index.map((e) => readJson<ResultRecord>(join(CORPUS_DIR, "results", `${e.id}.json`)));
 
-    // C and D are the labels OF RECORD. A and B ran against an earlier version of the
-    // specification — before D-020, D-021, D-024 and D-025 — and against a corpus with four
-    // defective fixtures. They are retained rather than deleted, because a superseded
-    // measurement is part of the audit trail and deleting it would hide that the corpus was
-    // re-labelled at all; but scoring against them would score against a spec that no longer
-    // exists.
-    const aPath = join(CORPUS_DIR, "labels", "labeller-C.json");
-    const bPath = join(CORPUS_DIR, "labels", "labeller-D.json");
+    // E and F are the labels OF RECORD.
+    //
+    // A/B scored a spec that no longer exists. C/D were DISCARDED AS CONTAMINATED: the
+    // re-label brief handed labeller C a finding derived from reading the evaluator, and C's
+    // own note recorded that one fixture turned entirely on it (A-028 F-1). The views
+    // themselves also leaked the decoder's internal output through innocuously-named fields.
+    // Both causes were fixed before E and F ran, and both were denied `docs/` — including
+    // decisions.md, which is the path the contamination took.
+    //
+    // All four earlier files are RETAINED rather than deleted. A superseded or contaminated
+    // measurement is part of the audit trail, and removing it would hide that the corpus was
+    // re-labelled twice — which is exactly the kind of omission this project keeps finding in
+    // its own artifacts.
+    const aPath = join(CORPUS_DIR, "labels", "labeller-E.json");
+    const bPath = join(CORPUS_DIR, "labels", "labeller-F.json");
     if (!existsSync(aPath)) throw new Error(`missing ${aPath}: the independent labelling has not run`);
 
     return {
@@ -192,10 +199,17 @@ export function contributionByLayer(results: ResultRecord[], truth: Map<string, 
     const l2 = caught("L2_policy_plus_effects");
     const l3 = caught("L3_full_conformance");
 
+    // AGAINST EVERYTHING WEAKER, not just the previous rung.
+    //
+    // `addedByL3` was `L3 \ L2`, which readmits anything L2 REGRESSED. F056 appeared in both
+    // "caught by the baseline alone" and "added by mandate conformance" — recovering a
+    // detection the weakest arm already made is not a contribution, and the headline 20 was
+    // overstated by it. Found independently by two reviewers (A-028).
+    const weaker = new Set([...l1, ...l2]);
     return {
         l1: [...l1].sort(),
         addedByL2: [...l2].filter((id) => !l1.has(id)).sort(),
-        addedByL3: [...l3].filter((id) => !l2.has(id)).sort(),
+        addedByL3: [...l3].filter((id) => !weaker.has(id)).sort(),
         lostByL2: [...l1].filter((id) => !l2.has(id)).sort(),
         lostByL3: [...l2].filter((id) => !l3.has(id)).sort(),
     };
@@ -238,6 +252,36 @@ export function buildReport(inputs: AblationInputs): string {
     w("describe 50 fixtures over two demo contracts and two call schemas. They are not an");
     w("accuracy claim about EVM transactions, and nothing here is a comparison with any named");
     w("vendor — D-001 cut executed vendor comparisons from v1 entirely.");
+    w();
+
+    w("## Context a hostile reader needs, stated here rather than only in the source");
+    w();
+    w("**§7.2's own caveat, verbatim:** *\"This baseline makes the demo reproducible but is not");
+    w("evidence that current vendors miss Case 3.\"* The L1 arm is a local reimplementation of the");
+    w("capability class §7.2 describes. It is not any vendor's product, and no vendor was executed,");
+    w("emulated, or measured — D-001 cut all executed vendor comparisons from v1.");
+    w();
+    w("**§7.2 mandates TWO baseline classes and only one is present.** The second — strong");
+    w("published-capability baselines — is absent from v1 per D-001. Some of those products");
+    w("document parameter-matching capabilities that are Case-3 shaped. Their absence is a scope");
+    w("decision, not a finding about them.");
+    w();
+    w("**The labelling history, because two rounds preceded the labels of record.** Round 1 (A/B)");
+    w("scored a specification that has since been amended. Round 2 (C/D) was DISCARDED AS");
+    w("CONTAMINATED — its brief handed the labeller a finding derived from reading the evaluator,");
+    w("and the fixture views leaked the decoder's internal output through innocuously-named");
+    w("fields. Round 3 (E/F) ran after both causes were fixed, denied `docs/` entirely, and");
+    w("produced provenance attestations. All four earlier files are retained as audit trail.");
+    w();
+    w("**A robustness check worth more than any single round:** re-scoring the whole table");
+    w("against the superseded round-1 labels produces IDENTICAL false-allow counts. The headline");
+    w("is not an artifact of which labelling round is used; only exact-match moves.");
+    w();
+    w("**The latency column measures the deterministic decision only, and excludes simulation");
+    w("entirely.** L1 performs no I/O; L2 and L3 are timed after the simulation they share. So");
+    w("the L1-versus-L3 gap shown here is NOT the cost of full conformance — the real difference");
+    w("is dominated by an EVM round-trip that is orders of magnitude larger and is not measured.");
+    w("Treat these figures as ordering the layers' arithmetic, not their operational cost.");
     w();
 
     w("## Configurations");
@@ -310,6 +354,17 @@ export function buildReport(inputs: AblationInputs): string {
             : "Rate is within the declared threshold.",
     );
     w();
+    w("**Two limits on what this rate can mean, both raised by the second labeller itself.**");
+    w("First, with n=10 the only attainable rates are multiples of 10%, so the declared \">10%\"");
+    w("boundary is operationally \"halt at two or more disagreements\" — a single disagreement");
+    w("lands exactly on 10.0% and does not breach. Second, the sample was drawn at random and");
+    w("happened to contain **no conforming fixture and no fixture whose primary defect is an");
+    w("evidence gap** — the REVIEW/BLOCK boundary where the verdict semantics are actually");
+    w("stressed. A rate computed from it is measuring determinate-failure cases almost");
+    w("exclusively. The sample was NOT redrawn to improve its composition: the selection is a");
+    w("deterministic hash precisely so it cannot be steered, and redrawing until the mix looked");
+    w("better would forfeit that.");
+    w();
 
     w("## Results by attack class");
     w();
@@ -337,6 +392,20 @@ export function buildReport(inputs: AblationInputs): string {
     w();
     w("§3.3(8) requires that a critical dependency failure never produce an automatic allow.");
     w("Whether each of these satisfies that is the labels' call, and is scored above.");
+    w();
+
+    w("## Fixtures that must NOT be read as detections");
+    w();
+    w("`F049` and `F050` sit in the `malicious-retrieved-instructions` class, but the corpus");
+    w("fixture format has **no field for an agent rationale** — the adversarial text exists only");
+    w("in the declared intent, which reaches the labeller and never reaches the pipeline. Their");
+    w("actions are therefore identical to `F009` and `F012` respectively apart from mandate");
+    w("identity. Whatever layer \"catches\" them is catching the underlying approval or");
+    w("wrong-resource action, not an injection. D-025 set this precedent for a class that cannot");
+    w("be driven to a positive case; it applies here for the same reason.");
+    w();
+    w("The same caution applies to `F035` and `F057`, whose enforcement is the isolated signer");
+    w("and the vault rather than the conformance engine — see the attribution note below.");
     w();
 
     w("## Attribution note");

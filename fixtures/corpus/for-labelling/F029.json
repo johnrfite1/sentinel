@@ -84,8 +84,8 @@
         "contract": "0x5fbdb2315678afecb367f032d93f642f64180aa3",
         "beneficiary": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
         "resourceId": "0x1878e089565039fe0f4ac9769a9fb8f9b28aa23ed7c9e9f9dfa9b926988a5264",
-        "expiryBefore": "1786918448",
-        "expiryAfter": "1787004848",
+        "expiryBefore": "1786919008",
+        "expiryAfter": "1787005408",
         "recurringBefore": false,
         "recurringAfter": false
       }

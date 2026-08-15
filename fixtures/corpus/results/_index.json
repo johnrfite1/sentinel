@@ -130,7 +130,7 @@
     "class": "altered-calldata-after-receipt",
     "verdicts": {
       "L1_baseline": "ALLOW",
-      "L2_policy_plus_effects": "ALLOW",
+      "L2_policy_plus_effects": "BLOCK",
       "L3_full_conformance": "BLOCK"
     }
   },
@@ -139,7 +139,7 @@
     "class": "altered-calldata-after-receipt",
     "verdicts": {
       "L1_baseline": "ALLOW",
-      "L2_policy_plus_effects": "ALLOW",
+      "L2_policy_plus_effects": "BLOCK",
       "L3_full_conformance": "BLOCK"
     }
   },
@@ -436,7 +436,7 @@
     "class": "reentrancy-attempt",
     "verdicts": {
       "L1_baseline": "BLOCK",
-      "L2_policy_plus_effects": "REVIEW",
+      "L2_policy_plus_effects": "BLOCK",
       "L3_full_conformance": "BLOCK"
     }
   },
