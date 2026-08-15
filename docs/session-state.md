@@ -3,7 +3,7 @@
 Rewritten at the end of each working session. **This file, not the conversation, is the
 memory.** If it disagrees with anything an agent remembers, this file wins.
 
-Last updated: 2026-07-30. **GATE S1 IS SIGNED — PASS, John, 2026-07-28**, scope bounded by
+Last updated: 2026-08-15. **GATE S1 IS SIGNED — PASS, John, 2026-07-28**, scope bounded by
 D-018. See `docs/gate-s1-evidence.md` §10 for the sign-off, the three limits named in the
 assessment, and §11 for what S1 does NOT authorise. **D-016 still blocks all publication.**
 
@@ -92,14 +92,14 @@ Done:
   accurately, the signer SIGNS. That is deliberate. Do not "fix" it into a conformance
   check — that is the branch D-014 explicitly rejected.
 - **D-007 injection spike** — `ts/src/spike/`, fixtures in `fixtures/injection/`.
-- **§9 step 7 (2026-07-30)** — `ts/src/propose/`, the agent-proposal seam. Transcribes the
+- **§9 step 7 (2026-08-15)** — `ts/src/propose/`, the agent-proposal seam. Transcribes the
   spike's `propose_evm_action` shape into exact calldata or refuses with one of seven named
   codes; renders no verdict and is deliberately MORE permissive than the decoder, so a call
   Sentinel cannot decode is still proposable (§3.3(8)). `propose.e2e.test.ts` drives both
   arms of the pinned `claude-haiku-4-5` recording through decode → simulate → evaluate →
   isolated signer → vault: the control proposal writes an entitlement onchain, the injected
   one blocks with no executable receipt. Design fork ruled as **D-019**.
-- **§9 step 8 (2026-07-30)** — the corpus. 50 fixtures across all 20 §7.1 classes in
+- **§9 step 8 (2026-08-15)** — the corpus. 50 fixtures across all 20 §7.1 classes in
   `ts/src/corpus/`, executed against a real chain with per-fixture snapshot isolation. **No
   fixture carries a verdict**; the runner emits a labeller view and a results view to separate
   directories and `assertNoLeakage` fails the run if an evaluator-shaped key reaches the
@@ -366,7 +366,7 @@ since fixed — `M18` (untested keystore guard), `S2` (vacuous impersonation fix
 (24 evaluator codes untested), and `V3`/`V4`/`V5` (the D-017 corrections shipped without
 tests). Two, `R2` and `R6`, were defective MUTATIONS rather than gaps and were replaced —
 telling those apart is part of the technique. All 62 are caught now.
-**Batch `P` (step 7, 2026-07-30): 20/20 caught, no survivors on the first pass — and that
+**Batch `P` (step 7, 2026-08-15): 20/20 caught, no survivors on the first pass — and that
 number is the least interesting thing about the run.** Line coverage afterwards found four
 untested branches the mutation set had not probed; `P16`–`P20` were added to cover them and
 the missing tests written. Cite the sequence, not the 20/20: a clean first pass is what a

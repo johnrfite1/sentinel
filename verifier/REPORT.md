@@ -1,6 +1,6 @@
 # D-010 Receipt-Verifier CLI — Independent Reimplementation Report
 
-Authored by the independent verifier subagent (2026-07-30), which read only
+Authored by the independent verifier subagent (2026-08-15), which read only
 `Sentinel_Protocol_Lab_Proposal_v0_2.md` and `fixtures/samples/**`. It never opened `ts/`,
 `contracts/`, `scripts/`, or `docs/`. Transcribed into the repository by the build loop
 because the subagent's tooling could not write it; the content is the subagent's.
@@ -16,6 +16,16 @@ digest itself — are named as fields and never defined.
 Four of the five were recovered by brute-force search against the signed samples. The fifth,
 `reasonCodesHash`, could not be recovered at all; the CLI reports it as `NOT VERIFIABLE`
 rather than pretending otherwise.
+
+> **Amended 2026-08-15 (D-022).** The preceding paragraph is preserved as written but is no
+> longer current. §5.4 now defines `reasonCodesHash`, the samples publish the `reasonCodes`
+> array the construction needs, and the CLI recomputes and checks it — the `NOT VERIFIABLE`
+> skip is gone. Five of the six hash computations are now reproducible from the spec; only
+> §5.5's `OverrideAuthorizationPayload` remains untested, for want of a fixture. The finding's
+> substance held: the gap was real and it was the *cause* of the fix. The diagnosis was
+> incomplete — the preimage encoding guessed here was substantially correct, and the reason
+> nothing matched was that no artifact published the committed set. See the F-3 resolution
+> subsection for what the amended §5.4 still leaves open.
 
 §5 currently specifies *field names*. It needs to specify *encodings*. A schema that names
 fields but not their wire types is not implementable by an independent party — which is the
@@ -165,6 +175,77 @@ are defensible hash inputs; the spec picks neither.
 > of the identifier** (not evaluation order), deduplicated. The empty list hashes to
 > `keccak256("")` = `0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470`. The
 > codes bound are exactly the `policyChecks` entries whose `outcome` is not `PASS`.
+
+#### F-3 — RESOLVED by D-022 (2026-08-15). Implemented; the check is now real.
+
+*Everything above is preserved as the original finding. This subsection records the outcome.*
+
+**What I concluded, and what was actually true.** I concluded the preimage was underspecified
+*and* unrecoverable. The first half was right and drove the fix. The second half was wrong
+about the cause: my guessed construction was, in substance, correct — dedup, ascending byte
+order, keccak256 — and one of the encodings I tested was the delimiter-joined form that D-022
+ratified. **Nothing matched because the committed set is the union of the evaluator's reason
+codes and the isolated signer's own findings, and no shipped artifact published that union.**
+I was hashing the evaluator's half against a hash of the whole. That was a fixture gap, not a
+reasoning error, but it is worth being precise about what my search could and could not have
+found: no amount of brute force over *encodings* recovers a set whose *membership* is not
+published. The failure mode was invisible to me — a wrong encoding and a wrong input set both
+present as "no candidate matched".
+
+The corrected §5.4 construction: union of evaluator codes and signer findings, de-duplicated,
+sorted ascending by identifier bytes, joined with a single `\n`, UTF-8, keccak256; empty set
+hashes to `keccak256("")`. Identifiers match `^[A-Za-z0-9_.:-]{1,64}$`, enforced at the
+signer's RPC boundary. Verified against all five regenerated samples.
+
+**Now implemented** in `reasoncodes.py`, replacing the `NOT VERIFIABLE` skip with three real
+checks: identifier grammar, the hash recomputation, and `signerFindings ⊆ reasonCodes`.
+Tamper coverage: substitute, add and remove are rejected; a pure reorder still verifies.
+
+**Three things the amended §5.4 still does not settle** — each was a decision I had to make:
+
+1. **"Union" is a production rule, and reads as a verifier instruction.** §5.4 says the
+   committed set *is* the union of two things, but the verifier is handed `reasonCodes`
+   already unioned. Taken literally as a verifier instruction — recompute
+   `union(reasonCodes, signerFindings)` — the verifier becomes **strictly weaker**: deleting
+   any code that also appears in `signerFindings` is silently repaired by the union and goes
+   undetected. In the current samples every signer finding is also in `reasonCodes`, so both
+   readings produce identical hashes and the corpus cannot distinguish them. I hash the
+   published `reasonCodes` and assert the subset relation separately; a regression test pins
+   it. **§5.4 should say explicitly which array a verifier hashes.**
+2. **The printed pattern does not do what the sentence claims it does.** §5.4 says the
+   pattern "is what removes the delimiter and the collation as sources of disagreement". As
+   printed, `^[A-Za-z0-9_.:-]{1,64}$`, that is false in two of the three most likely
+   implementation languages, because `^`/`$` are not absolute anchors:
+   - **Python** (the language D-010 mandates): `re.match(r"^[A-Za-z0-9_.:-]{1,64}$",
+     "EVAL_OK\n")` **matches** — `$` matches before a trailing newline. The identifier ends
+     in the delimiter.
+   - **Ruby**: `^`/`$` are line anchors unconditionally, so `"EVIL\nINJECTED"` **matches**.
+   - **JavaScript**: correct, `$` is end-of-input without the `m` flag.
+
+   This is not pedantry — it is a collision. `{"EVIL\nINJECTED"}` and `{"EVIL", "INJECTED"}`
+   produce the byte-identical preimage `EVIL\nINJECTED` and therefore the same
+   `reasonCodesHash`, so a receipt can commit to two different sets at once. The grammar is
+   the *only* thing preventing it, and as written the grammar does not hold. **§5.4 should
+   print the rule as absolute anchors and say so:** `\A[A-Za-z0-9_.:-]{1,64}\z`, or in prose
+   "the identifier must match end-to-end; implementations must use `fullmatch`/`\A…\z` rather
+   than `^…$`, which is a line anchor in some languages." My implementation uses
+   `re.fullmatch` and a test asserts the printed pattern's laxity to keep the hazard visible.
+3. **Enforcement "at the signer's RPC boundary" is not enforcement at the verifier.** A
+   third-party verifier is outside that boundary by construction and must re-validate. §5.4
+   should say the verifier MUST reject a non-conforming identifier rather than sanitise it,
+   and should state what a verifier does when `reasonCodes` is **absent** — I treat it as a
+   verification failure for a signed receipt, on the reading that "a verifier must be given
+   it" makes absence a failure to meet the spec, but that is my inference.
+
+**Smaller gaps.** The empty-set rule is redundant but harmless — `"\n".join([])` is `""`, so
+the general rule already yields `keccak256("")`. Whether de-duplication is exact-match or
+case-folded is unstated; I use exact match, consistent with byte-order sorting. No sample now
+has exactly **one** reason code, so the corpus does not pin the "no trailing delimiter" edge —
+a producer emitting `code + "\n"` for a single-element set would pass every shipped fixture.
+Worth one more fixture.
+
+**What remains unverifiable:** nothing in the reason-code path. F-3 is closed. The residual
+limits on this verifier are the ones in §3, none of which are about reason codes.
 
 ### F-4 — MAJOR — the verdict enum is unspecified, and the spec's own prose implies the wrong one
 
@@ -392,8 +473,10 @@ self-contradictory. Tests synthesise all three shapes since no fixture does.
 
 ## 3. What this verifier does *not* prove
 
-- **`reasonCodesHash` is unchecked** (F-3) — reason codes are not tamper-evident to any third
-  party.
+- ~~**`reasonCodesHash` is unchecked** (F-3) — reason codes are not tamper-evident to any
+  third party.~~ **Superseded by D-022 (2026-08-15):** §5.4 now defines the construction,
+  the samples publish `reasonCodes`, and the check is implemented. Reason codes are
+  tamper-evident. See the F-3 resolution subsection.
 - **§5.5 `OverrideAuthorizationPayload` is entirely unexercised** — no sample contains one, so
   its type string is unrecovered and the chain-binding concern is reasoned from pattern, not
   tested.
@@ -416,8 +499,10 @@ If only three things are fixed:
 
 1. **F-1 / F-2 — publish every EIP-712 type string verbatim.** Without them §5 is not
    implementable, which defeats the receipt layer's provider-neutrality claim.
-2. **F-3 — define `reasonCodesHash`.** The one binding a third party currently cannot check,
-   and the one carrying the human-readable "why".
+2. ~~**F-3 — define `reasonCodesHash`.**~~ **DONE — D-022, 2026-08-15.** Implemented and
+   verified against all five samples. Three residual wording gaps are recorded in the F-3
+   resolution subsection; the anchor-semantics one (item 2) is a real collision risk and
+   should be fixed before the gate.
 3. **F-4 — state the verdict enum.** The one error that passes every cryptographic check and
    still reports the opposite answer.
 
@@ -431,8 +516,14 @@ python3 verifier/verify.py fixtures/samples/case-1-allow   # one sample, verbose
 python3 verifier/verify.py --all fixtures/samples          # all five
 python3 verifier/verify.py --tamper --all fixtures/samples # negative self-test
 python3 verifier/verify.py --print-types                   # the recovered type strings
-python3 verifier/test_verifier.py                          # 39 tests
+python3 verifier/test_verifier.py                          # test suite
 ```
 
-**Results at time of writing:** 5/5 samples PASS · 15/15 tamper cases rejected · 39/39 tests
-OK. Per sample, 16 checks pass and 1 (`reasonCodesHash`) reports NOT VERIFIABLE.
+**Results at time of writing (2026-08-15):** 5/5 samples PASS · 15/15 tamper cases rejected ·
+39/39 tests OK. Per sample, 16 checks pass and 1 (`reasonCodesHash`) reports NOT VERIFIABLE.
+
+**Results after D-022 (2026-08-15):** 5/5 samples PASS · 32/32 applicable tamper cases behave
+as specified · 55/55 tests OK. Per sample, 18-19 checks pass and none report NOT VERIFIABLE.
+The tamper suite gained four reason-code modes; three of the 35 mode/sample combinations are
+N/A because `case-1-allow` has an empty reason-code list, and `reasons-reorder` is a control
+that must *still verify* rather than be rejected.
