@@ -378,9 +378,19 @@ Only an allow receipt is executable on the automatic path.
 
 The committed set is the **union of the evaluator's reason codes and the isolated signer's own findings** — not the evaluator's codes alone. This is the part a reader would not guess, and it is deliberate: the signer appends what it found so the receipt commits to the whole record rather than to the evaluator's half of it.
 
-That set is de-duplicated, sorted in ascending byte order of the identifier, joined with a single `\n` (U+000A) between elements, encoded UTF-8, and hashed with keccak256. The empty set hashes to `keccak256("")` = `0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470`. Each identifier matches `^[A-Za-z0-9_.:-]{1,64}$`, which is enforced at the signer's RPC boundary and is what removes the delimiter and the collation as sources of disagreement between implementations.
+That set is de-duplicated (exact match, not case-folded), sorted in ascending byte order of the identifier, joined with a single `\n` (U+000A) between elements, encoded UTF-8, and hashed with keccak256. The empty set hashes to `keccak256("")` = `0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470`.
 
-The receipt commits to a hash, not to the list, so **the full ordered list travels alongside the receipt** and a verifier must be given it. A receipt transmitted without its reason-code list can have its signature and evidence checked but not its stated reasons.
+**A verifier hashes the `reasonCodes` array it is given, verbatim.** It does not recompute the union. The union describes how the signer *builds* the set, not what a verifier *recomputes* — and the distinction is load-bearing: a verifier that re-unions the published list with `signerFindings` would silently repair the deletion of any code that appears in both, and the deletion would go undetected. A verifier MUST additionally assert `signerFindings ⊆ reasonCodes`, which catches that deletion as a subset violation rather than repairing it.
+
+**Identifier grammar.** Each identifier must match, **end to end**:
+
+    [A-Za-z0-9_.:-]{1,64}
+
+Use an anchoring construct that means end-of-input in your language — `\A…\z`, or Python's `re.fullmatch`. **Do not write `^…$`.** In Python `$` also matches immediately before a trailing newline, so `"EVAL_OK\n"` passes; in Ruby `^` and `$` are line anchors unconditionally, so `"EVIL\nINJECTED"` passes. Either admits `\n` into an identifier, and because `\n` is also the delimiter, `{"EVIL\nINJECTED"}` and `{"EVIL", "INJECTED"}` then produce the byte-identical preimage and therefore **the same `reasonCodesHash`** — one receipt committing to two different sets. The grammar is the only thing preventing that collision, so it has to hold in the implementer's language rather than in the abstract.
+
+A verifier MUST re-validate every identifier against this grammar and **reject rather than sanitise** on failure. Enforcement at the signer's RPC boundary does not help a third party, who is outside that boundary by construction.
+
+The receipt commits to a hash, not to the list, so **the full ordered list travels alongside the receipt** and a verifier must be given it. A signed receipt presented without its `reasonCodes` list MUST fail verification rather than skip the check: its signature and evidence can still be checked, but its stated reasons cannot, and reporting that as a pass would misdescribe what was verified.
 
 ### 5.5 OverrideAuthorizationPayload
 
