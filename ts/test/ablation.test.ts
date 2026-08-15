@@ -370,6 +370,22 @@ describe("the §7.3 layer partition", () => {
         assert.equal(runLayer("L3_full_conformance", i, config).verdict, "BLOCK");
     });
 
+    /**
+     * L1 must fold with the BASELINE's rule, not the engine's.
+     *
+     * Mutation B7 swapped `baselineVerdict` for `verdictOf` inside `runLayer` and survived:
+     * the fold was tested by calling `baselineVerdict` directly, never through the layer. The
+     * two disagree exactly where it matters — on an unresolved check, the engine's fold
+     * returns REVIEW under `failureMode = REVIEW` while the baseline returns ALLOW — so the
+     * mutation would have silently given the baseline a third verdict §7.2 never grants it,
+     * and converted a false allow into an abstention in the ablation table.
+     */
+    it("L1 folds with the baseline's rule, not the engine's", () => {
+        const undecodable = ("0xc188528b" + RESOURCE.slice(2) + "0".repeat(64)) as Hex;
+        const r = runLayer("L1_baseline", input({callData: undecodable}), config);
+        assert.equal(r.verdict, "ALLOW", `L1 must not review; got ${r.verdict}`);
+    });
+
     it("reports a decision latency for every layer", () => {
         for (const layer of LAYERS) {
             const r = runLayer(layer, input({}), config);
