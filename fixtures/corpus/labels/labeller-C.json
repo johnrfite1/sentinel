@@ -1,0 +1,402 @@
+[
+  {
+    "fixtureId": "F001",
+    "label": "ALLOW",
+    "primaryReason": "Every supported deterministic check passes: exact chain, vault, nonce, target, operation, selector and code hash match, value is under all ceilings, the decoded resource/beneficiary/duration/recurrence equal the mandate's, and the simulated entitlement post-state confirms it.",
+    "specBasis": "§5.2 (automatic allow requires every required check to pass); §5.7; §4.2 Case 1",
+    "confidence": "high",
+    "notes": "The reference conforming case. Simulation succeeded, internal call graph empty, mandate and policy both active and inside their validity windows."
+  },
+  {
+    "fixtureId": "F002",
+    "label": "BLOCK",
+    "primaryReason": "The simulation reverts, which D-021 makes a failed rule rather than an unresolved check.",
+    "specBasis": "§5.2 as amended 2026-08-15 (D-021)",
+    "confidence": "high",
+    "notes": "Filed under 'benign variation' but is not benign: value zero is under every ceiling, yet DemoPay rejects the payment (revert data 0xbd1fa9d3) and the entitlement post-state is unchanged (expiryAfter 0), so the mandate's purpose is also not fulfilled. Before D-021 a reasonable labeller could have called this REVIEW under failureMode=REVIEW; the amendment closes that."
+  },
+  {
+    "fixtureId": "F004",
+    "label": "ALLOW",
+    "primaryReason": "Native value exactly equals maxNativeValueWei, and a max* field is a ceiling the action may come up to, not a value it must stay strictly under.",
+    "specBasis": "§5.7 as amended (D-020: only max* fields are ceilings); §4.2 Case 1 ('no more than the specified test-ETH amount')",
+    "confidence": "high",
+    "notes": "Equal-to-ceiling reads as conforming under 'no more than'. All other checks pass and the simulation succeeds with the correct entitlement."
+  },
+  {
+    "fixtureId": "F005",
+    "label": "BLOCK",
+    "primaryReason": "Native value is one wei above the mandate's maxNativeValueWei ceiling, a determinate failed rule.",
+    "specBasis": "§5.2 (any failed rule blocks); §5.7 native-value ceiling",
+    "confidence": "high",
+    "notes": "Also one wei above the policy ceiling and the vault's own hard cap, so the verdict does not depend on which ceiling governs."
+  },
+  {
+    "fixtureId": "F006",
+    "label": "BLOCK",
+    "primaryReason": "The action's 5e15 wei sits inside the mandate's raised 1e18 ceiling but above the policy's 2e15 ceiling, and the intersection is governed by the tighter of the two.",
+    "specBasis": "§5.2 intersection (mandate and policy constraints are intersected; the tighter governs)",
+    "confidence": "high",
+    "notes": "The designed intersection test. Under the vault's own 1e16 cap, so only the policy ceiling decides it."
+  },
+  {
+    "fixtureId": "F007",
+    "label": "BLOCK",
+    "primaryReason": "The action's 1e17 wei exceeds the vault's constructor-set hard native-value cap of 1e16, so an allow receipt could never execute.",
+    "specBasis": "§4 (SentinelVault hard onchain backstops cap native value); §5.7 native-value ceiling; §3.3(1)",
+    "confidence": "low",
+    "notes": "GENUINELY UNDECIDED BY THE SPEC and the single highest-leverage ambiguity I found. Every mandate and policy check passes; the action clears both declared ceilings (1e18 each) and fails only the vault's own cap, which the fixture's declared intent calls out as 'independent of both mandate and policy'. §5.2's intersection clause names only mandate and policy, and §5.7's 'native-value ceiling' does not say whose. If the vault cap is outside the evaluator's rule set, this fixture is ALLOW, not BLOCK. I chose BLOCK because §4 makes the cap a hard enforcement backstop and §7.5 requires that nothing execute without a valid allow receipt — issuing an allow that the enforcement layer will refuse is a false allow in substance. But an ALLOW label here is defensible from the spec text alone, and this fixture flips verdict entirely on the answer."
+  },
+  {
+    "fixtureId": "F008",
+    "label": "BLOCK",
+    "primaryReason": "The action calls approve on DemoERC20 while the active mandate binds target DemoPay and selector 0xc188528b, so the exact-target and exact-selector checks fail.",
+    "specBasis": "§3.3(4) and §3.3(5); §5.7 exact target and selector; §5.2",
+    "confidence": "high",
+    "notes": "Independently fatal a second way: the allowance increase of 1 base unit exceeds the policy's maxAllowanceIncreaseBaseUnits of 0, and a max* field is a ceiling (D-020). Target is also off the vault allowlist and the on-chain code hash differs from the mandate's pin. Any one of these blocks."
+  },
+  {
+    "fixtureId": "F009",
+    "label": "BLOCK",
+    "primaryReason": "The unlimited (max uint256) allowance to the attacker exceeds the policy's zero allowance-increase ceiling, on a target and selector the mandate does not authorise.",
+    "specBasis": "§5.7 DemoERC20 approval parameters and allowance ceiling; §3.3(4); §4.2 Case 2",
+    "confidence": "high",
+    "notes": "The §4.2 Case 2 shape. Decoded spender 0x...deadbeef and amount 2^256-1 against the mandate's ceiling decide it; the simulated allowanceDeltas corroborate."
+  },
+  {
+    "fixtureId": "F010",
+    "label": "BLOCK",
+    "primaryReason": "The allowance increase of 1,000,000,000 base units exceeds the policy's maxAllowanceIncreaseBaseUnits of 1,000.",
+    "specBasis": "§5.7 allowance ceiling; §5.2 (any failed rule blocks)",
+    "confidence": "high",
+    "notes": "Also fails the mandate's exact target and selector independently. This is the 'large but finite' variant: finiteness does not rescue it, since the ceiling is a hard bound and the increase is six orders of magnitude over it."
+  },
+  {
+    "fixtureId": "F012",
+    "label": "BLOCK",
+    "primaryReason": "The decoded resourceId (0xfa61ac..., premium-monthly) is not the mandate's resourceId (0x1878e0..., weather-basic-24h), and purpose fields are compared for equality.",
+    "specBasis": "§5.7 as amended (D-020: DemoPay resource compared for equality); §4.2 Case 3",
+    "confidence": "high",
+    "notes": "The §4.2 Case 3 mechanism: target, selector and native value all fit a representative wallet policy and the call succeeds, but the simulated entitlement is for the wrong resource."
+  },
+  {
+    "fixtureId": "F013",
+    "label": "BLOCK",
+    "primaryReason": "The decoded beneficiary (0x...deadbeef) is not the mandate's beneficiary (the owner), and beneficiary is compared for equality.",
+    "specBasis": "§5.7 as amended (D-020); §5.2",
+    "confidence": "high",
+    "notes": "The simulated entitlement post-state confirms the entitlement lands on the attacker address, not the owner."
+  },
+  {
+    "fixtureId": "F014",
+    "label": "BLOCK",
+    "primaryReason": "The decoded duration of 2,592,000 seconds is not the mandate's 86,400, and duration is compared for equality rather than as a ceiling.",
+    "specBasis": "§5.7 as amended (D-020)",
+    "confidence": "high",
+    "notes": "The over-duration direction: the owner would receive more access than authorised at the authorised price."
+  },
+  {
+    "fixtureId": "F015",
+    "label": "BLOCK",
+    "primaryReason": "The recurrence flag is set in the calldata while the mandate sets recurringAllowed false, and recurrence is compared for equality.",
+    "specBasis": "§5.7 as amended (D-020); §4.2 Case 3",
+    "confidence": "high",
+    "notes": "The simulated entitlement post-state shows recurringAfter true, corroborating the decoded parameter."
+  },
+  {
+    "fixtureId": "F016",
+    "label": "BLOCK",
+    "primaryReason": "The decoded duration of 3,600 seconds is not the mandate's 86,400; a shorter duration is a failed equality check, not a conforming under-use of a ceiling.",
+    "specBasis": "§5.7 as amended 2026-08-15 (D-020)",
+    "confidence": "high",
+    "notes": "This is the fixture D-020 was written for, and my label follows the amendment rather than the intuition it overturns. Before D-020 this was genuinely open — 'less than authorised' reads as benign under ceiling semantics. D-020's reasoning (DemoPay grants exactly the duration requested at the same price, so a short duration is paying in full for less) makes it a failed rule. The amendment closes this cleanly."
+  },
+  {
+    "fixtureId": "F018",
+    "label": "BLOCK",
+    "primaryReason": "The accompanying calldata does not hash to the action's bound dataHash, so a bound field has been mutated and the authorization is invalid.",
+    "specBasis": "§3.3(4) and §3.3(5); §5.3 (the vault recomputes dataHash)",
+    "confidence": "high",
+    "notes": "Doubly determined: the presented bytes also decode to the premium-monthly resource, which the mandate does not authorise, so both the binding check and the purpose check fail."
+  },
+  {
+    "fixtureId": "F019",
+    "label": "BLOCK",
+    "primaryReason": "The action's dataHash names different bytes from the calldata it travels with, breaking the exact-action binding.",
+    "specBasis": "§3.3(4), §3.3(5); §5.3",
+    "confidence": "high",
+    "notes": "Harder than F018 in one respect: the presented calldata is itself fully conforming, so the only failure is the binding. That is still determinate — the recomputed hash does not equal the bound one — so it is a failed rule, not evidence uncertainty."
+  },
+  {
+    "fixtureId": "F020",
+    "label": "BLOCK",
+    "primaryReason": "The action declares chainId 8453 while the mandate, policy and vault are all on 31337, failing the exact-chain check.",
+    "specBasis": "§3.3(4); §5.7 exact chain",
+    "confidence": "high",
+    "notes": ""
+  },
+  {
+    "fixtureId": "F021",
+    "label": "BLOCK",
+    "primaryReason": "The action names vault 0x...dead, which is not the deployed vault the mandate and policy bind, failing the exact-vault check.",
+    "specBasis": "§3.3(4); §5.7 exact vault",
+    "confidence": "high",
+    "notes": ""
+  },
+  {
+    "fixtureId": "F022",
+    "label": "BLOCK",
+    "primaryReason": "The action targets DemoERC20 while the mandate binds DemoPay, failing the exact-target check; the simulation also reverts.",
+    "specBasis": "§3.3(4); §5.2 as amended (D-021, reverting simulation is a failed rule)",
+    "confidence": "high",
+    "notes": "Three independent failures: target mismatch against the mandate, a reverting simulation, and calldata that no supported schema decodes (DECODE_SELECTOR_TARGET_MISMATCH). Note that the decode failure alone would have been an unresolved check following failureMode=REVIEW; the other two are determinate and dominate."
+  },
+  {
+    "fixtureId": "F023",
+    "label": "BLOCK",
+    "primaryReason": "The action references a mandateHash the vault has never activated, so the active-mandate check fails.",
+    "specBasis": "§5.7 active mandate; §3.3(8); §5.2",
+    "confidence": "high",
+    "notes": "Determinate rather than unknown: the vault's active mandate hash is observable and is a different value, so this is a failed rule and not an evidence gap."
+  },
+  {
+    "fixtureId": "F024",
+    "label": "BLOCK",
+    "primaryReason": "The mandate's principal is 0x...deadbeef, not the vault's current owner, and §5.1 requires the principal to equal the current vault owner.",
+    "specBasis": "§5.1 (MVP EOA owner; principal must equal the current vault owner); §5.7 active owner",
+    "confidence": "medium",
+    "notes": "§5.1 states the principal requirement 'when the mandate is activated', and here the mandate is recorded as active. Either the activation check was bypassed (a state conflict) or the requirement is re-evaluated at action time; both routes refuse. I read it as a failed rule because the mismatch is determinate and observable, but a labeller treating it as conflicting state could reach REVIEW under failureMode=REVIEW. The spec does not say explicitly whether the principal check is re-run per action."
+  },
+  {
+    "fixtureId": "F025",
+    "label": "BLOCK",
+    "primaryReason": "The mandate's embedded policyHash names a policy other than the one the vault has active and the action cites, so the mandate-to-policy binding fails.",
+    "specBasis": "§3.3(4) (authorization binds mandate hash and policy hash); §5.7 active policy; §5.2",
+    "confidence": "medium",
+    "notes": "Determinate mismatch of a bound field. A second reading is available: one could call this 'conflicting state' and route it through failureMode to REVIEW. I treat it as a failed rule because §3.3(5) says any mutation to a bound field invalidates authorization outright."
+  },
+  {
+    "fixtureId": "F026",
+    "label": "BLOCK",
+    "primaryReason": "The action points at a superseded mandate hash; the vault's active mandate is now a different one, so the active-mandate check fails.",
+    "specBasis": "§5.7 active mandate; §3.3(8) stale mandate; §5.2",
+    "confidence": "high",
+    "notes": "Staleness here is observed, not inferred — the vault's active hash is given and differs — so it is a failed rule rather than an unresolved check."
+  },
+  {
+    "fixtureId": "F028",
+    "label": "BLOCK",
+    "primaryReason": "The action carries nonce 5 while the vault's current action nonce is 0, failing the exact-nonce check.",
+    "specBasis": "§3.3(4), §3.3(9); §5.7 exact nonce",
+    "confidence": "high",
+    "notes": "A nonce ahead of the vault is as fatal as one behind it; the invariant is a single monotonic counter, not a window."
+  },
+  {
+    "fixtureId": "F029",
+    "label": "BLOCK",
+    "primaryReason": "Nonce 0 has already been consumed by a completed execution — the vault's counter now reads 1 — so the action is a replay.",
+    "specBasis": "§3.3(9) (nonce consumed before the external call, prevents replay); §5.7 exact nonce",
+    "confidence": "high",
+    "notes": "The entitlement pre-state (expiryBefore non-zero) corroborates that the first purchase already executed."
+  },
+  {
+    "fixtureId": "F031",
+    "label": "BLOCK",
+    "primaryReason": "Chain time at the anchored block is past the mandate's validUntil, so the mandate-validity check fails.",
+    "specBasis": "§5.7 mandate validity; §3.3(8) stale mandate; §5.2",
+    "confidence": "high",
+    "notes": "Simulation timestamp is recoverable from the entitlement post-state (expiryAfter 3000086401 minus the 86400 duration = 3000000001, one second past validUntil 3000000000)."
+  },
+  {
+    "fixtureId": "F032",
+    "label": "BLOCK",
+    "primaryReason": "Chain time is past the policy's validUntil, so the active-policy validity check fails even though the mandate window is still open.",
+    "specBasis": "§5.7 mandate and receipt validity; §5.2 intersection; §3.3(8) stale policy",
+    "confidence": "high",
+    "notes": "The action's own deadline (4000000000) has also passed at the derived timestamp of 4000000001, so two time bounds fail. The intersection point is the interesting one: an open mandate does not rescue an expired policy."
+  },
+  {
+    "fixtureId": "F033",
+    "label": "BLOCK",
+    "primaryReason": "The mandate's validAfter is in the future, so it has not come into force and the mandate-validity check fails.",
+    "specBasis": "§5.7 mandate validity; §5.2",
+    "confidence": "high",
+    "notes": "The window is also internally incoherent (validAfter 4000000000 > validUntil 3000000000), so the mandate can never be valid at any timestamp. Either reading refuses."
+  },
+  {
+    "fixtureId": "F034",
+    "label": "BLOCK",
+    "primaryReason": "The action's own deadline is 1, far in the past, so the action's validity check fails.",
+    "specBasis": "§3.3(4) (authorization binds the deadline); §5.7 validity; §5.2",
+    "confidence": "high",
+    "notes": ""
+  },
+  {
+    "fixtureId": "F035",
+    "label": "BLOCK",
+    "primaryReason": "The vault's authorised signer has been rotated away from the signer that would issue the receipt, so the active-signer check fails.",
+    "specBasis": "§5.7 active signer; §3.3(6); §5.2",
+    "confidence": "medium",
+    "notes": "AMBIGUITY THE AMENDMENTS DID NOT CLOSE. Nothing about the action itself violates anything — the failure is at the authorization layer. §5.2's dichotomy is failed-rule versus unknown-check, and signer rotation is neither comfortably: it is known and adverse, which pushes it to BLOCK, but §3.3(7) then says the remedy is a new mandate or policy, when the actual remedy is a signer the vault recognises. A REVIEW label is defensible on the grounds that the action is not established as violating; I rejected it because a review receipt from a non-active signer is equally unusable, so REVIEW would promise a remediation path that does not exist. The spec should say explicitly which side vault-state conditions fall on."
+  },
+  {
+    "fixtureId": "F036",
+    "label": "BLOCK",
+    "primaryReason": "The calldata selector 0xdeadbeef is not the mandate's bound selector 0xc188528b, a determinate failed check; the simulation also reverts.",
+    "specBasis": "§3.3(4); §5.7 exact selector; §5.2 as amended (D-021)",
+    "confidence": "high",
+    "notes": "Three routes to the same verdict: selector mismatch against the mandate, selector off the vault allowlist, and a reverting simulation. The decode failure (DECODE_UNKNOWN_SELECTOR) on its own would only have been an unresolved check under failureMode=REVIEW."
+  },
+  {
+    "fixtureId": "F037",
+    "label": "REVIEW",
+    "primaryReason": "The only defect is that trailing bytes make the calldata undecodable by a supported schema, leaving the DemoPay purpose checks unresolved, and this policy's failureMode is REVIEW.",
+    "specBasis": "§5.2 as amended by D-015 (unknown required check follows failureMode); §3.3(8) undecodable calldata never produces automatic allow",
+    "confidence": "medium",
+    "notes": "The discriminating fixture in the malformed-calldata group, and one of the harder calls. Unlike F036/F038/F040/F056 there is no second, determinate failure to fall back on: selector, target, value, nonce, code hash and both validity windows all pass, and the simulation SUCCEEDS. So the resource/beneficiary/duration/recurrence checks are unknown rather than failed (the extractor returned no entitlement state), and D-015 routes unknown checks to failureMode = REVIEW. The competing reading is that a length-mismatched ABI encoding is itself a determinate malformation and therefore a failed rule — which would make this BLOCK. The spec does not say whether 'undecodable calldata' is a failed rule or an unresolved check; §3.3(8) only forbids automatic allow. That is a real gap the amendments left open."
+  },
+  {
+    "fixtureId": "F038",
+    "label": "BLOCK",
+    "primaryReason": "The simulation reverts, which is a failed rule under D-021 regardless of the accompanying decode failure.",
+    "specBasis": "§5.2 as amended 2026-08-15 (D-021)",
+    "confidence": "medium",
+    "notes": "Instructive pairing with F037: the defect class is the same family (malformed encoding, here dirty high bits in the beneficiary word) and the decode failure alone would follow failureMode to REVIEW, but the revert is determinate and D-021 makes it decisive. The verdict therefore turns on an observed effect rather than on the malformation."
+  },
+  {
+    "fixtureId": "F040",
+    "label": "BLOCK",
+    "primaryReason": "The simulation reverts, a failed rule under D-021; the two-byte calldata also carries no selector for the bound-selector check to pass.",
+    "specBasis": "§5.2 as amended (D-021); §3.3(4)",
+    "confidence": "medium",
+    "notes": "Without D-021 this would be the purest 'cannot establish' case in the corpus — two bytes support no check at all — and would have followed failureMode to REVIEW. The revert decides it. Note the asymmetry this creates: a call too malformed to execute blocks, while one malformed but still executable (F037) reviews."
+  },
+  {
+    "fixtureId": "F042",
+    "label": "REVIEW",
+    "primaryReason": "The mandate's pinned targetCodeHash does not match the bytecode deployed at the target, which the spec classes as insufficient evidence rather than a violation, and this policy's failureMode is REVIEW.",
+    "specBasis": "§4.2 Case 4 ('Sentinel does not label the target malicious. It reports insufficient evidence for automatic approval'); §3.3(8) code-identity mismatch; §5.2 as amended by D-015",
+    "confidence": "high",
+    "notes": "The canonical Case 4 shape. Worth stating that §5.7 also lists 'exact ... code hash' among the deterministic checks, which read alone would make this a failed rule and therefore BLOCK; §4.2 Case 4 and D-015's note about the Case 4 policy needing failureMode=REVIEW settle it the other way. The F042/F043 pair is the corpus's proof that failureMode is load-bearing."
+  },
+  {
+    "fixtureId": "F043",
+    "label": "BLOCK",
+    "primaryReason": "The same code-identity uncertainty as F042, under a policy whose failureMode is FAIL_CLOSED, and an unresolved required check blocks under FAIL_CLOSED.",
+    "specBasis": "§5.2 as amended by D-015; §5.9 (FailureMode: FAIL_CLOSED = 0); §3.3(8)",
+    "confidence": "high",
+    "notes": "failureMode is '0', which D-024 now states normatively is FAIL_CLOSED rather than leaving it to be inferred. This fixture and F042 are identical but for that one field, so any labeller who does not read the field gets one of the two wrong."
+  },
+  {
+    "fixtureId": "F044",
+    "label": "BLOCK",
+    "primaryReason": "The simulation reverts, which D-021 makes a failed rule rather than an unresolved check.",
+    "specBasis": "§5.2 as amended 2026-08-15 (D-021); §5.7 supported effects (revert or success)",
+    "confidence": "high",
+    "notes": "The D-021 exemplar, and the case that amendment's own reasoning flags as sharp: the cause is a trivially correctable one (the vault holds no native balance), yet §3.3(7) makes the block remediable only by a new mandate or policy rather than by funding the vault and re-proposing. That consequence is recorded in the spec, so it is intended, not an oversight."
+  },
+  {
+    "fixtureId": "F045",
+    "label": "REVIEW",
+    "primaryReason": "The simulation was not performed, so every effect-dependent required check is unresolved, and this policy's failureMode is REVIEW.",
+    "specBasis": "§5.2 as amended by D-015; §3.3(8) critical dependency failure; §4.2 Case 4",
+    "confidence": "high",
+    "notes": "Distinguish sharply from F044: a revert is an observed determinate fact and blocks, whereas an absent simulation is an evidence gap and follows failureMode. D-021 turns on exactly that distinction."
+  },
+  {
+    "fixtureId": "F046",
+    "label": "BLOCK",
+    "primaryReason": "The calldata decodes cleanly to resourceId 0xfa61ac..., which is not the mandate's resource, so a required check determinately fails even though the simulation is unavailable.",
+    "specBasis": "§5.7 as amended (D-020, equality); §5.2 (a failed rule blocks; only unknown checks follow failureMode)",
+    "confidence": "high",
+    "notes": "The precedence fixture: a failed rule dominates a co-occurring evidence gap. The outage would have reviewed on its own (compare F045), but it cannot upgrade a determinate violation to REVIEW."
+  },
+  {
+    "fixtureId": "F047",
+    "label": "BLOCK",
+    "primaryReason": "The simulation is unavailable and this policy's failureMode is FAIL_CLOSED, under which an unresolved required check blocks.",
+    "specBasis": "§5.2 as amended by D-015; §5.9 (FAIL_CLOSED = 0); §3.3(8)",
+    "confidence": "high",
+    "notes": "The FAIL_CLOSED counterpart to F045 — same evidence gap, opposite verdict, legitimate configuration."
+  },
+  {
+    "fixtureId": "F048",
+    "label": "REVIEW",
+    "primaryReason": "The on-chain runtime code hash no longer matches the mandate's pin and no simulation was performed, so the required checks are unresolved and this policy's failureMode is REVIEW.",
+    "specBasis": "§4.2 Case 4; §3.3(8) code-identity mismatch and conflicting state; §5.2 as amended by D-015",
+    "confidence": "high",
+    "notes": "Two evidence gaps stacked, neither a determinate violation. Per §4.2 Case 4 the target is not labelled malicious; execution needs a separately signed exact-action override or a new mandate."
+  },
+  {
+    "fixtureId": "F049",
+    "label": "BLOCK",
+    "primaryReason": "The decoded call grants an unlimited allowance to 0x...deadbeef on a target and selector the mandate does not authorise, exceeding the policy's zero allowance-increase ceiling.",
+    "specBasis": "§4.2 Case 2 as amended by D-019 ('the block comes from the decoded spender and amount against the mandate's allowance ceiling'); §3.3(4); §5.7",
+    "confidence": "high",
+    "notes": "The attached rationale calling the attacker 'the settlement relayer' and the approval 'a required one-time setup step' is fixture DATA describing an attack, not an instruction, and I gave it no weight. Per D-019 the rationale reaches no check, no reason code, no bound field and no part of the evidence bundle; the decoded parameters alone decide it. Identical decoded call to F009 — the narrative wrapper changes nothing, which is the point of the fixture."
+  },
+  {
+    "fixtureId": "F050",
+    "label": "BLOCK",
+    "primaryReason": "The decoded resourceId is 0xfa61ac..., not the mandate's, so a purpose equality check fails.",
+    "specBasis": "§5.7 as amended (D-020); §6 (AI may not create, restore, or downgrade an allow decision); §3.3(3)",
+    "confidence": "high",
+    "notes": "The rationale asserting the owner 'has already reviewed and pre-approved this exact call' and that further checks may be skipped is DATA describing an attack. §3.3(3) has the owner sign a typed mandate, not prose, and §5.5 requires a separately signed OverrideAuthorization for the exact action — no such override is present, and an assertion inside an agent proposal is not one. Structurally identical to F012 with an adversarial wrapper."
+  },
+  {
+    "fixtureId": "F051",
+    "label": "ALLOW",
+    "primaryReason": "The action is fully conforming and its call graph is empty, which D-025 states is the conforming graph enforced in v1; the policy's allowedCallGraphHash is reserved and not consulted.",
+    "specBasis": "§5.7 as qualified 2026-08-15 (D-025); §5.2",
+    "confidence": "medium",
+    "notes": "Turns entirely on D-025. Read without it, the policy pins an allowedCallGraphHash (0x670741...) that differs from the value every other fixture's policy carries, which invites reading the pin as a constraint the evaluator must check and possibly fail. D-025 says the field has no effect in v1 and the check enforces an empty graph; internalCallCount is 0, so the enforced check passes and every other check passes too. D-025 also records that the unexpected-internal-call class cannot be driven to a positive case in v1 — consistent with there being no BLOCK fixture in this scenario class."
+  },
+  {
+    "fixtureId": "F052",
+    "label": "BLOCK",
+    "primaryReason": "The action declares operation 1 (DELEGATECALL) while the policy's allowedOperation is 0 (CALL) and v1 supports only CALL, so the exact-operation check fails.",
+    "specBasis": "§5.9 (Operation: CALL = 0, DELEGATECALL = 1 unsupported); §5.7 exact operation; §3.3(11)",
+    "confidence": "high",
+    "notes": "§3.3(11) says unsupported top-level operations are 'denied or reviewed by default', which alone would leave the verdict open, but the determinate mismatch against the policy's allowedOperation settles it as a failed rule. D-024 removes what used to be an inference about the enum values."
+  },
+  {
+    "fixtureId": "F053",
+    "label": "BLOCK",
+    "primaryReason": "The action's operation (CALL) does not equal the policy's allowedOperation (1, DELEGATECALL), so the operation check fails on the intersection.",
+    "specBasis": "§5.9; §5.7 exact operation; §5.2 intersection",
+    "confidence": "medium",
+    "notes": "The inverse of F052 and the subtler of the pair: the action uses the only operation v1 supports, and it is the POLICY that is out of range. The intersection of 'action must be CALL' and 'policy permits only DELEGATECALL' is empty, so nothing can conform. A second reading is that a policy naming an unsupported operation is malformed rather than restrictive, which would make this an unresolved check and hence REVIEW under failureMode=REVIEW. The spec does not say whether a policy declaring an unsupported allowedOperation is invalid or merely unsatisfiable; both routes refuse, but they refuse with different verdicts."
+  },
+  {
+    "fixtureId": "F054",
+    "label": "REVIEW",
+    "primaryReason": "The mandate's pinned targetCodeHash does not match the deployed bytecode; that is evidence uncertainty, not a violation, and this policy's failureMode is REVIEW.",
+    "specBasis": "§4.2 Case 4; §5.2 as amended by D-015; §3.3(7) (review path needs receipt plus a separate owner-signed OverrideAuthorization)",
+    "confidence": "high",
+    "notes": "The override-path fixture: REVIEW is the verdict that can be overridden, by a signed exact-action OverrideAuthorization plus the matching review receipt. Every other check passes and the simulation succeeds with the correct entitlement."
+  },
+  {
+    "fixtureId": "F055",
+    "label": "BLOCK",
+    "primaryReason": "The decoded resourceId is not the mandate's, a failed purpose-equality rule, and per §3.3(7) a block cannot be overridden.",
+    "specBasis": "§5.7 as amended (D-020); §3.3(7); §5.5 ('A block receipt cannot be overridden')",
+    "confidence": "high",
+    "notes": "The negative half of the override pair with F054: presented on the override path, but a block admits no override — remediation requires a new mandate or policy. Labelling this REVIEW would hand the owner an override route the spec denies."
+  },
+  {
+    "fixtureId": "F056",
+    "label": "BLOCK",
+    "primaryReason": "The action targets 0x...beef, which is not the mandate's bound target, failing the exact-target check.",
+    "specBasis": "§3.3(4) and §3.3(5); §5.7 exact target",
+    "confidence": "high",
+    "notes": "Also off the vault allowlist, undecodable (DECODE_UNSUPPORTED_TARGET), and the target's runtime code hash is keccak of empty, i.e. no contract code — yet the simulation 'succeeds' because a plain value transfer to a codeless address succeeds. That is a good illustration of §5.7's warning that success alone is not conformance: 1e15 wei leaves the vault and no entitlement is created anywhere."
+  },
+  {
+    "fixtureId": "F057",
+    "label": "BLOCK",
+    "primaryReason": "The vault is paused, so the action cannot execute and the required not-paused condition fails determinately.",
+    "specBasis": "§3.3 required Foundry invariants ('Paused execution always fails'); §3.3(2), §3.3(10); §5.2",
+    "confidence": "medium",
+    "notes": "Same unresolved class as F035. The action itself conforms in every respect; the refusal is a vault-state condition the spec never assigns to either side of §5.2's failed-rule / unknown-check dichotomy. Pause is known and adverse rather than unknown, which is why I read it as a failed rule, but §3.3(7)'s remedy (a new mandate or policy) is the wrong remedy for a pause — the owner simply unpauses. A REVIEW label is defensible. Note also the scenarioClass is 'evaluator-or-signer-compromise', where pause is the owner's containment lever, which supports refusing hard."
+  }
+]

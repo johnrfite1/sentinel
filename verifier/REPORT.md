@@ -21,7 +21,8 @@ rather than pretending otherwise.
 > longer current. §5.4 now defines `reasonCodesHash`, the samples publish the `reasonCodes`
 > array the construction needs, and the CLI recomputes and checks it — the `NOT VERIFIABLE`
 > skip is gone. Five of the six hash computations are now reproducible from the spec; only
-> §5.5's `OverrideAuthorizationPayload` remains untested, for want of a fixture. The finding's
+> §5.5's `OverrideAuthorizationPayload` remained untested at that point, for want of a fixture
+> — since closed by D-023; all six hash computations are now reproducible. The finding's
 > substance held: the gap was real and it was the *cause* of the fix. The diagnosis was
 > incomplete — the preimage encoding guessed here was substantially correct, and the reason
 > nothing matched was that no artifact published the committed set. See the F-3 resolution
@@ -125,10 +126,89 @@ Things a reimplementer needs and §5 does not give:
   the same way, would have no chain binding except through the hashes it references. **This
   could not be tested — no sample exercises §5.5 — but on the §5.1–§5.3 pattern it looks like
   a live gap worth checking before v1.**
+  >
+  > **RETIRED on evidence, 2026-08-15 (D-023). The binding holds. This concern was wrong.**
+  > See the F-2 §5.5 resolution below.
 - §5.3's "The complete calldata accompanies the payload" is true: `callData` rides alongside
   and is **excluded** from the struct hash, committed only via `dataHash = keccak256(callData)`.
   §5.3 doesn't say that; a reimplementer including `callData` as a `bytes` member gets a
   different hash.
+
+#### F-2 — §5.5 chain binding: RETIRED on evidence by D-023 (2026-08-15)
+
+*The finding above is preserved as written. This subsection records the measurement.*
+
+**I was wrong, and I am glad to be.** I reasoned that because `OverrideAuthorizationPayload`
+carries neither `chainId` nor `vault`, it "would have no chain binding except through the
+hashes it references", and flagged it as a likely live gap. §5.8 now publishes the type
+string and `case-4-review-failmode-review/override.json` supplies a real owner-signed
+override, so I constructed the cross-deployment case instead of reasoning about it.
+**The binding holds, by two independent mechanisms, and it is stronger than the original §5.5
+text suggested.**
+
+The override verifies end to end: `hashStruct`
+`0x2219530e90ec210fb023f8eb8e8210fd401f049c3b4b2fea53b462d094ff8d4e`, digest
+`0x13409c770aca097bba9dd7009c7bcbff5fbdd6c253f2cca177ff2ed80d99d8a6`, recovering
+`0xf39f…92266` = `ownerAddress` = `mandate.principal` — and *not* the Sentinel signer
+`0x7099…79C8`, which is the §3.3(7) property holding in practice. `reviewReceiptHash` equals
+the receipt's own EIP-712 `hashStruct`, and `actionHash`/`mandateHash`/`policyHash`/
+`actionNonce` all match the receipt and action in that directory.
+
+**The measurement.** I built a synthetic "deployment B" and perturbed one variable at a time,
+recording which mechanism notices:
+
+| perturbation | domain separator | referenced hashes |
+|---|---|---|
+| different `chainId` | catches | catches |
+| different vault / `verifyingContract` | catches | catches |
+| different domain `name`/`version` | catches | **blind** |
+| different mandate, same deployment | **blind** | catches |
+| different policy, same deployment | **blind** | catches |
+| different `actionNonce` | **blind** | catches |
+
+Both mechanisms fire on every real cross-deployment move, because any distinct deployment
+differs in `chainId` or in `verifyingContract` — and in this design `vault` *is* the
+`verifyingContract`, so the two mechanisms key on the same two facts from opposite directions.
+The untouched, genuinely-signed override lifted to chain 8453 recovers a garbage address, not
+the owner.
+
+The last two rows are the part worth keeping: **the mechanisms are genuinely independent, not
+redundant restatements.** Changing only the domain `name` leaves every referenced hash
+byte-identical and only the separator notices. Substituting a different mandate on the *same*
+deployment leaves the separator identical and the signature perfectly valid, and only the
+referenced hashes notice. Neither alone is sufficient; together they cover both axes.
+
+**And the sharpest form of the original worry also fails.** `DecisionReceiptPayload` really
+does carry no `chainId` and no `vault`, and `reviewReceiptHash` is a hash of exactly that
+payload — so my concern had one more level of indirection than I credited. But the receipt
+references `actionHash`, `mandateHash` and `policyHash`, and all three of *those* payloads
+carry `chainId` and `vault`. Moving the deployment to chain 8453 changes the receipt's
+`hashStruct` even though not one of its own fields mentions a chain. The override therefore
+references three independently chain-bound hashes at depth one, plus a fourth that is
+chain-bound at depth two. That is not a thin binding.
+
+**Tamper coverage added:** substituted `reviewReceiptHash`, incremented `actionNonce`, a
+cross-deployment replay, and — the one that actually tests §3.3(7) — a **valid** signature
+over the **unmodified** payload produced by the Sentinel signer's key instead of the owner's.
+Nothing about that forgery is malformed; only the party is wrong. A flipped byte cannot test
+that, so `secp256k1.py` gained a clearly-marked test-only `sign_digest`. All four are
+rejected.
+
+**On whether §5.8 is sufficient to build from: yes.** The override was implemented directly
+from the published type string, first attempt, no search, no oracle needed. As a control on
+the earlier work, all five type strings I had recovered by brute force match §5.8
+byte-for-byte; a test now pins the published spec and the implementation together, so a future
+edit to either that breaks the agreement fails the suite. The one substantive thing §5.8 still
+does not say is **who** signs an override — the type string and §5.5 describe the payload, and
+that the owner rather than the Sentinel signer holds the key is inferable from §3.3(7) and
+from `ownerSignature`/`ownerAddress` being fixture field names, but §5.8's warning block would
+be the natural place to state it outright, alongside the `signer`-inside-the-struct note it
+already carries for the receipt. Two smaller gaps: §5.5 says "A block receipt cannot be
+overridden" but nothing states that a verifier must *enforce* the target verdict is REVIEW (I
+enforce it), and `issuedAt`/`expiresAt` are in the struct with no statement of what a verifier
+does when an override is presented outside its window (I do not currently check it, because
+"expired" is a vault-side liveness question rather than an artifact-integrity one — but that
+is my judgment, not the spec's).
 
 **Value of closing this:** recovering these turned the CLI from "checks the signature and the
 evidence hash" into "checks the whole chain". Before it, **a receipt correctly signed over the
@@ -477,9 +557,10 @@ self-contradictory. Tests synthesise all three shapes since no fixture does.
   third party.~~ **Superseded by D-022 (2026-08-15):** §5.4 now defines the construction,
   the samples publish `reasonCodes`, and the check is implemented. Reason codes are
   tamper-evident. See the F-3 resolution subsection.
-- **§5.5 `OverrideAuthorizationPayload` is entirely unexercised** — no sample contains one, so
-  its type string is unrecovered and the chain-binding concern is reasoned from pattern, not
-  tested.
+- ~~**§5.5 `OverrideAuthorizationPayload` is entirely unexercised.**~~ **Superseded by
+  D-023 (2026-08-15):** §5.8 publishes its type string, a signed override fixture exists,
+  and it verifies end to end with four tamper modes rejected. The chain-binding concern
+  raised in F-2 was measured and **retired** — see the F-2 §5.5 resolution.
 - **RFC 8785's number and non-ASCII paths are unexercised by the corpus** (F-6) — this
   implementation is pinned to the RFC's vectors; agreement with the *evaluator* on those paths
   is untested by anything, because no fixture reaches them.
@@ -527,3 +608,7 @@ as specified · 55/55 tests OK. Per sample, 18-19 checks pass and none report NO
 The tamper suite gained four reason-code modes; three of the 35 mode/sample combinations are
 N/A because `case-1-allow` has an empty reason-code list, and `reasons-reorder` is a control
 that must *still verify* rather than be rejected.
+
+**Results after D-023 (2026-08-15):** 5/5 samples PASS · 36/36 applicable tamper cases behave
+as specified · 70/70 tests OK. The override sample runs 11 additional checks. All six §5.8
+type strings are exercised; none of the six hash computations is unverifiable.

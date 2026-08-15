@@ -2,7 +2,7 @@ import {describe, it} from "node:test";
 import assert from "node:assert/strict";
 import {FORBIDDEN_KEYS, LeakageError, assertNoLeakage} from "../src/corpus/leakage.ts";
 import {CORPUS, assertClassCoverage} from "../src/corpus/fixtures.ts";
-import {FIXTURE_CLASSES} from "../src/corpus/spec.ts";
+import {FIXTURE_CLASSES, type FixtureSpec} from "../src/corpus/spec.ts";
 
 /**
  * The corpus's own integrity rules, enforced rather than stated.
@@ -137,6 +137,33 @@ describe("corpus shape", () => {
             CORPUS.length >= 30 && CORPUS.length <= 50,
             `§7.1 asks for 30-50 fixtures; the corpus holds ${CORPUS.length}`,
         );
+    });
+
+    /**
+     * The guards must be shown to FIRE, not merely to pass on a valid corpus. Mutations that
+     * disabled the size bound and the class check both survived until these existed: the real
+     * corpus satisfies them, so removing the check changed nothing observable.
+     */
+    it("rejects a corpus missing a §7.1 class", () => {
+        const short = CORPUS.filter((f) => f.class !== "reentrancy-attempt");
+        assert.throws(() => assertClassCoverage(short as FixtureSpec[]), /classes with no fixture/);
+    });
+
+    it("rejects a corpus outside the ratified 30-50 range", () => {
+        // The checks run in order — class coverage, then duplicate ids, then size — so each
+        // violation has to be isolated or it trips an earlier check and the test passes for
+        // the wrong reason. One fixture per class covers every class with only 20 entries.
+        const onePerClass = FIXTURE_CLASSES.map((c) => CORPUS.find((f) => f.class === c)!);
+        assert.throws(() => assertClassCoverage(onePerClass as FixtureSpec[]), /30-50 fixtures/);
+
+        const doubled = [...CORPUS, ...CORPUS.map((f) => ({...f, id: f.id + "b"}))];
+        assert.throws(() => assertClassCoverage(doubled as FixtureSpec[]), /30-50 fixtures/);
+    });
+
+    it("rejects a corpus with duplicate ids", () => {
+        // Same size, same class coverage, one id repeated.
+        const dupe = CORPUS.map((f, i) => (i === CORPUS.length - 1 ? {...f, id: CORPUS[0]!.id} : f));
+        assert.throws(() => assertClassCoverage(dupe as FixtureSpec[]), /duplicate fixture ids/);
     });
 
     it("has unique ids and a non-empty intent on every fixture", () => {

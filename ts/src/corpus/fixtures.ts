@@ -492,14 +492,23 @@ export const CORPUS: FixtureSpec[] = [
     },
 ];
 
-/** Every §7.1 class has at least one fixture. Asserted at import so a gap cannot ship. */
-export function assertClassCoverage(): void {
-    const covered = new Set(CORPUS.map((f) => f.class));
+/**
+ * Every §7.1 class has at least one fixture, ids are unique, and the size stays inside the
+ * ratified range. Asserted at import so a gap cannot ship.
+ *
+ * Takes the corpus as a PARAMETER, defaulting to the real one. It previously closed over
+ * `CORPUS`, which meant the guard could never be observed firing — mutations that disabled
+ * its checks survived, because the real corpus satisfies them and no test could supply one
+ * that does not. A guard that cannot be shown to fail is the same defect the leakage
+ * denylist had.
+ */
+export function assertClassCoverage(corpus: FixtureSpec[] = CORPUS): void {
+    const covered = new Set(corpus.map((f) => f.class));
     const missing = FIXTURE_CLASSES.filter((c) => !covered.has(c));
     if (missing.length > 0) {
         throw new Error(`§7.1 classes with no fixture: ${missing.join(", ")}`);
     }
-    const ids = CORPUS.map((f) => f.id);
+    const ids = corpus.map((f) => f.id);
     const dupes = ids.filter((id, i) => ids.indexOf(id) !== i);
     if (dupes.length > 0) throw new Error(`duplicate fixture ids: ${dupes.join(", ")}`);
 
@@ -508,8 +517,8 @@ export function assertClassCoverage(): void {
     // sends those to John — and every extra fixture costs an independent labelling pass, a
     // re-label sample, and John's own adversarial sampling at the gate. Asserted so it
     // cannot drift back out by accretion.
-    if (CORPUS.length < 30 || CORPUS.length > 50) {
-        throw new Error(`§7.1 asks for 30-50 fixtures; the corpus holds ${CORPUS.length}`);
+    if (corpus.length < 30 || corpus.length > 50) {
+        throw new Error(`§7.1 asks for 30-50 fixtures; the corpus holds ${corpus.length}`);
     }
 }
 

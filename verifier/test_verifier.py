@@ -274,7 +274,9 @@ class TestTamper(unittest.TestCase):
                         self.assertTrue(ok, f"{mode} was WRONGLY REJECTED")
                     else:
                         self.assertFalse(ok, f"{mode} was WRONGLY ACCEPTED")
-        self.assertEqual(exercised, 32, "expected 32 applicable tamper cases")
+        # 5 samples x 3 core modes = 15; reason-code modes 17 (case-1's empty
+        # list makes 3 N/A); override modes 4 (only case-4-review has one).
+        self.assertEqual(exercised, 36, "expected 36 applicable tamper cases")
 
     def test_evidence_tamper_breaks_the_receipt_binding(self):
         # Specifically: it must fail the receipt.evidenceHash check, not merely
@@ -655,6 +657,213 @@ class TestReasonCodeTamper(unittest.TestCase):
         self.assertFalse(ok)
         grammar = [c for c in checks if "identifier matches" in c.name]
         self.assertTrue(grammar and not grammar[0].ok)
+
+
+# ---------------------------------------------------------------------------
+# §5.5 override authorization and the chain-binding question (D-023)
+# ---------------------------------------------------------------------------
+
+OVERRIDE_SAMPLE = os.path.join(SAMPLES, "case-4-review-failmode-review")
+
+
+class TestPublishedTypeStrings(unittest.TestCase):
+    """§5.8 now publishes all six type strings. Check the published spec is
+    sufficient -- and that it agrees with what was independently recovered."""
+
+    def _published(self):
+        import re
+        spec = os.path.join(REPO, "Sentinel_Protocol_Lab_Proposal_v0_2.md")
+        with open(spec, encoding="utf-8") as handle:
+            text = handle.read()
+        block = text.split("### 5.8 EIP-712 Type Strings")[1].split("---")[0]
+        out = {}
+        for line in block.split("\n"):
+            m = re.match(r"^([A-Za-z0-9]+)\((.*)\)$", line.strip())
+            if m:
+                out[m.group(1)] = line.strip()
+        return out
+
+    def test_all_six_are_published(self):
+        self.assertEqual(len(self._published()), 6)
+
+    def test_recovered_strings_match_the_published_ones(self):
+        pub = self._published()
+        def render(name, fields):
+            return name + "(" + ",".join(f"{t} {n}" for t, n in fields) + ")"
+        cases = {
+            "EIP712Domain": eip712.DOMAIN_TYPE,
+            "DecisionReceiptPayload": eip712.RECEIPT_TYPE,
+            "MandatePayload": render(eip712.MANDATE_STRUCT_NAME, eip712.MANDATE_FIELDS),
+            "PolicyPayload": render(eip712.POLICY_STRUCT_NAME, eip712.POLICY_FIELDS),
+            "ActionPayload": render(eip712.ACTION_STRUCT_NAME, eip712.ACTION_FIELDS),
+            "OverrideAuthorizationPayload": render(
+                eip712.OVERRIDE_STRUCT_NAME, eip712.OVERRIDE_FIELDS),
+        }
+        for name, mine in cases.items():
+            with self.subTest(struct=name):
+                self.assertEqual(pub[name], mine)
+
+
+class TestOverride(unittest.TestCase):
+    def _doc(self):
+        return read_json(OVERRIDE_SAMPLE, "override.json")
+
+    def test_override_verifies(self):
+        ok, checks = verify.verify_sample(OVERRIDE_SAMPLE)
+        self.assertTrue(ok, [c.name for c in checks if not c.ok])
+        names = [c.name for c in checks]
+        for expected in ("override signature recovers ownerAddress",
+                         "override.reviewReceiptHash == this receipt's EIP-712 hashStruct",
+                         "override.actionNonce == action.actionNonce"):
+            self.assertIn(expected, names)
+
+    def test_owner_is_not_the_sentinel_signer(self):
+        # §3.3(7): the override must be a credential the isolated signer cannot
+        # mint. If these were the same key the property would be vacuous.
+        doc = self._doc()
+        receipt = read_json(OVERRIDE_SAMPLE, "receipt.json")["receipt"]
+        self.assertNotEqual(doc["ownerAddress"].lower(), receipt["signer"].lower())
+
+    def test_owner_is_the_mandate_principal(self):
+        doc = self._doc()
+        mandate = read_json(OVERRIDE_SAMPLE, "mandate.json")
+        self.assertEqual(doc["ownerAddress"].lower(), mandate["principal"].lower())
+
+    def test_review_receipt_hash_is_the_receipt_hashstruct(self):
+        doc = self._doc()
+        receipt = read_json(OVERRIDE_SAMPLE, "receipt.json")["receipt"]
+        self.assertEqual(
+            doc["override"]["reviewReceiptHash"],
+            "0x" + eip712.receipt_struct_hash(receipt).hex(),
+        )
+
+    def test_only_review_receipts_carry_an_override(self):
+        # §5.5: "A block receipt cannot be overridden."
+        for path in sample_dirs():
+            has = os.path.isfile(os.path.join(path, "override.json"))
+            verdict = verify.VERDICT_NAMES[
+                int(read_json(path, "receipt.json")["receipt"]["verdict"])]
+            if has:
+                self.assertEqual(verdict, "REVIEW", f"{path} overrides a {verdict}")
+
+    def test_every_override_tamper_mode_is_rejected(self):
+        modes = [m for m in verify.TAMPER_MODES if m.startswith("override-")]
+        self.assertGreaterEqual(len(modes), 3)
+        for mode in modes:
+            with self.subTest(mode=mode):
+                ok, _ = verify.verify_sample(OVERRIDE_SAMPLE, tamper=mode)
+                self.assertFalse(ok, f"{mode} was WRONGLY ACCEPTED")
+
+    def test_wrongkey_signature_is_valid_but_from_the_wrong_party(self):
+        # The forged signature must be well-formed -- otherwise this only tests
+        # signature parsing, not signer identity.
+        from secp256k1 import sign_digest, recover_address
+        doc = self._doc()
+        domain = read_json(SAMPLES, "domain.json")
+        digest = eip712.override_digest(domain, doc["override"])
+        forged = sign_digest(digest, verify._SENTINEL_SIGNER_TEST_KEY)
+        recovered = recover_address(digest, forged)
+        receipt = read_json(OVERRIDE_SAMPLE, "receipt.json")["receipt"]
+        self.assertEqual(recovered, receipt["signer"].lower(),
+                         "the forgery should recover the Sentinel signer")
+        self.assertNotEqual(recovered, doc["ownerAddress"].lower())
+        ok, checks = verify.verify_sample(OVERRIDE_SAMPLE, tamper="override-wrongkey")
+        self.assertFalse(ok)
+        self.assertTrue(any("recovers ownerAddress" in c.name and not c.ok
+                            for c in checks))
+
+
+class TestOverrideChainBinding(unittest.TestCase):
+    """D-023: measure the §5.5 chain-binding concern rather than reasoning about it.
+
+    OverrideAuthorizationPayload carries neither chainId nor vault. Two
+    independent mechanisms are claimed to bind it anyway: the EIP-712 domain
+    separator, and the chain-bound payload hashes it references.
+    """
+
+    def _parts(self, domain, mandate, policy, action, receipt):
+        mh = "0x" + eip712.mandate_hash(mandate).hex()
+        ph = "0x" + eip712.policy_hash(policy).hex()
+        act = dict(action, mandateHash=mh, policyHash=ph)
+        ah = "0x" + eip712.action_hash(act).hex()
+        rec = dict(receipt, actionHash=ah, mandateHash=mh, policyHash=ph)
+        return mh, ph, ah, "0x" + eip712.receipt_struct_hash(rec).hex()
+
+    def _load(self):
+        return (read_json(SAMPLES, "domain.json"),
+                read_json(OVERRIDE_SAMPLE, "mandate.json"),
+                read_json(OVERRIDE_SAMPLE, "policy.json"),
+                read_json(OVERRIDE_SAMPLE, "action.json"),
+                read_json(OVERRIDE_SAMPLE, "receipt.json")["receipt"],
+                read_json(OVERRIDE_SAMPLE, "override.json"))
+
+    def _replays(self, domain, doc):
+        from secp256k1 import recover_address
+        try:
+            got = recover_address(eip712.override_digest(domain, doc["override"]),
+                                  doc["ownerSignature"])
+        except Exception:
+            return False
+        return got == doc["ownerAddress"].lower()
+
+    def test_baseline_replays_on_its_own_deployment(self):
+        domain, m, p, a, r, doc = self._load()
+        self.assertTrue(self._replays(domain, doc))
+
+    def test_other_chain_breaks_both_mechanisms(self):
+        domain, m, p, a, r, doc = self._load()
+        base = self._parts(domain, m, p, a, r)
+        d2 = dict(domain, chainId="8453")
+        moved = self._parts(d2, dict(m, chainId="8453"), dict(p, chainId="8453"),
+                            dict(a, chainId="8453"), r)
+        self.assertNotEqual(base, moved, "referenced hashes must change")
+        self.assertFalse(self._replays(d2, doc), "domain separator must change")
+
+    def test_other_vault_breaks_both_mechanisms(self):
+        domain, m, p, a, r, doc = self._load()
+        nv = "0x" + "11" * 20
+        base = self._parts(domain, m, p, a, r)
+        d2 = dict(domain, verifyingContract=nv)
+        moved = self._parts(d2, dict(m, vault=nv), dict(p, vault=nv),
+                            dict(a, vault=nv), r)
+        self.assertNotEqual(base, moved)
+        self.assertFalse(self._replays(d2, doc))
+
+    def test_domain_separator_catches_what_the_hashes_cannot(self):
+        # Changing only the domain name leaves every referenced hash identical.
+        # Only the separator notices. Proves the separator does independent work.
+        domain, m, p, a, r, doc = self._load()
+        d2 = dict(domain, name="Sentinel2")
+        self.assertEqual(self._parts(domain, m, p, a, r),
+                         self._parts(d2, m, p, a, r))
+        self.assertFalse(self._replays(d2, doc))
+
+    def test_hashes_catch_what_the_domain_separator_cannot(self):
+        # Substituting a different mandate on the SAME deployment leaves the
+        # separator identical and the signature valid. Only the referenced
+        # hashes notice. Proves the two mechanisms are genuinely independent.
+        domain, m, p, a, r, doc = self._load()
+        other = read_json(SAMPLES, "case-1-allow", "mandate.json")
+        self.assertEqual(other["chainId"], m["chainId"])
+        self.assertEqual(other["vault"].lower(), m["vault"].lower())
+        self.assertNotEqual("0x" + eip712.mandate_hash(other).hex(),
+                            "0x" + eip712.mandate_hash(m).hex())
+        self.assertTrue(self._replays(domain, doc), "signature is unaffected")
+        self.assertNotEqual(doc["override"]["mandateHash"],
+                            "0x" + eip712.mandate_hash(other).hex())
+
+    def test_receipt_is_chain_bound_transitively_despite_carrying_no_chainid(self):
+        # The original F-2 worry in its sharpest form: DecisionReceiptPayload has
+        # no chainId and no vault member, and reviewReceiptHash is a hash of it.
+        domain, m, p, a, r, doc = self._load()
+        self.assertNotIn("chainId", r)
+        self.assertNotIn("vault", r)
+        _, _, _, base_receipt = self._parts(domain, m, p, a, r)
+        _, _, _, moved_receipt = self._parts(
+            dict(domain, chainId="8453"), dict(m, chainId="8453"),
+            dict(p, chainId="8453"), dict(a, chainId="8453"), r)
+        self.assertNotEqual(base_receipt, moved_receipt,
+                            "the receipt hashStruct must move with the chain")
 
 
 if __name__ == "__main__":
