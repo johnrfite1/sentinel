@@ -68,8 +68,6 @@
     "allowanceDeltas": null,
     "entitlements": null,
     "internalCallCount": null,
-    "simulationAnchorBlock": null,
-    "calldataDecodedByASupportedSchema": true,
-    "calldataDecodeFailureReason": null
+    "simulationAnchorBlock": null
   }
 }

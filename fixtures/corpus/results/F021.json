@@ -42,7 +42,7 @@
       "failing": [
         "BASE_VAULT_BOUND"
       ],
-      "micros": 7.5
+      "micros": 6.625
     },
     {
       "layer": "L2_policy_plus_effects",
@@ -123,7 +123,7 @@
         "EVAL_NATIVE_DELTA_UNOBSERVED",
         "EVAL_VAULT_BOUND"
       ],
-      "micros": 120.208
+      "micros": 113.791
     },
     {
       "layer": "L3_full_conformance",
@@ -284,7 +284,7 @@
         "EVAL_NATIVE_DELTA_UNOBSERVED",
         "EVAL_VAULT_BOUND"
       ],
-      "micros": 108.542
+      "micros": 97
     }
   ]
 }

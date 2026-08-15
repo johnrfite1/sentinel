@@ -40,7 +40,7 @@
         }
       ],
       "failing": [],
-      "micros": 2.833
+      "micros": 3.75
     },
     {
       "layer": "L2_policy_plus_effects",
@@ -118,7 +118,7 @@
         }
       ],
       "failing": [],
-      "micros": 107.833
+      "micros": 135.375
     },
     {
       "layer": "L3_full_conformance",
@@ -276,7 +276,7 @@
         }
       ],
       "failing": [],
-      "micros": 90.083
+      "micros": 118.959
     }
   ]
 }

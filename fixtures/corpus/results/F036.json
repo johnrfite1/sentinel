@@ -48,7 +48,7 @@
         "BASE_CALLDATA_UNDECODABLE",
         "BASE_SELECTOR_ALLOWLISTED"
       ],
-      "micros": 10.25
+      "micros": 6.916
     },
     {
       "layer": "L2_policy_plus_effects",
@@ -129,7 +129,7 @@
         "EVAL_CALLDATA_UNDECODABLE",
         "EVAL_SIMULATION_SUCCEEDS"
       ],
-      "micros": 133.25
+      "micros": 110.125
     },
     {
       "layer": "L3_full_conformance",
@@ -255,7 +255,7 @@
         "EVAL_CALLDATA_UNDECODABLE",
         "EVAL_SIMULATION_SUCCEEDS"
       ],
-      "micros": 94.458
+      "micros": 88.5
     }
   ]
 }

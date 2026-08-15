@@ -89,8 +89,6 @@
     ],
     "entitlements": [],
     "internalCallCount": 0,
-    "simulationAnchorBlock": "5",
-    "calldataDecodedByASupportedSchema": true,
-    "calldataDecodeFailureReason": null
+    "simulationAnchorBlock": "5"
   }
 }

@@ -47,7 +47,7 @@
       "failing": [
         "BASE_UNLIMITED_APPROVAL"
       ],
-      "micros": 8.875
+      "micros": 6.916
     },
     {
       "layer": "L2_policy_plus_effects",
@@ -138,7 +138,7 @@
         "EVAL_ALLOWANCE_EFFECT_WITHIN_CEILING",
         "EVAL_APPROVAL_CEILING"
       ],
-      "micros": 118.666
+      "micros": 113
     },
     {
       "layer": "L3_full_conformance",
@@ -288,7 +288,7 @@
         "EVAL_TARGET_BOUND",
         "EVAL_TARGET_CODE_IDENTITY"
       ],
-      "micros": 94.625
+      "micros": 90.5
     }
   ]
 }

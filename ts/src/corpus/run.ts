@@ -25,7 +25,7 @@ import {LAYERS, runLayer, type LayerResult} from "../ablation/layers.ts";
 import type {BaselineConfig} from "../ablation/baseline.ts";
 import {CORPUS, ATTACKER, RESOURCE, WRONG_RESOURCE, CONFORMING_VALUE, MANDATE_CEILING} from "./fixtures.ts";
 import type {FixtureSpec} from "./spec.ts";
-import {assertNoLeakage} from "./leakage.ts";
+import {assertNoLeakage, assertViewShape} from "./leakage.ts";
 
 /**
  * Execute the §7.1 corpus against a real chain and emit two separate views.
@@ -551,13 +551,25 @@ for (const spec of CORPUS) {
                     })) ?? null,
                 internalCallCount: simulation?.internalCalls.length ?? null,
                 simulationAnchorBlock: simulation?.anchor.blockNumber ?? null,
-                calldataDecodedByASupportedSchema: decode.ok,
-                calldataDecodeFailureReason: decode.ok ? null : decode.code,
+                // REMOVED (A-028 F-3): `calldataDecodedByASupportedSchema` and
+                // `calldataDecodeFailureReason` published the EVALUATOR'S OWN DECODER OUTPUT
+                // to the labeller — the same `decode` object handed to `evaluate` below,
+                // including its internal enum strings. Six views carried them and labeller C
+                // quoted the codes verbatim; `decode.ok === false` was a perfect predictor of
+                // "not ALLOW" across the corpus. D-011(b) forbids exactly this, and the guard
+                // missed it because the field NAMES merely contained forbidden words rather
+                // than equalling them.
+                //
+                // The labeller does not need them. The calldata itself is published in full
+                // (`action.callData`), and §5.7's supported schemas are in the specification,
+                // so a labeller can determine decodability by reading the bytes against the
+                // spec — which is the independent reasoning the corpus is supposed to measure,
+                // rather than being handed the implementation's answer.
             },
         };
-        const labellerJson = j(labellerView);
-        assertNoLeakage(labellerJson, spec.id);
-        writeFileSync(join(OUT, "for-labelling", `${spec.id}.json`), labellerJson);
+        assertNoLeakage(labellerView, spec.id);
+        assertViewShape(labellerView as unknown as Record<string, unknown>, spec.id);
+        writeFileSync(join(OUT, "for-labelling", `${spec.id}.json`), j(labellerView));
 
         writeFileSync(
             join(OUT, "results", `${spec.id}.json`),

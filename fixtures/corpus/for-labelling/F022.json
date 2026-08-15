@@ -77,8 +77,6 @@
     "allowanceDeltas": [],
     "entitlements": [],
     "internalCallCount": 0,
-    "simulationAnchorBlock": "5",
-    "calldataDecodedByASupportedSchema": false,
-    "calldataDecodeFailureReason": "DECODE_SELECTOR_TARGET_MISMATCH"
+    "simulationAnchorBlock": "5"
   }
 }

@@ -85,14 +85,12 @@
         "beneficiary": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
         "resourceId": "0x1878e089565039fe0f4ac9769a9fb8f9b28aa23ed7c9e9f9dfa9b926988a5264",
         "expiryBefore": "0",
-        "expiryAfter": "1786913675",
+        "expiryAfter": "1786918448",
         "recurringBefore": false,
         "recurringAfter": false
       }
     ],
     "internalCallCount": 0,
-    "simulationAnchorBlock": "6",
-    "calldataDecodedByASupportedSchema": true,
-    "calldataDecodeFailureReason": null
+    "simulationAnchorBlock": "6"
   }
 }

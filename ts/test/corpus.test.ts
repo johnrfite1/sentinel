@@ -1,6 +1,12 @@
 import {describe, it} from "node:test";
 import assert from "node:assert/strict";
-import {FORBIDDEN_KEYS, LeakageError, assertNoLeakage} from "../src/corpus/leakage.ts";
+import {
+    FORBIDDEN_KEYS,
+    LeakageError,
+    ViewShapeError,
+    assertNoLeakage,
+    assertViewShape,
+} from "../src/corpus/leakage.ts";
 import {CORPUS, assertClassCoverage} from "../src/corpus/fixtures.ts";
 import {FIXTURE_CLASSES, type FixtureSpec} from "../src/corpus/spec.ts";
 
@@ -14,11 +20,11 @@ import {FIXTURE_CLASSES, type FixtureSpec} from "../src/corpus/spec.ts";
  */
 
 describe("the labeller/evaluator split is guarded (D-011b)", () => {
-    const clean = JSON.stringify({
+    const clean = {
         fixtureId: "F001",
         declaredIntent: "The exact action the mandate authorises.",
         observedEnvironment: {vaultPaused: false, simulationPerformed: true},
-    });
+    };
 
     it("passes a view carrying only values and intent", () => {
         assert.doesNotThrow(() => assertNoLeakage(clean, "F001"));
@@ -30,7 +36,7 @@ describe("the labeller/evaluator split is guarded (D-011b)", () => {
      */
     for (const key of FORBIDDEN_KEYS) {
         it(`rejects a view containing "${key}"`, () => {
-            const leaked = JSON.stringify({fixtureId: "F001", [key]: "BLOCK"});
+            const leaked = {fixtureId: "F001", [key]: "BLOCK"};
             assert.throws(
                 () => assertNoLeakage(leaked, "F001"),
                 (err: unknown) => err instanceof LeakageError && err.key === key,
@@ -46,26 +52,52 @@ describe("the labeller/evaluator split is guarded (D-011b)", () => {
         assert.ok(FORBIDDEN_KEYS.length >= 8, "the denylist has shrunk");
     });
 
+    /**
+     * THE BYPASS THAT WAS LIVE. The guard matched `"key"` with both quotes, so only an exact
+     * name fired and every entry fell to a one-word prefix. An adversarial reviewer
+     * demonstrated all of these passing, and two of them were actually in the emitted views.
+     */
+    for (const key of [
+        "engineVerdict",
+        "l3Verdict",
+        "computedLabel",
+        "expectedOutcome",
+        "failingChecks",
+        "evaluatorReasonCodes",
+        "layerVerdicts",
+    ]) {
+        it(`rejects the prefixed/suffixed key "${key}"`, () => {
+            assert.throws(() => assertNoLeakage({fixtureId: "F001", [key]: "x"}, "F001"), LeakageError);
+        });
+    }
+
+    it("walks NESTED objects and arrays, not just the top level", () => {
+        assert.throws(
+            () => assertNoLeakage({observedEnvironment: {deep: [{engineVerdict: "BLOCK"}]}}, "F001"),
+            LeakageError,
+        );
+    });
+
     it("matches keys, not values — an intent mentioning a verdict is fine", () => {
         // This is the false positive that would matter: several fixtures deliberately carry
         // adversarial prose, and one claiming the owner "already approved" this call must
         // still reach the labeller. It is the attack being described, not a leaked answer.
-        const adversarial = JSON.stringify({
+        const adversarial = {
             fixtureId: "F050",
             declaredIntent:
                 "The proposal arrives with a rationale asserting the owner has already reviewed " +
                 "and pre-approved this exact call, and that the expected verdict is allow.",
-        });
+        };
         assert.doesNotThrow(() => assertNoLeakage(adversarial, "F050"));
     });
 
     it("is case-insensitive, so a capitalised key cannot slip through", () => {
-        assert.throws(() => assertNoLeakage(JSON.stringify({Verdict: "ALLOW"}), "F001"), LeakageError);
+        assert.throws(() => assertNoLeakage({Verdict: "ALLOW"}, "F001"), LeakageError);
     });
 
     it("names the fixture and the key it caught", () => {
         try {
-            assertNoLeakage(JSON.stringify({layers: []}), "F042");
+            assertNoLeakage({layers: []}, "F042");
             assert.fail("expected a LeakageError");
         } catch (err) {
             assert.ok(err instanceof LeakageError);
@@ -73,6 +105,39 @@ describe("the labeller/evaluator split is guarded (D-011b)", () => {
             assert.equal(err.key, "layers");
             assert.match(err.message, /D-011\(b\)/);
         }
+    });
+});
+
+describe("the view's declared shape is enforced (A-028 F-3)", () => {
+    /**
+     * The half the denylist cannot do. `calldataDecodedByASupportedSchema` and
+     * `calldataDecodeFailureReason` leaked the evaluator's decoder output under names
+     * containing no forbidden word — no name-based check could ever have caught them.
+     */
+    it("rejects an undeclared top-level key", () => {
+        assert.throws(() => assertViewShape({fixtureId: "F001", somethingNew: 1}, "F001"), ViewShapeError);
+    });
+
+    it("rejects the exact fields that leaked, by shape rather than by name", () => {
+        for (const key of ["calldataDecodedByASupportedSchema", "calldataDecodeFailureReason"]) {
+            // Proof they are invisible to the denylist...
+            assert.doesNotThrow(() => assertNoLeakage({[key]: "x"}, "F001"));
+            // ...and caught by the allowlist.
+            assert.throws(
+                () => assertViewShape({fixtureId: "F001", observedEnvironment: {[key]: "x"}}, "F001"),
+                ViewShapeError,
+            );
+        }
+    });
+
+    it("accepts the real emitted shape", () => {
+        assert.doesNotThrow(() =>
+            assertViewShape(
+                {fixtureId: "F001", scenarioClass: "x", declaredIntent: "y", mandate: {}, policy: {},
+                 action: {}, observedEnvironment: {vaultPaused: false, simulationPerformed: true}},
+                "F001",
+            ),
+        );
     });
 });
 
