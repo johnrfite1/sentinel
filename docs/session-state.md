@@ -7,8 +7,9 @@ Last updated: 2026-07-30. **GATE S1 IS SIGNED — PASS, John, 2026-07-28**, scop
 D-018. See `docs/gate-s1-evidence.md` §10 for the sign-off, the three limits named in the
 assessment, and §11 for what S1 does NOT authorise. **D-016 still blocks all publication.**
 
-Since S1: **§9 step 7 is built** (D-019 ruled the design fork). Building toward Gate S2;
-steps 8 and 9 remain.
+Since S1: **§9 steps 7 and 8 are built, and most of step 9.** D-019 ruled the step-7 fork.
+The 50-fixture corpus is built and **independently labelled**, the §7.3 ablation has run, and
+the **D-010 Python verifier is complete**. Building toward Gate S2 — which only John signs.
 
 ---
 
@@ -39,7 +40,7 @@ product fork. Routine engineering judgment is yours.
 ## 3. Where the build actually is
 
 On branch **`step-3/isolated-signer`** (not merged to `main` — that is John's call):
-**43/43 Foundry tests + 277/277 TypeScript tests**. Run everything with
+**43/43 Foundry tests + 299/299 TypeScript tests**. Run everything with
 `./scripts/test.sh`; **use `--gate` for gate evidence** (20,000 fuzz runs, 262,144 calls per
 invariant). It prints its own coverage boundary, organised by layer with each layer's limit
 stated — read all of it. That block previously rotted into self-contradiction and was
@@ -98,10 +99,25 @@ Done:
   arms of the pinned `claude-haiku-4-5` recording through decode → simulate → evaluate →
   isolated signer → vault: the control proposal writes an entitlement onchain, the injected
   one blocks with no executable receipt. Design fork ruled as **D-019**.
+- **§9 step 8 (2026-07-30)** — the corpus. 50 fixtures across all 20 §7.1 classes in
+  `ts/src/corpus/`, executed against a real chain with per-fixture snapshot isolation. **No
+  fixture carries a verdict**; the runner emits a labeller view and a results view to separate
+  directories and `assertNoLeakage` fails the run if an evaluator-shaped key reaches the
+  former. Labelling prompt frozen and hash-pinned FIRST (D-011a), guarded by
+  `scripts/check-label-prompt.sh` in the project gate.
+- **Independent labelling COMPLETE (D-011)** — labeller A on all 50, labeller B on a
+  sha256-ranked 20% sample, both denied the implementation, the tests, and each other's work.
+  **Disagreement 10.0% (1/10)** — see §4, this sits exactly on the ratified threshold.
+- **§7.2 baseline + §7.3 ablation** — `ts/src/ablation/`, report at `docs/ablation-report.md`.
+  The baseline is a SEPARATE implementation, not a filter over the evaluator's codes.
+- **D-010 verifier COMPLETE** — `verifier/`, Python, zero third-party dependencies, built by
+  an agent that never opened `ts/`. 5/5 samples verify, 15/15 tamper cases rejected, 39/39
+  tests. **`verifier/REPORT.md` is the most important document produced this session** — 13
+  findings, 3 BLOCKERs, with proposed §5 wording.
 - Secret guard + pre-commit hook, project gate script.
 
-**Not started:** §9 steps 8–9 — the 30–50 fixture corpus and its independent labels, the
-§7.3 ablation, the dashboard, and the D-010 verifier CLI.
+**Not started:** the §7.5 hard-gate evidence pack, the dashboard (outside S2 unless John adds
+it), and the independent adversarial review of steps 7–8 and of steps 1–3.
 (Keep this line consistent with the Done list above. It once contradicted it for several
 commits and two outside reviewers caught that; the standing rule is to rewrite both together
 or delete one of them.)
@@ -110,10 +126,27 @@ or delete one of them.)
 
 ## 4. What to do next, in order
 
-1. **§9 step 8** — the 30–50 fixture corpus. **Freeze the labelling prompt and commit its
-   hash BEFORE building the corpus** (D-011a); the labeller sees schemas, invariants and
-   declared intent only, never evaluator source or output.
-2. **§9 step 9 + D-010** — ablation, dashboard, and the Python receipt-verifier CLI.
+1. **DECISIONS JOHN OWES, and they gate the S2 evidence pack.** All four came from
+   independent parties, not from the build loop:
+   - **§5 is not implementable as written** (`verifier/REPORT.md`, 3 BLOCKERs). The EIP-712
+     type strings for every payload are unpublished and had to be recovered by brute-force
+     search; `reasonCodesHash` could not be recovered at all, so **reason codes are not
+     tamper-evident to any third party**. Proposed wording is drafted for each. These are
+     spec changes and are John's.
+   - **Is a purchase for LESS duration than the mandate authorises conforming?** §5.7 states
+     the fields are checked and never states the RELATION (A-026a). Both labellers flagged
+     it; it decides F016 and it changes what the product enforces.
+   - **Is a reverting simulation a failed rule or an unresolved check?** §5 does not say
+     (A-026b). This is the sole inter-labeller disagreement (F002) and the reason the rate
+     is 10.0% rather than 0% — a spec gap, not a labelling error.
+   - **`PolicyPayload.allowedCallGraphHash` is declared and never consulted** (A-025a).
+2. **§7.5 hard-gate evidence + the S2 pack.** Prepare and run as a FACILITATED session;
+   never sign, pre-fill, or answer it. D-008's five comprehension questions are John's and
+   must stay unseen by the build loop.
+3. **Independent adversarial review of steps 7–8, and the never-completed one of steps 1–3.**
+   House rule 3, D-017's conditions. Steps 7 and 8 have had none. Freeze the tree first —
+   §6 records why reviewing a moving target wasted a previous round.
+4. **The dashboard** — outside S2 unless John adds it at the gate (D-009).
 
 Opened by step 7 and worth deciding before the corpus fossilises:
 - **D-019 option (b) was revisited at John's direction and MEASURED — it does not work.**
@@ -325,8 +358,8 @@ about the artifact, so it is his call rather than an agent's.
 
 ## 8. Verification tooling
 
-`scripts/mutate.sh` — 82 deliberate defects across signer, decoders, pipeline, evaluator,
-the D-012/D-014 rulings, the D-017 corrections, and (batch `P`) the step-7 transcriber.
+`scripts/mutate.sh` — 90 deliberate defects across signer, decoders, pipeline, evaluator,
+the D-012/D-014 rulings, the D-017 corrections, (batch `P`) the step-7 transcriber, and (batch `B`) the ablation layers.
 Run `./scripts/mutate.sh` for all, or `./scripts/mutate.sh E` for one batch. **First-pass
 result across all batches: 54 caught, 8 survived.** Five survivors were real coverage gaps,
 since fixed — `M18` (untested keystore guard), `S2` (vacuous impersonation fixture), `E7`
