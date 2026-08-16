@@ -132,6 +132,7 @@ gates). Added since:
 | A-032 | Three adversarial reviews of the same day's work: two blockers, fourteen others, all remediated |
 | D-033 | **Ruled by John** — measure A-030's contamination channel (control re-label vs the pre-amendment spec), and add a labeller from a different model |
 | D-034 | **Ruled by John** — the §7.3 partition gets a criterion; mandate conformance 17 → 8, and the 8 are exactly the wrong-purpose class |
+| A-034 | **Agent call, reversible** — the labelling protocol is not re-freezing now; J-1/J-2 go to S2 as a v1.1 scope question |
 | A-033 | D-033 executed: labellers H (pre-amendment spec) and J (different model) agree with the labels of record **9 of 9**. The channel is real and broader than A-030 said; it moved no label |
 
 ## 5. What to do next, in order
