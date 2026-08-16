@@ -82,11 +82,23 @@ is systematic, the sample has stopped being a bound, and a full re-freeze plus r
 50 escalates to John.** One movement is consistent with F051 being the known case. **Do not
 soften this after seeing the result.**
 
-### 2. Then part (c) of D-035 — and only as far as it goes
+### 2. ~~Then part (c) of D-035~~ — DONE, 2026-08-15. `docs/v1-1-register.md`
 
 The offending passages are a **v1.1** correction, not a v1 re-freeze. **Do NOT edit §4.2 or
 §5.7.1 to remove the worked examples** — that edits the specification to serve the measurement,
-and D-035 explicitly does not authorise it. Record what should change; leave it.
+and D-035 explicitly does not authorise it. Recorded, not changed.
+
+Three things in that register a reader should not have to find for themselves:
+
+- **D-035's "§5.7.1 publishes eleven reason-code identifiers" is wrong — it publishes 41.** The
+  eleven is §5.7.1's count of checks missing from §5.7's prose. The ruling is unaffected; the
+  entry is annotated in place, not rewritten, because it is John's.
+- **Closing that leak fights `check-eval-codes.sh`**, which fails the gate if a check exists in
+  the engine and not in §5.7.1. Deleting the list to protect labellers breaks the guard that
+  proves the prose is complete. That tension is a design fork, not an edit.
+- **One item does NOT ride on the re-label and could be built now:** the mechanical check that a
+  fixture exercises the class it names (A-036). It asserts a property of the existing corpus,
+  so it changes no fixture and moves no label. **It is the highest-value corpus work outstanding.**
 
 ### 3. Prepare Gate 5's certification for John; do not perform it
 
