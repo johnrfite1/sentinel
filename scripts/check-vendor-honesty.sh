@@ -53,8 +53,23 @@ VENDORS='Cobo|Coinbase|Circle|Privy|Safe|MetaMask|Sigil|Hypernative|Blockaid|Ten
 # job — laying nine rows in front of John — without naming the nine parties they describe.
 EXCLUDED='^(Sentinel_Protocol_Lab_Proposal_v0_2\.md|HANDOFF\.md|docs/decisions\.md|docs/session-state\.md|docs/gate-5-vendor-audit\.md|docs/review-2026-08-15/|scripts/check-vendor-honesty\.sh)'
 
+# TRACKED **AND** UNTRACKED-BUT-NOT-IGNORED, and the second half is not belt-and-braces.
+#
+# The first version scanned `git ls-files` alone, which meant a brand-new artifact was
+# invisible until the commit that added it — so the check passed while the file was being
+# written, and HEAD went red immediately afterwards. That happened on this script's own first
+# use: `docs/gate-s2-evidence.md` quoted the two §10.1 label strings, passed while untracked,
+# and failed the moment it was committed. A guard that only inspects what is already published
+# reports on the past.
+#
+# The cost is that an unignored scratch file in the working tree can fail the gate. That is
+# the right side to err on for a check about publication honesty: an untracked file in this
+# tree is one `git add -A` away from being published.
 artifacts() {
-    git ls-files -- '*.md' '*.json' 'README*' | grep -Ev "$EXCLUDED"
+    {
+        git ls-files -- '*.md' '*.json' 'README*'
+        git ls-files --others --exclude-standard -- '*.md' '*.json' 'README*'
+    } | sort -u | grep -Ev "$EXCLUDED"
 }
 
 echo "vendor honesty (§7.5 Gate 5, D-008) — mechanical conditions"

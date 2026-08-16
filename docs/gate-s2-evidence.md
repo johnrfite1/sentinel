@@ -5,7 +5,7 @@
 assembles evidence, states each piece's boundary, and asks questions. **It does not record
 answers, and no agent may add them.**
 
-Prepared 2026-08-15 at commit `<HEAD>`. Supersedes
+Prepared 2026-08-15 at commit `885b4da`. Supersedes
 `docs/review-2026-08-15/gate-s2-hard-gates-draft.md`, which predates D-032 and carries
 pre-remediation numbers.
 
@@ -180,9 +180,15 @@ are John's and are not an agent's to clear.**
 D-001 cut ALL executed and emulated vendor comparisons from v1, so the honest report is that
 none exist. `scripts/check-vendor-honesty.sh` now runs in the project gate and enforces:
 
-- **D-008(2), the empty-column condition** — no artifact labels a comparison "executed" or
-  "faithfully emulated", and §10.1's definition site must still exist so the check cannot pass
-  by the scheme having been deleted.
+- **D-008(2), the empty-column condition** — no artifact carries either of the two comparison
+  labels §10.1 defines above documentation-only, and §10.1's definition site must still exist
+  so the check cannot pass by the scheme having been deleted.
+
+  *This paragraph is worded around those two label strings deliberately.* The first draft of
+  it quoted them, the check went red on this very file, and the temptation was to add the pack
+  to the exclusion list — which would have excluded the document carrying every number in
+  evidence. The guard was right and the prose was rewritten. Recorded because a guard that has
+  visibly fired on real work is worth more than one that has only ever passed.
 - **D-008(4), no claim or layout implying superiority** — implemented as: **no named vendor may
   appear in any measurement artifact**. Stronger than a phrase scan, and deliberately so: D-008
   forbids a *layout* that implies superiority, and layout has no vocabulary to grep for.
