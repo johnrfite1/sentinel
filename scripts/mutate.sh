@@ -30,23 +30,27 @@
 # takes roughly half an hour. It is a periodic verification tool, not a gate stage.
 set -uo pipefail
 
-TS="$(git rev-parse --show-toplevel)/ts"
+ROOT="$(git rev-parse --show-toplevel)"
+TS="$ROOT/ts"
 FILTER="${1:-}"
+export PATH="$HOME/.foundry/bin:$PATH"
 
 # Refuse to run against a dirty tree. Results are meaningless if a mutation cannot be
 # distinguished from work in progress, and a clean tree is what makes `git checkout --` a
 # reliable fallback if this script is killed at the worst possible moment.
-if [ -n "$(cd "$TS" && git status --porcelain -- src)" ]; then
-    echo "REFUSING: ts/src has uncommitted changes. Commit or stash first."
+if [ -n "$(cd "$ROOT" && git status --porcelain -- ts/src contracts/src)" ]; then
+    echo "REFUSING: ts/src or contracts/src has uncommitted changes. Commit or stash first."
     exit 1
 fi
 
 CURRENT_FILE=""
 CURRENT_BACKUP=""
 
+# CURRENT_FILE holds an ABSOLUTE path. It used to be relative to ts/, which quietly made
+# the harness TypeScript-only: restoring a Solidity file would have written it under ts/.
 restore_current() {
     if [ -n "$CURRENT_FILE" ] && [ -f "$CURRENT_BACKUP" ]; then
-        cp "$CURRENT_BACKUP" "$TS/$CURRENT_FILE"
+        cp "$CURRENT_BACKUP" "$CURRENT_FILE"
         rm -f "$CURRENT_BACKUP"
     fi
     CURRENT_FILE=""
@@ -76,8 +80,8 @@ open(path, "w").write(text.replace(old, new, 1))
 '
 }
 
-run_mutation() {
-    local name="$1" file="$2" from="$3" to="$4"
+_mutate() {
+    local name="$1" path="$2" from="$3" to="$4" kind="$5"
 
     if [ -n "$FILTER" ] && [[ "$name" != $FILTER* ]]; then
         skipped=$((skipped + 1))
@@ -85,20 +89,40 @@ run_mutation() {
     fi
 
     restore_current
-    CURRENT_FILE="$file"
+    CURRENT_FILE="$path"
     CURRENT_BACKUP="$(mktemp)"
-    cp "$TS/$file" "$CURRENT_BACKUP"
+    cp "$path" "$CURRENT_BACKUP"
 
     # A mutation that silently fails to apply is indistinguishable, in the results, from one
     # the suite failed to catch — so applying it is verified, not assumed.
-    if ! apply_mutation "$TS/$file" "$from" "$to" 2>/dev/null; then
+    if ! apply_mutation "$path" "$from" "$to" 2>/dev/null; then
         printf '  %-58s ERROR (anchor not unique)\n' "$name"
         errored=$((errored + 1))
         restore_current
         return
     fi
 
-    if (cd "$TS" && npm test >/dev/null 2>&1); then
+    local green=1
+    if [ "$kind" = "sol" ]; then
+        # BUILD FIRST, AND REPORT A BUILD FAILURE AS AN ERROR RATHER THAN A CATCH.
+        #
+        # `deny = "warnings"` means a mutation that leaves an unused variable does not
+        # compile, and `forge test` then exits non-zero — which this script would otherwise
+        # record as "caught". That would credit the test suite for work the compiler did,
+        # and inflate exactly the number the gate evidence cites. A mutant that does not
+        # build is not a measurement.
+        if ! (cd "$ROOT/contracts" && forge build >/dev/null 2>&1); then
+            printf '  %-58s ERROR (mutant does not compile)\n' "$name"
+            errored=$((errored + 1))
+            restore_current
+            return
+        fi
+        (cd "$ROOT/contracts" && forge test >/dev/null 2>&1) || green=0
+    else
+        (cd "$TS" && npm test >/dev/null 2>&1) || green=0
+    fi
+
+    if [ "$green" -eq 1 ]; then
         printf '  %-58s *** SURVIVED ***\n' "$name"
         survived=$((survived + 1))
     else
@@ -108,13 +132,39 @@ run_mutation() {
     restore_current
 }
 
+# TypeScript mutation. `file` is relative to ts/.
+run_mutation() {
+    _mutate "$1" "$TS/$2" "$3" "$4" ts
+}
+
+# Solidity mutation. `file` is relative to the repository root, and the runner is `forge
+# test` rather than `npm test` — which is the entire reason this harness reported nothing
+# about the vault until now (A-028: "scripts/mutate.sh is TypeScript-only, and that gap is
+# where most of this class lives").
+run_sol_mutation() {
+    _mutate "$1" "$ROOT/$2" "$3" "$4" sol
+}
+
 echo "=== Sentinel mutation testing${FILTER:+ (filter: $FILTER*)} ==="
 
 # The baseline must be green, or every "caught" below is meaningless.
+#
+# BOTH baselines are checked, and both are checked even when a filter selects only one
+# language. A green TypeScript run says nothing about whether `forge test` compiles, and a
+# Solidity batch measured against a suite that does not build would report every mutation
+# "caught" — the instrument reading as maximally effective at the exact moment it is broken,
+# which is the failure mode v1 of this script had.
 if (cd "$TS" && npm test >/dev/null 2>&1); then
-    echo "  baseline (no mutation): green"
+    echo "  baseline typescript: green"
 else
-    echo "  baseline (no mutation): RED — aborting, results would be meaningless"
+    echo "  baseline typescript: RED — aborting, results would be meaningless"
+    exit 1
+fi
+
+if (cd "$ROOT/contracts" && forge test >/dev/null 2>&1); then
+    echo "  baseline solidity:   green"
+else
+    echo "  baseline solidity:   RED — aborting, results would be meaningless"
     exit 1
 fi
 
@@ -719,5 +769,163 @@ run_mutation "C10 corpus: return the injection class to its vacuous state" \
             \"This authorization call grants the settlement relayer \" +" \
     "        agentRationaleRemovedByMutation:
             \"This authorization call grants the settlement relayer \" +"
+
+# --- S: the vault (Solidity) ------------------------------------------------
+#
+# THIS BATCH DID NOT EXIST UNTIL 2026-08-15, AND ITS ABSENCE IS THE POINT. The vault is the
+# enforcement substrate — the layer that still holds when the evaluator and the signer are
+# both compromised — and it was the only layer with no non-vacuity instrument at all. When
+# an outside reviewer built one, 29 of 45 mutations survived a fully green run and the
+# §3.3(9) ordering property turned out to be verified by nothing.
+#
+# The twenty below are that reviewer's set, promoted from `docs/review-2026-08-15/artifacts/`
+# into the harness that ships, for the reason stated at the top of this file: a claim resting
+# on a script nobody else has cannot be independently reproduced.
+#
+# CONTROLS are marked. They target checks the suite has always covered, and they exist to
+# validate the instrument in the other direction — a batch where everything is caught tells
+# you nothing unless you know the harness can report a survivor, and a batch where everything
+# survives tells you nothing unless you know it can report a catch.
+
+run_sol_mutation "S1  vault: delete the WrongVault check" \
+    "contracts/src/SentinelVault.sol" \
+    '        if (action.vault != address(this)) revert WrongVault();
+' \
+    ''
+
+run_sol_mutation "S2  vault: delete the CalldataTooShort check" \
+    "contracts/src/SentinelVault.sol" \
+    '        if (callData.length < 4) revert CalldataTooShort();
+' \
+    ''
+
+run_sol_mutation "S3  vault: delete the SelectorNotAllowed backstop" \
+    "contracts/src/SentinelVault.sol" \
+    '        if (!allowedSelector[bytes4(callData[:4])]) revert SelectorNotAllowed();
+' \
+    ''
+
+run_sol_mutation "S4  CONTROL vault: delete the TargetNotAllowed backstop" \
+    "contracts/src/SentinelVault.sol" \
+    '        if (!allowedTarget[action.target]) revert TargetNotAllowed();
+' \
+    ''
+
+run_sol_mutation "S5  vault: delete the ReceiptBindingMismatch check" \
+    "contracts/src/SentinelVault.sol" \
+    '        if (receipt.mandateHash != action.mandateHash || receipt.policyHash != action.policyHash) {
+            revert ReceiptBindingMismatch();
+        }
+' \
+    ''
+
+run_sol_mutation "S6  vault: delete the OverrideExpired check" \
+    "contracts/src/SentinelVault.sol" \
+    '        // forge-lint: disable-next-line(block-timestamp)
+        if (block.timestamp > auth.expiresAt) revert OverrideExpired();
+' \
+    ''
+
+# The one A-028 called its sharpest coverage finding: the reentrancy guard masks the
+# ordering, so the two defences §3.3(9) presents as independent were tested by one test.
+run_sol_mutation "S7  vault: consume the nonce AFTER the external call (breaks §3.3(9))" \
+    "contracts/src/SentinelVault.sol" \
+    '        bytes32 actionHash = T.hashAction(action);
+        actionNonce += 1;
+
+        emit ActionExecuted(actionHash, action.actionNonce, decisionId, viaOverride);
+
+        (bool ok, bytes memory ret) = action.target.call{value: action.valueWei}(callData);
+        if (!ok) revert CallFailed(ret);' \
+    '        bytes32 actionHash = T.hashAction(action);
+
+        emit ActionExecuted(actionHash, action.actionNonce, decisionId, viaOverride);
+
+        (bool ok, bytes memory ret) = action.target.call{value: action.valueWei}(callData);
+        actionNonce += 1;
+        if (!ok) revert CallFailed(ret);'
+
+run_sol_mutation "S8  CONTROL vault: drop nonReentrant from executeWithReceipt" \
+    "contracts/src/SentinelVault.sol" \
+    '        bytes calldata receiptSig
+    ) external nonReentrant returns (bytes memory) {
+        _checkAction(action, callData);
+        _checkReceipt(action, receipt, receiptSig);' \
+    '        bytes calldata receiptSig
+    ) external returns (bytes memory) {
+        _checkAction(action, callData);
+        _checkReceipt(action, receipt, receiptSig);'
+
+run_sol_mutation "S9  CONTROL vault: delete the named-signer half of the receipt check" \
+    "contracts/src/SentinelVault.sol" \
+    '        if (receipt.signer != signer) revert WrongSigner();
+' \
+    ''
+
+run_sol_mutation "S10 vault: delete the constructor zero-address check" \
+    "contracts/src/SentinelVault.sol" \
+    '        if (_owner == address(0) || _signer == address(0)) revert ZeroAddress();
+' \
+    ''
+
+run_sol_mutation "S11 vault: delete the rotateSigner zero-address check" \
+    "contracts/src/SentinelVault.sol" \
+    '        if (newSigner == address(0)) revert ZeroAddress();
+' \
+    ''
+
+run_sol_mutation "S12 vault: delete the recover zero-address check" \
+    "contracts/src/SentinelVault.sol" \
+    '        if (to == address(0)) revert ZeroAddress();
+' \
+    ''
+
+run_sol_mutation "S13 CONTROL vault: delete the ReceiptExpired check" \
+    "contracts/src/SentinelVault.sol" \
+    '        // forge-lint: disable-next-line(block-timestamp)
+        if (block.timestamp > receipt.expiresAt) revert ReceiptExpired();
+' \
+    ''
+
+run_sol_mutation "S14 vault: drop actionNonce from the override binding" \
+    "contracts/src/SentinelVault.sol" \
+    '                || auth.actionNonce != action.actionNonce
+        ) revert OverrideMismatch();' \
+    '        ) revert OverrideMismatch();'
+
+run_sol_mutation "S15 vault: drop mandate/policy from the override binding" \
+    "contracts/src/SentinelVault.sol" \
+    '                || auth.mandateHash != action.mandateHash || auth.policyHash != action.policyHash
+' \
+    ''
+
+run_sol_mutation "S16 vault: drop the zero-hash guard on activeMandateHash" \
+    "contracts/src/SentinelVault.sol" \
+    '        if (activeMandateHash == bytes32(0) || action.mandateHash != activeMandateHash) {' \
+    '        if (action.mandateHash != activeMandateHash) {'
+
+run_sol_mutation "S17 vault: drop the zero-hash guard on activePolicyHash" \
+    "contracts/src/SentinelVault.sol" \
+    '        if (activePolicyHash == bytes32(0) || action.policyHash != activePolicyHash) {' \
+    '        if (action.policyHash != activePolicyHash) {'
+
+run_sol_mutation "S18 vault: trust the supplied dataHash instead of recomputing it" \
+    "contracts/src/SentinelVault.sol" \
+    '        if (keccak256(callData) != action.dataHash) revert CalldataMismatch();
+' \
+    ''
+
+run_sol_mutation "S19 CONTROL vault: drop the ValueOverCap backstop" \
+    "contracts/src/SentinelVault.sol" \
+    '        if (action.valueWei > maxNativeValueWei) revert ValueOverCap();
+' \
+    ''
+
+run_sol_mutation "S20 vault: delete the ActionExpired deadline check" \
+    "contracts/src/SentinelVault.sol" \
+    '        // forge-lint: disable-next-line(block-timestamp)
+        if (block.timestamp > action.deadline) revert ActionExpired();
+' \
+    ''
 
 echo "=== ${caught} caught, ${survived} survived, ${errored} did not apply, ${skipped} skipped ==="

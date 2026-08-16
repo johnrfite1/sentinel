@@ -160,6 +160,10 @@ contract VaultHandler is Test {
     uint256 internal immutable signerPkB;
     uint256 internal currentSignerPk;
     address public immutable owner;
+    /// @dev Needed because the override path requires an OWNER signature, not an owner
+    ///      `prank`. §3.3(7)'s "separately authenticated" is a signature over a typed
+    ///      payload; a handler that could only prank would be unable to reach the path at all.
+    uint256 internal immutable ownerPk;
 
     bytes32 public constant MANDATE_HASH = keccak256("mandate-1");
     bytes32 public constant POLICY_HASH = keccak256("policy-1");
@@ -173,13 +177,33 @@ contract VaultHandler is Test {
     mapping(bytes32 => uint256) public executionsPerActionHash;
     bytes32[] public executedActionHashes;
 
-    constructor(SentinelVault _vault, DemoPay _demoPay, uint256 _signerPkA, uint256 _signerPkB, address _owner) {
+    // --- Ghost state for the override path (§3.3(7)) ---
+    //
+    // SEPARATE GHOSTS ON PURPOSE. A REVIEW verdict executing through an owner override is
+    // CORRECT, so folding override executions into `everExecutedNonAllowVerdict` would make
+    // the automatic-path invariant fire on legitimate behaviour — and the temptation would
+    // then be to loosen that invariant, which is the wrong repair. Each path gets its own
+    // ghost and its own invariant.
+    uint256 public overrideExecutions;
+    bool public everExecutedNonReviewViaOverride;
+    bool public everExecutedForgedOverride;
+    bool public everExecutedMismatchedOverride;
+
+    constructor(
+        SentinelVault _vault,
+        DemoPay _demoPay,
+        uint256 _signerPkA,
+        uint256 _signerPkB,
+        address _owner,
+        uint256 _ownerPk
+    ) {
         vault = _vault;
         demoPay = _demoPay;
         signerPkA = _signerPkA;
         signerPkB = _signerPkB;
         currentSignerPk = _signerPkA;
         owner = _owner;
+        ownerPk = _ownerPk;
     }
 
     function executedCount() external view returns (uint256) {
@@ -316,6 +340,113 @@ contract VaultHandler is Test {
         }
     }
 
+    // -----------------------------------------------------------------
+    // The override path (§3.3(7)) — absent from this campaign until A-028
+    // -----------------------------------------------------------------
+    //
+    // A-028: "`executeWithOverride` is absent from the invariant campaign's handler set
+    // although §3.3 names its property." The whole second execution path — the one that can
+    // move funds on a REVIEW verdict — was exercised only by deterministic tests, so nothing
+    // explored it interleaved with pauses, rotations, replays and time warps. It also meant
+    // the nonce invariant had never seen a nonce consumed by an override.
+
+    function _overrideFor(T.ActionPayload memory a, T.DecisionReceiptPayload memory r, uint256 seed)
+        internal
+        view
+        returns (T.OverrideAuthorizationPayload memory)
+    {
+        return T.OverrideAuthorizationPayload({
+            schemaVersion: 1,
+            reviewReceiptHash: T.hashReceipt(r),
+            actionHash: T.hashAction(a),
+            mandateHash: a.mandateHash,
+            policyHash: a.policyHash,
+            actionNonce: a.actionNonce,
+            reasonHash: keccak256(abi.encode(seed, "reason")),
+            issuedAt: uint64(block.timestamp),
+            expiresAt: uint64(block.timestamp + 30 minutes)
+        });
+    }
+
+    function _signOverride(uint256 pk, T.OverrideAuthorizationPayload memory auth)
+        internal
+        view
+        returns (bytes memory)
+    {
+        bytes32 digest = T.digest(T.domainSeparator(block.chainid, address(vault)), T.hashOverride(auth));
+        (uint8 v, bytes32 rr, bytes32 ss) = vm.sign(pk, digest);
+        return abi.encodePacked(rr, ss, v);
+    }
+
+    /// @notice The productive override path: a REVIEW receipt plus the owner's signature.
+    function executeValidOverride(uint256 seed) external {
+        bytes memory data = _data(seed);
+        (T.ActionPayload memory a, T.DecisionReceiptPayload memory r, bytes memory sig) =
+            _bundle(seed, vault.actionNonce(), T.Verdict.REVIEW, data);
+        T.OverrideAuthorizationPayload memory auth = _overrideFor(a, r, seed);
+        bool wasPaused = vault.paused();
+        try vault.executeWithOverride(a, data, r, sig, auth, _signOverride(ownerPk, auth)) {
+            overrideExecutions++;
+            _record(T.hashAction(a), wasPaused, T.Verdict.ALLOW, false);
+        } catch {
+            rejectedAttempts++;
+        }
+    }
+
+    /// @notice An ALLOW or BLOCK receipt pushed through the override path. §3.3(7) makes a
+    ///         block unoverridable, and an allow has no business here either.
+    function executeOverrideOnNonReview(uint256 seed, bool allowVerdict) external {
+        bytes memory data = _data(seed);
+        T.Verdict verdict = allowVerdict ? T.Verdict.ALLOW : T.Verdict.BLOCK;
+        (T.ActionPayload memory a, T.DecisionReceiptPayload memory r, bytes memory sig) =
+            _bundle(seed, vault.actionNonce(), verdict, data);
+        T.OverrideAuthorizationPayload memory auth = _overrideFor(a, r, seed);
+        bool wasPaused = vault.paused();
+        try vault.executeWithOverride(a, data, r, sig, auth, _signOverride(ownerPk, auth)) {
+            everExecutedNonReviewViaOverride = true;
+            overrideExecutions++;
+            _record(T.hashAction(a), wasPaused, verdict, true);
+        } catch {
+            rejectedAttempts++;
+        }
+    }
+
+    /// @notice The override signed by the EVALUATOR's key rather than the owner's. A
+    ///         compromised signer must not be able to manufacture both halves of §3.3(7).
+    function executeOverrideWithForgedOwnerSig(uint256 seed) external {
+        bytes memory data = _data(seed);
+        (T.ActionPayload memory a, T.DecisionReceiptPayload memory r, bytes memory sig) =
+            _bundle(seed, vault.actionNonce(), T.Verdict.REVIEW, data);
+        T.OverrideAuthorizationPayload memory auth = _overrideFor(a, r, seed);
+        bool wasPaused = vault.paused();
+        try vault.executeWithOverride(a, data, r, sig, auth, _signOverride(currentSignerPk, auth)) {
+            everExecutedForgedOverride = true;
+            overrideExecutions++;
+            _record(T.hashAction(a), wasPaused, T.Verdict.REVIEW, true);
+        } catch {
+            rejectedAttempts++;
+        }
+    }
+
+    /// @notice A validly owner-signed override that names a DIFFERENT action. This is the
+    ///         one that matters most: the owner really did consent to something, just not
+    ///         to this.
+    function executeOverrideForAnotherAction(uint256 seed) external {
+        bytes memory data = _data(seed);
+        (T.ActionPayload memory a, T.DecisionReceiptPayload memory r, bytes memory sig) =
+            _bundle(seed, vault.actionNonce(), T.Verdict.REVIEW, data);
+        T.OverrideAuthorizationPayload memory auth = _overrideFor(a, r, seed);
+        auth.actionHash = keccak256(abi.encode(seed, "a different action entirely"));
+        bool wasPaused = vault.paused();
+        try vault.executeWithOverride(a, data, r, sig, auth, _signOverride(ownerPk, auth)) {
+            everExecutedMismatchedOverride = true;
+            overrideExecutions++;
+            _record(T.hashAction(a), wasPaused, T.Verdict.REVIEW, true);
+        } catch {
+            rejectedAttempts++;
+        }
+    }
+
     function togglePause(bool value) external {
         vm.prank(owner);
         vault.setPaused(value);
@@ -364,11 +495,11 @@ contract SentinelVaultInvariantTest is Test {
         vm.stopPrank();
         vm.warp(1_000_000);
 
-        handler = new VaultHandler(vault, demoPay, SIGNER_PK, SIGNER_PK_B, owner);
+        handler = new VaultHandler(vault, demoPay, SIGNER_PK, SIGNER_PK_B, owner, OWNER_PK);
         targetContract(address(handler));
         // Explicit selector list. Without it the runner also fuzzes inherited
         // forge-std helpers on the handler, which crowd out the actions we care about.
-        bytes4[] memory sel = new bytes4[](8);
+        bytes4[] memory sel = new bytes4[](12);
         sel[0] = VaultHandler.executeValid.selector;
         sel[1] = VaultHandler.executeReplay.selector;
         sel[2] = VaultHandler.executeNonAllow.selector;
@@ -377,6 +508,12 @@ contract SentinelVaultInvariantTest is Test {
         sel[5] = VaultHandler.togglePause.selector;
         sel[6] = VaultHandler.rotateSigner.selector;
         sel[7] = VaultHandler.warp.selector;
+        // The override path, added after A-028 found the entire second execution path
+        // missing from this campaign.
+        sel[8] = VaultHandler.executeValidOverride.selector;
+        sel[9] = VaultHandler.executeOverrideOnNonReview.selector;
+        sel[10] = VaultHandler.executeOverrideWithForgedOwnerSig.selector;
+        sel[11] = VaultHandler.executeOverrideForAnotherAction.selector;
         targetSelector(FuzzSelector({addr: address(handler), selectors: sel}));
     }
 
@@ -431,6 +568,30 @@ contract SentinelVaultInvariantTest is Test {
         assertFalse(handler.everExecutedNonAllowVerdict());
     }
 
+    /// @notice The same non-vacuity discipline applied to the override path.
+    ///
+    /// @dev Worth stating why this is not optional. Three of the four new handler actions can
+    ///      only ever be rejected, so if the productive one silently stopped working the
+    ///      campaign would still report every override invariant PASS — while proving nothing
+    ///      about a path that moves funds. That is the 16,384-calls-zero-executions failure
+    ///      recorded above, and it would recur here first.
+    function test_nonVacuity_overridePathExecutesAndItsAdversarialArmsDoNot() public {
+        handler.executeValidOverride(11);
+        assertEq(handler.overrideExecutions(), 1, "the override path cannot execute at all");
+        assertEq(vault.actionNonce(), 1, "an override execution did not consume a nonce");
+
+        handler.executeOverrideOnNonReview(12, true); // ALLOW receipt
+        handler.executeOverrideOnNonReview(13, false); // BLOCK receipt — §3.3(7) forbids
+        handler.executeOverrideWithForgedOwnerSig(14);
+        handler.executeOverrideForAnotherAction(15);
+
+        assertEq(handler.overrideExecutions(), 1, "an adversarial override executed");
+        assertFalse(handler.everExecutedNonReviewViaOverride());
+        assertFalse(handler.everExecutedForgedOverride());
+        assertFalse(handler.everExecutedMismatchedOverride());
+        assertEq(vault.actionNonce(), 1, "a rejected override consumed a nonce");
+    }
+
     /// @notice Proves the paused and rotated states the campaign relies on are reachable.
     function test_nonVacuity_ownerControlsAreReachable() public {
         handler.togglePause(true);
@@ -471,6 +632,25 @@ contract SentinelVaultInvariantTest is Test {
     ///         Block and review verdicts must never get through it.
     function invariant_onlyAllowVerdictsExecuteOnTheAutomaticPath() public view {
         assertFalse(handler.everExecutedNonAllowVerdict());
+    }
+
+    /// @notice §3.3(7) on the override path: only a REVIEW verdict is overridable. A BLOCK
+    ///         "requires a new mandate or policy; it cannot be overridden directly."
+    function invariant_onlyReviewVerdictsExecuteOnTheOverridePath() public view {
+        assertFalse(handler.everExecutedNonReviewViaOverride());
+    }
+
+    /// @notice §3.3(7)'s "separately authenticated": the override is the HUMAN's half, so a
+    ///         signature from the evaluator's own key must never satisfy it. This is the
+    ///         property that keeps a compromised signer from authoring both halves.
+    function invariant_overrideRequiresTheOwnersOwnSignature() public view {
+        assertFalse(handler.everExecutedForgedOverride());
+    }
+
+    /// @notice An override authorises ONE exact action. A genuine owner signature over a
+    ///         different action must not execute this one.
+    function invariant_overrideMustNameTheExactAction() public view {
+        assertFalse(handler.everExecutedMismatchedOverride());
     }
 
     /// @notice The owner's authority is never reachable through the execution path,
