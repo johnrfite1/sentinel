@@ -3,9 +3,10 @@
 Rewritten at the end of each working session. **This file, not the conversation, is the
 memory.** If it disagrees with anything an agent remembers, this file wins.
 
-Last updated: **2026-08-16**, branch `step-3/isolated-signer`, **committed locally and NOT
-pushed** — the working tree is clean and every commit from 2026-08-16 is local only.
-The repository is PRIVATE and D-016 still blocks all publication.
+Last updated: **2026-08-16**, branch `step-3/isolated-signer`, **pushed** (`1a27a36`, verified
+against the remote rather than trusting the push output). The repository is PRIVATE — the rename
+gate checks this on every run — and D-016 still blocks all publication. **Pushing to the private
+remote is backup, not publication; do not read the push as any relaxation of D-016.**
 
 ---
 
