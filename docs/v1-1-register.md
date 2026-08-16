@@ -100,5 +100,17 @@ check the class is about* — and **is not built**.
 It is the only item here that would have caught F056, F051 and the vacuous injection class
 without a human noticing each one separately, and unlike everything else in this register it
 does **not** ride on the re-label decision: asserting a property of the existing corpus changes
-no fixture and moves no label. **It could be built now.** It is listed here rather than done
-because it was not in the ordered work for this session.
+no fixture and moves no label.
+
+**BUILT 2026-08-16 — `scripts/check-class-coverage.sh`, wired into the gate (A-038).** It
+reports **14 of 20 classes exercise the class they name**. Four of the six carried are known and
+reasoned; **two are new and unruled**, and they are the register's newest items:
+
+- **`owner-override-and-block-behaviour`** — F054/F055 fail on code identity and wrong resource.
+  Neither is about the override path.
+- **`conflicting-block-state`** — F048 REVIEWs on simulation-unavailable and code-identity, which
+  is an outage shape, not the conflicting-state shape D-030 calls a failed rule that blocks.
+
+Both are corpus defects of the A-036 family and therefore **inherit its deferral**: repairing a
+fixture changes the view the labels of record were drawn against, so they ride with the re-label.
+What does NOT ride with it is the guard, which is why building it first was worth doing.

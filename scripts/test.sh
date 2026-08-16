@@ -35,6 +35,13 @@ step "published EIP-712 type strings (D-023)"
 step "§5.7.1 check coverage (D-031)"
 ./scripts/check-eval-codes.sh || fail=1
 
+# Also reads its own output rather than its exit status. It passes on a RATCHET: six classes
+# are carried as not-exercised-at-the-corpus-layer, four of them ratified and two found by the
+# guard itself and still unruled. A green line here means "no NEW class went vacuous", never
+# "every class is covered". The carried list prints on every run for that reason.
+step "corpus class coverage (A-036)"
+./scripts/check-class-coverage.sh || fail=1
+
 # Reads its own output, not just its exit status: this one passes on the mechanical half
 # while printing two conditions only John can clear. A green gate here does NOT mean Gate 5
 # is satisfied.
@@ -208,8 +215,16 @@ WHAT IS COVERED, by layer, each with the limit that layer cannot exceed:
            canary`), whose history this script prints; nothing in the suite itself calls a
            model, and the canary is deliberately not a stage here.
 
-  §9 s8    The §7.1 corpus and the §7.3 ablation. 50 fixtures across all 20 declared
-           classes, executed against a real chain with per-fixture snapshot isolation, and
+  §9 s8    The §7.1 corpus and the §7.3 ablation. 50 fixtures spread over all 20 declared
+           classes — but SPREAD OVER IS NOT COVERAGE, and as of 2026-08-16 the difference is
+           measured rather than assumed: check-class-coverage.sh (A-036) finds 14 of the 20
+           produce a failing check the class is actually about. Six do not. Four of those are
+           known and reasoned — the call-graph classes D-025 reserved, the signer class the
+           evaluator has no code for, the injection class whose subject is containment rather
+           than a check — and TWO were found by that guard and are unruled:
+           `owner-override-and-block-behaviour` and `conflicting-block-state`. Read the
+           carried list the guard prints; a green line there means no NEW class went vacuous.
+           The fixtures are executed against a real chain with per-fixture snapshot isolation, and
            INDEPENDENTLY LABELLED under the D-011a frozen prompt by agents denied the
            implementation, the tests, and each other's work. Measured against those labels:
            false allows 38 (baseline) / 8 (policy+effects) / 1 (full). Detection

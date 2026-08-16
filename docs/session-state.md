@@ -96,9 +96,9 @@ Three things in that register a reader should not have to find for themselves:
 - **Closing that leak fights `check-eval-codes.sh`**, which fails the gate if a check exists in
   the engine and not in §5.7.1. Deleting the list to protect labellers breaks the guard that
   proves the prose is complete. That tension is a design fork, not an edit.
-- **One item does NOT ride on the re-label and could be built now:** the mechanical check that a
-  fixture exercises the class it names (A-036). It asserts a property of the existing corpus,
-  so it changes no fixture and moves no label. **It is the highest-value corpus work outstanding.**
+- ~~One item does NOT ride on the re-label and could be built now~~ — **BUILT 2026-08-16,
+  `scripts/check-class-coverage.sh`, in the gate. It found two more vacuous classes (A-038),
+  both awaiting John.** See §3 and A-038.
 
 ### 3. Prepare Gate 5's certification for John; do not perform it
 
@@ -173,10 +173,16 @@ design forks. Never sign a gate, never certify a public claim.
 Run `./scripts/test.sh`; use `--gate` for evidence. Read the coverage boundary it prints — it is
 ONE statement, not a log; rewrite the affected layer when a step lands, never append.
 
-**Seven mechanical guards run in the gate:** secrets (A-007), rename (D-016), labelling-prompt
-freeze (D-011a), EIP-712 type strings (D-023), §5.7.1 check coverage (D-031), vendor honesty
-(§7.5 Gate 5, D-008), and — deep profile only — **the §7.1 corpus executed with its committed
-views verified**. The Gate 7 canary history prints and deliberately cannot fail the gate.
+**Eight mechanical guards run in the gate:** secrets (A-007), rename (D-016), labelling-prompt
+freeze (D-011a), EIP-712 type strings (D-023), §5.7.1 check coverage (D-031), **corpus class
+coverage (A-036, new 2026-08-16)**, vendor honesty (§7.5 Gate 5, D-008), and — deep profile
+only — **the §7.1 corpus executed with its committed views verified**. The Gate 7 canary history
+prints and deliberately cannot fail the gate.
+
+**Two of the eight pass on something weaker than a pass, and both say so on every run.** Vendor
+honesty reports two conditions as UNCERTIFIED. Class coverage passes on a RATCHET: **14 of 20
+classes exercise the class they name**, six are carried, and a green line means only that no NEW
+class went vacuous. Read their output, not their exit status.
 
 - **§9 steps 1–9 done.** Steps 4–6 reviewed under A-022; steps 1–3 under A-016 (whose
   verifications were mostly cut short by a spend limit — that limit is NOT retired); **steps
@@ -212,6 +218,7 @@ views verified**. The Gate 7 canary history prints and deliberately cannot fail 
 | A-034 | Agent call not to re-freeze — **TRIGGERED, superseded by D-035** |
 | A-036 | Two fixtures do not exercise the class they name; no check asserts they do |
 | A-037 | **Two sessions ran the same measurement and one overwrote the other's committed evidence.** Caught by luck, not by any guard |
+| A-038 | A-036's check **built** and in the gate: 14/20 classes exercise the class they name; two new vacuous classes found, both **unruled** |
 
 ## 5. Traces — what worked, and what was a dead end
 
