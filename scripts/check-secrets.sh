@@ -127,7 +127,24 @@ while IFS= read -r f; do
     [ -f "$f" ] || continue
     body=$(cat "$f")
   fi
-  hits=$(printf '%s' "$body" | grep -nE '(/Users/[a-z]|/home/[a-z])' 2>/dev/null || true)
+  # HTTP(S) URLs are stripped before matching, and only those. A remote URL's path can
+  # legitimately contain the segment `/home/` — a documentation citation gathered for the Gate 5
+  # source-verification pass had exactly that shape and blocked a commit. (The vendor is not
+  # named here on purpose: this file is not on check-vendor-honesty.sh's exclusion list, and
+  # naming one would fail D-008(4). That guard caught this comment's first draft.)
+  # This is house rule 6 doing what the project keeps catching elsewhere: an instrument pointed
+  # at the wrong thing. The rule is that SCRIPTS must resolve $HOME rather than hardcode a local
+  # path; a segment inside a remote URL is not a local path and no script can resolve it.
+  #
+  # Scoped deliberately to http/https. `file:///Users/<name>/...` IS a machine-specific path
+  # wearing a URL scheme and must still fail, so `file://` is not stripped. The residual hole is
+  # that a real path could be hidden behind an `https://` prefix — it would then also not be a
+  # usable path, which is the whole reason the rule exists.
+  #
+  # sed runs line-by-line, so grep -n's line numbers still refer to the original file.
+  hits=$(printf '%s' "$body" \
+    | sed -E 's#https?://[^[:space:])"'"'"']*##g' \
+    | grep -nE '(/Users/[a-z]|/home/[a-z])' 2>/dev/null || true)
   if [ -n "$hits" ]; then
     echo "${YEL}BLOCKED${RST} $f — machine-specific absolute path (use \$HOME):"
     printf '%s\n' "$hits" | sed 's/^/    /'

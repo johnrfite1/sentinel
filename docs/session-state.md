@@ -44,6 +44,15 @@ Recorded in `fixtures/corpus/labels/labeller-L-control.json` and its provenance 
 across fourteen fixtures — ONE label moved (F051), and it was the one labeller E had itself
 flagged.** That is the bound D-035 asked for, and it holds.
 
+**REPLICATED, BY ACCIDENT — labeller M, a second control arm over the same five fixtures.** Two
+Claude Code sessions were open on this repository at once and both ran D-035's control. The
+arms were blind to each other and agree completely: **E, L and M give the same label on all
+five, and L and M even match on confidence — both `medium` on F025 and `high` on the other
+four, both marking F025's governing rule as inferred rather than stated.** Ten control
+observations, zero movements. The result is stronger than D-035 required, and **it was not
+designed — do not write it up as planned replication.** See A-037 for the incident, which is a
+finding in its own right and the more important half.
+
 L raised a new finding, recorded as **A-036: F056 does not exercise reentrancy at all** —
 `internalCallCount` 0, target with empty bytecode, exact-target failing long before the call
 graph is reached. With F051 inert for the neighbouring class, §7.1's `reentrancy-attempt` and
@@ -82,20 +91,37 @@ and D-035 explicitly does not authorise it. Record what should change; leave it.
 ### 3. Prepare Gate 5's certification for John; do not perform it
 
 `docs/gate-5-vendor-audit.md` holds a completed source-verification pass — all nine cited pages
-fetched and read 2026-08-15. Five rows hold. **Four do not:**
+fetched and read 2026-08-15 — and, appended to the same file, **the certification packet: every
+proposed change as literal replacement text, ready for a ruling session.** It is in that file
+and not its own because a new vendor-naming file would fail `check-vendor-honesty.sh` on
+D-008(4), and excluding it would be a claim about the file the script warns against.
 
-| Row | What the cited page does not support | Proposal (John certifies) |
+**The earlier count in this file was wrong and is corrected.** It read "five rows hold, four do
+not". Row 8 is two products in one sentence: Blockaid holds, **Tenderly does not**. Four rows
+hold as written (1, 4, 6, 9), one holds by half (8), and **five need a ruling:**
+
+| Row | Status after the packet's lookups | What John rules |
 |---|---|---|
-| 7 Hypernative | "intent verification" appears nowhere on it | strike, or mark `(inference)` |
-| 2 Coinbase; Privy | holds for Privy only; "signer" for neither | split the row |
-| 5 Safe | Guards page documents Guards; 4 of 5 claims absent | re-cite, or narrow to Guards |
-| 3 Circle | "agent-native execution" is a characterisation | mark `(inference)` |
+| 7 Hypernative | **UNRESOLVED.** "intent verification" is on no cited page, and the re-cite lookup returned a self-contradicting read — not evidence | strike / mark `(inference)` / re-cite after a verified read |
+| 2 Coinbase; Privy | holds for Privy only; "signer" for neither | split the row (text drafted) |
+| 5 Safe | **recoverable** — all four missing claims documented on two Safe pages §13 does not yet cite | re-cite (text drafted; adds §13 #25, #26) |
+| 8 Tenderly half | "known-threat detection" unsupported on the landing page AND the alert docs | split the row (text drafted) |
+| 3 Circle | "agent-native execution" is a characterisation | mark `(inference)` (text drafted) |
 
-**Every discrepancy overstates a COMPETITOR, never Sentinel.** Once John rules, the marker
-`[§13#N read YYYY-MM-DD]` on each capability cell makes D-008(1) mechanical —
-`check-vendor-honesty.sh` already counts it and reports `0 of 9`.
+Plus two policy questions the packet states: the marker format, and whether inference is marked
+per-cell or by one declaration over the "Consequence for Sentinel" column (recommended).
 
-**An agent may not write those cells.** Prepare the diff; put it in front of him.
+**Every discrepancy overstates a COMPETITOR, never Sentinel** — and note that the cheap fix for
+Safe (narrow the row to Guards) would have made a competitor look weaker on a citation error of
+ours. The packet takes the other road. Once John rules, the marker `[§13#N read YYYY-MM-DD]` on
+each capability cell makes D-008(1) mechanical — `check-vendor-honesty.sh` counts it and reports
+`0 of 9` today, `10 of 11` after application, with Row 7 the honest shortfall.
+
+**A guard defect recorded in the packet, to fix AFTER the rulings:** the script says the marker
+is counted "appended to the capability cell" but its awk tests the whole row line. The tightened
+version has to match the layout John rules for, so it is sequenced behind him.
+
+**An agent may not write those cells.** The diff is prepared; put it in front of him.
 
 ### 4. Run Gate S2 as a facilitated session
 
@@ -151,9 +177,12 @@ views verified**. The Gate 7 canary history prints and deliberately cannot fail 
 - **D-010 verifier:** 6/6 samples, 42/42 tamper cases, 70/70 tests.
 - **Gate 7 canary:** built, run live once, agrees with the pinned recording. D-036 sets the
   cadence at **monthly**; a DRIFT row is a finding about the model, never a build failure.
-- **Labellers:** E and F are the labels of record. G, H, J, K (and L, if recorded) are targeted
+- **Labellers:** E and F are the labels of record. G, H, J, K, **L and M** are targeted
   measurement arms and are audit trail only. **A-033 as first written was wrong and is corrected
-  in place** — the contamination channel moved one label (F051), measured by K.
+  in place** — the contamination channel moved one label (F051), measured by K. **L and M are
+  the same D-035 control arm run twice by two concurrent sessions (A-037); M is the duplicate,
+  re-designated, and its provenance says so. They agree with E and with each other on all five
+  labels and on confidence.** Next arm is N.
 
 ## 4. Decisions and findings from this session
 
@@ -169,6 +198,8 @@ views verified**. The Gate 7 canary history prints and deliberately cannot fail 
 | A-032 | Three adversarial reviews: two blockers, fourteen others |
 | A-033 | D-033 executed — **corrected**: the channel moved one label |
 | A-034 | Agent call not to re-freeze — **TRIGGERED, superseded by D-035** |
+| A-036 | Two fixtures do not exercise the class they name; no check asserts they do |
+| A-037 | **Two sessions ran the same measurement and one overwrote the other's committed evidence.** Caught by luck, not by any guard |
 
 ## 5. Traces — what worked, and what was a dead end
 
@@ -201,6 +232,11 @@ views verified**. The Gate 7 canary history prints and deliberately cannot fail 
   decided at.
 - **Do not summarise ratified decisions for a labeller**, and do not reuse a sample across
   rounds.
+- **A clean `git status` is a statement about one instant, not a lock.** A-037: a second session
+  committed between this session's check and its write, and the write silently clobbered it.
+  The collision was caught only because both sessions picked the same letter. **Nothing in the
+  repository can detect a second writer** — every guard here validates content, and content
+  cannot tell you who produced it.
 - **The corpus runner picks a random port and occasionally collides.** Re-run before diagnosing.
   Concurrent runs also contend — nine spurious failures came from a mutation sweep running
   beside the suite.
@@ -225,6 +261,12 @@ views verified**. The Gate 7 canary history prints and deliberately cannot fail 
 
 ## 6. Environment facts
 
+- **MORE THAN ONE AGENT SESSION CAN BE OPEN ON THIS TREE, AND NOTHING STOPS THEM COLLIDING.**
+  It happened (A-037): two sessions ran D-035's control arm minutes apart and one overwrote a
+  file the other had just committed. **`git status` clean and a directory listing are only true
+  for the instant they run** — re-check immediately before writing, and prefer creating a file
+  under a name nobody else could pick. Every guard in this repository checks the CONTENT of the
+  tree and none can see a second writer.
 - Foundry v1.7.1 at `$HOME/.foundry/bin` — **not on the agent's non-interactive PATH**.
   `scripts/mutate.sh` and `scripts/test.sh` export it themselves.
 - Node v26.3.0, viem 2.55.10. The signer runs under Node's native type stripping: erasable

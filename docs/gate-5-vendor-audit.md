@@ -189,3 +189,255 @@ then the marker.
   contain a phrase is a fact about the page, and deciding what to do about it is the
   certification.
 - **Nothing in §2 was edited.** The table stands exactly as John wrote it.
+
+---
+
+---
+
+# Certification packet — the exact diff — **PREPARED 2026-08-15, NOT APPLIED**
+
+This is step 3 of the session-state ordering: *prepare Gate 5's certification for John; do not
+perform it.* Below is every proposed change as literal replacement text, so the certification
+session is a sequence of rulings rather than drafting. **Nothing here is applied. §2 still
+stands exactly as John wrote it.**
+
+**Why this is appended to the audit rather than filed as its own document.** A new
+`docs/gate-5-certification-packet.md` naming nine vendors would fail `check-vendor-honesty.sh`
+on D-008(4) the moment it existed — the script scans untracked-but-not-ignored files, and only
+this file is on its exclusion list. The alternative was to add the new file to that list, and
+the script says in terms that adding a file to the exclusion list is a claim about that file.
+Appending here makes no such claim.
+
+## What changed since the source-verification pass above
+
+Three lookups were run today to close forks that pass had left open. **Locating a candidate
+source is a lookup; deciding whether a sentence fairly describes a competitor is John's.** The
+partition is unchanged.
+
+1. **Row 5 (Safe) is recoverable, and the pass above understated it.** Its four unsupported
+   claims are all documented — on Safe pages that §13 does not yet cite. See Row 5 below.
+2. **Row 8 (Tenderly) is confirmed unsupported, on a second page as well.** The alert-type
+   documentation describes only user-configured conditions; there is no known-threat detection
+   to cite. See Row 8.
+3. **Row 7 (Hypernative) did NOT resolve, and the honest report is that my instrument was
+   unreliable.** Detail under Row 7 — read that one before ruling.
+
+**A counting correction to `docs/session-state.md`.** It says "Five rows hold. Four do not."
+That is wrong, and it is wrong in the flattering direction. Row 8 is two products in one
+sentence: the Blockaid half holds and the **Tenderly half does not**, which the pass above
+records but the summary line collapsed. Of the nine numbered rows, **four hold as written (1,
+4, 6, 9), one holds by half (8), and four do not (2, 3, 5, 7)** — five rows need a ruling, not
+four. Session-state is corrected.
+
+## The two policy questions, which decide the shape of everything below
+
+**Q1 — the citation marker.** `check-vendor-honesty.sh` counts
+`[§13#N read YYYY-MM-DD]`. A row needing two sources carries two markers. Confirm the format
+and that **2026-08-15** is the access date of record (it is the date every page was fetched).
+
+**Q2 — how inference gets marked (D-008(3)).** Two forms, and the choice is real:
+
+| | Form | Cost | What it says |
+|---|---|---|---|
+| **A (recommended)** | One declaration above the table that the whole **"Consequence for Sentinel"** column is Sentinel's inference, plus a `(inference)` suffix on individual **capability** clauses not quoted from the cited page | 1 sentence + 1 suffix today | Accurate: the fourth column is inference *by construction* — no vendor documents what its product implies for Sentinel |
+| B | `(inference)` on every cell of the fourth column | 11 suffixes | Same content, repeated eleven times; the repetition reads as hedging rather than precision |
+
+Under A, exactly one capability clause is marked today: Circle's "agent-native execution".
+
+**Proposed declaration sentence, to sit immediately below the table:**
+
+> Every entry in "Existing capability" is quoted or closely paraphrased from the cited source
+> as read on the marked date; clauses marked `(inference)` are not. **The "Consequence for
+> Sentinel" column is Sentinel's own inference throughout** — no vendor documents what its
+> product implies for this project.
+
+## Row-by-row
+
+### Rows that hold — ruling is "add the marker"
+
+| # | Party | Marker to append to the capability cell | Note |
+|---|---|---|---|
+| 1 | Cobo | `[§13#5 read 2026-08-15] [§13#6 read 2026-08-15]` | **Two markers required.** Four claims are on #5, "parameter matching" and "rolling limits" only on #6. One citation would leave two clauses unsupported |
+| 4 | Sigil | `[§13#12 read 2026-08-15]` | Seven of seven documented. The pass above retracted its own "most citation-thin row" flag |
+| 6 | MetaMask | `[§13#11 read 2026-08-15]` | Announcement page, but it describes shipped capability ("officially launches today") |
+| 9 | ERC-7730 | `[§13#16 read 2026-08-15]` | Binding is explicit and mandatory in the standard. A standard is not a vendor; if John reads the vendor-honesty gate as not reaching it, the marker is still harmless |
+
+### Row 2 — Coinbase; Privy — **split**
+
+One sentence covers two products and holds for neither jointly. Privy documents five of the
+six criteria; Coinbase documents two; **"signer" is documented for neither.**
+
+*Current:*
+
+```
+| Wallet policy infrastructure | Coinbase Policy Engine; Privy | Rules over value, network, destination, contract, signer, and decoded calldata | Generic policy-as-code is a substitute |
+```
+
+*Proposed (recommended — split, and drop "signer" from both):*
+
+```
+| Wallet policy infrastructure | Privy | Rules over value, network, destination, contract, and decoded calldata [§13#9 read 2026-08-15] | Generic policy-as-code is a substitute |
+| Wallet policy infrastructure | Coinbase Policy Engine | Rules over value and destination [§13#7 read 2026-08-15] | Generic policy-as-code is a substitute |
+```
+
+*Alternative:* keep one row narrowed to the intersection ("Rules over value and destination").
+Cheaper, but it understates Privy — which is the direction that flatters Sentinel, and this
+table's whole purpose is to not do that.
+
+### Row 3 — Circle — **mark one clause**
+
+*Current:*
+
+```
+| Agent payment wallets | Circle Agent Wallets | Spend limits, address controls, compliance screening, and agent-native execution | Spend governance is increasingly bundled |
+```
+
+*Proposed:*
+
+```
+| Agent payment wallets | Circle Agent Wallets | Spend limits, address controls, compliance screening, and agent-native execution (inference) [§13#8 read 2026-08-15] | Spend governance is increasingly bundled |
+```
+
+Three clauses are verbatim. The page says an "AI agent hold funds and transact onchain
+autonomously"; "agent-native execution" is Sentinel's compression of that, so it is inference,
+not misquotation.
+
+### Row 5 — Safe — **re-cite; the claims are real, the citation was wrong**
+
+The pass above found four of five claims absent from the cited Guards page and proposed
+narrowing the row to Guards. **That proposal is withdrawn.** Both missing pieces are documented
+on Safe pages §13 does not yet list, verified today:
+
+- **"How do Safe Smart Accounts work?"** — multisignature: *"Safe's multi-signature
+  functionality allows you to define a list of owner accounts and a threshold number of
+  accounts required to confirm a transaction."* Allowances: *"allowance modules that allow
+  owners of a Safe to grant limited execution permission, such as a daily limit to external
+  accounts."* Recovery: *"defining a module that can only be used to recover access to a Safe
+  under specific circumstances is possible."*
+- **"AI agent with a spending limit for a treasury"** — a documentation page whose subject is
+  exactly the clause I could not source: *"you can set an allowance per token for a spender…
+  It can be a one-time allowance, or an allowance that resets after a certain time interval."*
+
+*Current:*
+
+```
+| Smart-account controls | Safe | Guards, allowances, multisignature approval, recovery, and agent spending patterns | Do not invent production custody |
+```
+
+*Proposed:*
+
+```
+| Smart-account controls | Safe | Guards, allowance modules, multisignature approval, recovery modules, and agent spending patterns [§13#10 read 2026-08-15] [§13#25 read 2026-08-15] [§13#26 read 2026-08-15] | Do not invent production custody |
+```
+
+**One wording judgement is flagged rather than taken.** The source documents recovery and
+allowances as *things a module can be built to do*, not as shipped named features — hence
+"allowance modules" and "recovery modules" above. If John reads Safe's spending-limit
+documentation as making allowances a shipped feature, the bare words are defensible. **Narrowing
+the row to Guards would have made a competitor look weaker on a citation error of ours** — worth
+recording, because that was the cheap option and it was available.
+
+### Row 7 — Hypernative — **unresolved; read the method note before ruling**
+
+"Intent verification" appears nowhere on the cited page (§13 #13). The other four clauses are
+verbatim. This is the cell the audit above singled out before any page was fetched, because
+"intent verification" is the closest published language to Sentinel's own claim.
+
+**I attempted the same re-cite lookup that rescued Row 5, and it did not produce evidence I am
+willing to put behind a citation.** A fetch of Hypernative's security-solutions page returned a
+sentence containing *"ensuring every signed transaction matches authorized intent"* — but the
+same fetch also stated that the word "intent" does not appear on the page, and separately that
+the sentence came from navigation rather than body content. **Those statements cannot all be
+true.** A self-contradicting read is not a source, and treating the fragment I liked as the
+reliable half is precisely the defect class this project keeps finding. So Row 7 goes to John
+with the lookup **attempted and failed**, not with a citation.
+
+Three options, no recommendation between the first two:
+
+| | Ruling | Effect |
+|---|---|---|
+| a | Strike "intent verification" | Removes an unsourced claim. Makes a competitor look less like Sentinel — the direction that flatters us, so it deserves the harder look |
+| b | Mark `(inference)` | Keeps the concession that a competitor may already do Sentinel's differentiating thing, and says the inference is ours |
+| c | Re-cite, after a **verified** read of a Hypernative page that carries the language | Correct if the language exists; **blocked on a clean fetch, which I did not get** |
+
+If John wants (c), the check is one page-read confirming the sentence in body content, and it
+should be done by someone who can see the rendered page — my tooling gave an unreliable answer
+once already.
+
+### Row 8 — Tenderly; Blockaid — **split; the Tenderly clause is unsupported on two pages**
+
+Blockaid documents all three claims. Tenderly documents decoded effects and execution
+simulation but **not known-threat detection** — confirmed today against the alert-type
+documentation as well as the cited landing page: the alert types are user-configured conditions
+(a "Blocklisted Callers" alert requires the user to supply the addresses), with no automatic
+detection of known threats or attack patterns.
+
+*Current:*
+
+```
+| Simulation and threat APIs | Tenderly; Blockaid | Decoded effects, execution simulation, and known-threat detection | Integrate or compare against these primitives |
+```
+
+*Proposed:*
+
+```
+| Simulation and threat APIs | Blockaid | Decoded effects, execution simulation, and known-threat detection [§13#14 read 2026-08-15] | Integrate or compare against these primitives |
+| Simulation APIs | Tenderly | Decoded effects and execution simulation [§13#15 read 2026-08-15] | Integrate or compare against these primitives |
+```
+
+The category label changes for the Tenderly row because "threat APIs" would carry the struck
+claim in the layout after the words were removed — D-008(4) is about layout as well as text.
+The cited Tenderly source stays #15 (it does document the two surviving clauses) even though
+the pass above noted it is a thin marketing page; **re-citing to `docs.tenderly.co` is a
+separate improvement and would need its own verified read, which has not been done.**
+
+## New §13 entries this requires
+
+Two, and they are **appended as 25 and 26 rather than inserted into the wallet-alternatives
+block (5–15)**. Inserting would renumber 16–24 and silently invalidate every `§13 #N` reference
+already written in this audit — a renumbering that breaks existing citations is a worse
+citation defect than the one being fixed.
+
+```
+Additional vendor sources (added at Gate 5 certification, 2026-08-15):
+
+25. [Safe — How do Safe Smart Accounts work?](https://docs.safe.global/advanced/smart-account-overview)
+26. [Safe — AI agent with a spending limit for a treasury](https://docs.safe.global/home/ai-agent-quickstarts/agent-with-spending-limit)
+```
+
+## The table as it would read, under the recommended rulings
+
+Row 7 is left **exactly as it stands today**, because it is unresolved — so this block is not
+yet appliable in full, by design.
+
+```
+| Category | Examples | Existing capability | Consequence for Sentinel |
+|---|---|---|---|
+| Pact-first agent authorization | Cobo Agentic Wallet | Owner-approved task pacts, scoped and revocable credentials, parameter matching, completion conditions, rolling limits, and allow/review/deny enforcement [§13#5 read 2026-08-15] [§13#6 read 2026-08-15] | Intent-aware authorization is not an empty category |
+| Wallet policy infrastructure | Privy | Rules over value, network, destination, contract, and decoded calldata [§13#9 read 2026-08-15] | Generic policy-as-code is a substitute |
+| Wallet policy infrastructure | Coinbase Policy Engine | Rules over value and destination [§13#7 read 2026-08-15] | Generic policy-as-code is a substitute |
+| Agent payment wallets | Circle Agent Wallets | Spend limits, address controls, compliance screening, and agent-native execution (inference) [§13#8 read 2026-08-15] | Spend governance is increasingly bundled |
+| Direct agent-wallet security | Sigil | ERC-4337 wallet, Guardian co-signing, deterministic rules, simulation, AI risk scoring, policies, and recovery [§13#12 read 2026-08-15] | Close overlap with the original stack |
+| Smart-account controls | Safe | Guards, allowance modules, multisignature approval, recovery modules, and agent spending patterns [§13#10 read 2026-08-15] [§13#25 read 2026-08-15] [§13#26 read 2026-08-15] | Do not invent production custody |
+| Wallet-native controls | MetaMask Agent Wallet | Protocol policies, simulation, threat scanning, MEV protection, and human escalation [§13#11 read 2026-08-15] | Policy plus simulation is moving into wallet UX |
+| Institutional transaction guard | Hypernative Transaction Guard | Pre-sign simulation, custom policy, intent verification, approval workflows, and audit records | Direct substitute for an inline transaction guard |
+| Simulation and threat APIs | Blockaid | Decoded effects, execution simulation, and known-threat detection [§13#14 read 2026-08-15] | Integrate or compare against these primitives |
+| Simulation APIs | Tenderly | Decoded effects and execution simulation [§13#15 read 2026-08-15] | Integrate or compare against these primitives |
+| Signing metadata | ERC-7730 | Chain/address-bound clear-signing metadata for calldata and typed messages [§13#16 read 2026-08-15] | Consume the standard; do not invent a parallel manifest without evidence of a gap |
+```
+
+**After application the guard would read `10 of 11` rows cited, not `11 of 11`** — Row 7 is the
+uncited one, and the shortfall is the gate correctly refusing to go green on an open question.
+Gate 5 is **NOT MET** until Row 7 is ruled.
+
+## A defect in the guard that counts these markers
+
+`check-vendor-honesty.sh` tells the reader the marker is *"appended to the capability cell"*,
+but its awk tests `$0` — **the whole row line**. A marker in any cell, including "Consequence
+for Sentinel", would be counted. Nothing exploits this today (0 of 9 rows carry a marker, and
+the markers will be written to John's ruling), but it is the project's most-repeated defect
+shape: an instrument that exists and points at something other than what it says it does.
+
+**Not fixed yet, deliberately** — the tightened awk must match the cell layout John actually
+rules for, and the row split changes that layout. Sequencing: rule, apply, then tighten the
+guard and re-run. Recorded here so it is not lost between the two.

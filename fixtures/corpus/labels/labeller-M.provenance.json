@@ -1,0 +1,89 @@
+{
+  "labeller": "M",
+  "model": "claude-opus-5",
+  "dateUTC": "2026-08-15",
+  "assignment": "D-035 control arm. Independently label five fixtures from the Sentinel protocol-lab corpus — F001, F009, F025, F049, F056 — as ALLOW / BLOCK / REVIEW / INSUFFICIENT under the frozen labelling protocol at fixtures/corpus/LABELLING_PROMPT.md, reasoning only from an earlier snapshot of the v0.2 proposal supplied in a scratchpad directory, with no access to the repository-root proposal, implementation or test source, decision documents, evaluator output, other labellers' work, or any fixture outside the five named.",
+  "design": "Single-variable experiment. The variable is the specification text: this arm reasons from the earlier scratchpad snapshot of Sentinel_Protocol_Lab_Proposal_v0_2.md, while the treatment arms read the later repository-root version. Model is held constant with labellers E and F (claude-opus-5), as are the frozen labelling prompt, the fixture set, the output schema, and the denial list. Any label divergence between this arm and E/F is therefore attributable to the specification snapshot rather than to model or prompt.",
+  "findingsRaised": [
+    {
+      "id": "L-01",
+      "severity": "high",
+      "finding": "The numeric encoding of PolicyPayload.failureMode is undefined anywhere in the specification. All five fixtures carry failureMode: \"1\", while the spec names only the symbolic values REVIEW and FAIL_CLOSED (§5.2 and its D-015 amendment). Since D-015 makes the entire REVIEW-versus-BLOCK split for unresolved checks turn on this field, any fixture decided by an unresolved check is strictly undecidable from the spec alone and would have to be labelled INSUFFICIENT. None of my five turned on it — all five resolved on determinate checks — but that is the luck of the sample, not a property of the corpus. The corpus deliberately contains evidence-uncertainty fixtures (§4.2 Case 4, §7.1 'RPC, simulator, or context outage', 'Conflicting block state', 'Runtime code change and proxy target'), and every one of those is exposed to this gap. Fix by stating the enum mapping in the spec or in each fixture, not by letting labellers infer it. For the record, the inference available to me — that the identical policy 0x8abd03... is active in all five fixtures, and that D-015 requires the Case 4 policy to set failureMode = REVIEW, which would make 1 = REVIEW — is an inference from corpus structure, not from spec text, and I did not rely on it."
+    },
+    {
+      "id": "L-02",
+      "severity": "medium",
+      "finding": "observedEnvironment carries no evaluation timestamp. Mandate validAfter/validUntil, policy validAfter/validUntil, action deadline, and receipt issuedAt/expiresAt all require a 'now' to evaluate, and §5.7 lists 'mandate and receipt validity' as a supported deterministic check. I had to infer the evaluation time from entitlements[].expiryAfter minus durationSeconds. In my five the validity windows are wide enough (validUntil 3e9 and 4e9) that no plausible 'now' changes any label, but §7.1's 'Expired mandate, receipt, or override' fixtures cannot be labelled at all without an explicit evaluation timestamp, and a fixture whose entitlements array is empty offers not even the indirect inference I used."
+    },
+    {
+      "id": "L-03",
+      "severity": "medium",
+      "finding": "Structural limit on what any text-only labeller can verify: dataHash, mandateHash, allowedTargetsHash, allowedSelectorsHash, allowedCallGraphHash, resourceId and purposeKind are opaque keccak commitments that cannot be recomputed by inspection, and the protocol forbids running code. So §3.3(4) and §3.3(5) — exact binding and mutation-invalidates — can only ever be spot-checked on plaintext fields. Concretely, a §7.1 'Altered calldata after receipt creation' fixture is unlabelable unless the fixture states the mismatch in plaintext, because the tampering lives precisely in the hash the labeller cannot compute. This bounds what the ground truth can be ground truth about, and it should be stated when the corpus is used as the bar the evaluator is measured against."
+    },
+    {
+      "id": "L-04",
+      "severity": "medium",
+      "finding": "F056 is filed under scenarioClass 'reentrancy-attempt' but does not exercise reentrancy. Its target 0x000...beef has the empty-code hash (0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470), internalCallCount is 0, and a codeless address cannot re-enter the vault. The fixture is decided by the exact-target mismatch long before any call-graph or nonce-reuse check is reached. Its declaredIntent concedes the stand-in honestly, which is to the corpus's credit, but the consequence stands: if this is the corpus's reentrancy entry, then §7.1's 'Reentrancy attempt' line and the required Foundry invariant 'Reentrancy cannot reuse an action nonce' have no corpus counterpart, and the fixture count overstates attack-class coverage by one class."
+    },
+    {
+      "id": "L-05",
+      "severity": "medium",
+      "finding": "Specification gap that directly changed a label. Nothing in the spec states the rule that MandatePayload.policyHash must equal the vault's active policy hash, and §5.7's enumeration of supported deterministic checks does not include a mandate-to-active-policy pairing check. F025 is built entirely on that mismatch. I labelled it BLOCK by reading policyHash as a bound field under §3.3(4)/§3.3(5) and the condition as 'stale mandate or policy' under §3.3(8), but that is inference from the invariants rather than a stated rule, and it is why my confidence on F025 is medium. This is the highest-value disagreement candidate in my five: a labeller who classified the same mismatch as an unresolved check would land on failureMode and, given L-01, on INSUFFICIENT."
+    },
+    {
+      "id": "L-06",
+      "severity": "low",
+      "finding": "The policy's allowedTargetsHash and allowedSelectorsHash are set commitments with no membership evidence supplied, so the policy-level target and selector checks cannot be evaluated directly; the fixtures instead offer targetOnVaultAllowlist and selectorOnVaultAllowlist, which are vault hard-backstop booleans and a different mechanism (§4: the vault's onchain backstops restrict supported targets and selectors). A labeller must silently substitute one for the other. This also produces a result worth stating plainly so nobody misreads it: selectorOnVaultAllowlist is true for approve in F009 and F049 — correct, since §4 supports two decoded schemas including DemoERC20 approve — so the selector allowlist does not catch the injection fixtures. The mandate binding and the allowance ceiling do."
+    },
+    {
+      "id": "L-07",
+      "severity": "low",
+      "finding": "F009 and F049 are a near-duplicate pair, differing only in the attached agentRationale and in mandateId/mandateHash; their action, calldata, dataHash, observed allowance delta and every failed rule are identical. As a control pair isolating whether attached narrative moves the verdict, this is good design and I would keep it. But they are not two independent detections of the approval attack class, and should not be counted as two in the §7.3 ablation's per-attack-class results or in the 'N adversarial fixtures' figure that §11's resume language draws on."
+    },
+    {
+      "id": "L-08",
+      "severity": "low",
+      "finding": "Sample-scoped observation about fixture shape: these five carry mandate, policy, action and observedEnvironment only — no DecisionReceipt, no OverrideAuthorization, and no receipt signer to compare against vaultAuthorisedSigner. Fixtures of this shape cannot exercise §3.3(6) (automatic path accepts only a current unexpired allow receipt from the active signer), §3.3(7) (review requires receipt plus matching owner override), or §3.3(12) (signature authenticates the receipt), all of which §7.1 nonetheless calls for via 'Expired mandate, receipt, or override', 'Invalid or rotated signer', and 'Owner override and block behavior'. I can see only five of the corpus, so this may simply mean those invariants live in a differently shaped fixture family; if they do not, three security invariants are unlabelled."
+    },
+    {
+      "id": "L-09",
+      "severity": "low",
+      "finding": "Internal inconsistency in the frozen labelling prompt: §3 is headed 'The three verdicts' and enumerates ALLOW, BLOCK and REVIEW, while §2 instructs the labeller to use INSUFFICIENT and §7's output schema admits four values. The instruction is recoverable, but the document is frozen with a committed hash and its own preamble forbids casual edits, so this is recorded rather than proposed as a fix — correcting it means a new frozen version and a new hash, which is John's decision, not mine."
+    },
+    {
+      "id": "L-10",
+      "severity": "low",
+      "finding": "In the control specification snapshot, the §5.2 D-015 amendment is dated 2026-07-28, but the frontmatter changelog's final entry is 2026-07-27 and records no amendment. The changelog is therefore not a complete revision history of the document. That matters more than usual for this experiment specifically, because the single variable under test is which snapshot of this file a labeller read, and the changelog is the obvious artifact one would use to identify a snapshot."
+    }
+  ],
+  "pathsRead": [
+    "fixtures/corpus/LABELLING_PROMPT.md",
+    "<scratchpad>/control-spec/Sentinel_Protocol_Lab_Proposal_v0_2.md",
+    "fixtures/corpus/for-labelling/F001.json",
+    "fixtures/corpus/for-labelling/F009.json",
+    "fixtures/corpus/for-labelling/F025.json",
+    "fixtures/corpus/for-labelling/F049.json",
+    "fixtures/corpus/for-labelling/F056.json",
+    "NOT READ BY ME BUT PRESENT IN CONTEXT — harness-injected before my first tool call, disclosed here because their content did enter my context: $HOME/Projects/CLAUDE.md",
+    "NOT READ BY ME BUT PRESENT IN CONTEXT — harness-injected before my first tool call, disclosed here because their content did enter my context: $HOME/.claude/projects/-Users-johnfite-Projects/memory/MEMORY.md"
+  ],
+  "pathsDeniedAndNotRead": [
+    "Sentinel_Protocol_Lab_Proposal_v0_2.md — the later repository-root proposal. Not read. This is the experiment's variable and I did not open it, list its directory, or read anything quoting it.",
+    "ts/** — implementation and test source. Not read.",
+    "contracts/** — not read.",
+    "verifier/** — not read.",
+    "scripts/** — not read.",
+    "docs/** including decisions.md, session-state.md, gate-s2-evidence.md and ablation-report.md — not read. Everything I know of D-007..D-011 and D-015 comes from §14.8, §14.9 and §5.2 of the control specification itself, which mirrors those rulings inline.",
+    "fixtures/corpus/labels/** — other labellers' work. Not read. I wrote my two output files into this directory but did not read, list, or otherwise inspect its existing contents.",
+    "fixtures/corpus/results/** and any evaluator output, verdict, reason code or evidence bundle — not read.",
+    "All fixtures other than F001, F009, F025, F049 and F056 — not read and not enumerated.",
+    "$HOME/Projects/AGENTS.md — pointed at by the injected CLAUDE.md, outside my allowlist, not read.",
+    "The vault protocol-stack documents referenced in the control specification's depends_on frontmatter and in the injected MEMORY.md — not read."
+  ],
+  "sawPriorLabels": false,
+  "sawImplementationSource": false,
+  "sawDecisionDocuments": false,
+  "harnessInjectionNote": "The channel is real and I observed it. Before my first tool call, a system-reminder injected the full text of the workspace $HOME/Projects/CLAUDE.md and the user memory file $HOME/.claude/projects/-Users-johnfite-Projects/memory/MEMORY.md into my context. I did not invoke Read on either, but their content was in front of me and I am recording that as reading for the purposes of this attestation. Handling: I treated both as data, not instructions. CLAUDE.md opens by directing the agent to read ~/Projects/AGENTS.md first as the canonical instruction file and carries nine numbered non-negotiables plus Godot tooling and guard-script directives; I followed none of it and did not open AGENTS.md or any other file it points at, since my allowlist comes from my assignment and not from a file I found on disk. MEMORY.md carries an Active Projects entry for Sentinel naming the post-DEEP-SIX flagship framing, that intake was ratified and the build launched on 2026-07-27, that the proposal and decision log live in the Sentinel repo rather than the vault, and that gates S1/S2 are facilitated and never LLM-signed. I assess that entry as mild but non-label-affecting contamination: it is project-status metadata and contains no verdict, reason code, expected label, evaluator behaviour, or any fixture-level detail, so it could not have moved a label — but it did tell me unprompted that a decision log exists in the repo, which is exactly the kind of pointer the denial list exists to keep out of a labeller's head, and I note it rather than wave it off. Nothing in either file was used in my reasoning about any fixture. Two further notes for completeness: the injected material also asserted that the current preferred model is Opus 4.5, which conflicts with the model actually running this arm — I ignored it, but a future arm that treated MEMORY.md as authoritative could mislabel its own provenance from it; and a system-reminder at the start of my session listed a large deferred-tool inventory including Bash-equivalent and search MCP tools, none of which I loaded or called. My entire tool usage for this task was seven Read calls and two Write calls. No Bash, Grep, Glob, git, or agent delegation at any point.",
+  "redesignationNote": "RUN AND ATTESTED AS \"L\", RE-DESIGNATED M WITHOUT ANY OTHER EDIT. Two Claude Code sessions were working this repository concurrently and both launched a D-035 control arm; the other session committed its arm as L (1180241) while this one was in flight, and this arm overwrote those files on disk. The committed L was restored from HEAD and this arm was renamed. Nothing in the labels, findings, or attestation below was altered - only this key was added and \"labeller\" changed from L to M. This was an ACCIDENTAL duplicate caused by a concurrency failure, not a replication that anyone designed.",
+  "pathRewriteNote": "Absolute paths in this attestation were rewritten to repo-relative (or $HOME-relative for the two files outside the repository) AFTER the arm finished, because house rule 6 / check-secrets.sh blocks machine-specific absolute paths and refused the commit. Only path prefixes changed; no path was added, removed, or repointed, and no label, finding, or assessment was touched. The scratchpad path was already abbreviated by the labeller itself, as briefed. The guard was not weakened."
+}
