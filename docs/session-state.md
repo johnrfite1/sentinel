@@ -34,7 +34,26 @@ autonomy *none*).
 
 ## 1. What the next instance should do, in order
 
-### 1. Collect the D-035 measurement (launched 2026-08-15; may already be recorded)
+### 1. ~~Collect the D-035 measurement~~ — DONE, 2026-08-15. Result below.
+
+**Labeller L: 5 of 5 agree with the labels of record. ZERO movements, against a declared
+threshold of two.** D-035 part (c) stands; no escalation is owed and no re-freeze happens.
+Recorded in `fixtures/corpus/labels/labeller-L-control.json` and its provenance file.
+
+**The programme as a whole: six independent labellers, two specification versions, two models,
+across fourteen fixtures — ONE label moved (F051), and it was the one labeller E had itself
+flagged.** That is the bound D-035 asked for, and it holds.
+
+L raised a new finding, recorded as **A-036: F056 does not exercise reentrancy at all** —
+`internalCallCount` 0, target with empty bytecode, exact-target failing long before the call
+graph is reached. With F051 inert for the neighbouring class, §7.1's `reentrancy-attempt` and
+`unexpected-internal-call` classes are covered at the corpus layer by two fixtures that between
+them exercise neither. Deferred with D-035 (repairing them changes the labelled views), and it
+is the THIRD instance of this defect class after A-028 F-5. **A mechanical check is possible —
+assert each class's fixtures produce at least one failing check the class is about — and is not
+built. That is the highest-value corpus work outstanding.**
+
+### 1b. If the measurement ever needs re-running (it should not)
 
 D-035 ruled: run the control labeller over **F001, F009, F025, F049, F056** and compare with
 the labels of record. If no result is recorded in `fixtures/corpus/labels/`, run it:

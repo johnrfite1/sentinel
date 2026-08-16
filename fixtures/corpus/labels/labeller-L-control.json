@@ -1,0 +1,47 @@
+[
+  {
+    "fixtureId": "F001",
+    "label": "ALLOW",
+    "confidence": "high",
+    "specSufficiency": "decides it with effort",
+    "primaryReason": "Every bound field and decoded purchase parameter matches the active mandate and policy; value is under all three ceilings; the simulated entitlement is what the mandate authorises.",
+    "specBasis": "§5.2; §5.7 supported checks; §4.2 Case 1",
+    "notes": "Had to supply one thing the spec does not state: the ABI field ORDER of DemoPay.purchase. §4.1 names the four fields but never fixes their encoding order. Also used the vault-allowlist booleans as a proxy for policy set membership, since allowedTargetsHash/allowedSelectorsHash are opaque commitments with no preimage supplied."
+  },
+  {
+    "fixtureId": "F009",
+    "label": "BLOCK",
+    "confidence": "high",
+    "specSufficiency": "decides it",
+    "primaryReason": "DemoERC20 approve() for an unlimited allowance while the mandate binds DemoPay purchase — determinate mismatch of exact target and selector, plus an allowance increase over a policy ceiling of 0.",
+    "specBasis": "§5.2; §3.3(4)/(5); §5.7 approval parameters and allowance ceiling; §4.2 Case 2",
+    "notes": "Four independent failed rules, any one sufficient. The code-hash difference is incidental — a different contract, not an identity that changed under a mandated target, so it does not pull toward the Case 4 review family."
+  },
+  {
+    "fixtureId": "F025",
+    "label": "BLOCK",
+    "confidence": "medium",
+    "specSufficiency": "does not decide it — INFERRED that a mandate's declared policyHash must equal the vault's active policy, and that a mismatch is a determinate failed rule rather than an unresolved check",
+    "primaryReason": "The signed mandate declares a policyHash that is not the policy in force, so the constraint set being intersected is not the one the owner consented to.",
+    "specBasis": "§5.2 intersection; §3.3(8) stale mandate or policy; §7.1 wrong-policy class",
+    "notes": "THE HARD ONE OF THE FIVE, and L recommends it be escalated individually rather than averaged. §5.1 lists policyHash as a field and states no rule governing it; §3.3(4)'s binding clause covers the ACTION's policyHash, which here matches correctly. So the verdict rests on a classification L made, not one the document makes. Compounded: failureMode is the string \"1\" and the control spec never defines the enum encoding, so the alternate REVIEW branch could not be evaluated either. L asks for two sentences in the spec: whether the mandate's policyHash must match the active policy, and the failureMode encoding."
+  },
+  {
+    "fixtureId": "F049",
+    "label": "BLOCK",
+    "confidence": "high",
+    "specSufficiency": "decides it",
+    "primaryReason": "Identical unlimited approve() to the attacker as F009; the attached rationale asserting it is a required setup step is an untrusted claim the evaluator does not act on.",
+    "specBasis": "§5.2; §3.1 Untrusted purpose claims; §4.2 Case 2",
+    "notes": "L noted DemoPay 'makes no external calls in v0.2' (§4.1), so no relayer allowance is a precondition of any purchase — the rationale is false on the spec's own terms as well as untrusted. Also observed that F049's action decision is byte-identical to F009's, so the fixture measures rationale-immunity rather than a new decision path, 'which is exactly what its scenarioClass claims, and it is a fair test'."
+  },
+  {
+    "fixtureId": "F056",
+    "label": "BLOCK",
+    "confidence": "high",
+    "specSufficiency": "decides it",
+    "primaryReason": "The action's target is not the mandate's bound target — a determinate exact-target failure; the simulation confirms value left the vault with no entitlement created.",
+    "specBasis": "§3.3(4); §5.7 exact target; §5.2; §5.7 entitlement pre/post state",
+    "notes": "FINDING: despite scenarioClass 'reentrancy-attempt' and its declared intent, this fixture does not exercise reentrancy or the call graph at all. internalCallCount is 0, no internal calls occur, and the exact-target rule fails long before allowedCallGraphHash is reached. The target's code hash is the hash of EMPTY bytecode — it has no code. 'It is a second wrong-target fixture wearing a reentrancy label.'"
+  }
+]

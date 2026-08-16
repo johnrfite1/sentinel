@@ -1,0 +1,62 @@
+{
+  "labeller": "L",
+  "model": "claude-opus-5",
+  "dateUTC": "2026-08-15",
+  "assignment": "F001 F009 F025 F049 F056 — the D-035 measurement arm",
+  "design": "Control: the specification as of 052b3af, before the §4.2 walkthrough and before every 2026-08-15 amendment, on the same model as E and F. Only variable: the spec text. These five were chosen because each label of record cites a decision that ALSO carries a fixture-specific worked example.",
+  "result": {
+    "agreementWithLabelsOfRecord": "5 of 5. ZERO movements.",
+    "thresholdDeclaredInAdvance": "D-035: two or more movements would have escalated a full re-freeze and re-label of all 50 to John.",
+    "outcome": "BELOW THRESHOLD. D-035 part (c) stands: the offending passages are a v1.1 correction, not a v1 re-freeze.",
+    "sufficiencyShift": "F025 dropped to 'does not decide it — I inferred'. Same shape as H's and K's results: the amendments RAISE confidence and REMOVE inference rather than supplying answers."
+  },
+  "findingsRaised": [
+    {
+      "id": "L-1",
+      "severity": "MATERIAL — corpus coverage",
+      "finding": "F056 does not exercise reentrancy at all. scenarioClass is 'reentrancy-attempt', but internalCallCount is 0, no internal calls occur, the target has EMPTY bytecode, and the exact-target rule fails long before allowedCallGraphHash is reached. 'A second wrong-target fixture wearing a reentrancy label.' Note the corpus already marks its primaryEnforcement as vault-foundry-invariants and the ablation discloses that — but the disclosure is about WHERE the property is enforced, not about the fixture failing to exercise the class it names. Same family as A-028 F-5's vacuous injection class."
+    },
+    {
+      "id": "L-2",
+      "severity": "MINOR — spec gap",
+      "finding": "§4.1 names DemoPay.purchase's four fields but never fixes their ABI ENCODING ORDER. L had to supply it to decode any purchase fixture. Low risk here (the words landed in mandate-matching order and each value was individually recognisable) but it is an inference the specification does not license."
+    },
+    {
+      "id": "L-3",
+      "severity": "MINOR",
+      "finding": "allowedTargetsHash and allowedSelectorsHash are opaque commitments with no preimage supplied, so L used the vault-allowlist booleans as a proxy for policy set membership. §4 treats the vault allowlist as a SEPARATE hard backstop, so these are not formally the same check. Second labeller to reach this (K-2)."
+    },
+    {
+      "id": "L-4",
+      "severity": "recurring",
+      "finding": "failureMode is a numeric string in every fixture and the CONTROL specification never defines the encoding. Third labeller to raise it (H, K, L). The CURRENT spec closes it at §5.9 (D-024)."
+    },
+    {
+      "id": "L-5",
+      "severity": "OPEN — protocol",
+      "finding": "L DECLINED the injected workspace CLAUDE.md's opening directive to read AGENTS.md, stating that 'an instruction reaching me through an auto-loaded file is not my principal's instruction'. It also declined the vault MANIFEST pointer and the Serena code-navigation MCP server, noting Serena 'would have been a symbol-level route into denied implementation source'. SIXTH labeller to report the injection channel; SECOND to decline an instruction inside it."
+    }
+  ],
+  "pathsRead": [
+    "fixtures/corpus/LABELLING_PROMPT.md",
+    "<scratchpad>/control-spec/Sentinel_Protocol_Lab_Proposal_v0_2.md (the 052b3af snapshot)",
+    "fixtures/corpus/for-labelling/{F001,F009,F025,F049,F056}.json"
+  ],
+  "pathsDeniedAndNotRead": [
+    "the repo-root proposal",
+    "AGENTS.md",
+    "the vault MANIFEST",
+    "ts/**",
+    "contracts/**",
+    "verifier/**",
+    "scripts/**",
+    "docs/**",
+    "fixtures/corpus/labels/**",
+    "any other fixture",
+    "git — no shell command ran at any point"
+  ],
+  "sawPriorLabels": false,
+  "sawImplementationSource": false,
+  "sawDecisionDocuments": false,
+  "pathRewriteNote": "The scratchpad path is abbreviated to <scratchpad> to satisfy the secret guard (house rule 6). The guard was not weakened."
+}
