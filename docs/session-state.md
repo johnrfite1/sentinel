@@ -3,7 +3,8 @@
 Rewritten at the end of each working session. **This file, not the conversation, is the
 memory.** If it disagrees with anything an agent remembers, this file wins.
 
-Last updated: **2026-08-15** (long evening session), branch `step-3/isolated-signer`, pushed.
+Last updated: **2026-08-16**, branch `step-3/isolated-signer`, **committed locally and NOT
+pushed** — the working tree is clean and every commit from 2026-08-16 is local only.
 The repository is PRIVATE and D-016 still blocks all publication.
 
 ---
@@ -94,8 +95,8 @@ the labels of record. If no result is recorded in `fixtures/corpus/labels/`, run
   scratch path — the spec BEFORE the §4.2 walkthrough and before every 2026-08-15 amendment.
 - Model: `claude-opus-5` (same as E and F, so the spec text is the only variable).
 - Brief: copy labeller K's. `fixtures/corpus/labels/labeller-K.provenance.json` records the
-  exact denials. **Require the provenance attestation** — six labellers for six have produced a
-  first-order finding in it, unprompted.
+  exact denials. **Require the provenance attestation** — eight labellers for eight have produced
+  a first-order finding in it, unprompted.
 - Record as `labeller-<letter>-control.json` + `.provenance.json`. These are AUDIT TRAIL:
   `report.ts` reads only `labeller-E.json` and `labeller-F.json`, so adding files moves no
   published number.
@@ -226,7 +227,10 @@ design forks. Never sign a gate, never certify a public claim.
 
 ## 3. Where the build is
 
-**66/66 Foundry · 380/380 TypeScript · 70/70 verifier · gate green at the deep profile.**
+**73/73 Foundry · 380/380 TypeScript · 146/146 verifier · 50 corpus fixtures · 7 samples ·
+gate green at the deep profile · workspace guards OK.** *(This line read 66/66 and 70/70 for
+most of 2026-08-16 while all three numbers moved underneath it — in the file that opens by
+declaring itself the memory. Update it in the same edit that changes a suite, not later.)*
 
 Run `./scripts/test.sh`; use `--gate` for evidence. Read the coverage boundary it prints — it is
 ONE statement, not a log; rewrite the affected layer when a step lands, never append.
