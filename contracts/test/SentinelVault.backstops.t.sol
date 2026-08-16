@@ -611,6 +611,59 @@ contract SentinelVaultBackstopsTest is Test {
         assertEq(v.actionNonce(), 1, "one nonce consumed for unlimited token authority");
     }
 
+    /// @notice ROTATION IS NOT REVOCATION. Asserts the limit, not a protection.
+    ///
+    /// @dev A-040. The comment at the signer check used to claim the named-signer half stops
+    ///      "a stale receipt naming a rotated-out signer if that key were later reinstated".
+    ///      It does not. Nothing binds a receipt to the EPOCH in which its signer was active,
+    ///      so both checks are point-in-time comparisons against whoever `signer` is now.
+    ///
+    ///      Currency comes from `expiresAt` and the action nonce instead. If epoch binding is
+    ///      ever added this test fails, and that failure is the signal to update the comment
+    ///      and the v1.1 register — not to delete the test.
+    function test_LIMIT_reinstatingARotatedOutSignerRevivesItsOldReceipts() public {
+        address signerB = vm.addr(0xB0B);
+        bytes memory data = _callData();
+        T.ActionPayload memory a = _action(data);
+        T.DecisionReceiptPayload memory r = _receipt(a, T.Verdict.ALLOW);
+        bytes memory sig = _sign(SIGNER_PK, T.hashReceipt(r));
+
+        // Rotate away: the receipt correctly dies.
+        vm.prank(owner);
+        vault.rotateSigner(signerB);
+        vm.expectRevert(SentinelVault.WrongSigner.selector);
+        vault.executeWithReceipt(a, data, r, sig);
+
+        // Rotate back: the same receipt, unchanged, executes.
+        vm.prank(owner);
+        vault.rotateSigner(signerAddr);
+        vault.executeWithReceipt(a, data, r, sig);
+
+        assertEq(vault.actionNonce(), 1, "REPAIR or REGRESSION: receipts are now epoch-bound - see A-040");
+    }
+
+    /// @notice The mirror: a receipt pre-minted by a standby key goes live the instant the
+    ///         owner rotates to that key. Same missing property, other direction.
+    function test_LIMIT_receiptFromAFutureSignerGoesLiveOnRotation() public {
+        uint256 pkB = 0xB0B;
+        address signerB = vm.addr(pkB);
+        bytes memory data = _callData();
+        T.ActionPayload memory a = _action(data);
+
+        T.DecisionReceiptPayload memory r = _receipt(a, T.Verdict.ALLOW);
+        r.signer = signerB; // named and signed by a key that is not active yet
+        bytes memory sig = _sign(pkB, T.hashReceipt(r));
+
+        vm.expectRevert(SentinelVault.WrongSigner.selector);
+        vault.executeWithReceipt(a, data, r, sig);
+
+        vm.prank(owner);
+        vault.rotateSigner(signerB);
+        vault.executeWithReceipt(a, data, r, sig);
+
+        assertEq(vault.actionNonce(), 1, "REPAIR or REGRESSION: pre-minted receipts no longer activate on rotation");
+    }
+
     /// @dev `_sign` is bound to the suite's own vault; this variant signs for another.
     function _signFor(SentinelVault v, uint256 pk, bytes32 structHash)
         internal

@@ -290,9 +290,24 @@ contract SentinelVault {
         if (block.timestamp > receipt.expiresAt) revert ReceiptExpired();
 
         // Both halves matter: the receipt must *name* the active signer, and must actually
-        // be *signed* by it. Checking only the recovered address would let a stale receipt
-        // naming a rotated-out signer through if that key were later reinstated; checking
-        // only the named field would accept an unsigned claim.
+        // be *signed* by it. Checking only the named field would accept an unsigned claim;
+        // checking only the recovered address would accept a receipt signed by the active
+        // key that names somebody else.
+        //
+        // CORRECTED 2026-08-16 (A-040). This comment previously claimed the named-signer
+        // check stops "a stale receipt naming a rotated-out signer if that key were later
+        // reinstated". IT DOES NOT, and an adversarial review demonstrated it: with both
+        // halves present, rotate A -> B (the old receipt correctly dies), then rotate B -> A,
+        // and the same receipt executes. The mirror case also holds — a receipt pre-minted by
+        // a standby key is rejected until the owner rotates to that key, and goes live the
+        // instant they do.
+        //
+        // THE REAL PROPERTY, STATED SO IT CANNOT DRIFT AGAIN: nothing here binds a receipt to
+        // the EPOCH in which its signer was active. Rotation is not revocation. Both checks
+        // are point-in-time comparisons against whoever `signer` is right now. Receipt
+        // currency comes from `expiresAt` and from the action nonce, not from rotation.
+        // Epoch binding is v1.1 work (docs/v1-1-register.md); the tests below pin the
+        // behaviour as it actually is.
         if (receipt.signer != signer) revert WrongSigner();
 
         receiptHash = T.hashReceipt(receipt);

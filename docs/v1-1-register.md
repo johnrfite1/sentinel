@@ -158,8 +158,11 @@ not and is the only one that could be done today.**
 - **Receipt-to-signer-epoch binding.** Rotation is not revocation: a receipt from a rotated-out
   signer executes if that key is ever reinstated, and a receipt pre-minted by a standby key goes
   live the instant the owner rotates to it. **This does not touch the corpus and is not blocked
-  by the re-label.** The comment in `SentinelVault.sol` claiming the named-signer check prevents
-  this is wrong and should be corrected whether or not the binding is added.
+  by the re-label.** *The wrong comment is CORRECTED (2026-08-16) and both directions are now
+  pinned by `test_LIMIT_reinstatingARotatedOutSignerRevivesItsOldReceipts` and
+  `test_LIMIT_receiptFromAFutureSignerGoesLiveOnRotation`. Those tests assert the LIMIT — when
+  epoch binding is added they fail, and the failure is the signal to update the comment and this
+  entry, not to delete the tests. The binding itself is still owed.*
 - **Log the override authorization.** §3.3(2) requires override be *logged*; `ActionExecuted`
   records only `viaOverride` and the receipt's `decisionId`, so an auditor cannot say which owner
   authorization was used or what the owner's recorded reason was. Every other item in §3.3(2)
