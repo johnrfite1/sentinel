@@ -784,15 +784,19 @@ run_mutation "C7 rationale: never actually report a leak" \
     "        if (haystack.includes(phrase)) throw new RationaleLeakError(fixtureId, phrase);" \
     "        if (false && haystack.includes(phrase)) throw new RationaleLeakError(fixtureId, phrase);"
 
+# RE-AIMED 2026-08-15, and the re-aim is the same lesson C1/C3 taught one commit earlier: the
+# guard was rewritten (normalisation moved into a shared helper) and these two anchors would
+# otherwise have started reporting "anchor not unique" for exactly the code they exist to
+# protect. Re-run the batch whose target you just edited.
 run_mutation "C8 rationale: stop normalising, so a punctuated leak slips past" \
     "src/corpus/rationale.ts" \
-    "    const haystack = artefact.toLowerCase().replace(/[^a-z]+/g, \" \");" \
-    "    const haystack = artefact.toLowerCase();"
+    "    return text.toLowerCase().replace(/[^a-z]+/g, \" \");" \
+    "    return text.toLowerCase();"
 
 run_mutation "C9 rationale: let evaluator field names count as narrative" \
     "src/corpus/rationale.ts" \
-    "        .filter((w) => w.length >= 4 && !GENERIC.has(w));" \
-    "        .filter((w) => w.length >= 4);"
+    "    const usable = (w: string): boolean => w.length >= 4 && !GENERIC.has(w);" \
+    "    const usable = (w: string): boolean => w.length >= 4;"
 
 run_mutation "C10 corpus: return the injection class to its vacuous state" \
     "src/corpus/fixtures.ts" \
@@ -1001,5 +1005,28 @@ run_sol_mutation "S25 vault: recover moves the whole balance while the event say
     "contracts/src/SentinelVault.sol" \
     '        (bool ok, bytes memory ret) = to.call{value: amount}("");' \
     '        (bool ok, bytes memory ret) = to.call{value: address(this).balance}("");'
+
+# C11-C13 target the WIRING, which had none. Six of ten mutations against it survived a green
+# suite because every test drove the fixture data or the pure guard and nothing drove the
+# pipeline. `run.ts` is not covered by the suite at all, so C13 is caught by a STRUCTURAL
+# assertion over its source rather than by behaviour — which is the honest way to pin a call
+# site the tests cannot reach, and is stated as such in the test.
+
+run_mutation "C11 rationale: skip the transcription equality check" \
+    "src/corpus/rationale.ts" \
+    "    if (
+        transcribed.callData !== input.encodedCallData ||" \
+    "    if (
+        false ||"
+
+run_mutation "C12 rationale: accept a proposal that did not transcribe" \
+    "src/corpus/rationale.ts" \
+    "    if (!transcribed.ok) {" \
+    "    if (false) {"
+
+run_mutation "C13 corpus: delete the one call site in the runner" \
+    "src/corpus/run.ts" \
+    "            verifyRationaleFixture({" \
+    "            const _unused = ({"
 
 echo "=== ${caught} caught, ${survived} survived, ${errored} did not apply, ${skipped} skipped ==="
