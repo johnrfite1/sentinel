@@ -27,8 +27,9 @@ The channel is real and **measured to be small**: six targeted measurement arms 
 M), across two specification versions and two models over fourteen fixtures, compared against
 E and F as the labels of record — **one label moved** (F051), and it was the one labeller E had
 itself flagged. (An earlier phrasing said "six labellers" and counted the measurement arms as if
-they were the whole programme; twelve label files touch those fixtures, four of them from an
-earlier round whose role is unestablished. See `docs/session-state.md`.) D-035's control arm — run twice, see A-037 — moved nothing. The
+they were the whole programme. Twelve label files touch those fixtures: A–D are the first round,
+superseded by E and F under D-021's owed re-label; E and F are the record; G, H, J, K, L, M are
+the measurement arms. See `docs/session-state.md`.) D-035's control arm — run twice, see A-037 — moved nothing. The
 passages are still defects; the bound is what says they are not urgent.
 
 | Passage | Where (grep this, not a line number) | What it leaks |

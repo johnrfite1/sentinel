@@ -46,12 +46,17 @@ fourteen fixtures — ONE label moved (F051), and it was the one labeller E had 
 That is the bound D-035 asked for, and it holds.
 
 **"Six independent labellers" was the wrong count and is corrected.** Twelve label files touch
-those fourteen fixtures. Eight belong to the programme — two of record plus six measurement
-arms. **Four (A, B, C, D) do not, and what they are was never established:** they postdate the
-2026-08-15 12:55 prompt freeze by twenty minutes to an hour and were superseded by E and F the
-same afternoon. Nothing in the repository says whether they were a discarded first round or
-something else. **Do not cite them and do not delete them until that is pinned down** — an
-unexplained label file in the corpus is exactly the kind of thing a hostile reader finds.
+those fourteen fixtures: **A–D are the FIRST labelling round, E and F are the labels of record,
+and G, H, J, K, L, M are the six targeted measurement arms.**
+
+**A–D are not unexplained — an earlier draft of this entry said they were, and that was my error
+rather than a gap in the record.** `decisions.md` documents them: A and B produced the project's
+sole inter-labeller disagreement (A read F002 REVIEW, B read it BLOCK), which is what put D-021
+to John; C and D drove D-026 and D-027. **D-021 then owed a re-label of A's four wrong REVIEW
+labels by fresh labellers — and E and F are that re-label**, verified: E labels F002 BLOCK,
+citing D-021 by name. The owed work was done. Say A–D are superseded, not that nobody knows what
+they are; **the lesson is that "the record does not establish this" is a claim needing the same
+verification as any other, and I published it without grepping the decision log.**
 
 **REPLICATED, BY ACCIDENT — labeller M, a second control arm over the same five fixtures.** Two
 Claude Code sessions were open on this repository at once and both ran D-035's control. The
@@ -251,7 +256,8 @@ means only that no NEW class went vacuous. Read their output, not their exit sta
 | D-037 | **One agent session at a time on this tree.** Resolves A-037 |
 | D-038 | **GATE 5 CERTIFIED.** Seven rulings; §2 rewritten; 11/11 cited; stale on any §2 edit |
 | D-039 | The two A-038 classes ruled apart: override is an accepted **delegation**, conflicting-block-state is a **GAP owing a fixture** |
-| A-039 | **Two adversarial reviews, 25 findings.** Both new guards were defeatable; several claims exceeded their evidence. 11 of 12 exploits now caught, 1 documented residual. **One hypothesis left for John** |
+| A-039 | **Two adversarial reviews, 25 findings.** Both new guards were defeatable; several claims exceeded their evidence. 11 of 12 exploits now caught, 1 documented residual |
+| D-040 | Closes A-039: **F002 stays** (it earns its place by blocking), the class map widens to §7.1's four hard caps, condition (2)'s residual accepted as documented |
 
 ## 5. Traces — what worked, and what was a dead end
 

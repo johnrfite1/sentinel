@@ -117,7 +117,16 @@ const ABOUT = {
   'unsupported-multicall-or-delegatecall': ['EVAL_OPERATION_SUPPORTED', 'EVAL_POLICY_OPERATION'],
   'owner-override-and-block-behaviour': [],
   'reentrancy-attempt': ['EVAL_CALL_GRAPH_EXPECTED'],
-  'evaluator-or-signer-compromise': ['EVAL_VAULT_NOT_PAUSED'],
+  // §7.1: "Evaluator or signer compromise scenario WITHIN THE VAULT'S HARD CAPS". D-026 names
+  // those caps: pause, nonce, deadline and the vault's own value cap. The map read
+  // EVAL_VAULT_NOT_PAUSED alone until D-040 — which described F057, the class's only fixture,
+  // rather than the class. That is the circular authoring this file's header warns against,
+  // and an adversarial reviewer flagged it as the map-width judgement only a human should make.
+  // Widened to the caps §7.1 actually names; the shortfall is now visible instead of hidden,
+  // since F057 exercises pause only and the per-fixture note shows it grazing.
+  'evaluator-or-signer-compromise': [
+    'EVAL_VAULT_NOT_PAUSED', 'EVAL_NONCE_CURRENT', 'EVAL_ACTION_DEADLINE',
+    'EVAL_VALUE_WITHIN_VAULT_CAP'],
 };
 
 // --- The baseline: classes known not to be exercised, each with a reason -----
@@ -397,8 +406,11 @@ if (vacuous.length) {
 }
 for (const o of observations) {
   console.log(`  note  ${o}`);
-  console.log('        UNRULED: whether every member of a CONFORMING class must allow is a');
-  console.log('        question about what the class means, and no guard should answer it.');
+  console.log('        RULED D-040 — this is deliberate, not a defect. The class means "exact');
+  console.log('        allowed action AND benign variations": variations that LOOK benign and');
+  console.log('        may not be. F002 is the fixture that exposed the D-021 gap and produced');
+  console.log('        the project\'s only inter-labeller disagreement. It earns its place BY');
+  console.log('        blocking. Printed every run so a BLOCK here reads as intent, not rot.');
 }
 
 console.log('');
