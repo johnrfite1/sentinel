@@ -5,14 +5,22 @@
 assembles evidence, states each piece's boundary, and asks questions. **It does not record
 answers, and no agent may add them.**
 
-Prepared 2026-08-15, revised the same day after three independent adversarial reviews
-(corrections are marked in place). Supersedes
-`docs/review-2026-08-15/gate-s2-hard-gates-draft.md`, which predates D-032 and carries
-pre-remediation numbers.
+Prepared 2026-08-15, revised the same day after three independent adversarial reviews, and
+**revised again 2026-08-16 against the decision session that certified Gate 5** (corrections are
+marked in place). Supersedes `docs/review-2026-08-15/gate-s2-hard-gates-draft.md`, which
+predates D-032 and carries pre-remediation numbers.
 
 Every figure here was **measured during preparation**, not copied from an earlier document.
 That is not a formality: A-028 found several published numbers overstated, and the draft this
 replaces reproduced three of them.
+
+**What the 2026-08-16 revision changed, listed because a pack that silently updates is a pack
+nobody can audit:** Gate 5 moved from NOT MET to MET (D-038). Three §11 entries were stale — the
+A-030 labelling channel is now **measured** rather than unmeasured, model diversity is **partly**
+addressed, and §9 steps 7–8 **have** been reviewed. One §11 entry is **new and unfavourable**:
+14 of 20 fixture classes exercise the class they name. And §12's Gate 5 question said four rows
+failed their sources when the figure was **five** — an undercount in the flattering direction,
+corrected in place.
 
 ---
 
@@ -49,13 +57,18 @@ each layer states the limit it cannot exceed.
 | 2 — replay/tamper/chain/expiry/approval invariants | MET |
 | 3 — dependency outages review or fail closed | MET |
 | 4 — wrong purpose passes baseline, fails conformance | MET |
-| 5 — vendor comparisons reported honestly | **NOT MET** — mechanical half enforced; 0 of 9 capability rows are dated or linked |
+| 5 — vendor comparisons reported honestly | **MET** — certified by John 2026-08-16 (D-038); 11 of 11 rows dated and linked. Stale on any §2 edit |
 | 6 — fuzz/invariants cannot bypass the vault | MET |
 | 7 — real injection changes the proposal and is contained | MET, and the live canary now exists and agrees |
 | 8 — five-minute comprehension | **NOT AN S2 CONDITION** (D-032). Pre-publication. |
 
 **A gate marked MET means the stated evidence exists and was run. It does not mean the claim
 holds in general**, and each section below states the boundary it cannot exceed (house rule 4).
+
+**All seven S2 pass conditions now read MET, and that is exactly when this table is most
+misleading.** Nothing here is a claim that Sentinel decides correctly — §11 is where the pack
+says what it does not have, and it grew this revision rather than shrank. Read §11 before
+reading this table as a result.
 
 ---
 
@@ -196,13 +209,35 @@ list gets you.
 
 ## 6. Gate 5 — "Strong vendor-capability comparisons are reported honestly"
 
-**Status: NOT MET, with the mechanical half enforced.** D-032 makes Gate 5 an S2 *pass
-condition* and D-008 states it conjunctively: every cell documentation-only, **dated**, and
-**linked**. **0 of 9 rows carry a source or a date**, so condition (1) is objectively
-unsatisfied — not merely uncertified — and clearing it means editing §2 to add nine dated
-citations, which no signature substitutes for. This section read "PART MET" until an
-independent review called that a build loop grading its own homework. The correction stands
-whichever way §12's first question is answered.
+**Status: MET, certified by John at the facilitated session of 2026-08-16 (D-038).**
+
+**This section read NOT MET until that session, and the history matters more than the current
+status.** D-032 makes Gate 5 an S2 *pass condition* and D-008 states it conjunctively: every
+cell documentation-only, **dated**, and **linked**. **0 of 9 rows carried a source or a date**,
+so condition (1) was objectively unsatisfied — not merely uncertified — and clearing it meant
+editing §2, which no signature substitutes for. The section had read "PART MET" before that,
+until an independent review called it a build loop grading its own homework.
+
+**What the certification session changed, and why it is not a signature over the old table.**
+A source-verification pass fetched and read all nine cited pages on 2026-08-15 and found that
+**five of the nine rows did not hold as written** — and that every discrepancy overstated a
+COMPETITOR, never Sentinel. Seven forks went to John; §2 was rewritten to his rulings:
+
+- Rows 2 and 8 **split**, because one sentence covered two products and held jointly for
+  neither. Two clauses supported by no cited page were **struck**.
+- Two clauses were marked **`(inference)`** — documented capability, Sentinel's phrasing.
+- One row was **re-cited rather than narrowed**: four of its five claims were absent from the
+  cited page but documented on two pages §13 did not list. Narrowing was the cheap option and
+  would have made a competitor look weaker on a citation error of ours. It was rejected on the
+  record.
+- One row's **category label** changed, because removing the words while leaving the label would
+  have kept the layout asserting them — D-008(4) covers layout, not just sentences.
+
+**§13 gained four sources (#25–#28), appended rather than inserted**, since renumbering would
+have invalidated every existing `§13 #N` reference.
+
+**The count in the summary table is now 11 of 11 rows dated and linked.** The rows went from
+nine to eleven because of the two splits.
 
 D-001 cut ALL executed and emulated vendor comparisons from v1, so the honest report is that
 none exist. `scripts/check-vendor-honesty.sh` now runs in the project gate and enforces:
@@ -222,16 +257,36 @@ none exist. `scripts/check-vendor-honesty.sh` now runs in the project gate and e
 - **§7.2's caveat travels with the numbers** — extracted from §7.2 itself and required in the
   ablation report, after A-028 found the report had published its table without it.
 
-**Awaiting John (D-008(1) and (3)):** every capability cell documentation-only, dated and
-linked to its cited source; inference marked as inference. `docs/gate-5-vendor-audit.md` lays
-out all nine rows, what each would need, and which two read as the strongest statements in the
-table. **0 of 9 rows currently carry a per-cell source or access date.** The check reports this
-as UNCERTIFIED on every run and never as a pass.
+**D-008(1) and (3), now cleared and how.** Condition (1)'s mechanical half is **MET** — the check
+counts `[§13#N read YYYY-MM-DD]` in each capability cell and reports **11 of 11**, and a row
+added later without one fails the gate, so the count is a ratchet rather than a snapshot.
+Condition (3) is reported as **certified by record**: the check looks for a named certification
+line in §2 and prints the decision id it names. `docs/gate-5-vendor-audit.md` holds the full
+audit, the certification packet John ruled from, and the record of what was applied.
 
-**Boundary.** The mechanical half proves the artifacts contain no vendor comparison and no
-vendor name beside a number. It cannot tell whether a sentence describing somebody else's
-product is fair, which is exactly why the verification partition gives public claims autonomy
-none.
+**Two defects in that check were repaired at the same session, both previously recorded as
+owed.** The marker was counted against the whole row line while the check's own message said
+"appended to the capability cell" — so a marker sitting in the "Consequence for Sentinel" column
+would have counted. It now tests that cell specifically. And its prose still read "the cells do
+not reference them", which stopped being true the moment the table was written. Three mutations
+confirm the repair: a marker moved to the Consequence cell, an uncited row added, and the
+certification line removed are each caught.
+
+**Boundary — read this before treating Gate 5 as closed.** The check proves the artifacts
+contain no vendor comparison and no vendor name beside a number, that every row carries a dated
+citation, and that a named certification exists. **It cannot tell whether a sentence describing
+somebody else's product is fair, and it says so on every run.** That is the verification
+partition working as designed: public claims, autonomy none.
+
+**The certification has an expiry, and it is sharp: any edit to the §2 table makes it stale.**
+The check prints that where the certification prints, because a certification with no expiry is
+a claim nobody re-examines.
+
+**Owed at v1.1, and declined here only so Gate 5 stopped blocking S2:** one row was left cited
+for fewer criteria than the vendor may document, without the re-cite lookup that rescued
+another; and one still points at a marketing page this audit itself called thin on product
+detail. **Both would move accuracy in the direction that does not flatter Sentinel** — which is
+the direction worth naming in an evidence pack, because nothing forces them to be fixed.
 
 ---
 
@@ -346,18 +401,38 @@ prevent.
 - **A live agent in CI.** Every proposal in the suite comes from a pinned transcript. The canary
   is the only live call, it runs on demand, and it is not a CI stage.
 - **The evidence dashboard** — outside S2 unless John adds it at the gate (D-009).
-- **An independent review of §9 steps 7–8**, which have had none. Steps 4–6 had a full
-  adversarial pass under D-017 (A-022); steps 1–3's earlier review (A-016) had most of its own
-  verifications cut short by a spend limit, and that limit is not retired by the later review.
-- **Labeller independence from PRIOR FINDINGS about these fixtures (A-030).** The independence
-  D-011(b) enforces is from the implementation, and that half is real. The specification the
-  protocol grants has carried a walkthrough of F049 — its rationale quoted, its answer stated —
-  since two weeks before any labelling round, and every labeller of record read it. Whether the
-  labels would move without it is **unmeasured**. This entry was missing from this section in
-  the pack's first version, in the same commit that filed A-030, which is the omission §11
-  exists to catch.
-- **Model diversity among labellers.** E, F and G are all `claude-opus-5`. Agreement between
-  them is not model-independent agreement.
+- **An independent review of §9 steps 1–3's cut-short verifications.** Steps 4–6 had a full
+  adversarial pass under D-017 (A-022); **steps 7–8 were reviewed on 2026-08-15, ten findings,
+  all remediated** — this entry previously said they had had none, and that is now stale.
+  Steps 1–3's earlier review (A-016) had most of its own verifications cut short by a spend
+  limit, and **that limit is still not retired.**
+- **THAT EACH FIXTURE CLASS EXERCISES THE CLASS IT NAMES — measured 2026-08-16, and it does
+  not.** `scripts/check-class-coverage.sh` (A-036, in the gate) reports **14 of 20 classes
+  produce a failing check the class is actually about.** Of the six carried: one is RESERVED
+  (D-025 reserves the knob in v1), four are DELEGATED to a layer that does test them, and **one
+  is a GAP — `conflicting-block-state` declares it is proved by the conformance engine, and is
+  not, and nothing else covers it** (D-039). The corpus's headline "50 fixtures across all 20
+  declared classes" was true and misleading; **spread over is not coverage**, and the guard
+  exists because three vacuous classes had already shipped before anything checked. The guard
+  passes on a ratchet: green means no NEW class went vacuous, never that every class is covered.
+- ~~**Labeller independence from PRIOR FINDINGS about these fixtures (A-030)** — unmeasured.~~
+  **MEASURED, and this is the largest thing that changed since the pack was written.** Six
+  independent labellers across two specification versions and two models, over fourteen
+  fixtures: **one label moved** (F051), and it was the one labeller E had itself flagged
+  ("Without D-025 I would have labelled this INSUFFICIENT"). D-035's targeted control over five
+  fixtures whose labels cite a decision carrying a worked example moved **nothing**, against a
+  threshold of two declared before the result was seen — and was accidentally replicated by a
+  second arm that agreed on all five labels *and* on confidence. **What the measurement does
+  NOT retire:** the channel is real, and §5.7.1 publishes **41** of the evaluator's reason-code
+  identifiers, not the eleven the decision log recorded — a contamination surface about four
+  times what was written down. The passages are a v1.1 correction (D-035 part (c)); see
+  `docs/v1-1-register.md`.
+- ~~**Model diversity among labellers** — E, F and G are all `claude-opus-5`.~~ **Partly
+  addressed:** labeller J read the current specification on a DIFFERENT model and agreed with
+  the labels of record on all nine fixtures it was given. **The limit that remains, stated
+  plainly:** the build loop can vary the model within one vendor's family and cannot obtain a
+  labeller from a different vendor. "Model diversity" here means a different Claude model, not
+  an independent implementation of judgement.
 - **Reproducible labelling views.** The corpus artifacts under `fixtures/corpus/for-labelling/`
   are not byte-reproducible across runs: entitlement expiry is derived from chain time, so a
   re-run produces a different file. The audit trail that the labellers saw *these* views is git
@@ -379,12 +454,29 @@ or more of the five moved sends a full re-freeze and re-label of all 50 back to 
 
 **RULED — D-034:** the §7.3 partition criterion; mandate conformance is 8, not 17.
 
-**STILL OPEN, and both are John's alone:**
+**RULED — D-035's measurement, executed:** zero of five moved, against the declared threshold of
+two. No re-freeze, no re-label. Accidentally replicated by a second control arm that agreed on
+every label and every confidence rating.
 
-1. **Gate 5's certification** (D-008(1) and (3)). Four capability rows do not match their cited
-   sources — see §6 and `docs/gate-5-vendor-audit.md`. This is the only thing standing between
-   Gate 5 and MET.
-2. **The S2 signature itself** (D-002, non-delegable).
+**RULED — D-038: GATE 5 IS CERTIFIED.** Seven forks ruled at the session of 2026-08-16; §2
+rewritten; 11 of 11 rows dated and linked; D-008(3) certified by record. **It had been the only
+thing standing between Gate 5 and MET, and between the pack and a complete set of S2 pass
+conditions.** The entry that stood here said "four capability rows do not match their cited
+sources" — **the true figure was five**, because one row covered two products and only one half
+of it held. That undercount is recorded rather than quietly corrected: it read in the direction
+that made the gap look smaller.
+
+**RULED — D-039:** the two vacuous classes found by the new coverage guard are ruled apart — one
+an accepted delegation, one a GAP owing a fixture at v1.1.
+
+**RULED — D-037:** one agent session at a time on this working tree.
+
+**STILL OPEN, and it is John's alone:**
+
+1. **The S2 signature itself** (D-002, non-delegable). **All seven S2 pass conditions now read
+   MET.** Before signing, §11 is the section to read, not this one — three of its entries
+   changed materially since the pack was written, and one is new and unfavourable: **14 of 20
+   fixture classes exercise the class they name.**
 
 The original list follows, retained because the reasoning behind each is still the reasoning.
 
