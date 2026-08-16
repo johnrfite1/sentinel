@@ -49,7 +49,7 @@
         "BASE_CALLDATA_UNDECODABLE",
         "BASE_TARGET_ALLOWLISTED"
       ],
-      "micros": 16.542
+      "micros": 5.625
     },
     {
       "layer": "L2_policy_plus_effects",
@@ -150,7 +150,7 @@
         "BASE_TARGET_ALLOWLISTED",
         "EVAL_CALLDATA_UNDECODABLE"
       ],
-      "micros": 293.541
+      "micros": 104.917
     },
     {
       "layer": "L3_full_conformance",
@@ -282,7 +282,7 @@
         "EVAL_TARGET_BOUND",
         "EVAL_TARGET_CODE_IDENTITY"
       ],
-      "micros": 279.958
+      "micros": 95.041
     }
   ]
 }

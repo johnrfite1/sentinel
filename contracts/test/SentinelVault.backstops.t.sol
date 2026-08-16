@@ -216,11 +216,19 @@ contract SentinelVaultBackstopsTest is Test {
 
     /// @notice Kills S1 ("delete the WrongVault check").
     ///
-    /// @dev The sibling suite tampers with every bound field EXCEPT `vault`, and the gap is
-    ///      invisible from the outside: deleting the check still leaves the transaction
-    ///      reverting, just on the receipt binding two checks later. Only asserting the exact
-    ///      error tells the two apart — which is why this asserts the selector rather than
-    ///      merely that the call failed.
+    /// @dev The sibling suite tampers with every bound field EXCEPT `vault`.
+    ///
+    ///      CORRECTION, 2026-08-15. This comment previously claimed that deleting the check
+    ///      "still leaves the transaction reverting, just on the receipt binding two checks
+    ///      later", and that only the exact selector tells the two apart. An independent
+    ///      review measured it: the transaction SUCCEEDS. The receipt here is built from the
+    ///      already-tampered action, so `receipt.actionHash` agrees with it and nothing
+    ///      downstream objects — a vault executing an action that names a different vault.
+    ///      The reviewer also found that only 2 of this file's 13 tests actually need the
+    ///      selector rather than a bare `vm.expectRevert()`. The tests are right; the
+    ///      justification was wrong, and it was the kind of wrong that sounds more rigorous
+    ///      than the truth. Asserting the selector is still worth doing — it pins WHICH
+    ///      refusal fired — but it is not what makes this test bite.
     function test_actionNamingADifferentVaultIsRejected() public {
         bytes memory data = _callData();
         T.ActionPayload memory a = _action(data);
@@ -390,6 +398,95 @@ contract SentinelVaultBackstopsTest is Test {
         vm.expectRevert(SentinelVault.OverrideMismatch.selector);
         vault.executeWithOverride(a, data, r, sig, auth, ownerSig);
         assertEq(vault.actionNonce(), 0);
+    }
+
+    /// @notice The override binds to ONE EXACT REVIEW RECEIPT, and until an independent
+    ///         review found it, nothing tested that term.
+    ///
+    /// @dev Dropping `auth.reviewReceiptHash != receiptHash` from the comparison survived all
+    ///      60 tests. The other four terms are all functions of the ACTION, so they cannot
+    ///      distinguish two decisions about the same action — and two such decisions are
+    ///      ordinary: an evaluator that re-runs produces a second REVIEW receipt with a
+    ///      different `decisionId`, `evidenceHash`, `reasonCodesHash` and expiry. Without this
+    ///      term the owner's consent to ONE decision record silently authorises any of them,
+    ///      including one issued later on different evidence. The contract's own comment at
+    ///      `executeWithOverride` claims exactly this property.
+    function test_overrideCannotBeReusedForADifferentReviewReceipt() public {
+        bytes memory data = _callData();
+        T.ActionPayload memory a = _action(data);
+
+        // Two independently valid REVIEW receipts for the SAME action, differing only in the
+        // decision they record — which is what an evaluator re-run produces.
+        T.DecisionReceiptPayload memory first = _receipt(a, T.Verdict.REVIEW);
+        T.DecisionReceiptPayload memory second = _receipt(a, T.Verdict.REVIEW);
+        second.decisionId = keccak256("decision-2");
+        second.evidenceHash = keccak256("different evidence");
+        second.reasonCodesHash = keccak256("different reasons");
+        second.expiresAt = uint64(block.timestamp + 20 minutes);
+        bytes memory secondSig = _sign(SIGNER_PK, T.hashReceipt(second));
+
+        // The owner signs an override naming the FIRST receipt only.
+        T.OverrideAuthorizationPayload memory auth = _override(a, first);
+        bytes memory ownerSig = _sign(OWNER_PK, T.hashOverride(auth));
+
+        vm.expectRevert(SentinelVault.OverrideMismatch.selector);
+        vault.executeWithOverride(a, data, second, secondSig, auth, ownerSig);
+        assertEq(vault.actionNonce(), 0);
+    }
+
+    /// @notice A failed external call must revert the whole execution, not consume a nonce and
+    ///         report success.
+    ///
+    /// @dev `CallFailed` was asserted by no test in the suite. Deleting the `if (!ok) revert`
+    ///      survived all 60: the vault would consume the nonce, emit `ActionExecuted`, and
+    ///      return the revert data as if it were a return value — a receipt in the log for an
+    ///      action that did not happen, and the nonce spent so it cannot be retried.
+    ///
+    ///      The failure is produced honestly, by starving the vault of the native value the
+    ///      action moves, rather than by a target written to revert.
+    function test_aFailedExternalCallRevertsRatherThanConsumingTheNonce() public {
+        bytes memory data = _callData();
+        T.ActionPayload memory a = _action(data);
+        T.DecisionReceiptPayload memory r = _receipt(a, T.Verdict.ALLOW);
+        bytes memory sig = _sign(SIGNER_PK, T.hashReceipt(r));
+
+        vm.deal(address(vault), 0);
+
+        vm.expectRevert();
+        vault.executeWithReceipt(a, data, r, sig);
+        assertEq(vault.actionNonce(), 0, "a failed call must not consume the nonce");
+    }
+
+    /// @notice The execution event reports the nonce the action was BOUND to, not the
+    ///         post-increment value.
+    ///
+    /// @dev No test in the Solidity suite asserted any event at all, so two mutations
+    ///      survived: emitting `actionNonce` (already incremented) instead of
+    ///      `action.actionNonce`, and `recover` moving the whole balance while the event says
+    ///      `amount`. The log is what an auditor reconstructs the history from; an event that
+    ///      lies is a receipt that lies.
+    function test_executionEventReportsTheBoundNonceAndTheActualAmount() public {
+        bytes memory data = _callData();
+        T.ActionPayload memory a = _action(data);
+        T.DecisionReceiptPayload memory r = _receipt(a, T.Verdict.ALLOW);
+        bytes memory sig = _sign(SIGNER_PK, T.hashReceipt(r));
+
+        vm.expectEmit(true, true, false, true, address(vault));
+        emit SentinelVault.ActionExecuted(T.hashAction(a), a.actionNonce, r.decisionId, false);
+        vault.executeWithReceipt(a, data, r, sig);
+    }
+
+    function test_recoverEventReportsTheAmountItActuallyMoved() public {
+        address payable to = payable(address(0xD00D));
+        uint256 amount = 1 ether;
+
+        vm.expectEmit(true, false, false, true, address(vault));
+        emit SentinelVault.Recovered(to, amount);
+        vm.prank(owner);
+        vault.recover(to, amount);
+
+        assertEq(to.balance, amount, "the event's amount is not what moved");
+        assertEq(address(vault).balance, 9 ether, "recover moved more than it reported");
     }
 
     /// @notice Kills S6 ("delete the OverrideExpired check").

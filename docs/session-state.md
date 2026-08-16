@@ -121,8 +121,11 @@ gates). Added since:
    lists five questions, none of them an agent's call. Gate 5 is PART MET by construction —
    its two certification conditions are John's and no agent may clear them.
 2. **Put A-030 to John before the next labelling round.** Every available response changes a
-   ratified protocol, so it cannot be resolved in the build loop. Nothing is blocked on it
-   today: the labels of record stand and G agreed with them.
+   ratified protocol, so it cannot be resolved in the build loop. **Read the entry, not this
+   line:** its first version claimed the labels of record were unaffected, and a second review
+   refuted that with one `git log` — the contaminating amendment predates every labelling round,
+   so E and F read it too. Whether the labels would move is **unmeasured**. Nothing is shown to
+   be wrong; nothing is shown to be safe either.
 3. **§9 steps 7–8 have never had an independent review.** Steps 4–6 had a full adversarial pass
    (A-022); steps 1–3's earlier review (A-016) had most of its verifications cut short by a
    spend limit, and that limit is NOT retired by the later review. This is the largest

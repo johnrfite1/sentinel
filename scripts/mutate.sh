@@ -89,9 +89,27 @@ _mutate() {
     fi
 
     restore_current
+    # BACK UP FIRST, ARM THE TRAP SECOND, and the order is the whole point.
+    #
+    # The previous version set CURRENT_FILE, then created an EMPTY file with mktemp, then
+    # copied into it. A TERM in that window left the trap armed with a zero-byte backup and
+    # `[ -f ]` true, so restore wrote zero bytes over the source. An independent review
+    # reproduced it deterministically: 43 bytes to 0. The absolute-path change made it worse
+    # rather than introducing it — the old relative form produced a bogus path and failed
+    # harmlessly, while the new one lands on the real contract.
+    #
+    # This is the v2 lesson stated in the header, in a smaller window: a repair tool must
+    # never have an instant in which the thing it repairs does not exist.
+    local backup
+    backup="$(mktemp)"
+    cp "$path" "$backup.tmp" && mv "$backup.tmp" "$backup" || {
+        printf '  %-58s ERROR (could not back up)\n' "$name"
+        errored=$((errored + 1))
+        rm -f "$backup" "$backup.tmp"
+        return
+    }
+    CURRENT_BACKUP="$backup"
     CURRENT_FILE="$path"
-    CURRENT_BACKUP="$(mktemp)"
-    cp "$path" "$CURRENT_BACKUP"
 
     # A mutation that silently fails to apply is indistinguishable, in the results, from one
     # the suite failed to catch — so applying it is verified, not assumed.
@@ -111,8 +129,21 @@ _mutate() {
         # record as "caught". That would credit the test suite for work the compiler did,
         # and inflate exactly the number the gate evidence cites. A mutant that does not
         # build is not a measurement.
-        if ! (cd "$ROOT/contracts" && forge build >/dev/null 2>&1); then
-            printf '  %-58s ERROR (mutant does not compile)\n' "$name"
+        # Compilation and linting are reported SEPARATELY, because they mean different
+        # things. A mutant that does not compile is not a measurement. A mutant that
+        # compiles and fails forge-lint IS a measurement the harness cannot take — and
+        # an independent review found a real one: replacing `(bool ok, …)` with `(, …)`
+        # to drop the CallFailed check trips the unchecked-call lint, so a
+        # security-relevant mutation class was being bucketed as "does not compile" and
+        # written off as a defective mutant rather than as an unmeasurable one.
+        local build_out
+        build_out="$(cd "$ROOT/contracts" && forge build 2>&1)"
+        if [ $? -ne 0 ]; then
+            if printf '%s' "$build_out" | grep -q "Lint failed"; then
+                printf '  %-58s ERROR (compiles; forge-lint refuses it — UNMEASURED)\n' "$name"
+            else
+                printf '  %-58s ERROR (mutant does not compile)\n' "$name"
+            fi
             errored=$((errored + 1))
             restore_current
             return
@@ -927,5 +958,43 @@ run_sol_mutation "S20 vault: delete the ActionExpired deadline check" \
         if (block.timestamp > action.deadline) revert ActionExpired();
 ' \
     ''
+
+# S21-S25 come from an independent adversarial review of the twenty above (2026-08-15).
+# All five SURVIVED the 60-test suite the original twenty were all caught by, and the
+# reviewer's diagnosis is the useful part: every one of the first twenty targets a check
+# inside `_checkAction`, `_checkReceipt`, or the override binding. None targeted
+# `_consumeAndCall`'s failure handling, the reentrancy guard on the OVERRIDE path, or any
+# emitted event. A mutation set inherits the blind spots of whoever enumerated it, which is
+# the same lesson recorded for the TypeScript batches — and this time the set was inherited
+# from a reviewer rather than the implementer, and STILL had a shape to it.
+
+run_sol_mutation "S21 vault: drop nonReentrant from executeWithOverride" \
+    "contracts/src/SentinelVault.sol" \
+    '        bytes calldata ownerSig
+    ) external nonReentrant returns (bytes memory) {' \
+    '        bytes calldata ownerSig
+    ) external returns (bytes memory) {'
+
+run_sol_mutation "S22 vault: drop the review-receipt term from the override binding" \
+    "contracts/src/SentinelVault.sol" \
+    '            auth.reviewReceiptHash != receiptHash || auth.actionHash != T.hashAction(action)' \
+    '            auth.actionHash != T.hashAction(action)'
+
+run_sol_mutation "S23 vault: report a failed external call as success" \
+    "contracts/src/SentinelVault.sol" \
+    '        if (!ok) revert CallFailed(ret);
+        return ret;' \
+    '        ok;
+        return ret;'
+
+run_sol_mutation "S24 vault: log the post-increment nonce in ActionExecuted" \
+    "contracts/src/SentinelVault.sol" \
+    '        emit ActionExecuted(actionHash, action.actionNonce, decisionId, viaOverride);' \
+    '        emit ActionExecuted(actionHash, actionNonce, decisionId, viaOverride);'
+
+run_sol_mutation "S25 vault: recover moves the whole balance while the event says amount" \
+    "contracts/src/SentinelVault.sol" \
+    '        (bool ok, bytes memory ret) = to.call{value: amount}("");' \
+    '        (bool ok, bytes memory ret) = to.call{value: address(this).balance}("");'
 
 echo "=== ${caught} caught, ${survived} survived, ${errored} did not apply, ${skipped} skipped ==="

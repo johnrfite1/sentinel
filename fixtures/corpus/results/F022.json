@@ -48,7 +48,7 @@
       "failing": [
         "BASE_CALLDATA_UNDECODABLE"
       ],
-      "micros": 56.458
+      "micros": 30.208
     },
     {
       "layer": "L2_policy_plus_effects",
@@ -144,7 +144,7 @@
         "EVAL_CALLDATA_UNDECODABLE",
         "EVAL_SIMULATION_SUCCEEDS"
       ],
-      "micros": 269.708
+      "micros": 115
     },
     {
       "layer": "L3_full_conformance",
@@ -272,7 +272,7 @@
         "EVAL_TARGET_BOUND",
         "EVAL_TARGET_CODE_IDENTITY"
       ],
-      "micros": 210.25
+      "micros": 91.458
     }
   ]
 }

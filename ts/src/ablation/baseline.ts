@@ -16,9 +16,16 @@ import {MAX_UINT256} from "../decode/index.ts";
  *
  * BUILD IT AS STRONG AS IT FAIRLY GOES. §7 exists to test whether Sentinel's verdicts are
  * anything more than hard-coding, and a weak baseline manufactures a difference rather than
- * measuring one. So this baseline decodes calldata (Privy-class "decoded-calldata policies"
- * are real and shipping), enforces a native-value ceiling, and blocks unlimited approvals
- * outright. It is given every capability §7.2 lists and no less.
+ * measuring one. So this baseline decodes calldata — policy engines that write rules over
+ * decoded calldata are real and shipping, and §2's capability table is where the market is
+ * described — enforces a native-value ceiling, and blocks unlimited approvals outright. It is
+ * given every capability §7.2 lists and no less.
+ *
+ * NO VENDOR IS NAMED IN THIS FILE, and the omission is deliberate rather than incidental.
+ * This module IS the arm the ablation's headline compares against; a vendor's name in its
+ * header would make every figure in `docs/ablation-report.md` read as a claim about that
+ * product, which is exactly the LAYOUT D-008(4) forbids. One was here until 2026-08-15, in
+ * this paragraph, and it survived because `check-vendor-honesty.sh` only scanned markdown.
  *
  * WHAT §7.2 WITHHOLDS FROM IT, VERBATIM: "No resource, beneficiary, duration, recurrence, or
  * post-state constraint." Those are the mandate-to-effects layer, and withholding them is

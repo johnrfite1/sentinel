@@ -10,11 +10,16 @@ import {
 import {CORPUS, assertClassCoverage} from "../src/corpus/fixtures.ts";
 import {FIXTURE_CLASSES, type FixtureSpec} from "../src/corpus/spec.ts";
 import {
+    DeadProbeError,
     RationaleLeakError,
+    TranscriptionMismatchError,
     UnprobeableRationaleError,
+    assertProbesLive,
     assertRationaleUnread,
     rationaleBigrams,
+    verifyRationaleFixture,
 } from "../src/corpus/rationale.ts";
+import {readFileSync} from "node:fs";
 
 /**
  * The corpus's own integrity rules, enforced rather than stated.
@@ -159,14 +164,21 @@ describe("no fixture carries a verdict", () => {
      * immediate halt.
      */
     it("has no verdict-shaped key on any fixture spec", () => {
+        // CONTAINMENT, not equality. `leakage.ts` was wrong twice for exactly this reason
+        // (A-028 F-3) and was fixed; this test one file over kept the equality form, so a
+        // fixture key named `expectedVerdict` would have passed it. Found by an independent
+        // review looking at the two files side by side.
         const forbidden = ["expected", "verdict", "label", "answer", "truth", "outcome"];
         for (const fixture of CORPUS) {
             for (const key of Object.keys(fixture)) {
-                assert.equal(
-                    forbidden.includes(key.toLowerCase()),
-                    false,
-                    `fixture ${fixture.id} carries "${key}" — the corpus must not hold its own answers`,
-                );
+                const lowered = key.toLowerCase();
+                for (const f of forbidden) {
+                    assert.equal(
+                        lowered.includes(f),
+                        false,
+                        `fixture ${fixture.id} carries "${key}" — the corpus must not hold its own answers`,
+                    );
+                }
             }
         }
     });
@@ -183,14 +195,23 @@ describe("no fixture carries a verdict", () => {
             "must allow",
             "must block",
         ];
+        // BOTH free-text fields, not just `intent`. `agentRationale` is published to every
+        // labeller too (it is in ALLOWED_VIEW_KEYS), so a rationale saying "this should
+        // block" would hand the labeller an answer through the field added to carry an
+        // attack. An independent review found the scan reading only `intent`.
         for (const fixture of CORPUS) {
-            const intent = fixture.intent.toLowerCase();
-            for (const tell of tells) {
-                assert.equal(
-                    intent.includes(tell),
-                    false,
-                    `fixture ${fixture.id}'s intent states an outcome ("${tell}") — it must describe the setup only`,
-                );
+            for (const [field, text] of [
+                ["intent", fixture.intent],
+                ["agentRationale", fixture.agentRationale ?? ""],
+            ] as const) {
+                const lowered = text.toLowerCase();
+                for (const tell of tells) {
+                    assert.equal(
+                        lowered.includes(tell),
+                        false,
+                        `fixture ${fixture.id}'s ${field} states an outcome ("${tell}") — it must describe the setup only`,
+                    );
+                }
             }
         }
     });
@@ -285,6 +306,140 @@ describe("the injection class carries a real injection (A-028 F-5)", () => {
         // name, so the bigram is dropped rather than the guard being retuned later when it
         // false-positives on real output.
         assert.equal(rationaleBigrams("an unlimited allowance increase").includes("unlimited allowance"), false);
+    });
+});
+
+describe("the injection wiring can fail (independent review, 2026-08-15)", () => {
+    /**
+     * SIX OF TEN MUTATIONS AGAINST THIS WIRING SURVIVED A 349/349 GREEN SUITE.
+     *
+     * Deleting the transcription equality check, deleting the leak call outright, building a
+     * different call in `proposalFor`, dropping `agentRationale` from the view allowlist,
+     * weakening the floor, and narrowing the scan to reason codes — all green. Every test
+     * above exercises fixture data or the pure guard; none of them ran the pipeline, because
+     * `scripts/test.sh` never runs the corpus. The tests below drive the extracted check
+     * directly, and the last one asserts the call site still exists, because a unit-tested
+     * function nobody calls is the same defect in better clothes.
+     */
+    const F049 = CORPUS.find((f) => f.id === "F049")!;
+    const rationale = F049.agentRationale!;
+
+    const good = {
+        fixtureId: "F049",
+        rationale,
+        encodedTarget: "0xabc",
+        encodedValueWei: 0n,
+        encodedCallData: "0xdeadbeef",
+        transcribed: {ok: true, target: "0xabc", valueWei: 0n, callData: "0xdeadbeef"},
+        artefact: '{"reasonCodes":["EVAL_APPROVAL_SPENDER"]}',
+    };
+
+    it("passes a fixture whose proposal and encoding agree and whose artefacts are clean", () => {
+        assert.doesNotThrow(() => verifyRationaleFixture(good));
+    });
+
+    it("rejects a proposal that will not transcribe", () => {
+        assert.throws(
+            () =>
+                verifyRationaleFixture({
+                    ...good,
+                    transcribed: {ok: false, code: "PROPOSAL_MALFORMED_TARGET", detail: "x"},
+                }),
+            TranscriptionMismatchError,
+        );
+    });
+
+    for (const [field, patch] of [
+        ["callData", {callData: "0xfeed"}],
+        ["target", {target: "0xother"}],
+        ["valueWei", {valueWei: 1n}],
+    ] as const) {
+        it(`rejects a proposal whose ${field} differs from the fixture's`, () => {
+            assert.throws(
+                () => verifyRationaleFixture({...good, transcribed: {...good.transcribed, ...patch}}),
+                TranscriptionMismatchError,
+            );
+        });
+    }
+
+    it("rejects a leak reaching the evidence bundle through the full check", () => {
+        assert.throws(
+            () => verifyRationaleFixture({...good, artefact: JSON.stringify({e: rationale})}),
+            RationaleLeakError,
+        );
+    });
+
+    /**
+     * The defect an independent review measured: probes built by pairing the FILTERED word
+     * list matched strings that never existed. 10 of F049's 17 probes were dead, and the
+     * injection payload itself could pass. Every probe must occur in its own source text.
+     */
+    it("derives only probes that occur in the rationale they came from", () => {
+        for (const f of CORPUS) {
+            if (f.agentRationale === undefined) continue;
+            const self = f.agentRationale.toLowerCase().replace(/[^a-z]+/g, " ");
+            for (const p of rationaleBigrams(f.agentRationale)) {
+                assert.ok(self.includes(p), `${f.id}: probe "${p}" cannot ever match`);
+            }
+        }
+    });
+
+    it("refuses a probe that cannot occur in its own source text", () => {
+        // Hand-made, because the corrected builder can no longer produce one — which is the
+        // point of the invariant. The error class exists so that a future change to the
+        // builder is caught by an assertion rather than by an outside reviewer.
+        assert.throws(
+            () => assertProbesLive(["settlement deadbeef"], rationale, "F049"),
+            DeadProbeError,
+        );
+        assert.doesNotThrow(() => assertProbesLive(["settlement relayer"], rationale, "F049"));
+    });
+
+    it("refuses a rationale too thin to yield a usable probe set", () => {
+        assert.throws(
+            () => assertRationaleUnread("please approve this call now", "{}", "FXXX"),
+            UnprobeableRationaleError,
+        );
+    });
+
+    it("catches the verbatim excerpt the old construction let through", () => {
+        // "relayer (0x...DeaDBeef) an unlimited allowance to handle" — the injection payload.
+        const leak = JSON.stringify({
+            evidenceCanonical:
+                "granted the settlement relayer 0x00000000000000000000000000000000DeaDBeef " +
+                "an unlimited allowance to handle billing transactions",
+        });
+        assert.throws(() => assertRationaleUnread(rationale, leak, "F049"), RationaleLeakError);
+    });
+
+    it("catches a base64 or hex carriage of the whole rationale", () => {
+        for (const enc of ["base64", "hex"] as const) {
+            const smuggled = JSON.stringify({provenance: Buffer.from(rationale, "utf8").toString(enc)});
+            assert.throws(
+                () => assertRationaleUnread(rationale, smuggled, "F049"),
+                RationaleLeakError,
+                `a ${enc} carriage passed`,
+            );
+        }
+    });
+
+    /**
+     * THE CALL SITE, asserted structurally.
+     *
+     * `run.ts` is not covered by any test — it needs a chain, a signer process and a full
+     * corpus run — so the mutation that deletes its one call to the check would otherwise be
+     * invisible. This is the same idiom the step-7 transcriber uses for its code table: when
+     * behaviour cannot be reached, assert the structure that produces it, and say so.
+     */
+    it("still calls the check from the corpus runner", () => {
+        const src = readFileSync(new URL("../src/corpus/run.ts", import.meta.url), "utf8");
+        assert.match(src, /verifyRationaleFixture\(\{/, "run.ts no longer calls verifyRationaleFixture");
+        assert.equal(
+            (src.match(/verifyRationaleFixture\(/g) ?? []).length,
+            1,
+            "there must be exactly one call site, or deleting one would go unnoticed",
+        );
+        assert.match(src, /transcribe\(proposalFor\(spec, target, valueWei\)\)/, "the proposal is no longer transcribed");
     });
 });
 

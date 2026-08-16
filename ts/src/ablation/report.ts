@@ -275,6 +275,14 @@ export function buildReport(inputs: AblationInputs): string {
     w("fields. Round 3 (E/F) ran after both causes were fixed, denied `docs/` entirely, and");
     w("produced provenance attestations. All four earlier files are retained as audit trail.");
     w();
+    w();
+    w("**AND A CHANNEL NOBODY HAD LOOKED AT (A-030).** Round 3 is described above as having run");
+    w("after both known causes were fixed. A later review established that a third was open");
+    w("throughout: the specification itself — the one source the labelling protocol GRANTS —");
+    w("has carried a walkthrough of F049 since 2026-07-30, quoting that fixture's rationale and");
+    w("stating the answer, and every labeller of record read it. The labels are not shown to be");
+    w("wrong. They are no longer shown to be independent of prior findings about these");
+    w("fixtures, and nothing has scored F049 against the pre-amendment text.");
     w("**A robustness check worth more than any single round:** re-scoring the whole table");
     w("against the superseded round-1 labels produces IDENTICAL false-allow counts. The headline");
     w("is not an artifact of which labelling round is used; only exact-match moves.");
@@ -333,6 +341,44 @@ export function buildReport(inputs: AblationInputs): string {
     w(`- **Added by mandate conformance (L3): ${contrib.addedByL3.length}** — ${contrib.addedByL3.join(", ") || "none"}`);
     if (contrib.lostByL2.length) w(`- Regressed at L2 (caught by L1, missed by L2): ${contrib.lostByL2.join(", ")}`);
     if (contrib.lostByL3.length) w(`- Regressed at L3 (caught by L2, missed by L3): ${contrib.lostByL3.join(", ")}`);
+    w();
+
+    // §7.2 names exactly what the baseline lacks. Splitting the L3-only set by whether a
+    // fixture turns on one of those fields is derived from the results rather than asserted,
+    // so the two numbers cannot drift apart in prose.
+    const WITHHELD = new Set([
+        "EVAL_PURCHASE_RESOURCE",
+        "EVAL_PURCHASE_BENEFICIARY",
+        "EVAL_PURCHASE_DURATION",
+        "EVAL_PURCHASE_RECURRENCE",
+        "EVAL_ENTITLEMENT_ADVANCED",
+        "EVAL_ENTITLEMENT_RECURRENCE",
+        "EVAL_ENTITLEMENT_UNOBSERVED",
+        "EVAL_APPROVAL_SPENDER",
+    ]);
+    const l3Failing = (id: string): string[] =>
+        results.find((r) => r.fixtureId === id)?.layers.find((l) => l.layer === "L3_full_conformance")
+            ?.failing ?? [];
+    const onWithheld = contrib.addedByL3.filter((id) => l3Failing(id).some((c) => WITHHELD.has(c)));
+    const onOther = contrib.addedByL3.filter((id) => !l3Failing(id).some((c) => WITHHELD.has(c)));
+
+    w();
+    w("### What the mandate-conformance figure is, decomposed");
+    w();
+    w("§7.2 names what the baseline lacks: \"No resource, beneficiary, duration, recurrence, or");
+    w("post-state constraint.\" Splitting the fixtures L3 adds by whether they turn on one of");
+    w("those fields — derived here from each fixture's failing set, not asserted:");
+    w();
+    w(`- Turns on a §7.2-withheld field: **${onWithheld.length}** — ${onWithheld.join(", ")}`);
+    w(`- Turns on another mandate-derived check: **${onOther.length}** — ${onOther.join(", ")}`);
+    w();
+    w("So the headline is the contribution of having a signed mandate AT ALL, of which the");
+    w("first row is the wrong-purpose class §4.2 Case 3 names. Both are worth having and");
+    w("neither is the other. Raised by an independent review, which also asked whether");
+    w("`EVAL_ACTION_BINDS_MANDATE_AND_POLICY` belongs in the mandate-conformance set at all");
+    w("given that A-028 removed `EVAL_CALLDATA_BINDING` for being action integrity rather than");
+    w("purpose — an open partition question, stated rather than taken, because moving it");
+    w("changes the number the gate rests on.");
     w();
 
     w("## Inter-labeller disagreement (D-011c)");
@@ -404,9 +450,13 @@ export function buildReport(inputs: AblationInputs): string {
             "each carry an",
     );
     w("agent rationale, are transcribed through the same untrusted proposal seam a live agent's");
-    w("call takes, and the corpus run fails if any phrase of that narrative reaches a bound");
-    w("field, a check, a reason code, or the canonical evidence bundle. **That measurement is");
-    w("the fixture's content. The verdict is not.** Their underlying actions are an unlimited");
+    w("call takes, and the corpus run fails if a derived adjacent word-pair of that narrative");
+    w("— or a base64 or hex carriage of the whole of it — reaches a bound field, a check, a");
+    w("reason code, or the evidence bundle. It is a REGRESSION guard, not a proof of absence —");
+    w("a single leaked word, a paraphrase, or an unanticipated encoding passes.");
+    w();
+    w("**That measurement is the fixture's content. The verdict is not.** Their underlying");
+    w("actions are an unlimited");
     w("approval and a wrong-resource purchase, so whatever layer blocks them is blocking the");
     w("action — exactly as it blocks `F009` and `F012` — and no layer is detecting an injection,");
     w("because nothing in Sentinel reads the narrative. A layer that appeared to detect one");

@@ -43,7 +43,7 @@
       "failing": [
         "BASE_VALUE_CEILING"
       ],
-      "micros": 76.292
+      "micros": 37.042
     },
     {
       "layer": "L2_policy_plus_effects",
@@ -139,7 +139,7 @@
         "EVAL_VALUE_WITHIN_POLICY",
         "EVAL_VALUE_WITHIN_VAULT_CAP"
       ],
-      "micros": 337.75
+      "micros": 166.334
     },
     {
       "layer": "L3_full_conformance",
@@ -301,7 +301,7 @@
         "EVAL_VALUE_WITHIN_POLICY",
         "EVAL_VALUE_WITHIN_VAULT_CAP"
       ],
-      "micros": 260.667
+      "micros": 152.667
     }
   ]
 }

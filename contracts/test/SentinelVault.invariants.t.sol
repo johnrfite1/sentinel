@@ -132,6 +132,108 @@ contract SentinelVaultReentrancyTest is Test {
             balanceBefore - address(vault).balance, 0.1 ether, "exactly one transfer may leave the vault"
         );
     }
+
+    // -----------------------------------------------------------------
+    // The override path, and the door between the two paths
+    // -----------------------------------------------------------------
+    //
+    // FOUND BY AN INDEPENDENT REVIEW, 2026-08-15, and it is the second time the SAME
+    // blind spot has produced a finding. `nonReentrant` can be deleted from
+    // `executeWithOverride` and all 60 tests still pass, because the only reentrancy
+    // test drove `executeWithReceipt` and the only allowlisted target the invariant
+    // campaign has is DemoPay — which makes no outbound call, so the campaign
+    // STRUCTURALLY cannot generate a callback at any depth or profile. Adding four
+    // override actions to the handler did not fix that and was never going to.
+    //
+    // The reviewer demonstrated a double-spend on two shapes. Both are tested below.
+    // The second is the one worth staring at: `_entered` is shared, so the door is not
+    // "the override path re-entering itself" but ANY execution path re-entering ANY
+    // other. A per-path guard would have looked equally correct and been wrong.
+
+    function _reviewBundle(uint256 nonce, bytes memory data)
+        internal
+        view
+        returns (
+            T.ActionPayload memory a,
+            T.DecisionReceiptPayload memory r,
+            bytes memory sig,
+            T.OverrideAuthorizationPayload memory auth,
+            bytes memory ownerSig
+        )
+    {
+        (a, r, sig) = _bundle(nonce, data);
+        r.verdict = uint8(T.Verdict.REVIEW);
+        bytes32 digest = T.digest(T.domainSeparator(block.chainid, address(vault)), T.hashReceipt(r));
+        (uint8 v, bytes32 rr, bytes32 ss) = vm.sign(SIGNER_PK, digest);
+        sig = abi.encodePacked(rr, ss, v);
+
+        auth = T.OverrideAuthorizationPayload({
+            schemaVersion: 1,
+            reviewReceiptHash: T.hashReceipt(r),
+            actionHash: T.hashAction(a),
+            mandateHash: a.mandateHash,
+            policyHash: a.policyHash,
+            actionNonce: a.actionNonce,
+            reasonHash: keccak256("owner accepted the residual risk"),
+            issuedAt: uint64(block.timestamp),
+            expiresAt: uint64(block.timestamp + 10 minutes)
+        });
+        bytes32 od = T.digest(T.domainSeparator(block.chainid, address(vault)), T.hashOverride(auth));
+        (uint8 ov, bytes32 orr, bytes32 oss) = vm.sign(OWNER_PK, od);
+        ownerSig = abi.encodePacked(orr, oss, ov);
+    }
+
+    function test_reentrantOverrideCannotExecuteInTheSameTransaction() public {
+        bytes memory data = abi.encodePacked(SEL);
+        (
+            T.ActionPayload memory a0,
+            T.DecisionReceiptPayload memory r0,
+            bytes memory s0,
+            T.OverrideAuthorizationPayload memory auth0,
+            bytes memory o0
+        ) = _reviewBundle(0, data);
+        (
+            T.ActionPayload memory a1,
+            T.DecisionReceiptPayload memory r1,
+            bytes memory s1,
+            T.OverrideAuthorizationPayload memory auth1,
+            bytes memory o1
+        ) = _reviewBundle(1, data);
+
+        reenterer.arm(
+            abi.encodeCall(SentinelVault.executeWithOverride, (a1, data, r1, s1, auth1, o1))
+        );
+
+        uint256 balanceBefore = address(vault).balance;
+        vault.executeWithOverride(a0, data, r0, s0, auth0, o0);
+
+        assertEq(vault.actionNonce(), 1, "exactly one nonce may be consumed per transaction");
+        assertEq(balanceBefore - address(vault).balance, 0.1 ether, "exactly one transfer may leave");
+    }
+
+    /// @notice The cross-path door: an ALLOW receipt executing, and the target re-entering
+    ///         through the OVERRIDE path with an independently valid credential.
+    function test_anAllowExecutionCannotBeReenteredThroughTheOverridePath() public {
+        bytes memory data = abi.encodePacked(SEL);
+        (T.ActionPayload memory a0, T.DecisionReceiptPayload memory r0, bytes memory s0) = _bundle(0, data);
+        (
+            T.ActionPayload memory a1,
+            T.DecisionReceiptPayload memory r1,
+            bytes memory s1,
+            T.OverrideAuthorizationPayload memory auth1,
+            bytes memory o1
+        ) = _reviewBundle(1, data);
+
+        reenterer.arm(
+            abi.encodeCall(SentinelVault.executeWithOverride, (a1, data, r1, s1, auth1, o1))
+        );
+
+        uint256 balanceBefore = address(vault).balance;
+        vault.executeWithReceipt(a0, data, r0, s0);
+
+        assertEq(vault.actionNonce(), 1, "the override path re-entered an allow execution");
+        assertEq(balanceBefore - address(vault).balance, 0.1 ether, "two transfers left the vault");
+    }
 }
 
 /// @notice Handler for the stateful invariant campaign.

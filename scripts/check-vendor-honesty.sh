@@ -37,6 +37,15 @@ fail=0
 
 # The vendors §2 and §10.1 name. Sentinel's honesty obligation is specifically about THESE
 # parties, because they are the ones a reader could take a number to be a claim about.
+#
+# TEN SPELLINGS, AND THAT IS A REAL LIMIT RATHER THAN A COMPLETE RULE. D-008 forbids claims
+# about "any named vendor"; this list is the ten §2 and §10.1 name. Fireblocks, Turnkey, Dfns,
+# Anchorage and everything else pass. An independent review was right to point out that A-031
+# described this construction as categorically stronger than a phrase denylist when it is a
+# denylist of a different column — stronger against LAYOUT, which was the argument, and no
+# stronger against an unlisted name. The honest reading: this catches the vendors the project
+# has actually written about, which is the population D-008's artifacts draw from, and a new
+# vendor entering an artifact is a thing a human has to notice.
 VENDORS='Cobo|Coinbase|Circle|Privy|Safe|MetaMask|Sigil|Hypernative|Blockaid|Tenderly'
 
 # MEASUREMENT ARTIFACTS are the files that carry numbers, evidence, or published claims. The
@@ -51,7 +60,14 @@ VENDORS='Cobo|Coinbase|Circle|Privy|Safe|MetaMask|Sigil|Hypernative|Blockaid|Ten
 # `docs/gate-5-vendor-audit.md` is on the list for the same reason and no other: it is the
 # audit PREPARED FOR this gate, it carries no measurement of anything, and it cannot do its
 # job — laying nine rows in front of John — without naming the nine parties they describe.
-EXCLUDED='^(Sentinel_Protocol_Lab_Proposal_v0_2\.md|HANDOFF\.md|docs/decisions\.md|docs/session-state\.md|docs/gate-5-vendor-audit\.md|docs/review-2026-08-15/|scripts/check-vendor-honesty\.sh)'
+#
+# `docs/review-2026-08-15/` IS NOT EXCLUDED WHOLESALE, and the correction is the point. The
+# first version excluded the whole directory as "review scratch"; the same review pointed out
+# that `gate-s2-hard-gates-draft.md` inside it is a superseded gate-evidence pack containing a
+# false-allow table — a file that reports a result, which this script's own error message
+# calls the way the gate gets defeated. Only `artifacts/` (reproduction rigs and campaign
+# data) is excluded now.
+EXCLUDED='^(Sentinel_Protocol_Lab_Proposal_v0_2\.md|HANDOFF\.md|docs/decisions\.md|docs/session-state\.md|docs/gate-5-vendor-audit\.md|docs/review-2026-08-15/artifacts/|scripts/check-vendor-honesty\.sh)'
 
 # TRACKED **AND** UNTRACKED-BUT-NOT-IGNORED, and the second half is not belt-and-braces.
 #
@@ -65,11 +81,23 @@ EXCLUDED='^(Sentinel_Protocol_Lab_Proposal_v0_2\.md|HANDOFF\.md|docs/decisions\.
 # The cost is that an unignored scratch file in the working tree can fail the gate. That is
 # the right side to err on for a check about publication honesty: an untracked file in this
 # tree is one `git add -A` away from being published.
+#
+# THE FILE SET IS EVERY TEXT ARTIFACT, NOT JUST MARKDOWN AND JSON.
+#
+# The first version globbed '*.md' '*.json' 'README*' and an independent review named three
+# things it therefore could not see, each of which carries numbers or is itself S2 evidence:
+# `scripts/test.sh`'s coverage-boundary heredoc (printed on every gate run, carrying the
+# false-allow figures), `fixtures/injection/canary-history.jsonl` (which `.json` does not
+# match, and which D-007 requires IN the evidence bundle), and the verifier's Python. A guard
+# whose scope is a file extension is a guard somebody routes around by choosing a file.
 artifacts() {
     {
-        git ls-files -- '*.md' '*.json' 'README*'
-        git ls-files --others --exclude-standard -- '*.md' '*.json' 'README*'
-    } | sort -u | grep -Ev "$EXCLUDED"
+        git ls-files
+        git ls-files --others --exclude-standard
+    } | sort -u | grep -Ev "$EXCLUDED" | while IFS= read -r f; do
+        # Skip binaries and anything unreadable; `grep -Iq` tests for text.
+        [ -f "$f" ] && grep -Iq . "$f" 2>/dev/null && printf '%s\n' "$f"
+    done
 }
 
 echo "vendor honesty (§7.5 Gate 5, D-008) — mechanical conditions"

@@ -88,8 +88,15 @@ export async function runArm(client: Anthropic, model: string, arm: Arm): Promis
 
         if (response.stop_reason === "refusal") {
             refused = true;
-            refusalCategory = response.stop_details?.category ?? null;
-            finalText = "[classifier refusal: " + JSON.stringify(response.stop_details) + "]";
+            // NARROW CAST, WITH A REASON. The installed SDK's `Message` type does not declare
+            // `stop_details`, which the API returns alongside a refusal stop reason. This was
+            // invisible while `src/spike/**` sat outside `tsconfig`'s root set (A-015c); a
+            // test now imports this module, so the gap surfaced. Casting one field with this
+            // note is better than restoring the blanket exclusion, because the exclusion is
+            // what let the canary ship typechecked by nothing.
+            const details = (response as {stop_details?: {category?: string}}).stop_details;
+            refusalCategory = details?.category ?? null;
+            finalText = "[classifier refusal: " + JSON.stringify(details) + "]";
             break;
         }
 

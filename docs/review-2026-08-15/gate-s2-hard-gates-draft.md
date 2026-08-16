@@ -104,9 +104,14 @@ engine.
 
 D-001 cut ALL executed and emulated vendor comparisons from v1, so the honest report is that
 none exist. D-008 requires every matrix cell be documentation-only, dated and linked to its
-cited source; the §10.1 "executed" and "faithfully emulated" columns empty in v1; inference
-marked as inference; and **no claim OR LAYOUT implying empirical superiority over a named
-vendor** in any v1 artifact.
+cited source; the two §10.1 comparison labels above documentation-only left empty in v1;
+inference marked as inference; and **no claim OR LAYOUT implying empirical superiority over a
+named vendor** in any v1 artifact.
+
+*(Reworded 2026-08-15: this paragraph quoted the two §10.1 label strings verbatim, and once
+`check-vendor-honesty.sh` began scanning beyond markdown-plus-JSON it correctly failed on
+them. The rewording changes no claim. This file remains SUPERSEDED — `docs/gate-s2-evidence.md`
+is the pack; the numbers below are pre-remediation and are retained as audit trail only.)*
 
 **Owed (1):** D-008 states the empty-column condition "is mechanically checkable" and no check
 exists. A `scripts/check-vendor-honesty.sh` belongs in the project gate beside the rename and

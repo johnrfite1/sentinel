@@ -28,7 +28,7 @@ import type {AgentProposal} from "../propose/schema.ts";
 import {CORPUS, ATTACKER, RESOURCE, WRONG_RESOURCE, CONFORMING_VALUE, MANDATE_CEILING} from "./fixtures.ts";
 import type {FixtureSpec} from "./spec.ts";
 import {assertNoLeakage, assertViewShape} from "./leakage.ts";
-import {assertRationaleUnread} from "./rationale.ts";
+import {verifyRationaleFixture} from "./rationale.ts";
 
 /**
  * Execute the §7.1 corpus against a real chain and emit two separate views.
@@ -465,26 +465,12 @@ for (const spec of CORPUS) {
         let callData = buildCallData(spec);
         const valueWei = spec.valueWei ?? CONFORMING_VALUE;
 
-        // The injection classes are only real if the proposal is real. Checked here, before
-        // any environment manipulation, so a failure names the transcription rather than a
-        // later mutation of the calldata.
-        if (spec.agentRationale !== undefined) {
-            const transcribed = transcribe(proposalFor(spec, target, valueWei));
-            if (!transcribed.ok) {
-                throw new Error(
-                    `${spec.id} carries an agent rationale but its call does not transcribe: ` +
-                        `${transcribed.code} — ${transcribed.detail}`,
-                );
-            }
-            const p = transcribed.proposal;
-            if (p.callData !== callData || p.target !== target || p.valueWei !== valueWei) {
-                throw new Error(
-                    `${spec.id}: the agent proposal and the corpus fixture denote different ` +
-                        `calls. proposal=${p.target}/${p.valueWei}/${p.callData} ` +
-                        `fixture=${target}/${valueWei}/${callData}`,
-                );
-            }
-        }
+        // The transcription is performed here, before any environment manipulation, so a
+        // failure names the transcription rather than a later mutation of the calldata. The
+        // CHECKING lives in `verifyRationaleFixture` and is called once, below, after the
+        // artefacts exist — one call site, structurally asserted by `corpus.test.ts`.
+        const transcribedProposal =
+            spec.agentRationale === undefined ? null : transcribe(proposalFor(spec, target, valueWei));
 
         if (env.starveVault) await rpc("anvil_setBalance", [vault, "0x0"]);
         if (env.changeTargetCode) await rpc("anvil_setCode", [demoPay, "0x6001600155"]);
@@ -595,16 +581,28 @@ for (const spec of CORPUS) {
         // is the one place a leak would become content the signer attests to.
         if (spec.agentRationale !== undefined) {
             const evaluation = evaluate(input);
-            assertRationaleUnread(
-                spec.agentRationale,
-                j({
+            const p = transcribedProposal?.ok === true ? transcribedProposal.proposal : null;
+            verifyRationaleFixture({
+                fixtureId: spec.id,
+                rationale: spec.agentRationale,
+                encodedTarget: target,
+                encodedValueWei: valueWei,
+                encodedCallData: callData,
+                transcribed: {
+                    ok: transcribedProposal?.ok === true,
+                    code: transcribedProposal?.ok === false ? transcribedProposal.code : undefined,
+                    detail: transcribedProposal?.ok === false ? transcribedProposal.detail : undefined,
+                    target: p?.target,
+                    valueWei: p?.valueWei,
+                    callData: p?.callData,
+                },
+                artefact: j({
                     action: {...action, callData},
                     layers,
                     reasonCodes: evaluation.reasonCodes,
                     evidenceCanonical: evaluation.evidenceCanonical,
                 }),
-                spec.id,
-            );
+            });
         }
 
         // --- the labeller's view: values and intent, nothing derived ---------

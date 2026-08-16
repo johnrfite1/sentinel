@@ -41,7 +41,7 @@
         }
       ],
       "failing": [],
-      "micros": 10.291
+      "micros": 3.667
     },
     {
       "layer": "L2_policy_plus_effects",
@@ -134,7 +134,7 @@
         }
       ],
       "failing": [],
-      "micros": 417.125
+      "micros": 145.792
     },
     {
       "layer": "L3_full_conformance",
@@ -295,7 +295,7 @@
         "EVAL_ENTITLEMENT_RECURRENCE",
         "EVAL_PURCHASE_RECURRENCE"
       ],
-      "micros": 320.958
+      "micros": 112.709
     }
   ]
 }

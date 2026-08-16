@@ -86,7 +86,7 @@
         "beneficiary": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
         "resourceId": "0xfa61acd212c1c7e98d52043ae4ebe291c2755a407594f27e75b84f8394d309ed",
         "expiryBefore": "0",
-        "expiryAfter": "1786928434",
+        "expiryAfter": "1786934293",
         "recurringBefore": false,
         "recurringAfter": false
       }
