@@ -5,6 +5,8 @@ Prepared by: Claude (Fable), from the facilitated intake session with John
 For: Opus 5 (architect and build director) and its subagents
 Status: Rulings ratified by John 2026-07-27 (canonical record: `docs/decisions.md`). Build authorized through Gate S2. Anything in this brief marked "agent note" is elaboration, not ratified text.
 
+**2026-08-16 — GATE S2 IS SIGNED (PASS, John, D-041), so "authorized through Gate S2" has been spent.** Both of D-002's mid-build gates are behind the project and there is no next gate until pre-publication. **What comes after S2 is the §14.8 ladder "as John directs" — it is not an agent's call to start climbing it**, and D-003's scope-expansion stop condition applies with more force now, not less, because the obvious next move after a signed gate is to invent the next milestone. Remaining known work is v1.1 and is bounded by the re-label decision (`docs/v1-1-register.md`).
+
 Amended 2026-07-27 by Opus 5 at build start: D-007…D-011 (delegated rulings) resolve four open forks and the labeling blind spot. Sections below reflect them. Proposal mirror: §14.9.
 
 ## Mission
@@ -34,7 +36,8 @@ In order:
 - **Gate S1 — riskiest mechanism proven (D-002).** Vault + isolated signer + exact-action binding + Case 1 end-to-end + replay/tamper invariants green. (Agent note on sequencing: reaching Case 1 end-to-end requires §9 steps 1–4 plus minimal slices of steps 5–6 — the demo contracts, a decoder, and enough of the Anvil pipeline and conformance evaluator to produce the allow receipt.)
 - **Gate S2 — proof artifact (D-002, amended by D-009 and D-032).** Full 30–50 fixture corpus, §7.5 gate evidence, the §7.3 ablation report, and the receipt-verifier CLI (D-010). Under time pressure the priority order is corpus > ablation > CLI. The evidence dashboard stays outside S2 unless John adds it at the gate.
   - *Amended 2026-08-15 (D-032):* of §7.5's eight gates, **six are S2 pass conditions plus Gate 5 (vendor honesty), which is mechanically checkable and still owed its check**. **Gate 8 (five-minute comprehension) is a PRE-PUBLICATION condition**, not an S2 one — D-008 requires it be run against a dashboard D-009 holds outside S2, and it asks whether a stranger understands a finished artifact rather than whether the mechanism is proven.
-  - *Status at 2026-08-15:* the corpus, the ablation and the CLI are all COMPLETE. Gates 1, 2, 3, 4, 6 and 7 have evidence. Gate 5 is open pending its check and a §2 capability-table audit. Gate 7's live canary is not built.
+  - *~~Status at 2026-08-15~~ — superseded.* **Status at 2026-08-16: GATE S2 IS SIGNED — PASS, John, D-041.** All four deliverables complete, all seven pass conditions MET. Gate 5 was certified the same day (D-038) after a source-verification pass found five of nine capability rows unsupported by their cited pages; §2 was rewritten to John's rulings and the check now reports 11 of 11 rows cited, with the certified table pinned by hash so any §2 edit invalidates it. Gate 7's live canary is built and agrees with the pinned recording; D-036 sets its cadence at monthly.
+  - **What S2 does NOT authorise, because a signed gate is where scope creeps:** D-016 still blocks all publication, the repository is PRIVATE, Gate 8 remains PRE-PUBLICATION under D-032, and certification of public claims is still autonomy NONE. **S2 was signed on the limits in `docs/gate-s2-evidence.md` §11 rather than despite them** — notably that only 14 of 20 fixture classes exercise the class they name, that no live agent runs in CI, and that §9 steps 1–3 still have no completed adversarial review.
 
 Resolved since the first draft of this brief (see `docs/decisions.md` D-007…D-011):
 
