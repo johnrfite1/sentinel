@@ -35,10 +35,11 @@ step "published EIP-712 type strings (D-023)"
 step "§5.7.1 check coverage (D-031)"
 ./scripts/check-eval-codes.sh || fail=1
 
-# Also reads its own output rather than its exit status. It passes on a RATCHET: six classes
-# are carried as not-exercised-at-the-corpus-layer, four of them ratified and two found by the
-# guard itself and still unruled. A green line here means "no NEW class went vacuous", never
-# "every class is covered". The carried list prints on every run for that reason.
+# Also reads its own output rather than its exit status. It passes on a RATCHET: six classes are
+# carried as not-exercised-at-the-corpus-layer — one RESERVED, four DELEGATED elsewhere, and one
+# a GAP that owes a fixture (D-039). A green line here means "no NEW class went vacuous", never
+# "every class is covered". The carried list, the GAP count, and the per-fixture vacuity note
+# print on every run for that reason.
 step "corpus class coverage (A-036)"
 ./scripts/check-class-coverage.sh || fail=1
 
@@ -219,19 +220,33 @@ WHAT IS COVERED, by layer, each with the limit that layer cannot exceed:
            classes — but SPREAD OVER IS NOT COVERAGE, and as of 2026-08-16 the difference is
            measured rather than assumed: check-class-coverage.sh (A-036) finds 14 of the 20
            produce a failing check the class is actually about. Six do not. Four of those are
-           known and reasoned — the call-graph classes D-025 reserved, the signer class the
+           known and reasoned — the call-graph class D-025 reserved, the signer class the
            evaluator has no code for, the injection class whose subject is containment rather
-           than a check — and TWO were found by that guard and are unruled:
-           `owner-override-and-block-behaviour` and `conflicting-block-state`. Read the
-           carried list the guard prints; a green line there means no NEW class went vacuous.
+           than a check, and the override class the vault suite proves instead. THE SIXTH IS A
+           GAP (D-039): `conflicting-block-state` declares it is proved by the conformance
+           engine, is not, and nothing else covers it. It owes a fixture at v1.1.
+           A DELEGATION IS NOT A CREDIT. Where a class points elsewhere, this guard reports the
+           pointer; it cannot see the delegate and does not check that the delegate tests
+           anything. One of the four points at a REGRESSION guard that is explicitly not a
+           proof of absence. Read the carried list the guard prints; a green line there means
+           no NEW class went vacuous.
+           The class number also hides per-fixture vacuity, which the guard now prints
+           separately: 39 of 43 scoped fixtures individually fail a check their OWN class is
+           about. A class stays green while a member of it exercises nothing — F051 was caught
+           only because it was the sole fixture of its class.
            The fixtures are executed against a real chain with per-fixture snapshot isolation, and
            INDEPENDENTLY LABELLED under the D-011a frozen prompt by agents denied the
            implementation, the tests, and each other's work. Measured against those labels:
            false allows 38 (baseline) / 8 (policy+effects) / 1 (full). Detection
            contribution — baseline alone 9, effect extraction adds 29, mandate conformance
            adds 8, and those 8 are exactly the wrong-purpose class (D-034 gave the partition
-           a criterion and moved nine non-purpose codes to L2; the figure was 17). Inter-labeller disagreement 0.0% on a freshly drawn sample, with both
-           limits on that number stated in the report itself.
+           a criterion and moved nine non-purpose codes to L2; the figure was 17). Inter-labeller disagreement 0.0% on a freshly drawn sample, with FOUR
+           limits on that number stated in the report — two written with it, two supplied by
+           an independent review.
+           LIMIT ON THE EXACT-MATCH COLUMN: 12/50, 41/50, 49/50 are scored against labeller E,
+           and the one label the contamination channel moved (F051) is one of the 50. Scored
+           without it the figures read 11/49, 40/49, 48/49. Both columns are real; only the
+           first is published anywhere but the decision log (A-033).
            LIMIT: this is the first evidence in the repository that bears on whether the
            verdicts are RIGHT rather than merely produced, and it is bounded by the corpus.
            50 fixtures over two demo contracts and two call schemas is not an accuracy claim
@@ -271,9 +286,13 @@ WHAT IS NOT COVERED:
   - A LIVE agent. §9 step 7 connected the proposal to the pipeline, so the D-018 gap is
     closed for the recorded case, but every agent proposal exercised here comes from a
     pinned D-007 transcript. Nothing in this suite calls a model.
-  - Gate 5's CERTIFICATION half. The mechanical conditions run above and pass; D-008(1)
-    and (3) — every capability cell dated and linked, inference marked — are John's, are
-    reported UNCERTIFIED on every run, and no agent may clear them.
+  - THAT GATE 5's CITATIONS POINT ANYWHERE. Certified by John 2026-08-16 (D-038), and
+    the check now reports 11 of 11 rows and "certified by record" rather than
+    UNCERTIFIED. What it verifies is the SHAPE of a marker in the capability cell:
+    [§13#N read YYYY-MM-DD]. It does not resolve N against §13, so a citation to a
+    source number that does not exist passes. "Dated" is checked; "linked" is not.
+    Nor does anything detect an edit to the §2 table, which D-038 declares makes the
+    certification stale — that expiry is a convention, not an instrument.
   - The evidence dashboard (outside S2 unless John adds it at the gate, D-009).
   - Gate 8 (five-minute comprehension), which D-032 makes PRE-PUBLICATION rather than S2.
   - BYTE-reproducible labelling views: a corpus re-run rewrites 32 of 50 view files
@@ -282,14 +301,20 @@ WHAT IS NOT COVERED:
     runs to a temp directory and its normalised digests are compared to the committed
     ones. "These are the views the labellers saw" is now checkable modulo two declared
     timestamp fields, rather than resting on git history alone.
-  - Labeller independence from PRIOR FINDINGS about specific fixtures (A-030). The
-    independence from the IMPLEMENTATION is real and enforced. The specification the
-    protocol grants has carried a walkthrough of F049 since before any labelling round,
-    and every labeller of record read it. OPEN FORK for John.
-  - An independent review of steps 7-8, which have had NONE, and of steps 1-3 that
-    completed. Steps 4-6 HAVE now had a full
+  - Labeller independence from PRIOR FINDINGS about specific fixtures (A-030) is no
+    longer an open fork — it was MEASURED (D-033, D-035) and the channel moved exactly
+    ONE label, F051, the one labeller E had flagged itself. What is NOT covered is the
+    residue: the specification still carries fixture walkthroughs and still publishes
+    41 of the evaluator's reason-code identifiers, a contamination surface four times
+    what the decision log recorded before it was counted. v1.1 work, not measured away.
+  - Model-INDEPENDENT labelling. One arm used a different Claude model and agreed. The
+    build loop cannot obtain a labeller from another vendor, so "model diversity" here
+    means a second model from one family, not an independent implementation of judgement.
+  - An independent review of steps 1-3, whose earlier pass (A-016) had most of its
+    verifications cut short by a spend limit that is NOT retired. Steps 4-6 had a full
     independent adversarial pass under D-017 (see A-022): fixed commit, 12 findings, all 12
     independently adjudicated, 1 S1-blocking defect plus 6 others corrected and reverified.
+    Steps 7-8 were reviewed 2026-08-15: ten findings, all remediated.
     Steps 1-3 were reviewed earlier under A-016, whose own verifications were mostly cut
     short by a spend limit — that limit is NOT retired by the later review.
 

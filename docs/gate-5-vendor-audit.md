@@ -167,6 +167,15 @@ so this citation may want to point somewhere else regardless.
 
 ## The direction of the errors, which is worth noticing
 
+**[CORRECTED 2026-08-16 — this paragraph's enumeration was wrong in both directions, found by
+an independent adversarial review. It named Cobo, which this same file clears as holding (Row 1,
+"All six claims documented"), and omitted Privy, for which it found `"signer" is documented for
+neither`. The over-claimed parties are the five rows the pass marked as not holding, not six.
+The second sentence's "not Sentinel's" is also withdrawn: the only cells that could carry a
+Sentinel claim are the "Consequence for Sentinel" column, which this file rules out of scope by
+construction, so no pass examined that direction. What survives is the first clause, about the
+discrepancies actually examined. The original text is left below unaltered.]**
+
 **Every discrepancy found overstates a competitor's documented capability, not Sentinel's.**
 The table claims more for Cobo, Safe, Hypernative, Circle, Coinbase and Tenderly than their
 cited pages support. That is the honest direction to err — it makes Sentinel's market look

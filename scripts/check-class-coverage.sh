@@ -174,6 +174,23 @@ const BASELINE = {
 
 let fail = 0;
 const problems = [];
+const STATUSES = ['DELEGATED', 'RESERVED', 'GAP'];
+
+// THE BASELINE IS VALIDATED, AND THE FIRST VERSION VALIDATED NEITHER FIELD.
+// `status` was free text, so changing 'GAP' to 'Gap' silently erased the ruled GAP from the
+// report and printed "None owes a fixture" — a false statement about the guard's own baseline,
+// from a one-character typo. And a baseline key naming a class that exists nowhere printed as a
+// carried DELEGATED class forever. Both found by adversarial review.
+for (const [cls, b] of Object.entries(BASELINE)) {
+  if (!STATUSES.includes(b.status)) {
+    console.log(`  FAIL  baseline '${cls}' has status '${b.status}' — must be one of ${STATUSES.join(', ')}`);
+    fail = 1;
+  }
+  if (!(cls in ABOUT)) {
+    console.log(`  FAIL  baseline '${cls}' is not a class in the map — it carries a class that does not exist`);
+    fail = 1;
+  }
+}
 
 // --- Vacuity guard on the guard itself --------------------------------------
 // Every code in the map must exist in the engine. A renamed code would otherwise make its class
@@ -196,8 +213,10 @@ const fixtureIds = fs.readdirSync(fixturesDir)
   .map(f => JSON.parse(fs.readFileSync(`${fixturesDir}/${f}`, 'utf8')));
 
 const results = new Map();
+let resultFileCount = 0;
 for (const f of fs.readdirSync(resultsDir)) {
   if (!f.endsWith('.json') || f.startsWith('_')) continue;
+  resultFileCount++;
   const j = JSON.parse(fs.readFileSync(`${resultsDir}/${f}`, 'utf8'));
   results.set(j.fixtureId, j);
 }
@@ -207,6 +226,38 @@ const missing = fixtureIds.filter(f => !results.has(f.fixtureId)).map(f => f.fix
 if (missing.length) {
   console.log(`  FAIL  ${missing.length} fixture(s) have no result file: ${missing.join(', ')}`);
   console.log('        Run the corpus before this guard; a partial result set proves nothing.');
+  fail = 1;
+}
+
+// KEY INTEGRITY BETWEEN THE TWO DIRECTORIES. This guard reads CLASSES from for-labelling and
+// FAILING CHECKS from results, and the first version never checked that the two agree — so
+// relabelling `scenarioClass` in for-labelling alone moved a fixture into another class while
+// results still called it something else. An adversarial review used exactly that to launder
+// the ruled GAP green in two metadata edits, with the guard's own stale-baseline FAIL message
+// supplying step two. Nothing else in the gate verifies `results/` at all.
+const classMismatch = fixtureIds
+  .filter(f => results.has(f.fixtureId) && results.get(f.fixtureId).class !== f.scenarioClass)
+  .map(f => `${f.fixtureId} (view says '${f.scenarioClass}', result says '${results.get(f.fixtureId).class}')`);
+if (classMismatch.length) {
+  console.log(`  FAIL  ${classMismatch.length} fixture(s) disagree about their class between the labelling view and the result:`);
+  for (const m of classMismatch) console.log(`          ${m}`);
+  console.log('        Re-run the corpus. Editing one side to move a fixture between classes is');
+  console.log('        how a class is made to look covered without a fixture being written.');
+  fail = 1;
+}
+
+// The EXTRA direction. The missing check above is loud; a surplus result file was silent, and a
+// duplicate fixtureId simply overwrote the real one.
+const fixtureSet = new Set(fixtureIds.map(f => f.fixtureId));
+const extra = [...results.keys()].filter(id => !fixtureSet.has(id));
+if (extra.length) {
+  console.log(`  FAIL  ${extra.length} result file(s) name a fixture that does not exist: ${extra.join(', ')}`);
+  console.log('        A result with no fixture behind it is evidence of nothing.');
+  fail = 1;
+}
+if (resultFileCount !== results.size) {
+  console.log(`  FAIL  ${resultFileCount} result files collapsed to ${results.size} ids — duplicate fixtureId`);
+  console.log('        The last file read silently wins, so one fixture can be given another\'s result.');
   fail = 1;
 }
 
@@ -229,6 +280,7 @@ for (const c of Object.keys(ABOUT)) {
 // --- The assertion ----------------------------------------------------------
 const exercised = [];
 const unexercised = [];
+const observations = [];
 
 for (const cls of [...corpusClasses].sort()) {
   const about = ABOUT[cls];
@@ -236,11 +288,42 @@ for (const cls of [...corpusClasses].sort()) {
   const mine = fixtureIds.filter(f => f.scenarioClass === cls).map(f => results.get(f.fixtureId)).filter(Boolean);
 
   if (about === CONFORMING) {
-    const ok = mine.some(r => {
+    // BOTH HALVES ARE ASSERTED. The first version tested only "at least one fixture ALLOWs
+    // cleanly", while its own comment claimed "a failing check would be the defect" — so the
+    // inverse assertion was stated and never made. An adversarial review found the corpus
+    // violating it with no edit at all, and then added four all-BLOCK fixtures to the class
+    // without moving the guard off green.
+    const clean = mine.filter(r => {
       const L3 = (r.layers || []).find(l => l.layer === 'L3_full_conformance');
       return L3 && L3.verdict === 'ALLOW' && (L3.failing || []).length === 0;
     });
-    (ok ? exercised : unexercised).push({ cls, how: 'a conforming action is ALLOWed with nothing failing' });
+    const dirty = mine.filter(r => {
+      const L3 = (r.layers || []).find(l => l.layer === 'L3_full_conformance');
+      return L3 && (L3.verdict !== 'ALLOW' || (L3.failing || []).length > 0);
+    });
+    // THE ASSERTION IS THE DEFENSIBLE HALF; THE OTHER HALF IS REPORTED, NOT ASSERTED.
+    //
+    // "At least one fixture ALLOWs cleanly" is checkable and is checked. Whether EVERY member
+    // must allow is a judgement about what §7.1's "Exact allowed action and benign variations"
+    // means, and the two readings disagree on a real fixture: F002 is a benign variation (the
+    // mandated purchase at zero native value) that BLOCKS, legitimately, because D-021 makes a
+    // reverting simulation a failed rule. Under one reading it is misfiled; under the other the
+    // class deliberately shows that a benign-looking variation can block.
+    //
+    // An earlier draft of this guard asserted the strict reading and failed the gate on F002 —
+    // which would have been the guard picking the answer to a question about what the corpus
+    // MEANS. That is the map problem in the header, one level up. So: non-conforming members
+    // print on every run as an observation nobody has ruled on, and never count as a pass.
+    if (clean.length) {
+      exercised.push({ cls, how: 'a conforming action is ALLOWed with nothing failing' });
+    } else {
+      unexercised.push({ cls, conforming: true, how: 'NO fixture in the conforming class ALLOWs cleanly' });
+    }
+    for (const r of dirty) {
+      const L3 = (r.layers || []).find(l => l.layer === 'L3_full_conformance');
+      observations.push(`${r.fixtureId} is in the CONFORMING class '${cls}' and does not conform: ` +
+        `${L3.verdict} on ${(L3.failing || []).join(', ') || 'no failing codes'}`);
+    }
     continue;
   }
 
@@ -264,14 +347,59 @@ for (const e of exercised) {
 
 for (const u of unexercised) {
   if (!BASELINE[u.cls]) {
-    console.log(`  FAIL  '${u.cls}' has no fixture producing a failing check the class is about`);
-    console.log(`        Expected one of: ${(ABOUT[u.cls] || []).join(', ') || '(none mapped)'}`);
+    if (u.conforming) {
+      // The CONFORMING class fails for the opposite reason, and the first version printed the
+      // wrong message here and then CRASHED calling .join on the CONFORMING Symbol — killing
+      // the run before the carried list and the GAP count printed, which is the output
+      // test.sh tells the reader to read.
+      console.log(`  FAIL  '${u.cls}' does not hold the property its class asserts`);
+      console.log(`        ${u.how}`);
+      console.log('        This class is CONFORMING: its claim is that a valid action is ALLOWed');
+      console.log('        with nothing failing. A fixture here that blocks belongs to the class');
+      console.log('        that describes why it blocks.');
+    } else {
+      console.log(`  FAIL  '${u.cls}' has no fixture producing a failing check the class is about`);
+      console.log(`        Expected one of: ${(ABOUT[u.cls] || []).join(', ') || '(none mapped)'}`);
+    }
     problems.push(u.cls);
     fail = 1;
   }
 }
 
 console.log(`  ok    ${exercised.length} of ${corpusClasses.size} classes exercise the class they name`);
+
+// PER-FIXTURE VACUITY, REPORTED BECAUSE THE CLASS-LEVEL NUMBER HIDES IT.
+//
+// The header concedes this guard "cannot tell a fixture that exercises its class WELL from one
+// that grazes it". A review showed that understates it: a fixture exercising its class NOT AT
+// ALL is equally invisible once a sibling covers the class — which is precisely the F051/F056
+// shape A-036 was written for. F051 was caught only because it was the sole fixture of its
+// class. This count is the number that would have caught it with a sibling present. It is an
+// OBSERVATION, not a gate condition: some fixtures legitimately carry no failing check.
+let vacuous = [];
+for (const f of fixtureIds) {
+  const about = ABOUT[f.scenarioClass];
+  if (about === CONFORMING || about === undefined || about.length === 0) continue;
+  const r = results.get(f.fixtureId);
+  const L3 = r && (r.layers || []).find(l => l.layer === 'L3_full_conformance');
+  const hits = ((L3 && L3.failing) || []).filter(c => about.includes(c));
+  if (!hits.length) vacuous.push(f.fixtureId);
+}
+const scoped = fixtureIds.filter(f => {
+  const a = ABOUT[f.scenarioClass];
+  return a !== CONFORMING && a !== undefined && a.length > 0;
+}).length;
+console.log(`  note  ${scoped - vacuous.length} of ${scoped} individually fail a check their OWN class is about`);
+if (vacuous.length) {
+  console.log(`        not individually: ${vacuous.join(', ')}`);
+  console.log('        A class stays green while a member of it exercises nothing. That is how');
+  console.log('        F051 would have shipped if it had had a sibling.');
+}
+for (const o of observations) {
+  console.log(`  note  ${o}`);
+  console.log('        UNRULED: whether every member of a CONFORMING class must allow is a');
+  console.log('        question about what the class means, and no guard should answer it.');
+}
 
 console.log('');
 console.log('corpus class coverage — CARRIED, never counted as covered');

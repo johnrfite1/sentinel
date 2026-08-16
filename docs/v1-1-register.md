@@ -8,23 +8,34 @@ example from §4.2 *edits the specification to serve the measurement* and **is n
 So this register exists to hold the work rather than do it. Everything here is deferred behind
 a decision that is John's.
 
-Written 2026-08-15. Every line number and count below was verified against the tree that day,
-because this project's documented failure mode is a figure that was true once.
+Written 2026-08-15. **Its first version said "every line number and count below was verified
+against the tree that day" — and every line number in it was stale within hours**, because the
+Gate 5 certification grew §2 by four lines and nothing re-checked. Found by an independent
+adversarial review, 2026-08-16. That sentence was the register's own inoculation against "a
+figure that was true once", and it did not work, which is the more useful finding than the
+off-by-four.
+
+**Line numbers below are therefore SECTION ANCHORS, not line numbers.** Grep the quoted heading;
+do not trust an integer in a file that moves. Counts were re-verified 2026-08-16 by running the
+tools, not by reading the prose.
 
 ---
 
 ## 1. The contamination passages (A-030, D-035)
 
-The channel is real and **measured to be small**: across six labellers, two specification
-versions and two models over fourteen fixtures, **one label moved** (F051), and it was the one
-labeller E had itself flagged. D-035's control arm — run twice, see A-037 — moved nothing. The
+The channel is real and **measured to be small**: six targeted measurement arms (G, H, J, K, L,
+M), across two specification versions and two models over fourteen fixtures, compared against
+E and F as the labels of record — **one label moved** (F051), and it was the one labeller E had
+itself flagged. (An earlier phrasing said "six labellers" and counted the measurement arms as if
+they were the whole programme; twelve label files touch those fixtures, four of them from an
+earlier round whose role is unestablished. See `docs/session-state.md`.) D-035's control arm — run twice, see A-037 — moved nothing. The
 passages are still defects; the bound is what says they are not urgent.
 
-| Passage | Where | What it leaks |
+| Passage | Where (grep this, not a line number) | What it leaks |
 |---|---|---|
-| §4.2 Case 2 | line 259 | Walks through F049's scenario and states the expected block |
-| §5.7.1 note | line 516 | Names "the wrong-policy fixture then ALLOWs" — that is F025, with its answer |
-| §5.7.1 body | lines 522–535 | **Publishes the evaluator's reason-code identifiers** |
+| §4.2 Case 2 | `#### Case 2: Real Prompt Injection — Block` | Walks through F049's scenario and states the expected block |
+| §5.7.1 note | `*Added 2026-08-15 (D-031)` | Names "the wrong-policy fixture then ALLOWs" — that is F025, with its answer |
+| §5.7.1 body | `**Binding and activation**` through `**Evidence that did not arrive**` | **Publishes all 41 of the evaluator's reason-code identifiers** |
 | D-025's text | in `decisions.md`, reachable via the spec | Is F051's and F056's case, written out |
 
 ### A correction to D-035's own supporting text, which does not touch its ruling

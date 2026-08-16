@@ -67,7 +67,39 @@ VENDORS='Cobo|Coinbase|Circle|Privy|Safe|MetaMask|Sigil|Hypernative|Blockaid|Ten
 # false-allow table — a file that reports a result, which this script's own error message
 # calls the way the gate gets defeated. Only `artifacts/` (reproduction rigs and campaign
 # data) is excluded now.
-EXCLUDED='^(Sentinel_Protocol_Lab_Proposal_v0_2\.md|HANDOFF\.md|docs/decisions\.md|docs/session-state\.md|docs/gate-5-vendor-audit\.md|docs/review-2026-08-15/artifacts/|scripts/check-vendor-honesty\.sh)'
+# ANCHORED AT BOTH ENDS. The first version anchored `^` only, which made every entry a PREFIX
+# match: `docs/decisions.md.gate-5-evidence` — an untracked file one `git add -A` from being
+# published — inherited decisions.md's exemption and could carry a head-to-head false-allow
+# table naming three vendors plus both banned §10.1 labels, defeating conditions (2) and (4) at
+# once. Found by an independent adversarial review, 2026-08-16, with that exact file. Directory
+# entries keep the prefix form deliberately; file entries now end at `$`.
+EXCLUDED='^(Sentinel_Protocol_Lab_Proposal_v0_2\.md|HANDOFF\.md|docs/decisions\.md|docs/session-state\.md|docs/gate-5-vendor-audit\.md|docs/v1-1-register\.md|scripts/check-vendor-honesty\.sh)$|^docs/review-2026-08-15/artifacts/'
+
+# CONDITION (2) HAS A DIFFERENT, MUCH NARROWER EXCLUSION LIST, and the split is the point.
+#
+# The list above exists because a DELIBERATION record cannot discuss the market without naming
+# the parties. That argument is about condition (4) — vendor names — and about nothing else. The
+# first version applied it to the §10.1 label scan too, so appending "Sentinel was **executed
+# directly** against every vendor above and led on all nine rows" to the Gate 5 audit passed the
+# gate. That file is the packet John rules from.
+#
+# Narrowed to the four files that DEMONSTRABLY need it, measured rather than assumed: the
+# proposal defines the scheme in §10.1; `decisions.md` records D-001's text, which is the ruling
+# that cut executed comparisons; the Gate 5 audit quotes the labels while explaining the
+# condition; and this script holds the pattern. HANDOFF.md, session-state.md, v1-1-register.md,
+# the S2 evidence pack and the review artifacts were all on the old list and contain neither
+# label — they are now scanned.
+#
+# THE RESIDUAL EXPOSURE, STATED BECAUSE IT IS NOT MECHANICALLY CLOSED AND WAS RE-TESTED AFTER
+# THIS REPAIR. A guard cannot tell "labelling a comparison executed" from "recording that
+# executed comparisons were cut", and those are the same words. So condition (2) is unenforced
+# inside those four files, one of which is the packet John rules Gate 5 from.
+#
+# DEMONSTRATED 2026-08-16 and still true: appending "Sentinel was executed directly against
+# every vendor above" to `docs/gate-5-vendor-audit.md` passes this gate. Of the twelve exploits
+# an adversarial review built against these two guards, this is the ONE that survives the fix.
+# Reading that file is the only control, which is the honest description of an honour system.
+EXCLUDED_LABELS='^(Sentinel_Protocol_Lab_Proposal_v0_2\.md|docs/decisions\.md|docs/gate-5-vendor-audit\.md|scripts/check-vendor-honesty\.sh)$'
 
 # TRACKED **AND** UNTRACKED-BUT-NOT-IGNORED, and the second half is not belt-and-braces.
 #
@@ -90,13 +122,22 @@ EXCLUDED='^(Sentinel_Protocol_Lab_Proposal_v0_2\.md|HANDOFF\.md|docs/decisions\.
 # false-allow figures), `fixtures/injection/canary-history.jsonl` (which `.json` does not
 # match, and which D-007 requires IN the evidence bundle), and the verifier's Python. A guard
 # whose scope is a file extension is a guard somebody routes around by choosing a file.
+#
+# BINARY SKIPPING IS BY PATH, NOT BY CONTENT. `grep -Iq .` treats any file containing a NUL as
+# binary, so appending one NUL byte to a markdown file removed it from this scan entirely while
+# leaving it perfectly readable — demonstrated by an independent review, 2026-08-16. The test is
+# now an extension allowlist for the formats that carry binary data in this repository; anything
+# else is scanned as text whatever bytes it holds.
 artifacts() {
+    local excl="${1:-$EXCLUDED}"
     {
         git ls-files
         git ls-files --others --exclude-standard
-    } | sort -u | grep -Ev "$EXCLUDED" | while IFS= read -r f; do
-        # Skip binaries and anything unreadable; `grep -Iq` tests for text.
-        [ -f "$f" ] && grep -Iq . "$f" 2>/dev/null && printf '%s\n' "$f"
+    } | sort -u | grep -Ev "$excl" | while IFS= read -r f; do
+        case "$f" in
+            *.png|*.jpg|*.jpeg|*.gif|*.pdf|*.zip|*.gz|*.wasm|*.ico) continue ;;
+        esac
+        [ -f "$f" ] && printf '%s\n' "$f"
     done
 }
 
@@ -116,7 +157,7 @@ while IFS= read -r file; do
         echo "        D-001 cut executed comparisons from v1; §10.1's other two labels must stay empty."
         label_hits=$((label_hits + 1))
     fi
-done < <(artifacts)
+done < <(artifacts "$EXCLUDED_LABELS")
 
 if [ "$label_hits" -eq 0 ]; then
     echo "  ok    no artifact claims an executed or emulated vendor comparison (D-001, D-008(2))"
@@ -209,10 +250,28 @@ cited=$(awk -F'|' '/^\| Category \| Examples \| Existing capability \| Consequen
 
 # D-008(1) has a mechanical half — dated and linked — and this script may report that half as
 # MET when it is met. It may not report the judgement half, which is the next block.
+# THE MARKER'S SHAPE IS NOT ITS LINKAGE. D-008(1) says "dated AND LINKED to its cited source",
+# and the first version checked only that `[§13#N read YYYY-MM-DD]` matched — so `[§13#997 read
+# 1999-01-01]` counted as a citation though §13 has no entry 997. Two independent reviews found
+# this separately on 2026-08-16. Every N is now resolved against §13's actual entry numbers.
+declared=$(awk '/^## 13\. Source Notes/{t=1;next} t&&/^## 14\./{exit} t&&/^[0-9]+\. \[/{sub(/\..*/,"");print}' "$PROPOSAL" | sort -un)
+badrefs=""
+for n in $(awk -F'|' '/^\| Category \| Examples \| Existing capability \| Consequence for Sentinel \|/{t=1;next} t&&/^\|---/{next} t&&/^\|/{print $4} t&&!/^\|/{exit}' "$PROPOSAL" \
+           | grep -oE '§13#[0-9]+' | grep -oE '[0-9]+' | sort -un); do
+    printf '%s\n' "$declared" | grep -qx "$n" || badrefs="$badrefs $n"
+done
+if [ -n "$badrefs" ]; then
+    echo "  FAIL  §2 cites §13 entries that do not exist:$badrefs"
+    echo "        D-008(1) requires the cell be LINKED to its cited source. A well-formed marker"
+    echo "        pointing at nothing is a citation in shape only. Add the source to §13."
+    fail=1
+fi
+
 if [ "$cited" -eq "$rows" ] && [ "$rows" -gt 0 ]; then
-    echo "  ok    §2 capability table: $cited of $rows rows carry a per-cell source and access date"
-    echo "        D-008(1)'s mechanical half. A row added later without [§13#N read YYYY-MM-DD]"
-    echo "        in its capability cell FAILS this gate — the count is a ratchet, not a snapshot."
+    echo "  ok    §2 capability table: $cited of $rows rows carry a marker resolving to a §13 entry"
+    echo "        D-008(1)'s mechanical half: dated, and linked to a source that exists. A row"
+    echo "        added later without [§13#N read YYYY-MM-DD] in its capability cell FAILS this"
+    echo "        gate, as does one citing an entry §13 does not have. The count is a ratchet."
 else
     echo "  FAIL  §2 capability table: only $cited of $rows rows carry a per-cell source and date"
     echo "        D-008(1) requires every cell documentation-only, DATED, and LINKED to its cited"
@@ -227,13 +286,60 @@ fi
 # partition. What is mechanical is whether a NAMED certification exists in the document. So this
 # looks for the certification line §2 carries and reports the decision id it names. It does not
 # and cannot check that the certification is correct.
-certline=$(grep -oE '\*Certified by John at the Gate 5 session, [0-9]{4}-[0-9]{2}-[0-9]{2} \(D-[0-9]+\)\.\*' "$PROPOSAL" | head -1)
-if [ -n "$certline" ]; then
+# SCOPED TO §2, AND THE FIRST VERSION WAS NOT.
+#
+# It grepped the whole 71 KB proposal, so the one line at the gate saying a human certified the
+# public claims could be satisfied by a quotation, an example, or a fenced code block anywhere
+# in the file. An independent review demonstrated it on 2026-08-16 by deleting the real
+# certification from §2 and planting the string inside a code block in §14 introduced as "a
+# format we considered and rejected" — with a 1999 date and a decision id that does not exist.
+# The guard reported certified.
+#
+# THIS IS THE SAME DEFECT AS THE `$0`-VERSUS-FIELD-4 BUG FIXED TWENTY LINES ABOVE, committed in
+# the same session, by the same author, while writing a comment congratulating itself for
+# catching it. That is worth leaving in the file: the pattern is not rare and knowing about it
+# is not protection.
+sec2=$(awk '/^## 2\. Need, Market Reality, and First User/{t=1} t&&/^## 3\./{exit} t' "$PROPOSAL")
+certline=$(printf '%s\n' "$sec2" | grep -oE '^\*Certified by John at the Gate 5 session, [0-9]{4}-[0-9]{2}-[0-9]{2} \(D-[0-9]+\)\.\*' | head -1)
+# THE EXPIRY IS NOW AN INSTRUMENT, NOT A SENTENCE.
+#
+# D-038 declares the certification stale on ANY edit to the §2 table, and the first version
+# enforced that by PRINTING it — which is a warning, not a detection. A review pointed out that
+# `check-label-prompt.sh` had the enforcement pattern one file over. This pins the hash of the
+# table John actually certified: the rows plus the certification line, ignoring surrounding
+# prose. Edit a capability cell and the certification stops being reported, whatever the
+# sentence in §2 still says.
+#
+# TO RE-CERTIFY: John rules on the changed table, then this constant is updated in the same
+# commit that changes §2. An agent updating it without a ruling is forging a certification.
+CERTIFIED_TABLE_SHA="c9034750e56b8801be7cd31cce33c42caad209013a61ed7082155db33903959c"
+table_sha=$(awk '/^## 2\. Need, Market Reality, and First User/{t=1} t&&/^## 3\./{exit} t&&/^\|/{print} t&&/^\*Certified by John/{print}' "$PROPOSAL" | shasum -a 256 | awk '{print $1}')
+
+if [ -n "$certline" ] && [ "$table_sha" = "$CERTIFIED_TABLE_SHA" ]; then
     echo "  ok    §2 capability table: inference marking (D-008(3)) certified by record —"
     echo "        ${certline}"
-    echo "        THIS SCRIPT DID NOT AND CANNOT CHECK THAT THE CERTIFICATION IS RIGHT. It checks"
-    echo "        that a named certification exists. If the table changes, the certification is"
-    echo "        stale and this line becomes a claim nobody re-examined."
+    echo "        The table hashes to the one certified. THIS SCRIPT DID NOT AND CANNOT CHECK"
+    echo "        THAT THE CERTIFICATION IS RIGHT — it checks that a named certification exists"
+    echo "        in §2 and that §2 has not changed since. Whether a sentence fairly describes"
+    echo "        somebody else's product is John's, and no hash speaks to it."
+elif [ -n "$certline" ]; then
+    echo "  FAIL  §2 capability table: the certification is STALE. D-038 certified a table that"
+    echo "        hashed to ${CERTIFIED_TABLE_SHA%%????????????????????????????????????????????????????????}…; §2 now hashes to ${table_sha%%????????????????????????????????????????????????????????}…"
+    echo "        The certification line is still present and no longer describes this table."
+    echo "        Gate 5 is NOT MET until John rules on the change. Updating the pinned hash"
+    echo "        without a ruling forges a certification — it is not a repair."
+    fail=1
+elif [ -n "$CERTIFIED_TABLE_SHA" ]; then
+    # A pinned hash is this repository asserting that a certification HAPPENED. If the line is
+    # then absent from §2, that is not "not yet certified" — it is a certification that was
+    # removed, and letting it report as merely uncertified would turn a MET gate back into an
+    # open one silently. Found while re-testing the §2-scoping repair: the scoping worked, and
+    # the removal path underneath it did not fail.
+    echo "  FAIL  §2 capability table: a certification is pinned (D-038) but §2 carries no"
+    echo "        certification line. Gate 5 was MET and is not now."
+    echo "        A line elsewhere in the proposal does not count — quotations, examples and"
+    echo "        code blocks were accepted until 2026-08-16, and are not."
+    fail=1
 else
     echo "  UNCERTIFIED  §2 capability table: inference marking (D-008(3)) is a reading of each"
     echo "               sentence against its source, which is John's certification, not a grep."

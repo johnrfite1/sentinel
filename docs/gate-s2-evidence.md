@@ -132,8 +132,15 @@ records which layer actually enforces it so the two are not conflated.
 Evidence: corpus class `rpc-simulator-or-context-outage` — F045 (simulation unavailable,
 `failureMode = REVIEW`) reviews; F047 (identical, `FAIL_CLOSED`) blocks; F046 (unavailable
 simulation AND a wrong resource) blocks on the determinate failure, which is D-029's
-precedence ruling visible in a fixture. Plus `conflicting-block-state` (F048), whose
-classification D-030 settled with John's caveat recorded.
+precedence ruling visible in a fixture.
+
+**F048 was listed here as a fourth line of evidence and has been withdrawn as one.** It is filed
+`conflicting-block-state`, and D-030 did settle that classification with John's caveat recorded —
+but its actual L3 result is `REVIEW` on `EVAL_SIMULATION_UNAVAILABLE` and
+`EVAL_TARGET_CODE_IDENTITY`, which is the same outage shape as F045/F046/F047 immediately above.
+So it was one line of evidence presented as two, under a class label §11 of this pack now
+records as a GAP (D-039). **The gate's evidence is F045, F046 and F047, and it stands without
+F048** — which is why this is a withdrawal rather than a change of status.
 
 §3.3(8) requires that a critical dependency failure never produce an automatic allow, and no
 configuration in the corpus does.
@@ -219,9 +226,9 @@ editing §2, which no signature substitutes for. The section had read "PART MET"
 until an independent review called it a build loop grading its own homework.
 
 **What the certification session changed, and why it is not a signature over the old table.**
-A source-verification pass fetched and read all nine cited pages on 2026-08-15 and found that
-**five of the nine rows did not hold as written** — and that every discrepancy overstated a
-COMPETITOR, never Sentinel. Seven forks went to John; §2 was rewritten to his rulings:
+A source-verification pass fetched and read the **twelve** pages the nine rows cited (three rows
+cite two sources each) on 2026-08-15, and found that **five of the nine rows did not hold as
+written.** Seven forks went to John; §2 was rewritten to his rulings:
 
 - Rows 2 and 8 **split**, because one sentence covered two products and held jointly for
   neither. Two clauses supported by no cited page were **struck**.
@@ -235,6 +242,17 @@ COMPETITOR, never Sentinel. Seven forks went to John; §2 was rewritten to his r
 
 **§13 gained four sources (#25–#28), appended rather than inserted**, since renumbering would
 have invalidated every existing `§13 #N` reference.
+
+**A claim this section made and has withdrawn: "every discrepancy overstated a COMPETITOR, never
+Sentinel."** The first half is nearly right and the second half is not a result. The audit
+paragraph it rested on lists six over-claimed parties, but one of them is a row the same audit
+clears as holding, and one party the audit *did* find an unsupported claim for is missing from
+the list — so the enumeration is wrong in both directions. And "never Sentinel" describes a
+direction the pass did not examine: the only cells that could carry a Sentinel claim are the
+"Consequence for Sentinel" column, which the audit rules out of scope by construction. **A
+finding of "no errors in our own favour" from a pass that looked only at the vendor column is
+not a finding.** What survives: of the discrepancies the audit *did* examine, all were
+over-claims about other people's products.
 
 **The count in the summary table is now 11 of 11 rows dated and linked.** The rows went from
 nine to eleven because of the two splits.
@@ -260,6 +278,10 @@ none exist. `scripts/check-vendor-honesty.sh` now runs in the project gate and e
 **D-008(1) and (3), now cleared and how.** Condition (1)'s mechanical half is **MET** — the check
 counts `[§13#N read YYYY-MM-DD]` in each capability cell and reports **11 of 11**, and a row
 added later without one fails the gate, so the count is a ratchet rather than a snapshot.
+**"Linked" now means linked.** Until 2026-08-16 the check validated only the marker's SHAPE, so
+`[§13#997 read 1999-01-01]` counted as a citation though §13 has no entry 997 — found
+independently by both adversarial reviewers. Every `N` is now resolved against §13's actual
+entry numbers, and a citation pointing at nothing fails the gate.
 Condition (3) is reported as **certified by record**: the check looks for a named certification
 line in §2 and prints the decision id it names. `docs/gate-5-vendor-audit.md` holds the full
 audit, the certification packet John ruled from, and the record of what was applied.
@@ -278,9 +300,13 @@ citation, and that a named certification exists. **It cannot tell whether a sent
 somebody else's product is fair, and it says so on every run.** That is the verification
 partition working as designed: public claims, autonomy none.
 
-**The certification has an expiry, and it is sharp: any edit to the §2 table makes it stale.**
-The check prints that where the certification prints, because a certification with no expiry is
-a claim nobody re-examines.
+**The certification has an expiry, and it is now enforced rather than announced: any edit to the
+§2 table makes it stale.** The check pins the SHA-256 of the certified table and fails if §2
+changes, which is `check-label-prompt.sh`'s pattern applied to a second frozen artifact. **This
+was a printed warning until 2026-08-16** — a review pointed out that printing an expiry is not
+detecting one, and that the enforcement pattern was already in the repository one file over.
+Re-certifying means John ruling on the changed table and the pinned hash moving in the same
+commit; an agent moving it alone is forging a certification, and the guard says so.
 
 **Owed at v1.1, and declined here only so Gate 5 stopped blocking S2:** one row was left cited
 for fewer criteria than the vendor may document, without the re-cite lookup that rescued
@@ -409,16 +435,31 @@ prevent.
 - **THAT EACH FIXTURE CLASS EXERCISES THE CLASS IT NAMES — measured 2026-08-16, and it does
   not.** `scripts/check-class-coverage.sh` (A-036, in the gate) reports **14 of 20 classes
   produce a failing check the class is actually about.** Of the six carried: one is RESERVED
-  (D-025 reserves the knob in v1), four are DELEGATED to a layer that does test them, and **one
-  is a GAP — `conflicting-block-state` declares it is proved by the conformance engine, and is
-  not, and nothing else covers it** (D-039). The corpus's headline "50 fixtures across all 20
-  declared classes" was true and misleading; **spread over is not coverage**, and the guard
-  exists because three vacuous classes had already shipped before anything checked. The guard
-  passes on a ratchet: green means no NEW class went vacuous, never that every class is covered.
+  (D-025 reserves the knob in v1), four are DELEGATED elsewhere, and **one is a GAP —
+  `conflicting-block-state` declares it is proved by the conformance engine, and is not, and
+  nothing else covers it** (D-039). The corpus's headline "50 fixtures across all 20 declared
+  classes" was true and misleading; **spread over is not coverage**, and the guard exists
+  because three vacuous classes had already shipped before anything checked.
+  **A DELEGATION IS NOT A CREDIT, and an earlier draft of this entry said "four are DELEGATED to
+  a layer that does test them" — which is more than the guard reports and more than anyone
+  checked.** The guard states in its own header that it *"cannot see whether the delegate
+  actually tests it. It reports the delegation and does not credit it."* One of the four points
+  at the corpus leak guard, which §8 of this pack describes as *"a REGRESSION guard, not a proof
+  of absence"*. That the vault suite genuinely tests reentrancy and the override path is true and
+  is **not this guard's evidence**.
+  **What the class number also hides, now printed separately:** 39 of 43 scoped fixtures
+  individually fail a check their own class is about. A class stays green while a member of it
+  exercises nothing — F051 was caught only because it was the sole fixture of its class. And the
+  guard credits a class on ONE matching code: `malformed-calldata-or-unknown-selector` is green
+  on `EVAL_CALLDATA_UNDECODABLE` alone, and no fixture in it ever fails `EVAL_SELECTOR_BOUND`, so
+  the "unknown selector" half of that class name is unexercised.
+  The guard passes on a ratchet: green means no NEW class went vacuous, never that every class is
+  covered.
 - ~~**Labeller independence from PRIOR FINDINGS about these fixtures (A-030)** — unmeasured.~~
   **MEASURED, and this is the largest thing that changed since the pack was written.** Six
-  independent labellers across two specification versions and two models, over fourteen
-  fixtures: **one label moved** (F051), and it was the one labeller E had itself flagged
+  targeted measurement arms (G, H, J, K, L, M) across two specification versions and two models,
+  over fourteen fixtures, compared against E and F as the labels of record: **one label moved**
+  (F051), and it was the one labeller E had itself flagged
   ("Without D-025 I would have labelled this INSUFFICIENT"). D-035's targeted control over five
   fixtures whose labels cite a decision carrying a worked example moved **nothing**, against a
   threshold of two declared before the result was seen — and was accidentally replicated by a

@@ -40,9 +40,18 @@ autonomy *none*).
 threshold of two.** D-035 part (c) stands; no escalation is owed and no re-freeze happens.
 Recorded in `fixtures/corpus/labels/labeller-L-control.json` and its provenance file.
 
-**The programme as a whole: six independent labellers, two specification versions, two models,
-across fourteen fixtures — ONE label moved (F051), and it was the one labeller E had itself
-flagged.** That is the bound D-035 asked for, and it holds.
+**The programme as a whole: E and F are the labels of record; SIX targeted measurement arms
+(G, H, J, K, L, M) were compared against them, across two specification versions, two models and
+fourteen fixtures — ONE label moved (F051), and it was the one labeller E had itself flagged.**
+That is the bound D-035 asked for, and it holds.
+
+**"Six independent labellers" was the wrong count and is corrected.** Twelve label files touch
+those fourteen fixtures. Eight belong to the programme — two of record plus six measurement
+arms. **Four (A, B, C, D) do not, and what they are was never established:** they postdate the
+2026-08-15 12:55 prompt freeze by twenty minutes to an hour and were superseded by E and F the
+same afternoon. Nothing in the repository says whether they were a discarded first round or
+something else. **Do not cite them and do not delete them until that is pinned down** — an
+unexplained label file in the corpus is exactly the kind of thing a hostile reader finds.
 
 **REPLICATED, BY ACCIDENT — labeller M, a second control arm over the same five fixtures.** Two
 Claude Code sessions were open on this repository at once and both ran D-035's control. The
@@ -198,9 +207,11 @@ only — **the §7.1 corpus executed with its committed views verified**. The Ga
 prints and deliberately cannot fail the gate.
 
 **Two of the eight pass on something weaker than a pass, and both say so on every run.** Vendor
-honesty reports two conditions as UNCERTIFIED. Class coverage passes on a RATCHET: **14 of 20
-classes exercise the class they name**, six are carried, and a green line means only that no NEW
-class went vacuous. Read their output, not their exit status.
+honesty now reports D-008(1) as MET and (3) as **certified by record** (D-038) — it checks that a
+named certification exists in §2 and that §2 still hashes to the table John certified, and states
+that it cannot check the certification is *right*. Class coverage passes on a RATCHET: **14 of 20
+classes exercise the class they name**, six are carried, one of them a GAP, and a green line
+means only that no NEW class went vacuous. Read their output, not their exit status.
 
 - **§9 steps 1–9 done.** Steps 4–6 reviewed under A-022; steps 1–3 under A-016 (whose
   verifications were mostly cut short by a spend limit — that limit is NOT retired); **steps
@@ -240,6 +251,7 @@ class went vacuous. Read their output, not their exit status.
 | D-037 | **One agent session at a time on this tree.** Resolves A-037 |
 | D-038 | **GATE 5 CERTIFIED.** Seven rulings; §2 rewritten; 11/11 cited; stale on any §2 edit |
 | D-039 | The two A-038 classes ruled apart: override is an accepted **delegation**, conflicting-block-state is a **GAP owing a fixture** |
+| A-039 | **Two adversarial reviews, 25 findings.** Both new guards were defeatable; several claims exceeded their evidence. 11 of 12 exploits now caught, 1 documented residual. **One hypothesis left for John** |
 
 ## 5. Traces — what worked, and what was a dead end
 
@@ -287,11 +299,16 @@ class went vacuous. Read their output, not their exit status.
   material findings, several missed by the suite, the mutation harness and prior reviews. Give
   each a FROZEN tree — `git worktree add <scratch> <commit>` with `node_modules` symlinked
   works and lets you keep editing.
-- **Requiring a provenance attestation from every labeller.** Six for six produced a
-  first-order finding this way, unprompted: the harness-injected memory file (five times), the
+- **Requiring a provenance attestation from every labeller.** **Eight for eight** produced a
+  first-order finding this way, unprompted: the harness-injected memory file (repeatedly), the
   specification-as-contamination-channel, the published reason codes, `failureMode`'s undefined
-  encoding, and a labeller declining an injected instruction that would have breached the
-  protocol.
+  encoding, the F026/F051 call-graph-hash contradiction, F056 not exercising reentrancy, and a
+  labeller declining an injected instruction that would have breached the protocol.
+- **Adversarial review of a GUARD, not just of code.** Two reviewers at a frozen commit produced
+  twenty-five findings against two guards and the documents citing them — including that the
+  certification check grepped the whole proposal while the comment beside it congratulated the
+  author for having just fixed that exact defect in the function above. **Knowing about a defect
+  class is not protection from it.**
 - **Measuring a fork instead of arguing it.** D-033's control arm settled in one run what would
   otherwise have been unfalsifiable — then produced the counterexample that corrected A-033.
 - **Single-variable experiment design.** H varied only the spec text; J varied only the model.
