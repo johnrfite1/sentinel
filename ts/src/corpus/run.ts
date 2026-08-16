@@ -1,3 +1,4 @@
+import {createHash} from "node:crypto";
 import {spawn} from "node:child_process";
 import {existsSync, mkdirSync, readFileSync, rmSync, writeFileSync} from "node:fs";
 import {join} from "node:path";
@@ -73,6 +74,43 @@ function artifact(file: string, contract: string): {abi: Abi; bytecode: Hex} {
 
 function j(value: unknown): string {
     return JSON.stringify(value, (_k, v) => (typeof v === "bigint" ? v.toString() : v), 2);
+}
+
+/**
+ * A digest of a labeller view with the RUN-VARYING fields normalised out (A-029).
+ *
+ * THE PROBLEM THIS SOLVES, AND THE ONE IT DELIBERATELY DOES NOT. Re-running the corpus
+ * rewrites 32 of 50 view files with no source change, because entitlement expiry is derived
+ * from the simulated block's timestamp and Anvil starts at the wall clock. So "the labellers
+ * were given these files" is supported by commit history and cannot be re-derived by anyone
+ * re-running the pipeline — which is a weak footing for the only evidence bearing on whether
+ * the verdicts are right.
+ *
+ * The tempting fix is to pin chain time. It was not taken. Anvil's later blocks follow the
+ * real clock whatever the genesis is, so pinning gets *nearly* deterministic rather than
+ * deterministic; and forcing every block's timestamp risks the failure this file already
+ * records, where passing `Date.now()` instead of chain time silently made three time-window
+ * fixtures vacuous. A fix that quietly neuters a time fixture is worse than a documented
+ * irreproducibility.
+ *
+ * So the irreproducibility is BOUNDED instead. The digest covers the whole view except the
+ * timestamps that cannot help but move, and `_digests.json` is committed. A re-run that
+ * changes nothing semantic produces an EMPTY git diff on that file; a re-run that changes a
+ * value a labeller reasons about does not. The provenance claim becomes "these views are
+ * semantically the ones that were labelled", which is checkable, rather than "these are the
+ * bytes", which is not.
+ *
+ * The normalised fields are listed here rather than pattern-matched, so adding one is a
+ * deliberate act — the same reason `ALLOWED_VIEW_KEYS` is a list.
+ */
+const RUN_VARYING_FIELDS = ["expiryBefore", "expiryAfter"] as const;
+
+function normalisedDigest(view: unknown): string {
+    const canonical = JSON.stringify(view, (key, value) => {
+        if ((RUN_VARYING_FIELDS as readonly string[]).includes(key)) return "<run-varying>";
+        return typeof value === "bigint" ? value.toString() : value;
+    });
+    return createHash("sha256").update(canonical).digest("hex").slice(0, 32);
 }
 
 const anvilBin = join(process.env.HOME ?? "", ".foundry", "bin", "anvil");
@@ -408,6 +446,7 @@ mkdirSync(join(OUT, "for-labelling"), {recursive: true});
 mkdirSync(join(OUT, "results"), {recursive: true});
 
 const outcomes: RunOutcome[] = [];
+const digests: Record<string, string> = {};
 
 for (const spec of CORPUS) {
     const snapshot = await rpc("evm_snapshot", []);
@@ -671,6 +710,7 @@ for (const spec of CORPUS) {
         assertNoLeakage(labellerView, spec.id);
         assertViewShape(labellerView as unknown as Record<string, unknown>, spec.id);
         writeFileSync(join(OUT, "for-labelling", `${spec.id}.json`), j(labellerView));
+        digests[spec.id] = normalisedDigest(labellerView);
 
         writeFileSync(
             join(OUT, "results", `${spec.id}.json`),
@@ -704,6 +744,19 @@ for (const spec of CORPUS) {
         await rpc("evm_revert", [snapshot]);
     }
 }
+
+writeFileSync(
+    join(OUT, "for-labelling", "_digests.json"),
+    j({
+        note:
+            "sha256/128 of each labeller view with the run-varying timestamp fields normalised " +
+            "out (A-029). A corpus re-run that changes nothing a labeller reasons about leaves " +
+            "this file byte-identical, so `git diff` on it is the signal. The view FILES " +
+            "themselves are not byte-reproducible and are not meant to be.",
+        normalisedFields: RUN_VARYING_FIELDS,
+        digests,
+    }),
+);
 
 writeFileSync(
     join(OUT, "results", "_index.json"),

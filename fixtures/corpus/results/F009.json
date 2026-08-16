@@ -48,7 +48,7 @@
       "failing": [
         "BASE_UNLIMITED_APPROVAL"
       ],
-      "micros": 5.583
+      "micros": 15
     },
     {
       "layer": "L2_policy_plus_effects",
@@ -202,7 +202,7 @@
         "EVAL_TARGET_BOUND",
         "EVAL_TARGET_CODE_IDENTITY"
       ],
-      "micros": 156.125
+      "micros": 359.5
     },
     {
       "layer": "L3_full_conformance",
@@ -352,7 +352,7 @@
         "EVAL_TARGET_BOUND",
         "EVAL_TARGET_CODE_IDENTITY"
       ],
-      "micros": 115.791
+      "micros": 285.25
     }
   ]
 }

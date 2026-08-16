@@ -28,8 +28,23 @@ depth = 64
 fail_on_revert = false
 
 # Deeper campaign for gate evidence: `forge test --profile gate`
+#
+# THE GATE PROFILE IS SEEDED AND THE DEFAULT IS NOT, and the split is the point.
+#
+# An independent review observed that with no seed anywhere, any mutation whose only killer
+# is an invariant is a single sample from a random process — so "0 survived" is not
+# reproducible by construction, and neither is a gate result. That is the wrong property for
+# EVIDENCE. It is the right property for DEVELOPMENT: an unseeded default explores new
+# sequences on every run, which is how a stateful campaign finds what nobody thought of.
+#
+# So the default profile stays unseeded and keeps exploring, and the gate profile pins a seed
+# so that a figure cited at S2 can be reproduced by anyone with the repository. A gate number
+# that cannot be re-derived is a claim, not a measurement.
+#
+# The seed is arbitrary and has no meaning; it is fixed so that it is fixed.
 [profile.gate.fuzz]
 runs = 20000
+seed = "0x53656e74696e656c"
 
 [profile.gate.invariant]
 runs = 2048

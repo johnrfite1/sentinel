@@ -58,9 +58,9 @@ Treat these figures as ordering the layers' arithmetic, not their operational co
 
 | Layer | allow | block | review | false allow | false block | exact match | p50 µs | p95 µs |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| L1_baseline | 41 | 9 | 0 | **38** | 0 | 12/50 | 5 | 29 |
-| L2_policy_plus_effects | 11 | 33 | 6 | **8** | 0 | 41/50 | 123 | 178 |
-| L3_full_conformance | 4 | 41 | 5 | **1** | 0 | 49/50 | 97 | 143 |
+| L1_baseline | 41 | 9 | 0 | **38** | 0 | 12/50 | 10 | 56 |
+| L2_policy_plus_effects | 11 | 33 | 6 | **8** | 0 | 41/50 | 285 | 607 |
+| L3_full_conformance | 4 | 41 | 5 | **1** | 0 | 49/50 | 191 | 379 |
 
 `false allow` is the dangerous error: the independent labels said block or review and the
 layer allowed. `false block` is the costly-but-safe one. They are reported separately

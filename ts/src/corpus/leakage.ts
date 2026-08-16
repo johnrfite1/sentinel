@@ -62,7 +62,7 @@ export class LeakageError extends Error {
  * approved" a call must still reach the labeller, because that is the attack being described.
  */
 export function assertNoLeakage(view: unknown, fixtureId: string): void {
-    walk(view, fixtureId);
+    walk(view, fixtureId, 0, false);
 }
 
 /**
@@ -86,9 +86,9 @@ export function assertNoLeakage(view: unknown, fixtureId: string): void {
  * spellings it declares can only ever confirm the spellings it declares. Walking keys and
  * testing containment is the shape that does not depend on that.
  */
-function walk(node: unknown, fixtureId: string): void {
+function walk(node: unknown, fixtureId: string, depth: number, inEnvironment: boolean): void {
     if (Array.isArray(node)) {
-        for (const item of node) walk(item, fixtureId);
+        for (const item of node) walk(item, fixtureId, depth, inEnvironment);
         return;
     }
     if (typeof node !== "object" || node === null) return;
@@ -104,8 +104,17 @@ function walk(node: unknown, fixtureId: string): void {
         // specific field. The denylist is a heuristic for fields nobody decided about. A
         // heuristic must not overrule a decision, and a decision must be explicit — which is
         // why adding to `ALLOWED_ENVIRONMENT_KEYS` is the act that carries the thinking.
-        if (isDeclared(key)) {
-            walk(value, fixtureId);
+        //
+        // THE EXEMPTION IS NOW SCOPED TO THE DEPTH IT WAS DECIDED AT. It used to apply at
+        // every depth: `isDeclared` took a bare name, so an allowlisted word anywhere in the
+        // tree — nested three levels inside `mandate`, say — was exempt from the denylist
+        // walk, and `assertViewShape` only inspects the top level and `observedEnvironment`.
+        // An independent review raised it as a hypothesis it had not demonstrated. It is a
+        // real gap and it is cheaper to close than to argue about: a decision about a
+        // TOP-LEVEL field is not a decision about a field of the same name buried inside a
+        // payload, and treating it as one is how an allowlist quietly becomes a wildcard.
+        if (isDeclaredAt(key, depth, inEnvironment)) {
+            walk(value, fixtureId, depth + 1, inEnvironment || key === "observedEnvironment");
             continue;
         }
         const lowered = key.toLowerCase();
@@ -115,15 +124,22 @@ function walk(node: unknown, fixtureId: string): void {
                 throw new LeakageError(fixtureId, key);
             }
         }
-        walk(value, fixtureId);
+        walk(value, fixtureId, depth + 1, inEnvironment);
     }
 }
 
-function isDeclared(key: string): boolean {
-    return (
-        (ALLOWED_VIEW_KEYS as readonly string[]).includes(key) ||
-        (ALLOWED_ENVIRONMENT_KEYS as readonly string[]).includes(key)
-    );
+/**
+ * Exempt only where the exemption was actually decided.
+ *
+ * Depth 0 is the view's own shape, so `ALLOWED_VIEW_KEYS` applies there. `observedEnvironment`
+ * is the one declared container, so `ALLOWED_ENVIRONMENT_KEYS` applies to its immediate
+ * members. Nothing is exempt anywhere else — a name matching an allowlist entry six levels
+ * down inside a typed payload was never a decision anybody took.
+ */
+function isDeclaredAt(key: string, depth: number, inEnvironment: boolean): boolean {
+    if (depth === 0) return (ALLOWED_VIEW_KEYS as readonly string[]).includes(key);
+    if (inEnvironment && depth === 1) return (ALLOWED_ENVIRONMENT_KEYS as readonly string[]).includes(key);
+    return false;
 }
 
 

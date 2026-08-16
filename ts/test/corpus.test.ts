@@ -102,6 +102,42 @@ describe("the labeller/evaluator split is guarded (D-011b)", () => {
         assert.doesNotThrow(() => assertNoLeakage(adversarial, "F050"));
     });
 
+    /**
+     * THE EXEMPTION IS SCOPED TO THE DEPTH IT WAS DECIDED AT.
+     *
+     * `isDeclared` used to take a bare name, so an allowlisted word anywhere in the tree was
+     * exempt from the denylist — and `assertViewShape` inspects only the top level and
+     * `observedEnvironment`, so nothing else would have caught it. An independent review
+     * raised it as an undemonstrated hypothesis; these are the demonstrations.
+     */
+    it("does not exempt an allowlisted name nested inside a payload", () => {
+        // `simulationOutcome` is legitimately allowlisted as an environment field. Buried
+        // inside `mandate`, it is not a decision anybody took — and it contains "outcome".
+        assert.throws(
+            () => assertNoLeakage({fixtureId: "F001", mandate: {simulationOutcome: "success"}}, "F001"),
+            LeakageError,
+        );
+    });
+
+    it("does not exempt a top-level view key used at depth", () => {
+        assert.throws(
+            () => assertNoLeakage({fixtureId: "F001", action: {observedEnvironment: {verdict: "ALLOW"}}}, "F001"),
+            LeakageError,
+        );
+    });
+
+    it("still exempts the declared names at the depth they were declared for", () => {
+        assert.doesNotThrow(() =>
+            assertNoLeakage(
+                {
+                    fixtureId: "F001",
+                    observedEnvironment: {simulationOutcome: "success", nativeBalanceDeltas: [{delta: "1"}]},
+                },
+                "F001",
+            ),
+        );
+    });
+
     it("is case-insensitive, so a capitalised key cannot slip through", () => {
         assert.throws(() => assertNoLeakage({Verdict: "ALLOW"}, "F001"), LeakageError);
     });
