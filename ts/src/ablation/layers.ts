@@ -136,25 +136,26 @@ export function runLayer(
         checks = runBaseline({...input, simulation: null}, baselineConfig);
         verdict = baselineVerdict(checks);
     } else if (layer === "L2_policy_plus_effects") {
-        // L2 CARRIES THE POLICY ALLOWLIST, and omitting it made the ladder NON-MONOTONE.
+        // L2 IS EXACTLY "THE FULL ENGINE MINUS THE PURPOSE CHECKS", AND IT USED NOT TO BE.
         //
-        // `MANDATE_CONFORMANCE_CODES` removes EVAL_TARGET_BOUND and EVAL_SELECTOR_BOUND —
-        // correctly, since both ask "is this the MANDATE's target/selector", which §7.2
-        // withholds. But they are the engine's ONLY target and selector constraints, so L2
-        // was left with none at all while the strictly weaker L1 has an allowlist §7.2
-        // grants it explicitly. F056 was the demonstration: L1 BLOCK, L2 REVIEW, L3 BLOCK.
-        // Every product in the class L2 models has a target allowlist, so "added by L3" was
-        // being measured against an arm blind to a capability the baseline has.
+        // It carried two BASE_ checks injected from `runBaseline` — a separate implementation
+        // — so the ladder was not nested at the top: L2 held checks L3 did not. That crutch
+        // was added under A-028, when `MANDATE_CONFORMANCE_CODES` still removed
+        // `EVAL_TARGET_BOUND` and `EVAL_SELECTOR_BOUND` and L2 was therefore left with no
+        // target constraint at all while the strictly weaker L1 had an allowlist.
         //
-        // Fixed by giving L2 the baseline's allowlist checks alongside the filtered engine
-        // ones. L2 is now a superset of L1's capability, which is what a ladder means.
-        const allowlist = runBaseline({...input, simulation: null}, baselineConfig).filter(
-            (c) => c.code === "BASE_TARGET_ALLOWLISTED" || c.code === "BASE_SELECTOR_ALLOWLISTED",
-        );
-        checks = [
-            ...allowlist,
-            ...runChecks(input).filter((c) => !MANDATE_CONFORMANCE_CODES.has(c.code)),
-        ];
+        // D-034 moved both codes OUT of that set, so L2 has the engine's own target and
+        // selector binding natively and the crutch became dead scaffolding carrying a
+        // justification that had stopped being true. An independent review found it still
+        // there, and found that D-034's ruling quotes `LAYER_DESCRIPTIONS.L2` — "the full
+        // engine with the mandate-to-effects conformance checks removed" — as what decided
+        // the criterion. A description a ruling rests on has to describe the code.
+        //
+        // MEASURED before removal: dropping the injection changes the failing SET on three
+        // fixtures (F036, F040, F056) and changes ZERO verdicts across all fifty, so no
+        // published number moves. F056, the fixture the crutch was added for, now blocks on
+        // `EVAL_TARGET_BOUND` and does not need it.
+        checks = runChecks(input).filter((c) => !MANDATE_CONFORMANCE_CODES.has(c.code));
         verdict = verdictOf(checks, input.policy);
     } else {
         checks = runChecks(input);

@@ -475,6 +475,15 @@ export function buildReport(inputs: AblationInputs): string {
     w("vacuous and the report disclosed it instead of closing it. D-025 set the precedent for");
     w("caveating a class that cannot be driven to a positive case; this one could be, and now is.");
     w();
+    w("**`F051` is INERT and its row in the class table should not be read as a measurement.**");
+    w("Its only distinguishing knob is `policy.allowedCallGraphHash`, which D-025 reserves and");
+    w("which nothing outside the payload hash reads; deleting the override leaves its three");
+    w("layer verdicts unchanged, and `EVAL_CALL_GRAPH_EXPECTED` is never non-PASS anywhere in");
+    w("the corpus. D-025 ratified that the `unexpected-internal-call` class cannot be driven to");
+    w("a positive case in v1 — but that ruling lives in the decision log, and this report");
+    w("printed the class as an ordinary scored row without repeating it, so a reader of the");
+    w("table alone would have counted it. Found by an independent review of §9 step 8.");
+    w();
     w("The same caution applies to `F035` and `F057`, whose enforcement is the isolated signer");
     w("and the vault rather than the conformance engine — see the attribution note below.");
     w();

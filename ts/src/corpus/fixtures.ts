@@ -269,6 +269,19 @@ export const CORPUS: FixtureSpec[] = [
         // The mandate must outlive the advance, or this fixture expires BOTH windows and
         // stops isolating policy expiry. Its declared intent said one thing and its data
         // said another until an independent labeller compared them.
+        //
+        // IT STILL DOES NOT FULLY ISOLATE POLICY EXPIRY, and this note claimed it did.
+        // Raising the mandate's validUntil was necessary and not sufficient: the ACTION's
+        // deadline still defaults to FAR_FUTURE = 4_000_000_000 while the advance sets chain
+        // time to 4_000_000_001 — one second later. So F032 fails on EVAL_ACTION_DEADLINE and
+        // EVAL_POLICY_WINDOW together, and those sit in DIFFERENT D-026 remedy classes.
+        // Labeller E caught it and said so in its note; a later review found this comment
+        // still claiming the isolation.
+        //
+        // NOT FIXED IN v1, ON PURPOSE. The fix is an explicit `action: {deadline: …}`
+        // override, and changing the fixture changes the view the labels of record were drawn
+        // against. A-034 declines to invalidate label evidence days before the gate that
+        // rests on it, and this is the same trade. It belongs with a re-label.
         mandate: {validUntil: 4_200_000_000n},
         env: {advancePastPolicyWindow: true},
     },

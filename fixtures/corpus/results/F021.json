@@ -43,22 +43,12 @@
       "failing": [
         "BASE_VAULT_BOUND"
       ],
-      "micros": 14.417
+      "micros": 6
     },
     {
       "layer": "L2_policy_plus_effects",
       "verdict": "BLOCK",
       "checks": [
-        {
-          "code": "BASE_TARGET_ALLOWLISTED",
-          "outcome": "PASS",
-          "detail": ""
-        },
-        {
-          "code": "BASE_SELECTOR_ALLOWLISTED",
-          "outcome": "PASS",
-          "detail": ""
-        },
         {
           "code": "EVAL_MANDATE_ACTIVE",
           "outcome": "PASS",
@@ -184,7 +174,7 @@
         "EVAL_NATIVE_DELTA_UNOBSERVED",
         "EVAL_VAULT_BOUND"
       ],
-      "micros": 200.417
+      "micros": 118.334
     },
     {
       "layer": "L3_full_conformance",
@@ -345,7 +335,7 @@
         "EVAL_NATIVE_DELTA_UNOBSERVED",
         "EVAL_VAULT_BOUND"
       ],
-      "micros": 147.167
+      "micros": 105.042
     }
   ]
 }

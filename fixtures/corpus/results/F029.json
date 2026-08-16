@@ -41,22 +41,12 @@
         }
       ],
       "failing": [],
-      "micros": 10.416
+      "micros": 4.5
     },
     {
       "layer": "L2_policy_plus_effects",
       "verdict": "BLOCK",
       "checks": [
-        {
-          "code": "BASE_TARGET_ALLOWLISTED",
-          "outcome": "PASS",
-          "detail": ""
-        },
-        {
-          "code": "BASE_SELECTOR_ALLOWLISTED",
-          "outcome": "PASS",
-          "detail": ""
-        },
         {
           "code": "EVAL_MANDATE_ACTIVE",
           "outcome": "PASS",
@@ -181,7 +171,7 @@
       "failing": [
         "EVAL_NONCE_CURRENT"
       ],
-      "micros": 315.625
+      "micros": 122.042
     },
     {
       "layer": "L3_full_conformance",
@@ -341,7 +331,7 @@
       "failing": [
         "EVAL_NONCE_CURRENT"
       ],
-      "micros": 239.959
+      "micros": 100.292
     }
   ]
 }

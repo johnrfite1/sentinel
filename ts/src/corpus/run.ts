@@ -1,6 +1,7 @@
 import {createHash} from "node:crypto";
 import {spawn} from "node:child_process";
-import {existsSync, mkdirSync, readFileSync, rmSync, writeFileSync} from "node:fs";
+import {existsSync, mkdirSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync} from "node:fs";
+import {tmpdir} from "node:os";
 import {join} from "node:path";
 import {
     createPublicClient,
@@ -455,10 +456,63 @@ interface RunOutcome {
     simulated: boolean;
 }
 
-rmSync(OUT + "/for-labelling", {recursive: true, force: true});
-rmSync(OUT + "/results", {recursive: true, force: true});
-mkdirSync(join(OUT, "for-labelling"), {recursive: true});
-mkdirSync(join(OUT, "results"), {recursive: true});
+/**
+ * WRITE TO A STAGING DIRECTORY AND MOVE IT INTO PLACE AT THE END.
+ *
+ * This used to `rmSync` the two output directories before the first fixture ran. Combined with
+ * A-029 — the views are not byte-reproducible — a run that threw at fixture 30 left the
+ * artifacts the labels of record attest to DELETED and only 29 regenerated, with no way to
+ * restore them except git. An independent review pointed out that this repository already uses
+ * the temp-then-move shape elsewhere for exactly this reason, and that the mutation harness
+ * learned the same lesson the hard way: a tool must never have a window in which the thing it
+ * replaces does not exist.
+ */
+const STAGE = mkdtempSync(join(tmpdir(), "sentinel-corpus-"));
+mkdirSync(join(STAGE, "for-labelling"), {recursive: true});
+mkdirSync(join(STAGE, "results"), {recursive: true});
+
+function publish(): void {
+    rmSync(OUT + "/for-labelling", {recursive: true, force: true});
+    rmSync(OUT + "/results", {recursive: true, force: true});
+    mkdirSync(OUT, {recursive: true});
+    renameSync(join(STAGE, "for-labelling"), join(OUT, "for-labelling"));
+    renameSync(join(STAGE, "results"), join(OUT, "results"));
+    rmSync(STAGE, {recursive: true, force: true});
+}
+
+/**
+ * Kill the two child processes on ANY exit path.
+ *
+ * The same review threw at `connectSigner` and had to `pkill` an orphaned Anvil and signer by
+ * hand. Nothing here killed them off the happy path.
+ */
+let cleanedUp = false;
+function cleanup(): void {
+    if (cleanedUp) return;
+    cleanedUp = true;
+    try {
+        signerProc.kill("SIGTERM");
+    } catch {
+        /* already gone */
+    }
+    try {
+        node.kill("SIGTERM");
+    } catch {
+        /* already gone */
+    }
+}
+process.on("exit", cleanup);
+for (const sig of ["SIGINT", "SIGTERM"] as const) {
+    process.on(sig, () => {
+        cleanup();
+        process.exit(1);
+    });
+}
+process.on("uncaughtException", (err) => {
+    console.error("corpus run failed; committed artifacts left untouched:", err);
+    cleanup();
+    process.exit(1);
+});
 
 const outcomes: RunOutcome[] = [];
 const digests: Record<string, string> = {};
@@ -724,11 +778,11 @@ for (const spec of CORPUS) {
         };
         assertNoLeakage(labellerView, spec.id);
         assertViewShape(labellerView as unknown as Record<string, unknown>, spec.id);
-        writeFileSync(join(OUT, "for-labelling", `${spec.id}.json`), j(labellerView));
+        writeFileSync(join(STAGE, "for-labelling", `${spec.id}.json`), j(labellerView));
         digests[spec.id] = normalisedDigest(labellerView);
 
         writeFileSync(
-            join(OUT, "results", `${spec.id}.json`),
+            join(STAGE, "results", `${spec.id}.json`),
             j({
                 fixtureId: spec.id,
                 class: spec.class,
@@ -761,7 +815,7 @@ for (const spec of CORPUS) {
 }
 
 writeFileSync(
-    join(OUT, "for-labelling", "_digests.json"),
+    join(STAGE, "for-labelling", "_digests.json"),
     j({
         note:
             "sha256/128 of each labeller view with the run-varying timestamp fields normalised " +
@@ -774,7 +828,7 @@ writeFileSync(
 );
 
 writeFileSync(
-    join(OUT, "results", "_index.json"),
+    join(STAGE, "results", "_index.json"),
     j(
         outcomes.map((o) => ({
             id: o.id,
@@ -794,7 +848,8 @@ for (const layer of LAYERS) {
     console.log(`  ${layer.padEnd(24)} allow=${counts.ALLOW} block=${counts.BLOCK} review=${counts.REVIEW}`);
 }
 
+publish();
+
 await signerClient.close().catch(() => {});
-signerProc.kill("SIGTERM");
-node.kill("SIGTERM");
+cleanup();
 process.exit(0);

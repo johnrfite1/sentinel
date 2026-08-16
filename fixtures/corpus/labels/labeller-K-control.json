@@ -1,0 +1,20 @@
+[
+  {
+    "fixtureId": "F051",
+    "label": "INSUFFICIENT",
+    "confidence": "medium",
+    "specSufficiency": "does not decide it — INSUFFICIENT",
+    "primaryReason": "Every other required check passes, so the verdict turns entirely on whether the observed call graph matches the policy's pinned allowedCallGraphHash — and neither the specification nor the fixture supplies anything that lets that comparison be made.",
+    "specBasis": "§5.2 (PolicyPayload names allowedCallGraphHash but no clause defines its preimage, encoding, or comparison); §5.7 ('Allowed top-level and internal call graph' listed with no mechanics); §3.3(11) names both outcomes and chooses neither.",
+    "notes": "Conditional ground truth: ALLOW if the pin encodes 'purchase, zero internal calls', BLOCK if it encodes anything else — the fixture cannot distinguish them. Compounding gaps: no call trace and no observed call-graph hash are supplied, so even a fully specified check has no left-hand side; and if the check were treated as unknown, §5.2 routes it to failureMode, whose numeric encoding the pre-amendment spec never gives."
+  },
+  {
+    "fixtureId": "F026",
+    "label": "BLOCK",
+    "confidence": "high",
+    "specSufficiency": "decides it",
+    "primaryReason": "The action binds a mandateHash the vault does not report active, so the active-mandate check determinately fails.",
+    "specBasis": "§5.7 'Active owner, mandate, policy, and signer'; §3.3(4),(5); §5.2 'Any failed rule blocks'.",
+    "notes": "scenarioClass reads 'wrong-chain-vault-target-mandate-policy' but chain, vault, target and policy all match exactly — only the mandate leg fires. The supplied mandate object's role (superseded or replacement) is never declared and cannot be recomputed; BLOCK holds under either reading."
+  }
+]

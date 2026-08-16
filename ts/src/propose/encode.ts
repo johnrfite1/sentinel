@@ -22,10 +22,14 @@ import type {Hex} from "../signer/protocol.ts";
  * round-trip through this file. What remains genuinely untrusted on the agent path is the
  * agent's `rationale`: its account of what the call MEANS. Sentinel never reads it.
  *
- * `propose.roundtrip.test.ts` measures the transcription against the real decoder rather
- * than assuming it. That test is not decoration: it is the only thing standing between
- * "the agent proposed X" and "Sentinel evaluated X", now that no separate encoding exists
- * to disagree with.
+ * `propose.test.ts` measures the transcription against the real decoder rather than assuming
+ * it — see its round-trip section. That test is not decoration: it is the only thing standing
+ * between "the agent proposed X" and "Sentinel evaluated X", now that no separate encoding
+ * exists to disagree with.
+ *
+ * (This paragraph named `propose.roundtrip.test.ts`, which does not exist, until a review
+ * followed the pointer. A comment sending an auditor of the D-019 trusted path to a file that
+ * is not there is worse than no comment.)
  */
 
 /** Every way a proposal can fail to transcribe. Each is a distinct reason code. */

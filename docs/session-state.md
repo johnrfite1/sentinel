@@ -101,9 +101,11 @@ Done: §9 steps 1–9.
   — produced the finding recorded as A-030. **Labellers H and J (2026-08-15) are D-033's two
   measurement arms**, not rounds: H read the PRE-AMENDMENT spec on E and F's model, J read the
   current spec on a different model, both over the same nine fixtures. **All four agree with
-  the labels of record, 9 of 9, zero disagreements** (A-033). Read A-033 for what that does and
-  does not establish — the labels are robust; the disagreement RATE is a weaker instrument than
-  it looks, because the prompt and the spec both steer.
+  the labels of record on the NINE SAMPLED, 9 of 9** (A-033). **But labeller K then found the
+  counterexample the sample missed: F051.** E labelled it ALLOW and its own note says "Without
+  D-025 I would have labelled this INSUFFICIENT"; K, denied D-025, labelled it INSUFFICIENT.
+  **The channel moved a label of record.** Read A-033's correction and A-034 before doing
+  anything with the corpus numbers.
 - **§7.2 baseline + §7.3 ablation** — `ts/src/ablation/`, report at `docs/ablation-report.md`.
   **False allows 38 / 8 / 1**; detection contribution — baseline alone 9, effect extraction
   adds 29, mandate conformance adds **8**; exact match 12 / 41 / 49 of 50; inter-labeller
@@ -132,8 +134,8 @@ gates). Added since:
 | A-032 | Three adversarial reviews of the same day's work: two blockers, fourteen others, all remediated |
 | D-033 | **Ruled by John** — measure A-030's contamination channel (control re-label vs the pre-amendment spec), and add a labeller from a different model |
 | D-034 | **Ruled by John** — the §7.3 partition gets a criterion; mandate conformance 17 → 8, and the 8 are exactly the wrong-purpose class |
-| A-034 | **Agent call, reversible** — the labelling protocol is not re-freezing now; J-1/J-2 go to S2 as a v1.1 scope question |
-| A-033 | D-033 executed: labellers H (pre-amendment spec) and J (different model) agree with the labels of record **9 of 9**. The channel is real and broader than A-030 said; it moved no label |
+| A-034 | **TRIGGERED, and now John's** — its reversal condition fired the same day: control labeller K disagreed with a label of record on spec-supplied material |
+| A-033 | **CORRECTED** — D-033 executed: labellers H (pre-amendment spec) and J (different model) agree with the labels of record **9 of 9**. The channel is real and broader than A-030 said; it moved no label |
 
 ## 5. What to do next, in order
 

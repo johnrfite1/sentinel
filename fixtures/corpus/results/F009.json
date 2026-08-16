@@ -48,22 +48,12 @@
       "failing": [
         "BASE_UNLIMITED_APPROVAL"
       ],
-      "micros": 15
+      "micros": 7.583
     },
     {
       "layer": "L2_policy_plus_effects",
       "verdict": "BLOCK",
       "checks": [
-        {
-          "code": "BASE_TARGET_ALLOWLISTED",
-          "outcome": "PASS",
-          "detail": ""
-        },
-        {
-          "code": "BASE_SELECTOR_ALLOWLISTED",
-          "outcome": "PASS",
-          "detail": ""
-        },
         {
           "code": "EVAL_MANDATE_ACTIVE",
           "outcome": "PASS",
@@ -202,7 +192,7 @@
         "EVAL_TARGET_BOUND",
         "EVAL_TARGET_CODE_IDENTITY"
       ],
-      "micros": 359.5
+      "micros": 124.416
     },
     {
       "layer": "L3_full_conformance",
@@ -352,7 +342,7 @@
         "EVAL_TARGET_BOUND",
         "EVAL_TARGET_CODE_IDENTITY"
       ],
-      "micros": 285.25
+      "micros": 107.5
     }
   ]
 }

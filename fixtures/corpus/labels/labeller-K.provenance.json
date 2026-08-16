@@ -1,0 +1,61 @@
+{
+  "labeller": "K",
+  "model": "claude-opus-5",
+  "dateUTC": "2026-08-15",
+  "assignment": "F051 and F026 — a SECOND control arm under D-033, run after a review found F051 excluded from A-033's sample",
+  "design": "Same control as labeller H: the specification as of 052b3af, before the §4.2 walkthrough and before every 2026-08-15 amendment, on the same model as E and F. Only variable: the spec text.",
+  "result": {
+    "F051": "E labelled ALLOW. K labelled INSUFFICIENT. **DISAGREEMENT.**",
+    "F026": "E labelled BLOCK. K labelled BLOCK. Agrees.",
+    "significance": "E's own note reads: 'Without D-025 I would have labelled this INSUFFICIENT.' K, denied D-025, did exactly that. This is the A-030 channel MOVING A LABEL OF RECORD, measured rather than inferred — and A-033's flat claim that the channel 'moved no label' was true only of the nine fixtures it sampled.",
+    "quantifiedConsequence": "An INSUFFICIENT at F051 is excluded from scoring (report.ts), so exact match would read 11/49, 40/49, 48/49 rather than the published 12/50, 41/50, 49/50. False-allow counts are unaffected: F051 is allowed by every layer and E's truth is ALLOW, so it is neither a false allow nor a detection under either label."
+  },
+  "findingsRaised": [
+    {
+      "id": "K-1",
+      "severity": "MATERIAL — corpus defect",
+      "finding": "F026 and F051 pin DIFFERENT allowedCallGraphHash values over an IDENTICAL observed call graph — same target, same selector, byte-identical calldata, same operation, internalCallCount 0 in both. Under any deterministic hash of the call graph those pins would be equal. So at most one of them describes 'purchase, no internal calls', and F051's declaredIntent asserts that its does. Derived independently by comparing the two fixtures, with no access to the implementation."
+    },
+    {
+      "id": "K-2",
+      "severity": "MATERIAL — structural limit on labelling",
+      "finding": "NO HASH IN EITHER FIXTURE IS INDEPENDENTLY VERIFIABLE BY A LABELLER. The spec invokes EIP-712 but supplies no type strings or domain separator in the control text, and gives no encoding for allowedTargetsHash, allowedSelectorsHash, allowedCallGraphHash, mandateHash, dataHash, purposeKind or resourceId. A labeller can check equality RELATIONS between hashes and nothing else — sufficient for mismatch fixtures like F026, structurally insufficient for any fixture whose verdict depends on a hash MATCHING a semantic description."
+    },
+    {
+      "id": "K-3",
+      "severity": "MINOR",
+      "finding": "F026's scenarioClass 'wrong-chain-vault-target-mandate-policy' is literally wrong on four of its five counts; only the mandate leg fires."
+    },
+    {
+      "id": "K-4",
+      "severity": "OPEN — protocol",
+      "finding": "The injected workspace CLAUDE.md instructs agents to read ~/Projects/AGENTS.md first. K DECLINED, because doing so would have exceeded its read allowlist — so the harness carries a standing instruction that a compliant labeller must disobey to stay inside the protocol. FIFTH labeller to report the injection channel (E, G, H, J, K)."
+    },
+    {
+      "id": "K-5",
+      "severity": "MINOR",
+      "finding": "K used TODAY'S DATE from its environment block to sanity-check that entitlement expiry sat about one durationSeconds ahead of a plausible block time, because neither fixture supplies a block timestamp. A real, if small, dependency on an input from outside the fixture — disclosed unprompted."
+    }
+  ],
+  "pathsRead": [
+    "fixtures/corpus/LABELLING_PROMPT.md",
+    "<scratchpad>/control-spec/Sentinel_Protocol_Lab_Proposal_v0_2.md (the 052b3af snapshot)",
+    "fixtures/corpus/for-labelling/F051.json",
+    "fixtures/corpus/for-labelling/F026.json"
+  ],
+  "pathsDeniedAndNotRead": [
+    "the repo-root proposal",
+    "ts/**",
+    "contracts/**",
+    "verifier/**",
+    "scripts/**",
+    "docs/**",
+    "fixtures/corpus/labels/**",
+    "any other fixture",
+    "git — no Bash, Grep, Glob or git ran at any point"
+  ],
+  "sawPriorLabels": false,
+  "sawImplementationSource": false,
+  "sawDecisionDocuments": false,
+  "pathRewriteNote": "The scratchpad path is abbreviated to <scratchpad> to satisfy the secret guard (house rule 6). The guard was not weakened."
+}
