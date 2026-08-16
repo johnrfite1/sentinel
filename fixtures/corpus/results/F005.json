@@ -43,7 +43,7 @@
       "failing": [
         "BASE_VALUE_CEILING"
       ],
-      "micros": 37.042
+      "micros": 42.458
     },
     {
       "layer": "L2_policy_plus_effects",
@@ -60,7 +60,17 @@
           "detail": ""
         },
         {
+          "code": "EVAL_MANDATE_ACTIVE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
           "code": "EVAL_POLICY_ACTIVE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_MANDATE_PRINCIPAL_IS_OWNER",
           "outcome": "PASS",
           "detail": ""
         },
@@ -85,12 +95,37 @@
           "detail": ""
         },
         {
+          "code": "EVAL_TARGET_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
           "code": "EVAL_OPERATION_SUPPORTED",
           "outcome": "PASS",
           "detail": ""
         },
         {
           "code": "EVAL_CALLDATA_BINDING",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_ACTION_BINDS_MANDATE_AND_POLICY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_MANDATE_BINDS_POLICY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_TARGET_CODE_IDENTITY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_MANDATE_WINDOW",
           "outcome": "PASS",
           "detail": ""
         },
@@ -105,6 +140,11 @@
           "detail": ""
         },
         {
+          "code": "EVAL_VALUE_WITHIN_MANDATE",
+          "outcome": "VIOLATION",
+          "detail": "value 10000000000000001 exceeds mandate ceiling 10000000000000000"
+        },
+        {
           "code": "EVAL_VALUE_WITHIN_POLICY",
           "outcome": "VIOLATION",
           "detail": "value 10000000000000001 exceeds policy ceiling 10000000000000000"
@@ -116,6 +156,11 @@
         },
         {
           "code": "EVAL_POLICY_OPERATION",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_SELECTOR_BOUND",
           "outcome": "PASS",
           "detail": ""
         },
@@ -136,10 +181,11 @@
         }
       ],
       "failing": [
+        "EVAL_VALUE_WITHIN_MANDATE",
         "EVAL_VALUE_WITHIN_POLICY",
         "EVAL_VALUE_WITHIN_VAULT_CAP"
       ],
-      "micros": 166.334
+      "micros": 172.042
     },
     {
       "layer": "L3_full_conformance",
@@ -301,7 +347,7 @@
         "EVAL_VALUE_WITHIN_POLICY",
         "EVAL_VALUE_WITHIN_VAULT_CAP"
       ],
-      "micros": 152.667
+      "micros": 143.167
     }
   ]
 }

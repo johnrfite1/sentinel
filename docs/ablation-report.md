@@ -58,9 +58,9 @@ Treat these figures as ordering the layers' arithmetic, not their operational co
 
 | Layer | allow | block | review | false allow | false block | exact match | p50 µs | p95 µs |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| L1_baseline | 41 | 9 | 0 | **38** | 0 | 12/50 | 4 | 30 |
-| L2_policy_plus_effects | 20 | 26 | 4 | **17** | 0 | 32/50 | 114 | 166 |
-| L3_full_conformance | 4 | 41 | 5 | **1** | 0 | 49/50 | 94 | 126 |
+| L1_baseline | 41 | 9 | 0 | **38** | 0 | 12/50 | 5 | 29 |
+| L2_policy_plus_effects | 11 | 33 | 6 | **8** | 0 | 41/50 | 123 | 178 |
+| L3_full_conformance | 4 | 41 | 5 | **1** | 0 | 49/50 | 97 | 143 |
 
 `false allow` is the dangerous error: the independent labels said block or review and the
 layer allowed. `false block` is the costly-but-safe one. They are reported separately
@@ -79,26 +79,29 @@ would credit a configuration for holding a door it left openable.
 ## Detection contribution by layer
 
 - Caught by the baseline alone: 9 — F005, F007, F009, F020, F021, F036, F040, F049, F056
-- **Added by effect extraction (L2): 20** — F002, F006, F008, F010, F018, F019, F022, F028, F029, F032, F034, F037, F038, F044, F045, F047, F048, F052, F053, F057
-- **Added by mandate conformance (L3): 17** — F012, F013, F014, F015, F016, F023, F024, F025, F026, F031, F033, F042, F043, F046, F050, F054, F055
+- **Added by effect extraction (L2): 29** — F002, F006, F008, F010, F018, F019, F022, F023, F024, F025, F026, F028, F029, F031, F032, F033, F034, F037, F038, F042, F043, F044, F045, F047, F048, F052, F053, F054, F057
+- **Added by mandate conformance (L3): 8** — F012, F013, F014, F015, F016, F046, F050, F055
 
 
-### What the mandate-conformance figure is, decomposed
+### The partition's own criterion, checked against the result (D-034)
 
 §7.2 names what the baseline lacks: "No resource, beneficiary, duration, recurrence, or
-post-state constraint." Splitting the fixtures L3 adds by whether they turn on one of
-those fields — derived here from each fixture's failing set, not asserted:
+post-state constraint." D-034 makes exactly that the criterion for what L3 withholds
+from L2. This splits the fixtures L3 adds by whether they turn on one of those fields —
+derived from each fixture's failing set, not asserted — so the table below is a CHECK ON
+THE PARTITION rather than a description of it. The second row must be empty. If it ever
+is not, a code has drifted into the mandate-conformance set that does not belong there,
+which is the defect A-028 found once and an independent review found again at F023.
 
 - Turns on a §7.2-withheld field: **8** — F012, F013, F014, F015, F016, F046, F050, F055
-- Turns on another mandate-derived check: **9** — F023, F024, F025, F026, F031, F033, F042, F043, F054
+- Turns on another mandate-derived check: **0** — none, as the criterion requires
 
-So the headline is the contribution of having a signed mandate AT ALL, of which the
-first row is the wrong-purpose class §4.2 Case 3 names. Both are worth having and
-neither is the other. Raised by an independent review, which also asked whether
-`EVAL_ACTION_BINDS_MANDATE_AND_POLICY` belongs in the mandate-conformance set at all
-given that A-028 removed `EVAL_CALLDATA_BINDING` for being action integrity rather than
-purpose — an open partition question, stated rather than taken, because moving it
-changes the number the gate rests on.
+**This figure was 17 before D-034 and is now the number §4.2 Case 3 actually claims.**
+Nine codes moved to L2 — mandate validity, binding, identity, ceilings and code
+identity — because an arm that holds a mandate can check all of those without ever
+asking what the mandate was FOR. The larger figure counted that work as purpose
+conformance. It was not a measurement error; it was a category error, and it had
+already produced two findings before it was ruled on.
 
 ## Inter-labeller disagreement (D-011c)
 
@@ -132,19 +135,19 @@ better would forfeit that.
 | conflicting-block-state | 1 | 1 | 0 | 0 |
 | evaluator-or-signer-compromise | 1 | 1 | 0 | 0 |
 | exact-allowed-and-benign-variation | 2 | 1 | 0 | 0 |
-| expired-mandate-receipt-or-override | 4 | 4 | 2 | 0 |
+| expired-mandate-receipt-or-override | 4 | 4 | 0 | 0 |
 | invalid-or-rotated-signer | 1 | 1 | 1 | 1 |
 | malformed-calldata-or-unknown-selector | 4 | 2 | 0 | 0 |
 | malicious-retrieved-instructions | 2 | 1 | 1 | 0 |
-| owner-override-and-block-behaviour | 2 | 2 | 2 | 0 |
+| owner-override-and-block-behaviour | 2 | 2 | 1 | 0 |
 | reentrancy-attempt | 1 | 0 | 0 | 0 |
 | rpc-simulator-or-context-outage | 3 | 3 | 0 | 0 |
-| runtime-code-change-or-proxy-target | 2 | 2 | 2 | 0 |
+| runtime-code-change-or-proxy-target | 2 | 2 | 0 | 0 |
 | simulation-revert | 1 | 1 | 0 | 0 |
 | stale-or-reused-action-nonce | 2 | 2 | 0 | 0 |
 | unexpected-internal-call | 1 | 0 | 0 | 0 |
 | unsupported-multicall-or-delegatecall | 2 | 2 | 0 | 0 |
-| wrong-chain-vault-target-mandate-policy | 7 | 5 | 4 | 0 |
+| wrong-chain-vault-target-mandate-policy | 7 | 5 | 0 | 0 |
 | wrong-resource-beneficiary-duration-recurrence | 5 | 5 | 5 | 0 |
 
 ## Dependency-failure behaviour (§7.3)

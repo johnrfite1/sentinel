@@ -319,6 +319,55 @@ describe("the §7.3 layer partition", () => {
         assert.deepEqual(overlap, [], "a code cannot be both executability and mandate conformance");
     });
 
+    /**
+     * D-034'S CRITERION, ENFORCED RATHER THAN PRINTED.
+     *
+     * The set is a hand-written list of strings, and it has drifted twice — A-028 found
+     * `EVAL_CALLDATA_BINDING` counted as mandate conformance when it is signed-payload
+     * integrity, and an independent review then found F023 doing the same thing through
+     * `EVAL_ACTION_BINDS_MANDATE_AND_POLICY`. Patching instances left the category error in
+     * place. D-034 states the criterion: a code belongs here only if it compares the call or
+     * its simulated effects against the mandate's PURPOSE fields.
+     *
+     * Tying that to the naming convention is deliberate. A future purpose check named outside
+     * these three prefixes fails this test — loudly, at the point where somebody has to decide
+     * whether it really is a purpose check. That is the same shape as `ALLOWED_VIEW_KEYS`: a
+     * decision that must be made consciously, not a heuristic that quietly widens.
+     */
+    it("holds only purpose and post-state checks (D-034's criterion)", () => {
+        const offenders = [...MANDATE_CONFORMANCE_CODES].filter(
+            (c) => !/^EVAL_(PURCHASE_|ENTITLEMENT_|APPROVAL_SPENDER)/.test(c),
+        );
+        assert.deepEqual(
+            offenders,
+            [],
+            "a non-purpose check drifted into the mandate-conformance set; see D-034",
+        );
+    });
+
+    it("does not readmit anything D-034 moved to L2", () => {
+        // Named individually because these nine are the ones that were in the set and are the
+        // ones a future edit is most likely to put back — each with a plausible-sounding
+        // reason, which is how they got there the first time.
+        for (const code of [
+            "EVAL_TARGET_BOUND",
+            "EVAL_SELECTOR_BOUND",
+            "EVAL_VALUE_WITHIN_MANDATE",
+            "EVAL_TARGET_CODE_IDENTITY",
+            "EVAL_ACTION_BINDS_MANDATE_AND_POLICY",
+            "EVAL_MANDATE_BINDS_POLICY",
+            "EVAL_MANDATE_ACTIVE",
+            "EVAL_MANDATE_WINDOW",
+            "EVAL_MANDATE_PRINCIPAL_IS_OWNER",
+        ]) {
+            assert.equal(
+                MANDATE_CONFORMANCE_CODES.has(code),
+                false,
+                `${code} is mandate VALIDITY, BINDING or a CEILING — not purpose (D-034)`,
+            );
+        }
+    });
+
     it("removes something — L2 is not just L3 under another name", () => {
         assert.ok(MANDATE_CONFORMANCE_CODES.size > 0);
         const full = runChecks(input({}));

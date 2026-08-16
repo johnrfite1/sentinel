@@ -41,7 +41,7 @@
         }
       ],
       "failing": [],
-      "micros": 2.875
+      "micros": 4.5
     },
     {
       "layer": "L2_policy_plus_effects",
@@ -58,7 +58,17 @@
           "detail": ""
         },
         {
+          "code": "EVAL_MANDATE_ACTIVE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
           "code": "EVAL_POLICY_ACTIVE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_MANDATE_PRINCIPAL_IS_OWNER",
           "outcome": "PASS",
           "detail": ""
         },
@@ -83,6 +93,11 @@
           "detail": ""
         },
         {
+          "code": "EVAL_TARGET_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
           "code": "EVAL_OPERATION_SUPPORTED",
           "outcome": "PASS",
           "detail": ""
@@ -93,12 +108,37 @@
           "detail": ""
         },
         {
+          "code": "EVAL_ACTION_BINDS_MANDATE_AND_POLICY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_MANDATE_BINDS_POLICY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_TARGET_CODE_IDENTITY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_MANDATE_WINDOW",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
           "code": "EVAL_POLICY_WINDOW",
           "outcome": "PASS",
           "detail": ""
         },
         {
           "code": "EVAL_ACTION_DEADLINE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VALUE_WITHIN_MANDATE",
           "outcome": "PASS",
           "detail": ""
         },
@@ -114,6 +154,11 @@
         },
         {
           "code": "EVAL_POLICY_OPERATION",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_SELECTOR_BOUND",
           "outcome": "PASS",
           "detail": ""
         },
@@ -134,7 +179,7 @@
         }
       ],
       "failing": [],
-      "micros": 124.042
+      "micros": 130.75
     },
     {
       "layer": "L3_full_conformance",
@@ -292,7 +337,7 @@
         }
       ],
       "failing": [],
-      "micros": 101.334
+      "micros": 104.458
     }
   ]
 }

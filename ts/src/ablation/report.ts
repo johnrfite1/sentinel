@@ -363,22 +363,28 @@ export function buildReport(inputs: AblationInputs): string {
     const onOther = contrib.addedByL3.filter((id) => !l3Failing(id).some((c) => WITHHELD.has(c)));
 
     w();
-    w("### What the mandate-conformance figure is, decomposed");
+    w("### The partition's own criterion, checked against the result (D-034)");
     w();
     w("§7.2 names what the baseline lacks: \"No resource, beneficiary, duration, recurrence, or");
-    w("post-state constraint.\" Splitting the fixtures L3 adds by whether they turn on one of");
-    w("those fields — derived here from each fixture's failing set, not asserted:");
+    w("post-state constraint.\" D-034 makes exactly that the criterion for what L3 withholds");
+    w("from L2. This splits the fixtures L3 adds by whether they turn on one of those fields —");
+    w("derived from each fixture's failing set, not asserted — so the table below is a CHECK ON");
+    w("THE PARTITION rather than a description of it. The second row must be empty. If it ever");
+    w("is not, a code has drifted into the mandate-conformance set that does not belong there,");
+    w("which is the defect A-028 found once and an independent review found again at F023.");
     w();
     w(`- Turns on a §7.2-withheld field: **${onWithheld.length}** — ${onWithheld.join(", ")}`);
-    w(`- Turns on another mandate-derived check: **${onOther.length}** — ${onOther.join(", ")}`);
+    w(
+        `- Turns on another mandate-derived check: **${onOther.length}**` +
+            (onOther.length === 0 ? " — none, as the criterion requires" : ` — ${onOther.join(", ")} **← DRIFT**`),
+    );
     w();
-    w("So the headline is the contribution of having a signed mandate AT ALL, of which the");
-    w("first row is the wrong-purpose class §4.2 Case 3 names. Both are worth having and");
-    w("neither is the other. Raised by an independent review, which also asked whether");
-    w("`EVAL_ACTION_BINDS_MANDATE_AND_POLICY` belongs in the mandate-conformance set at all");
-    w("given that A-028 removed `EVAL_CALLDATA_BINDING` for being action integrity rather than");
-    w("purpose — an open partition question, stated rather than taken, because moving it");
-    w("changes the number the gate rests on.");
+    w("**This figure was 17 before D-034 and is now the number §4.2 Case 3 actually claims.**");
+    w("Nine codes moved to L2 — mandate validity, binding, identity, ceilings and code");
+    w("identity — because an arm that holds a mandate can check all of those without ever");
+    w("asking what the mandate was FOR. The larger figure counted that work as purpose");
+    w("conformance. It was not a measurement error; it was a category error, and it had");
+    w("already produced two findings before it was ruled on.");
     w();
 
     w("## Inter-labeller disagreement (D-011c)");

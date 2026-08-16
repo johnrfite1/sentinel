@@ -41,7 +41,7 @@
         }
       ],
       "failing": [],
-      "micros": 2.792
+      "micros": 3.917
     },
     {
       "layer": "L2_policy_plus_effects",
@@ -58,7 +58,17 @@
           "detail": ""
         },
         {
+          "code": "EVAL_MANDATE_ACTIVE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
           "code": "EVAL_POLICY_ACTIVE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_MANDATE_PRINCIPAL_IS_OWNER",
           "outcome": "PASS",
           "detail": ""
         },
@@ -83,6 +93,11 @@
           "detail": ""
         },
         {
+          "code": "EVAL_TARGET_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
           "code": "EVAL_OPERATION_SUPPORTED",
           "outcome": "PASS",
           "detail": ""
@@ -93,12 +108,37 @@
           "detail": ""
         },
         {
+          "code": "EVAL_ACTION_BINDS_MANDATE_AND_POLICY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_MANDATE_BINDS_POLICY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_TARGET_CODE_IDENTITY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_MANDATE_WINDOW",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
           "code": "EVAL_POLICY_WINDOW",
           "outcome": "PASS",
           "detail": ""
         },
         {
           "code": "EVAL_ACTION_DEADLINE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VALUE_WITHIN_MANDATE",
           "outcome": "PASS",
           "detail": ""
         },
@@ -114,6 +154,11 @@
         },
         {
           "code": "EVAL_POLICY_OPERATION",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_SELECTOR_BOUND",
           "outcome": "PASS",
           "detail": ""
         },
@@ -136,7 +181,7 @@
       "failing": [
         "EVAL_VAULT_NOT_PAUSED"
       ],
-      "micros": 106
+      "micros": 123.459
     },
     {
       "layer": "L3_full_conformance",
@@ -296,7 +341,7 @@
       "failing": [
         "EVAL_VAULT_NOT_PAUSED"
       ],
-      "micros": 89.5
+      "micros": 93.041
     }
   ]
 }

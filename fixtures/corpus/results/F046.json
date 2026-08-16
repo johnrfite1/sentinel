@@ -41,7 +41,7 @@
         }
       ],
       "failing": [],
-      "micros": 2.542
+      "micros": 2.584
     },
     {
       "layer": "L2_policy_plus_effects",
@@ -58,7 +58,17 @@
           "detail": ""
         },
         {
+          "code": "EVAL_MANDATE_ACTIVE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
           "code": "EVAL_POLICY_ACTIVE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_MANDATE_PRINCIPAL_IS_OWNER",
           "outcome": "PASS",
           "detail": ""
         },
@@ -83,6 +93,11 @@
           "detail": ""
         },
         {
+          "code": "EVAL_TARGET_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
           "code": "EVAL_OPERATION_SUPPORTED",
           "outcome": "PASS",
           "detail": ""
@@ -93,12 +108,37 @@
           "detail": ""
         },
         {
+          "code": "EVAL_ACTION_BINDS_MANDATE_AND_POLICY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_MANDATE_BINDS_POLICY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_TARGET_CODE_IDENTITY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_MANDATE_WINDOW",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
           "code": "EVAL_POLICY_WINDOW",
           "outcome": "PASS",
           "detail": ""
         },
         {
           "code": "EVAL_ACTION_DEADLINE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VALUE_WITHIN_MANDATE",
           "outcome": "PASS",
           "detail": ""
         },
@@ -118,6 +158,11 @@
           "detail": ""
         },
         {
+          "code": "EVAL_SELECTOR_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
           "code": "EVAL_SIMULATION_UNAVAILABLE",
           "outcome": "UNRESOLVED",
           "detail": "no simulation was produced"
@@ -126,7 +171,7 @@
       "failing": [
         "EVAL_SIMULATION_UNAVAILABLE"
       ],
-      "micros": 102.833
+      "micros": 108.917
     },
     {
       "layer": "L3_full_conformance",
@@ -267,7 +312,7 @@
         "EVAL_PURCHASE_RESOURCE",
         "EVAL_SIMULATION_UNAVAILABLE"
       ],
-      "micros": 88.916
+      "micros": 93.167
     }
   ]
 }

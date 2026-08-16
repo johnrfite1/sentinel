@@ -41,7 +41,7 @@
         }
       ],
       "failing": [],
-      "micros": 3.042
+      "micros": 3.834
     },
     {
       "layer": "L2_policy_plus_effects",
@@ -58,7 +58,17 @@
           "detail": ""
         },
         {
+          "code": "EVAL_MANDATE_ACTIVE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
           "code": "EVAL_POLICY_ACTIVE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_MANDATE_PRINCIPAL_IS_OWNER",
           "outcome": "PASS",
           "detail": ""
         },
@@ -83,12 +93,37 @@
           "detail": ""
         },
         {
+          "code": "EVAL_TARGET_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
           "code": "EVAL_OPERATION_SUPPORTED",
           "outcome": "PASS",
           "detail": ""
         },
         {
           "code": "EVAL_CALLDATA_BINDING",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_ACTION_BINDS_MANDATE_AND_POLICY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_MANDATE_BINDS_POLICY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_TARGET_CODE_IDENTITY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_MANDATE_WINDOW",
           "outcome": "PASS",
           "detail": ""
         },
@@ -103,6 +138,11 @@
           "detail": "the action deadline has passed"
         },
         {
+          "code": "EVAL_VALUE_WITHIN_MANDATE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
           "code": "EVAL_VALUE_WITHIN_POLICY",
           "outcome": "PASS",
           "detail": ""
@@ -114,6 +154,11 @@
         },
         {
           "code": "EVAL_POLICY_OPERATION",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_SELECTOR_BOUND",
           "outcome": "PASS",
           "detail": ""
         },
@@ -137,7 +182,7 @@
         "EVAL_ACTION_DEADLINE",
         "EVAL_POLICY_WINDOW"
       ],
-      "micros": 113.25
+      "micros": 126.541
     },
     {
       "layer": "L3_full_conformance",
@@ -298,7 +343,7 @@
         "EVAL_ACTION_DEADLINE",
         "EVAL_POLICY_WINDOW"
       ],
-      "micros": 95.5
+      "micros": 99.75
     }
   ]
 }

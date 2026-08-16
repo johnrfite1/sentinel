@@ -41,11 +41,11 @@
         }
       ],
       "failing": [],
-      "micros": 4.5
+      "micros": 4.042
     },
     {
       "layer": "L2_policy_plus_effects",
-      "verdict": "ALLOW",
+      "verdict": "BLOCK",
       "checks": [
         {
           "code": "BASE_TARGET_ALLOWLISTED",
@@ -58,7 +58,17 @@
           "detail": ""
         },
         {
+          "code": "EVAL_MANDATE_ACTIVE",
+          "outcome": "VIOLATION",
+          "detail": "presented mandate 0x8ea29b93b7798fee574c05965913b660557dc502f535955c120c527cdc619639 is not the vault's active 0x570b114073d90540791601b4931c53a317b5e35d4988a8d200745f1c90865383"
+        },
+        {
           "code": "EVAL_POLICY_ACTIVE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_MANDATE_PRINCIPAL_IS_OWNER",
           "outcome": "PASS",
           "detail": ""
         },
@@ -83,6 +93,11 @@
           "detail": ""
         },
         {
+          "code": "EVAL_TARGET_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
           "code": "EVAL_OPERATION_SUPPORTED",
           "outcome": "PASS",
           "detail": ""
@@ -93,12 +108,37 @@
           "detail": ""
         },
         {
+          "code": "EVAL_ACTION_BINDS_MANDATE_AND_POLICY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_MANDATE_BINDS_POLICY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_TARGET_CODE_IDENTITY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_MANDATE_WINDOW",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
           "code": "EVAL_POLICY_WINDOW",
           "outcome": "PASS",
           "detail": ""
         },
         {
           "code": "EVAL_ACTION_DEADLINE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VALUE_WITHIN_MANDATE",
           "outcome": "PASS",
           "detail": ""
         },
@@ -118,6 +158,11 @@
           "detail": ""
         },
         {
+          "code": "EVAL_SELECTOR_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
           "code": "EVAL_SIMULATION_SUCCEEDS",
           "outcome": "PASS",
           "detail": ""
@@ -133,8 +178,10 @@
           "detail": ""
         }
       ],
-      "failing": [],
-      "micros": 126.5
+      "failing": [
+        "EVAL_MANDATE_ACTIVE"
+      ],
+      "micros": 124
     },
     {
       "layer": "L3_full_conformance",
@@ -294,7 +341,7 @@
       "failing": [
         "EVAL_MANDATE_ACTIVE"
       ],
-      "micros": 93.375
+      "micros": 93.208
     }
   ]
 }

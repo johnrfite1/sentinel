@@ -93,10 +93,12 @@ Done: §9 steps 1–9.
   F050 after the view gained the rationale field, agreed with E and F on both, and — unprompted
   — produced the finding recorded as A-030.
 - **§7.2 baseline + §7.3 ablation** — `ts/src/ablation/`, report at `docs/ablation-report.md`.
-  **False allows 38 / 17 / 1**; detection contribution — baseline alone 9, effect extraction
-  adds 20, mandate conformance adds **17**; exact match 12 / 32 / 49 of 50; inter-labeller
-  disagreement 0.0% on a freshly drawn sample. **These numbers did not move this session** —
-  the corpus was re-run twice and the only diffs were chain timestamps and latency.
+  **False allows 38 / 8 / 1**; detection contribution — baseline alone 9, effect extraction
+  adds 29, mandate conformance adds **8**; exact match 12 / 41 / 49 of 50; inter-labeller
+  disagreement 0.0% on a freshly drawn sample. **The L2 and mandate-conformance figures moved
+  under D-034**, which gave the partition a criterion — L3-only means comparing the call or
+  its effects to the mandate's PURPOSE fields, §7.2's own sentence — and moved nine codes to
+  L2. The 8 that remain are exactly the wrong-purpose class. L1 and L3 are unchanged.
 - **D-010 verifier** — `verifier/`, Python, zero third-party dependencies, built by an agent
   that never read `ts/`. **6/6 samples verify, 42/42 applicable tamper cases behave as
   specified, 70/70 of its own tests pass.** The sixth sample is `edge-single-reason-code`
@@ -116,6 +118,8 @@ gates). Added since:
 | A-030 | **OPEN FORK for John** — the specification has become a contamination channel for labellers, and the frozen prompt no longer matches it |
 | A-031 | The five owed items are built; three agent-made design calls recorded, one flagged reversible |
 | A-032 | Three adversarial reviews of the same day's work: two blockers, fourteen others, all remediated |
+| D-033 | **Ruled by John** — measure A-030's contamination channel (control re-label vs the pre-amendment spec), and add a labeller from a different model |
+| D-034 | **Ruled by John** — the §7.3 partition gets a criterion; mandate conformance 17 → 8, and the 8 are exactly the wrong-purpose class |
 
 ## 5. What to do next, in order
 

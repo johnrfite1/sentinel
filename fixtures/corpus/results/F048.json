@@ -41,7 +41,7 @@
         }
       ],
       "failing": [],
-      "micros": 2.791
+      "micros": 4.5
     },
     {
       "layer": "L2_policy_plus_effects",
@@ -58,7 +58,17 @@
           "detail": ""
         },
         {
+          "code": "EVAL_MANDATE_ACTIVE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
           "code": "EVAL_POLICY_ACTIVE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_MANDATE_PRINCIPAL_IS_OWNER",
           "outcome": "PASS",
           "detail": ""
         },
@@ -83,6 +93,11 @@
           "detail": ""
         },
         {
+          "code": "EVAL_TARGET_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
           "code": "EVAL_OPERATION_SUPPORTED",
           "outcome": "PASS",
           "detail": ""
@@ -93,12 +108,37 @@
           "detail": ""
         },
         {
+          "code": "EVAL_ACTION_BINDS_MANDATE_AND_POLICY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_MANDATE_BINDS_POLICY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_TARGET_CODE_IDENTITY",
+          "outcome": "UNRESOLVED",
+          "detail": "target code hash 0xf8b07b083341d3a7667e38718918d301f47d62f82d8186f4ccd7ed7424a64ef3 is not the pinned 0x28b986ea45370917941b4baa7c9f4c3131216a87d1543071acdc841c39b5b726; the target's behaviour is no longer established"
+        },
+        {
+          "code": "EVAL_MANDATE_WINDOW",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
           "code": "EVAL_POLICY_WINDOW",
           "outcome": "PASS",
           "detail": ""
         },
         {
           "code": "EVAL_ACTION_DEADLINE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VALUE_WITHIN_MANDATE",
           "outcome": "PASS",
           "detail": ""
         },
@@ -118,15 +158,21 @@
           "detail": ""
         },
         {
+          "code": "EVAL_SELECTOR_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
           "code": "EVAL_SIMULATION_UNAVAILABLE",
           "outcome": "UNRESOLVED",
           "detail": "no simulation was produced"
         }
       ],
       "failing": [
-        "EVAL_SIMULATION_UNAVAILABLE"
+        "EVAL_SIMULATION_UNAVAILABLE",
+        "EVAL_TARGET_CODE_IDENTITY"
       ],
-      "micros": 110
+      "micros": 120.375
     },
     {
       "layer": "L3_full_conformance",
@@ -267,7 +313,7 @@
         "EVAL_SIMULATION_UNAVAILABLE",
         "EVAL_TARGET_CODE_IDENTITY"
       ],
-      "micros": 89.625
+      "micros": 94.083
     }
   ]
 }

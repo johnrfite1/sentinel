@@ -41,7 +41,7 @@
         }
       ],
       "failing": [],
-      "micros": 2.666
+      "micros": 3.833
     },
     {
       "layer": "L2_policy_plus_effects",
@@ -58,7 +58,17 @@
           "detail": ""
         },
         {
+          "code": "EVAL_MANDATE_ACTIVE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
           "code": "EVAL_POLICY_ACTIVE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_MANDATE_PRINCIPAL_IS_OWNER",
           "outcome": "PASS",
           "detail": ""
         },
@@ -83,6 +93,11 @@
           "detail": ""
         },
         {
+          "code": "EVAL_TARGET_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
           "code": "EVAL_OPERATION_SUPPORTED",
           "outcome": "VIOLATION",
           "detail": "operation 1 is not CALL"
@@ -93,12 +108,37 @@
           "detail": ""
         },
         {
+          "code": "EVAL_ACTION_BINDS_MANDATE_AND_POLICY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_MANDATE_BINDS_POLICY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_TARGET_CODE_IDENTITY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_MANDATE_WINDOW",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
           "code": "EVAL_POLICY_WINDOW",
           "outcome": "PASS",
           "detail": ""
         },
         {
           "code": "EVAL_ACTION_DEADLINE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VALUE_WITHIN_MANDATE",
           "outcome": "PASS",
           "detail": ""
         },
@@ -116,6 +156,11 @@
           "code": "EVAL_POLICY_OPERATION",
           "outcome": "VIOLATION",
           "detail": "the policy does not allow this operation"
+        },
+        {
+          "code": "EVAL_SELECTOR_BOUND",
+          "outcome": "PASS",
+          "detail": ""
         },
         {
           "code": "EVAL_SIMULATION_SUCCEEDS",
@@ -137,7 +182,7 @@
         "EVAL_OPERATION_SUPPORTED",
         "EVAL_POLICY_OPERATION"
       ],
-      "micros": 104.583
+      "micros": 116.542
     },
     {
       "layer": "L3_full_conformance",
@@ -298,7 +343,7 @@
         "EVAL_OPERATION_SUPPORTED",
         "EVAL_POLICY_OPERATION"
       ],
-      "micros": 90.166
+      "micros": 96.333
     }
   ]
 }

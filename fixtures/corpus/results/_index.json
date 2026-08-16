@@ -175,7 +175,7 @@
     "class": "wrong-chain-vault-target-mandate-policy",
     "verdicts": {
       "L1_baseline": "ALLOW",
-      "L2_policy_plus_effects": "ALLOW",
+      "L2_policy_plus_effects": "BLOCK",
       "L3_full_conformance": "BLOCK"
     }
   },
@@ -184,7 +184,7 @@
     "class": "wrong-chain-vault-target-mandate-policy",
     "verdicts": {
       "L1_baseline": "ALLOW",
-      "L2_policy_plus_effects": "ALLOW",
+      "L2_policy_plus_effects": "BLOCK",
       "L3_full_conformance": "BLOCK"
     }
   },
@@ -193,7 +193,7 @@
     "class": "wrong-chain-vault-target-mandate-policy",
     "verdicts": {
       "L1_baseline": "ALLOW",
-      "L2_policy_plus_effects": "ALLOW",
+      "L2_policy_plus_effects": "BLOCK",
       "L3_full_conformance": "BLOCK"
     }
   },
@@ -202,7 +202,7 @@
     "class": "wrong-chain-vault-target-mandate-policy",
     "verdicts": {
       "L1_baseline": "ALLOW",
-      "L2_policy_plus_effects": "ALLOW",
+      "L2_policy_plus_effects": "BLOCK",
       "L3_full_conformance": "BLOCK"
     }
   },
@@ -229,7 +229,7 @@
     "class": "expired-mandate-receipt-or-override",
     "verdicts": {
       "L1_baseline": "ALLOW",
-      "L2_policy_plus_effects": "ALLOW",
+      "L2_policy_plus_effects": "BLOCK",
       "L3_full_conformance": "BLOCK"
     }
   },
@@ -247,7 +247,7 @@
     "class": "expired-mandate-receipt-or-override",
     "verdicts": {
       "L1_baseline": "ALLOW",
-      "L2_policy_plus_effects": "ALLOW",
+      "L2_policy_plus_effects": "BLOCK",
       "L3_full_conformance": "BLOCK"
     }
   },
@@ -310,7 +310,7 @@
     "class": "runtime-code-change-or-proxy-target",
     "verdicts": {
       "L1_baseline": "ALLOW",
-      "L2_policy_plus_effects": "ALLOW",
+      "L2_policy_plus_effects": "REVIEW",
       "L3_full_conformance": "REVIEW"
     }
   },
@@ -319,7 +319,7 @@
     "class": "runtime-code-change-or-proxy-target",
     "verdicts": {
       "L1_baseline": "ALLOW",
-      "L2_policy_plus_effects": "ALLOW",
+      "L2_policy_plus_effects": "BLOCK",
       "L3_full_conformance": "BLOCK"
     }
   },
@@ -418,7 +418,7 @@
     "class": "owner-override-and-block-behaviour",
     "verdicts": {
       "L1_baseline": "ALLOW",
-      "L2_policy_plus_effects": "ALLOW",
+      "L2_policy_plus_effects": "REVIEW",
       "L3_full_conformance": "REVIEW"
     }
   },

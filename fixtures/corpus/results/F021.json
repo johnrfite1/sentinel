@@ -43,7 +43,7 @@
       "failing": [
         "BASE_VAULT_BOUND"
       ],
-      "micros": 11.792
+      "micros": 10.584
     },
     {
       "layer": "L2_policy_plus_effects",
@@ -60,7 +60,17 @@
           "detail": ""
         },
         {
+          "code": "EVAL_MANDATE_ACTIVE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
           "code": "EVAL_POLICY_ACTIVE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_MANDATE_PRINCIPAL_IS_OWNER",
           "outcome": "PASS",
           "detail": ""
         },
@@ -85,6 +95,11 @@
           "detail": ""
         },
         {
+          "code": "EVAL_TARGET_BOUND",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
           "code": "EVAL_OPERATION_SUPPORTED",
           "outcome": "PASS",
           "detail": ""
@@ -95,12 +110,37 @@
           "detail": ""
         },
         {
+          "code": "EVAL_ACTION_BINDS_MANDATE_AND_POLICY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_MANDATE_BINDS_POLICY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_TARGET_CODE_IDENTITY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_MANDATE_WINDOW",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
           "code": "EVAL_POLICY_WINDOW",
           "outcome": "PASS",
           "detail": ""
         },
         {
           "code": "EVAL_ACTION_DEADLINE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VALUE_WITHIN_MANDATE",
           "outcome": "PASS",
           "detail": ""
         },
@@ -116,6 +156,11 @@
         },
         {
           "code": "EVAL_POLICY_OPERATION",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_SELECTOR_BOUND",
           "outcome": "PASS",
           "detail": ""
         },
@@ -139,7 +184,7 @@
         "EVAL_NATIVE_DELTA_UNOBSERVED",
         "EVAL_VAULT_BOUND"
       ],
-      "micros": 126.417
+      "micros": 133.333
     },
     {
       "layer": "L3_full_conformance",
@@ -300,7 +345,7 @@
         "EVAL_NATIVE_DELTA_UNOBSERVED",
         "EVAL_VAULT_BOUND"
       ],
-      "micros": 105.417
+      "micros": 102.875
     }
   ]
 }

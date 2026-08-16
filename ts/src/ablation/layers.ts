@@ -38,30 +38,59 @@ import {runBaseline, baselineVerdict, type BaselineConfig} from "./baseline.ts";
  * Listed explicitly rather than derived by prefix, because a prefix rule would silently
  * absorb any future code and quietly change what the ablation measures.
  */
+/**
+ * The mandate-to-effects checks: what L3 has and L2 does not.
+ *
+ * THE CRITERION, ratified as D-034 and stated here because the previous version of this set
+ * did not have one and drifted twice for that reason:
+ *
+ *   A code belongs here if, and only if, it compares the CALL or its SIMULATED EFFECTS
+ *   against the mandate's PURPOSE fields — resource, beneficiary, duration, recurrence, and
+ *   the post-state those imply. Everything else goes to L2: whether a valid mandate exists,
+ *   whether the signed payload is intact, whether the target's code identity can be
+ *   confirmed, and every ceiling or allowlist.
+ *
+ * That is §7.2's own sentence, and nothing more: "No resource, beneficiary, duration,
+ * recurrence, or post-state constraint." L2 is defined as the full engine with the
+ * mandate-to-effects checks removed — so L2 HAS the mandate. It simply never asks what the
+ * mandate was FOR. An arm holding a mandate can perfectly well check that the mandate is
+ * active, in window, bound to the active policy, and names the owner as principal; withholding
+ * those from it modelled no product and inflated the contribution figure with work that has
+ * nothing to do with purpose.
+ *
+ * WHAT THIS COST, AND WHY IT WAS PAID. Applying the criterion moved NINE codes to L2 and cut
+ * the headline "added by mandate conformance" roughly in half. The number that survives is the
+ * one §4.2 Case 3 actually claims. A smaller figure that withstands reading is worth more than
+ * a larger one that does not, and the larger one had already produced two findings: A-028
+ * caught `EVAL_CALLDATA_BINDING` counted as mandate conformance when it is signed-payload
+ * integrity, and an independent review then caught F023 doing the same thing through
+ * `EVAL_ACTION_BINDS_MANDATE_AND_POLICY`. Patching the instances left the category error in
+ * place; the criterion is what stops a third.
+ *
+ * Listed explicitly rather than derived by prefix, because a prefix rule would silently absorb
+ * any future code and quietly change what the ablation measures.
+ */
 export const MANDATE_CONFORMANCE_CODES: ReadonlySet<string> = new Set([
-    // NOT here, and each removal was a correction (A-028, ablation review):
-    //   EVAL_CALLDATA_BINDING — signed-payload integrity ("are these the bytes that were
-    //   bound"), none of §7.2's withheld five. With it removed from L2, F019 was caught by
-    //   L3 SOLELY on it, so a signature-binding catch was counted as a mandate-conformance
-    //   contribution. The partition was also internally inconsistent: the sibling
-    //   action-integrity checks EVAL_NONCE_CURRENT and EVAL_ACTION_DEADLINE were left in L2.
+    // The four §7.2 names, compared against the decoded call.
     "EVAL_PURCHASE_RESOURCE",
     "EVAL_PURCHASE_BENEFICIARY",
     "EVAL_PURCHASE_DURATION",
     "EVAL_PURCHASE_RECURRENCE",
+    // The post-state those imply, read back out of the simulation.
     "EVAL_ENTITLEMENT_ADVANCED",
     "EVAL_ENTITLEMENT_RECURRENCE",
     "EVAL_ENTITLEMENT_UNOBSERVED",
+    // The approval schema's analogue of `beneficiary`: WHO the allowance is granted to,
+    // compared against the mandate rather than against an allowlist.
     "EVAL_APPROVAL_SPENDER",
-    "EVAL_TARGET_BOUND",
-    "EVAL_SELECTOR_BOUND",
-    "EVAL_VALUE_WITHIN_MANDATE",
-    "EVAL_TARGET_CODE_IDENTITY",
-    "EVAL_ACTION_BINDS_MANDATE_AND_POLICY",
-    "EVAL_MANDATE_BINDS_POLICY",
-    "EVAL_MANDATE_ACTIVE",
-    "EVAL_MANDATE_WINDOW",
-    "EVAL_MANDATE_PRINCIPAL_IS_OWNER",
+    //
+    // MOVED TO L2 BY D-034, each for the reason the criterion gives:
+    //   EVAL_TARGET_BOUND, EVAL_SELECTOR_BOUND   — mandate IDENTITY, not purpose
+    //   EVAL_VALUE_WITHIN_MANDATE                — a ceiling; §7.2 grants the baseline one
+    //   EVAL_TARGET_CODE_IDENTITY                — an evidence check (D-015, D-027)
+    //   EVAL_ACTION_BINDS_MANDATE_AND_POLICY     — signed-payload integrity (the A-028 shape)
+    //   EVAL_MANDATE_BINDS_POLICY                — binding, not purpose
+    //   EVAL_MANDATE_ACTIVE, _WINDOW, _PRINCIPAL_IS_OWNER — mandate VALIDITY
 ]);
 
 export type LayerName = "L1_baseline" | "L2_policy_plus_effects" | "L3_full_conformance";

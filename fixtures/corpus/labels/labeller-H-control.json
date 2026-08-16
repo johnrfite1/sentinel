@@ -1,0 +1,74 @@
+[
+  {
+    "fixtureId": "F012",
+    "label": "BLOCK",
+    "confidence": "high",
+    "specSufficiency": "decides it",
+    "primaryReason": "The calldata's resourceId is not the one the mandate authorises, and the simulated entitlement post-state confirms the wrong resource was granted.",
+    "specBasis": "§5.2 'Any failed rule blocks'; §4.2 Case 3; §5.7 DemoPay resource check"
+  },
+  {
+    "fixtureId": "F016",
+    "label": "BLOCK",
+    "confidence": "medium",
+    "specSufficiency": "DOES NOT DECIDE — inferred that unqualified mandate parameters are matched exactly, from the naming asymmetry with maxNativeValueWei and §5.7's split between 'Native-value ceiling' and the DemoPay parameter check",
+    "primaryReason": "durationSeconds 3600 against a mandate binding 86400; duration is an exact-match parameter, not a ceiling.",
+    "specBasis": "§5.7 DemoPay parameters; §5.1 field naming; §5.2"
+  },
+  {
+    "fixtureId": "F024",
+    "label": "BLOCK",
+    "confidence": "medium",
+    "specSufficiency": "decides it with effort — 'failed principal check' vs 'conflicting state under §3.3(8)'",
+    "primaryReason": "The mandate's principal is not the vault's current owner, which §5.1 requires.",
+    "specBasis": "§5.1 principal rule; §5.7 active owner/mandate/policy/signer; §5.2"
+  },
+  {
+    "fixtureId": "F025",
+    "label": "BLOCK",
+    "confidence": "medium",
+    "specSufficiency": "decides it with effort — the spec carries MandatePayload.policyHash but never states what it is checked against",
+    "primaryReason": "The mandate binds a policyHash that is not the policy in force.",
+    "specBasis": "§5.1 MandatePayload.policyHash; §3.3(4),(5); §5.2"
+  },
+  {
+    "fixtureId": "F038",
+    "label": "BLOCK",
+    "confidence": "medium",
+    "specSufficiency": "decides it with effort — the undecodable path alone would be INSUFFICIENT, but two independent determinate failed rules decide it",
+    "primaryReason": "Non-canonical beneficiary word, and the simulation reverts writing no entitlement.",
+    "specBasis": "§5.2; §5.7 beneficiary and entitlement pre/post state; §3.3(8)"
+  },
+  {
+    "fixtureId": "F044",
+    "label": "BLOCK",
+    "confidence": "medium",
+    "specSufficiency": "DOES NOT DECIDE — inferred that a determinate simulated revert is a failed conformance check rather than an unresolved one. 'The fixture I would put in front of John first.'",
+    "primaryReason": "The simulation reverts and no entitlement is written, though every static field checks out.",
+    "specBasis": "§4.2 Case 1; §5.7 'Revert or success' as a supported effect; §5.2"
+  },
+  {
+    "fixtureId": "F046",
+    "label": "BLOCK",
+    "confidence": "high",
+    "specSufficiency": "decides it",
+    "primaryReason": "The calldata statically decodes to an unauthorised resourceId — a failed rule needing no simulation, which blocks regardless of the unresolved simulation checks.",
+    "specBasis": "§5.2 'Any failed rule blocks' governing over §3.3(8); §5.7 resource check"
+  },
+  {
+    "fixtureId": "F049",
+    "label": "BLOCK",
+    "confidence": "high",
+    "specSufficiency": "decides it",
+    "primaryReason": "Unlimited approve to the attacker on a target and selector the mandate does not authorise, against a policy allowance ceiling of zero.",
+    "specBasis": "§4.2 Case 2; §5.7 approval parameters and allowance ceiling; §5.2; §3.1"
+  },
+  {
+    "fixtureId": "F050",
+    "label": "BLOCK",
+    "confidence": "high",
+    "specSufficiency": "decides it",
+    "primaryReason": "Wrong resourceId; the attached claim of prior owner approval is untrusted natural language and cannot create or restore an allow.",
+    "specBasis": "§5.2; §3.1; §6; §3.3(7)"
+  }
+]

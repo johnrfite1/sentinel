@@ -46,7 +46,7 @@
         }
       ],
       "failing": [],
-      "micros": 8.458
+      "micros": 6.083
     },
     {
       "layer": "L2_policy_plus_effects",
@@ -63,7 +63,17 @@
           "detail": ""
         },
         {
+          "code": "EVAL_MANDATE_ACTIVE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
           "code": "EVAL_POLICY_ACTIVE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_MANDATE_PRINCIPAL_IS_OWNER",
           "outcome": "PASS",
           "detail": ""
         },
@@ -88,6 +98,11 @@
           "detail": ""
         },
         {
+          "code": "EVAL_TARGET_BOUND",
+          "outcome": "VIOLATION",
+          "detail": "action target 0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0 is not the mandate's 0x5fbdb2315678afecb367f032d93f642f64180aa3"
+        },
+        {
           "code": "EVAL_OPERATION_SUPPORTED",
           "outcome": "PASS",
           "detail": ""
@@ -98,12 +113,37 @@
           "detail": ""
         },
         {
+          "code": "EVAL_ACTION_BINDS_MANDATE_AND_POLICY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_MANDATE_BINDS_POLICY",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_TARGET_CODE_IDENTITY",
+          "outcome": "UNRESOLVED",
+          "detail": "target code hash 0x3715c0836193ddf75afe858ba6d9ea4744ea3f450c56bab3ddbf41e577c9b0cd is not the pinned 0x28b986ea45370917941b4baa7c9f4c3131216a87d1543071acdc841c39b5b726; the target's behaviour is no longer established"
+        },
+        {
+          "code": "EVAL_MANDATE_WINDOW",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
           "code": "EVAL_POLICY_WINDOW",
           "outcome": "PASS",
           "detail": ""
         },
         {
           "code": "EVAL_ACTION_DEADLINE",
+          "outcome": "PASS",
+          "detail": ""
+        },
+        {
+          "code": "EVAL_VALUE_WITHIN_MANDATE",
           "outcome": "PASS",
           "detail": ""
         },
@@ -121,6 +161,11 @@
           "code": "EVAL_POLICY_OPERATION",
           "outcome": "PASS",
           "detail": ""
+        },
+        {
+          "code": "EVAL_SELECTOR_BOUND",
+          "outcome": "VIOLATION",
+          "detail": "selector 0x095ea7b3 is not the mandate's 0xc188528b"
         },
         {
           "code": "EVAL_APPROVAL_CEILING",
@@ -150,9 +195,12 @@
       ],
       "failing": [
         "EVAL_ALLOWANCE_EFFECT_WITHIN_CEILING",
-        "EVAL_APPROVAL_CEILING"
+        "EVAL_APPROVAL_CEILING",
+        "EVAL_SELECTOR_BOUND",
+        "EVAL_TARGET_BOUND",
+        "EVAL_TARGET_CODE_IDENTITY"
       ],
-      "micros": 136.625
+      "micros": 136.958
     },
     {
       "layer": "L3_full_conformance",
@@ -302,7 +350,7 @@
         "EVAL_TARGET_BOUND",
         "EVAL_TARGET_CODE_IDENTITY"
       ],
-      "micros": 97.709
+      "micros": 108
     }
   ]
 }

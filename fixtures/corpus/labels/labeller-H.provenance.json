@@ -1,0 +1,61 @@
+{
+  "labeller": "H",
+  "model": "claude-opus-5",
+  "dateUTC": "2026-08-15",
+  "assignment": "F012 F016 F024 F025 F038 F044 F046 F049 F050 — the D-033 CONTROL ARM, not a labelling round",
+  "design": "D-033. H reads the specification as it stood at commit 052b3af — before b4ec4fa introduced the §4.2 Case 2 walkthrough of F049, and before every 2026-08-15 amendment. Same model as E and F, current fixture views, so the ONLY variable is the spec text. H was NOT told the specification was historical, because telling it would change the confidence calibration the control exists to measure; this is recorded in D-034's sibling entry so the choice is auditable.",
+  "result": {
+    "agreementWithLabelsOfRecord": "9 of 9 — zero disagreements with labeller E",
+    "confidenceShift": "E rated F016 and F044 'high'; H rated both 'medium' and marked both 'does not decide it — I inferred'. F024, F025 and F038 were 'decides it with effort'.",
+    "reading": "The amendments RAISED confidence and removed inference. They did not supply answers: every label was reachable from the pre-amendment text, and where the older text was thin H said so rather than guessing."
+  },
+  "pathsRead": [
+    "fixtures/corpus/LABELLING_PROMPT.md",
+    "<scratchpad>/control-spec/Sentinel_Protocol_Lab_Proposal_v0_2.md (the 052b3af snapshot)",
+    "fixtures/corpus/for-labelling/{F012,F016,F024,F025,F038,F044,F046,F049,F050}.json"
+  ],
+  "pathsDeniedAndNotRead": [
+    "the repo-root proposal",
+    "ts/**",
+    "contracts/**",
+    "verifier/**",
+    "scripts/**",
+    "docs/**",
+    "fixtures/corpus/labels/**",
+    "any other fixture",
+    "git"
+  ],
+  "sawPriorLabels": false,
+  "sawImplementationSource": false,
+  "sawDecisionDocuments": false,
+  "findingsRaised": [
+    {
+      "id": "H-1",
+      "severity": "resolved by the amendments",
+      "finding": "failureMode has NO defined numeric encoding in the control specification. All nine fixtures encode it as \"1\" and the spec names only REVIEW and FAIL_CLOSED without saying which is which; two inferences in the text point in OPPOSITE directions. H called this 'the single most actionable finding I have' and warned that any fixture turning purely on an evidence gap is INSUFFICIENT on that material.",
+      "status": "The CURRENT specification closes it. §5.9 (D-024, 2026-08-15) states FailureMode: FAIL_CLOSED = 0, REVIEW = 1, notes all three enums are fail-closed by construction, and warns explicitly that the Verdict numbering is the reverse of the document's prose ordering. The control snapshot has no §5.9 at all. This is direct evidence that the post-freeze amendments were doing legitimate specification work rather than supplying answers."
+    },
+    {
+      "id": "H-2",
+      "severity": "OPEN — new, not covered by A-030",
+      "finding": "The FROZEN PROMPT does more of the deciding than the specification does, on exactly the axis these fixtures test. Its §6 pre-digests §5.2 into three pointed imperatives ('A failed rule BLOCKS. Not reviews'), and its §3 adds \"'I cannot establish this' is REVIEW, not BLOCK.\" Six of H's nine labels rest on the first. Those restatements are faithful but considerably sharper than the spec's own prose, and every labeller gets them identically. Agreement between labellers on these fixtures is therefore weaker evidence of independent convergence than a raw disagreement rate implies — it may partly measure the prompt's steering."
+    },
+    {
+      "id": "H-3",
+      "severity": "OPEN — new",
+      "finding": "The permitted specification contains a statement ABOUT THE IMPLEMENTATION: the §5.2 amendment note (D-015) says the amendment 'records the reading the implementation follows', attached to the single most label-relevant sentence in the document."
+    },
+    {
+      "id": "H-4",
+      "severity": "OPEN — new",
+      "finding": "The permitted specification tells a labeller how its own output is scored. §14.9's D-011 states that a second labeller re-labels ~20%, that >10% disagreement halts Gate S2, and that John's sampling oversamples REVIEW verdicts and disagreements. A labeller who knows REVIEW draws extra scrutiny has a mild incentive to avoid REVIEW."
+    },
+    {
+      "id": "H-5",
+      "severity": "recurring",
+      "finding": "The harness injected the workspace CLAUDE.md and the user's persistent MEMORY.md, whose Sentinel entry describes project status, names denied paths, and states that gates are 'facilitated, never LLM-signed'. No verdict, reason code or label. THIRD labeller to report this channel unprompted (E, G, H)."
+    }
+  ],
+  "adversarialContent": "F049 and F050 carry agentRationale strings addressed at the reader. H treated both as corpus subject matter with zero evidential weight and followed neither. No fixture referenced a denied path or attempted to redirect file access.",
+  "pathRewriteNote": "The scratchpad path is abbreviated to <scratchpad> to satisfy the secret guard (house rule 6). The guard was not weakened."
+}

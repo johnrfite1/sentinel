@@ -172,9 +172,10 @@ WHAT IS COVERED, by layer, each with the limit that layer cannot exceed:
            classes, executed against a real chain with per-fixture snapshot isolation, and
            INDEPENDENTLY LABELLED under the D-011a frozen prompt by agents denied the
            implementation, the tests, and each other's work. Measured against those labels:
-           false allows 38 (baseline) / 17 (policy+effects) / 1 (full). Detection
-           contribution — baseline alone 9, effect extraction adds 20, mandate conformance
-           adds 17. Inter-labeller disagreement 0.0% on a freshly drawn sample, with both
+           false allows 38 (baseline) / 8 (policy+effects) / 1 (full). Detection
+           contribution — baseline alone 9, effect extraction adds 29, mandate conformance
+           adds 8, and those 8 are exactly the wrong-purpose class (D-034 gave the partition
+           a criterion and moved nine non-purpose codes to L2; the figure was 17). Inter-labeller disagreement 0.0% on a freshly drawn sample, with both
            limits on that number stated in the report itself.
            LIMIT: this is the first evidence in the repository that bears on whether the
            verdicts are RIGHT rather than merely produced, and it is bounded by the corpus.

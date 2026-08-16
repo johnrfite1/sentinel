@@ -150,39 +150,30 @@ text. Read the numbers below with that qualification attached, and see §11.
 | Layer | false allows / 50 | exact match |
 |---|---:|---:|
 | L1 representative baseline | **38** | 12/50 |
-| L2 policy + effect extraction | **17** | 32/50 |
+| L2 policy + effect extraction | **8** | 41/50 |
 | L3 full mandate conformance | **1** | 49/50 |
 
-Detection contribution: baseline alone **9**, effect extraction adds **20**, mandate
-conformance adds **17**. F012 (wrong resource) is allowed by L1 and L2 and blocked by L3.
-
-**What the 17 is, decomposed — and it is not all the wrong-purpose class.** §7.2 defines what
-the baseline lacks as "no resource, beneficiary, duration, recurrence, or post-state
-constraint". Re-deriving each fixture's L3 failing set from `fixtures/corpus/results/`:
-
-| turns on a §7.2-withheld field | turns on another mandate-derived check |
-|---|---|
-| **8** — F012, F013, F014, F015, F016, F046, F050, F055 | **9** — F023 (action-to-mandate binding), F024 (principal), F025 (mandate-to-policy binding), F026 (mandate active), F031/F033 (mandate window), F042/F043/F054 (target code identity) |
-
-So **17 is the contribution of having a signed mandate at all**, of which **8** are the
-wrong-purpose class §4.2 Case 3 names. Both numbers are worth having and neither is the other.
-The report emits this split so it cannot drift from the headline.
-
-**An open partition question, raised by the same review and NOT resolved here.** A-028 removed
-`EVAL_CALLDATA_BINDING` from the mandate-conformance set because it is "signed-payload
-integrity, not mandate purpose". `EVAL_ACTION_BINDS_MANDATE_AND_POLICY` — F023's only failing
-check — is arguably the same category and was left in, while its siblings `EVAL_NONCE_CURRENT`
-and `EVAL_ACTION_DEADLINE` sit in L2. Moving it would make the headline 16. That is a
-measurement decision affecting the number the gate rests on, so it is stated rather than taken.
+Detection contribution: baseline alone **9**, effect extraction adds **29**, mandate
+conformance adds **8**. F012 (wrong resource) is allowed by L1 and L2 and blocked by L3.
 `ts/test/ablation.test.ts` asserts the baseline ALLOWS every wrong-purpose action as a LIMIT,
 so if that ever changes the suite fails and points at the claim.
 
-**These numbers differ from the draft's, and the difference is a correction rather than an
-improvement.** A-028 found `addedByL3` computed as `L3 \ L2` instead of `L3 \ (L1 ∪ L2)`, and
-found the layer partition non-monotone — `EVAL_TARGET_BOUND` and `EVAL_SELECTOR_BOUND` were
-stripped from L2, leaving it with no target constraint at all while the strictly weaker L1 had
-an allowlist. Both are fixed; L2 now carries the baseline's allowlist, which is what makes it
-a ladder. The draft's "mandate conformance adds 20" was an overcount.
+**These figures changed under D-034, and the change is a correction that makes the claim
+smaller.** The mandate-conformance contribution was 17 until the partition was given a
+criterion: a check is L3-only only if it compares the call or its effects to the mandate's
+PURPOSE fields, which is §7.2's own sentence. Nine codes — mandate validity, binding,
+identity, ceilings, code identity — moved to L2, because an arm that holds a mandate can
+check all of those without ever asking what the mandate was for. **The 8 that remain are
+exactly the wrong-purpose class**: F012, F013, F014, F015, F016, F046, F050, F055. The
+report now emits that split as a CHECK on the partition — a non-empty second row means a
+code has drifted — and the suite fails if any of the nine is readmitted.
+
+The ladder still shows a real gap, and it is now precisely the gap §4.2 Case 3 claims:
+**L2 false-allows 8 where L3 false-allows 1.**
+
+**Earlier numbers in this project's history should be read with that correction attached.**
+A-028 corrected this figure once (it was computed as `L3 \ L2` rather than `L3 \ (L1 ∪ L2)`);
+D-034 corrects what was being counted at all. Both moved it down.
 
 **Boundary, and it is the one most likely to be misread.** §7.2 says it directly: *"This
 baseline makes the demo reproducible but is not evidence that current vendors miss Case 3."*
