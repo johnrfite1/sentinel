@@ -2,6 +2,7 @@
   "fixtureId": "F004",
   "class": "boundary-and-over-limit-native-value",
   "intent": "Native value exactly equal to the mandate's maxNativeValueWei — the boundary itself.",
+  "agentRationale": null,
   "primaryEnforcement": "conformance-engine",
   "decode": {
     "ok": true,
@@ -40,7 +41,7 @@
         }
       ],
       "failing": [],
-      "micros": 10.708
+      "micros": 14.708
     },
     {
       "layer": "L2_policy_plus_effects",
@@ -133,7 +134,7 @@
         }
       ],
       "failing": [],
-      "micros": 152.375
+      "micros": 328.542
     },
     {
       "layer": "L3_full_conformance",
@@ -291,7 +292,7 @@
         }
       ],
       "failing": [],
-      "micros": 141.208
+      "micros": 290.417
     }
   ]
 }

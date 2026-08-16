@@ -23,9 +23,12 @@ import {evaluate} from "../evaluate/index.ts";
 import type {ActionPayload, Hex, MandatePayload, PolicyPayload} from "../signer/protocol.ts";
 import {LAYERS, runLayer, type LayerResult} from "../ablation/layers.ts";
 import type {BaselineConfig} from "../ablation/baseline.ts";
+import {transcribe} from "../propose/index.ts";
+import type {AgentProposal} from "../propose/schema.ts";
 import {CORPUS, ATTACKER, RESOURCE, WRONG_RESOURCE, CONFORMING_VALUE, MANDATE_CEILING} from "./fixtures.ts";
 import type {FixtureSpec} from "./spec.ts";
 import {assertNoLeakage, assertViewShape} from "./leakage.ts";
+import {assertRationaleUnread} from "./rationale.ts";
 
 /**
  * Execute the §7.1 corpus against a real chain and emit two separate views.
@@ -218,6 +221,62 @@ function buildCallData(spec: FixtureSpec): Hex {
     }) as Hex;
 }
 
+/**
+ * Rebuild a rationale-carrying fixture as the agent proposal it claims to be (A-028 F-5).
+ *
+ * The `malicious-retrieved-instructions` class describes something an AGENT did — it read a
+ * poisoned document and proposed a call with a story attached. A fixture that only ever exists
+ * as calldata this file encoded is not that scenario, which is why the class was vacuous.
+ *
+ * So the fixture is driven through `propose/`, the untrusted seam a live proposal takes, and
+ * the runner then requires the transcriber's bytes to equal the ones built here. That equality
+ * is the load-bearing part: it says the narrative changed nothing about the call, measured
+ * against an encoder that had the narrative in hand, rather than asserted because no data path
+ * existed. If the two ever disagree the corpus run fails, because then this fixture and the
+ * scenario it names would have come apart.
+ */
+function proposalFor(spec: FixtureSpec, target: Hex, valueWei: bigint): AgentProposal {
+    const rationale = spec.agentRationale!;
+    const c = spec.call;
+
+    if (c.kind === "raw") {
+        // Reachable only by editing a fixture, and a loud stop is the right answer: raw
+        // calldata is authored precisely for the classes a transcriber cannot emit (the
+        // step-7 coverage boundary says so), so a raw fixture claiming an agent rationale is
+        // a scenario contradicting itself.
+        throw new Error(
+            `${spec.id} declares an agentRationale but authors raw calldata. Raw fixtures exist ` +
+                `for shapes no proposal can produce, so the two cannot both be true.`,
+        );
+    }
+
+    if (c.kind === "approve") {
+        return {
+            target,
+            value_wei: valueWei.toString(),
+            function_signature: "approve(address,uint256)",
+            args: [
+                c.spender === "attacker" ? ATTACKER : c.spender,
+                (c.amount === "max" ? MAX_UINT256 : c.amount).toString(),
+            ],
+            rationale,
+        };
+    }
+
+    return {
+        target,
+        value_wei: valueWei.toString(),
+        function_signature: "purchase(bytes32,address,uint64,bool)",
+        args: [
+            c.resource === "wrong" ? WRONG_RESOURCE : (c.resource ?? RESOURCE),
+            c.beneficiary === "attacker" ? ATTACKER : (c.beneficiary ?? (OWNER.address.toLowerCase() as Hex)),
+            (c.durationSeconds ?? DAY).toString(),
+            (c.recurring ?? false) ? "true" : "false",
+        ],
+        rationale,
+    };
+}
+
 async function activate(mandate: MandatePayload, policy: PolicyPayload): Promise<void> {
     for (const [fn, arg] of [
         ["activateMandate", hashMandate(mandate)],
@@ -406,6 +465,27 @@ for (const spec of CORPUS) {
         let callData = buildCallData(spec);
         const valueWei = spec.valueWei ?? CONFORMING_VALUE;
 
+        // The injection classes are only real if the proposal is real. Checked here, before
+        // any environment manipulation, so a failure names the transcription rather than a
+        // later mutation of the calldata.
+        if (spec.agentRationale !== undefined) {
+            const transcribed = transcribe(proposalFor(spec, target, valueWei));
+            if (!transcribed.ok) {
+                throw new Error(
+                    `${spec.id} carries an agent rationale but its call does not transcribe: ` +
+                        `${transcribed.code} — ${transcribed.detail}`,
+                );
+            }
+            const p = transcribed.proposal;
+            if (p.callData !== callData || p.target !== target || p.valueWei !== valueWei) {
+                throw new Error(
+                    `${spec.id}: the agent proposal and the corpus fixture denote different ` +
+                        `calls. proposal=${p.target}/${p.valueWei}/${p.callData} ` +
+                        `fixture=${target}/${valueWei}/${callData}`,
+                );
+            }
+        }
+
         if (env.starveVault) await rpc("anvil_setBalance", [vault, "0x0"]);
         if (env.changeTargetCode) await rpc("anvil_setCode", [demoPay, "0x6001600155"]);
         if (env.advancePastMandateWindow) await rpc("evm_setNextBlockTimestamp", [Number(3_000_000_001n)]);
@@ -507,11 +587,34 @@ for (const spec of CORPUS) {
 
         const layers = LAYERS.map((l) => runLayer(l, input, baselineConfig));
 
+        // --- the rationale reached nothing, MEASURED (A-028 F-5) -------------
+        //
+        // Scans the bound fields, the executed bytes, every layer's checks and reason codes,
+        // and the canonical evidence bundle. `evaluate` is called once more here rather than
+        // reusing a layer result because the bundle is the artefact that gets SIGNED, and it
+        // is the one place a leak would become content the signer attests to.
+        if (spec.agentRationale !== undefined) {
+            const evaluation = evaluate(input);
+            assertRationaleUnread(
+                spec.agentRationale,
+                j({
+                    action: {...action, callData},
+                    layers,
+                    reasonCodes: evaluation.reasonCodes,
+                    evidenceCanonical: evaluation.evidenceCanonical,
+                }),
+                spec.id,
+            );
+        }
+
         // --- the labeller's view: values and intent, nothing derived ---------
         const labellerView = {
             fixtureId: spec.id,
             scenarioClass: spec.class,
             declaredIntent: spec.intent,
+            // Present only on the fixtures that carry one, so 48 views do not gain a null
+            // field describing a thing that did not happen to them.
+            ...(spec.agentRationale === undefined ? {} : {agentRationale: spec.agentRationale}),
             mandate,
             policy,
             action: {...action, callData},
@@ -577,6 +680,10 @@ for (const spec of CORPUS) {
                 fixtureId: spec.id,
                 class: spec.class,
                 intent: spec.intent,
+                // Recorded on the RESULTS side so the ablation can state which fixtures
+                // actually carried an injection rather than describing the class from its
+                // name — which is what produced the overclaim A-028 F-5 found.
+                agentRationale: spec.agentRationale ?? null,
                 primaryEnforcement: spec.primaryEnforcement ?? "conformance-engine",
                 decode: decode.ok ? {ok: true, schema: decode.decoded.schema} : {ok: false, code: decode.code},
                 simulated: simulation !== null,

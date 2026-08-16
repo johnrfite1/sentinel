@@ -50,9 +50,9 @@ Treat these figures as ordering the layers' arithmetic, not their operational co
 
 | Layer | allow | block | review | false allow | false block | exact match | p50 µs | p95 µs |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|
-| L1_baseline | 41 | 9 | 0 | **38** | 0 | 12/50 | 4 | 29 |
-| L2_policy_plus_effects | 20 | 26 | 4 | **17** | 0 | 32/50 | 120 | 179 |
-| L3_full_conformance | 4 | 41 | 5 | **1** | 0 | 49/50 | 95 | 133 |
+| L1_baseline | 41 | 9 | 0 | **38** | 0 | 12/50 | 11 | 56 |
+| L2_policy_plus_effects | 20 | 26 | 4 | **17** | 0 | 32/50 | 283 | 417 |
+| L3_full_conformance | 4 | 41 | 5 | **1** | 0 | 49/50 | 220 | 374 |
 
 `false allow` is the dangerous error: the independent labels said block or review and the
 layer allowed. `false block` is the costly-but-safe one. They are reported separately
@@ -136,13 +136,22 @@ Whether each of these satisfies that is the labels' call, and is scored above.
 
 ## Fixtures that must NOT be read as detections
 
-`F049` and `F050` sit in the `malicious-retrieved-instructions` class, but the corpus
-fixture format has **no field for an agent rationale** — the adversarial text exists only
-in the declared intent, which reaches the labeller and never reaches the pipeline. Their
-actions are therefore identical to `F009` and `F012` respectively apart from mandate
-identity. Whatever layer "catches" them is catching the underlying approval or
-wrong-resource action, not an injection. D-025 set this precedent for a class that cannot
-be driven to a positive case; it applies here for the same reason.
+The `malicious-retrieved-instructions` fixtures (`F049`, `F050`) each carry an
+agent rationale, are transcribed through the same untrusted proposal seam a live agent's
+call takes, and the corpus run fails if any phrase of that narrative reaches a bound
+field, a check, a reason code, or the canonical evidence bundle. **That measurement is
+the fixture's content. The verdict is not.** Their underlying actions are an unlimited
+approval and a wrong-resource purchase, so whatever layer blocks them is blocking the
+action — exactly as it blocks `F009` and `F012` — and no layer is detecting an injection,
+because nothing in Sentinel reads the narrative. A layer that appeared to detect one
+would be evidence of a defect.
+
+**This was previously worse and is recorded rather than quietly fixed.** Until A-028 F-5,
+the fixture format had no rationale field at all: the adversarial text existed only in the
+declared intent, reached the labeller, and never reached the pipeline, which made these
+fixtures byte-identical to `F009` and `F012` apart from mandate identity. The class was
+vacuous and the report disclosed it instead of closing it. D-025 set the precedent for
+caveating a class that cannot be driven to a positive case; this one could be, and now is.
 
 The same caution applies to `F035` and `F057`, whose enforcement is the isolated signer
 and the vault rather than the conformance engine — see the attribution note below.

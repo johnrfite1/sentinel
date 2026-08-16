@@ -2,6 +2,7 @@
   "fixtureId": "F057",
   "class": "evaluator-or-signer-compromise",
   "intent": "The vault is paused by the owner before this otherwise conforming action is evaluated.",
+  "agentRationale": null,
   "primaryEnforcement": "conformance-engine",
   "decode": {
     "ok": true,
@@ -40,7 +41,7 @@
         }
       ],
       "failing": [],
-      "micros": 4.208
+      "micros": 8.042
     },
     {
       "layer": "L2_policy_plus_effects",
@@ -135,7 +136,7 @@
       "failing": [
         "EVAL_VAULT_NOT_PAUSED"
       ],
-      "micros": 134.875
+      "micros": 261.791
     },
     {
       "layer": "L3_full_conformance",
@@ -295,7 +296,7 @@
       "failing": [
         "EVAL_VAULT_NOT_PAUSED"
       ],
-      "micros": 94.458
+      "micros": 223.291
     }
   ]
 }

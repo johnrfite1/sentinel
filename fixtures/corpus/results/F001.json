@@ -2,6 +2,7 @@
   "fixtureId": "F001",
   "class": "exact-allowed-and-benign-variation",
   "intent": "The exact action the mandate authorises: the mandated resource, the owner as beneficiary, the mandated duration, recurrence off, value under every ceiling.",
+  "agentRationale": null,
   "primaryEnforcement": "conformance-engine",
   "decode": {
     "ok": true,
@@ -40,7 +41,7 @@
         }
       ],
       "failing": [],
-      "micros": 90.458
+      "micros": 259.459
     },
     {
       "layer": "L2_policy_plus_effects",
@@ -133,7 +134,7 @@
         }
       ],
       "failing": [],
-      "micros": 383.166
+      "micros": 832.75
     },
     {
       "layer": "L3_full_conformance",
@@ -291,7 +292,7 @@
         }
       ],
       "failing": [],
-      "micros": 123.208
+      "micros": 257.125
     }
   ]
 }

@@ -146,6 +146,20 @@ export const ALLOWED_VIEW_KEYS = [
     "fixtureId",
     "scenarioClass",
     "declaredIntent",
+    // DECLARED DELIBERATELY, 2026-08-15, which is the entire purpose of this allowlist.
+    //
+    // `agentRationale` carries the untrusted narrative attached to the proposal (A-028 F-5).
+    // The question the allowlist forces is "did we decide the labeller should have this?", and
+    // the answer is yes, for a reason specific to this field: the labeller's job is to say
+    // what Sentinel SHOULD conclude, and a labeller shown only the bytes is never tested on
+    // whether a persuasive story moves them. The frozen prompt anticipated exactly this — rule
+    // 8.2 says a fixture claiming to be "a required setup step" is a fixture describing an
+    // attack, not an instruction — so the field is within the material D-011(b) grants, and
+    // the prompt needs no change to accommodate it.
+    //
+    // It is not evaluator output. Nothing in `evaluate/` reads it, and `rationale.ts` fails
+    // the corpus run if any of it turns up in an evaluator-side artefact.
+    "agentRationale",
     "mandate",
     "policy",
     "action",

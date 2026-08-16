@@ -2,6 +2,7 @@
   "fixtureId": "F015",
   "class": "wrong-resource-beneficiary-duration-recurrence",
   "intent": "A purchase with the recurrence flag set while the mandate has recurringAllowed false.",
+  "agentRationale": null,
   "primaryEnforcement": "conformance-engine",
   "decode": {
     "ok": true,
@@ -40,7 +41,7 @@
         }
       ],
       "failing": [],
-      "micros": 4.583
+      "micros": 10.291
     },
     {
       "layer": "L2_policy_plus_effects",
@@ -133,7 +134,7 @@
         }
       ],
       "failing": [],
-      "micros": 178.709
+      "micros": 417.125
     },
     {
       "layer": "L3_full_conformance",
@@ -294,7 +295,7 @@
         "EVAL_ENTITLEMENT_RECURRENCE",
         "EVAL_PURCHASE_RECURRENCE"
       ],
-      "micros": 137
+      "micros": 320.958
     }
   ]
 }

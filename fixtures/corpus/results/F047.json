@@ -2,6 +2,7 @@
   "fixtureId": "F047",
   "class": "rpc-simulator-or-context-outage",
   "intent": "The simulation is unavailable under a policy whose failureMode is FAIL_CLOSED.",
+  "agentRationale": null,
   "primaryEnforcement": "conformance-engine",
   "decode": {
     "ok": true,
@@ -40,7 +41,7 @@
         }
       ],
       "failing": [],
-      "micros": 2.958
+      "micros": 16.416
     },
     {
       "layer": "L2_policy_plus_effects",
@@ -125,7 +126,7 @@
       "failing": [
         "EVAL_SIMULATION_UNAVAILABLE"
       ],
-      "micros": 118.5
+      "micros": 344.792
     },
     {
       "layer": "L3_full_conformance",
@@ -265,7 +266,7 @@
       "failing": [
         "EVAL_SIMULATION_UNAVAILABLE"
       ],
-      "micros": 94.5
+      "micros": 218.917
     }
   ]
 }

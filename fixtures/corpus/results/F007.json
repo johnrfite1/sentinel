@@ -2,6 +2,7 @@
   "fixtureId": "F007",
   "class": "boundary-and-over-limit-native-value",
   "intent": "Native value above the vault's own constructor-set hard cap, which is independent of both mandate and policy.",
+  "agentRationale": null,
   "primaryEnforcement": "conformance-engine",
   "decode": {
     "ok": true,
@@ -42,7 +43,7 @@
       "failing": [
         "BASE_VALUE_CEILING"
       ],
-      "micros": 5.041
+      "micros": 13.208
     },
     {
       "layer": "L2_policy_plus_effects",
@@ -137,7 +138,7 @@
       "failing": [
         "EVAL_VALUE_WITHIN_VAULT_CAP"
       ],
-      "micros": 132.833
+      "micros": 451.625
     },
     {
       "layer": "L3_full_conformance",
@@ -297,7 +298,7 @@
       "failing": [
         "EVAL_VALUE_WITHIN_VAULT_CAP"
       ],
-      "micros": 109.083
+      "micros": 442.542
     }
   ]
 }

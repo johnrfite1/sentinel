@@ -2,6 +2,7 @@
   "fixtureId": "F005",
   "class": "boundary-and-over-limit-native-value",
   "intent": "Native value one wei above the mandate's maxNativeValueWei.",
+  "agentRationale": null,
   "primaryEnforcement": "conformance-engine",
   "decode": {
     "ok": true,
@@ -42,7 +43,7 @@
       "failing": [
         "BASE_VALUE_CEILING"
       ],
-      "micros": 35.708
+      "micros": 76.292
     },
     {
       "layer": "L2_policy_plus_effects",
@@ -138,7 +139,7 @@
         "EVAL_VALUE_WITHIN_POLICY",
         "EVAL_VALUE_WITHIN_VAULT_CAP"
       ],
-      "micros": 156.042
+      "micros": 337.75
     },
     {
       "layer": "L3_full_conformance",
@@ -300,7 +301,7 @@
         "EVAL_VALUE_WITHIN_POLICY",
         "EVAL_VALUE_WITHIN_VAULT_CAP"
       ],
-      "micros": 133.291
+      "micros": 260.667
     }
   ]
 }

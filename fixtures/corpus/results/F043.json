@@ -2,6 +2,7 @@
   "fixtureId": "F043",
   "class": "runtime-code-change-or-proxy-target",
   "intent": "The same pinned-code-hash mismatch, under a policy whose failureMode is FAIL_CLOSED rather than REVIEW.",
+  "agentRationale": null,
   "primaryEnforcement": "conformance-engine",
   "decode": {
     "ok": true,
@@ -40,7 +41,7 @@
         }
       ],
       "failing": [],
-      "micros": 4.417
+      "micros": 9.125
     },
     {
       "layer": "L2_policy_plus_effects",
@@ -133,7 +134,7 @@
         }
       ],
       "failing": [],
-      "micros": 123.5
+      "micros": 275.167
     },
     {
       "layer": "L3_full_conformance",
@@ -293,7 +294,7 @@
       "failing": [
         "EVAL_TARGET_CODE_IDENTITY"
       ],
-      "micros": 94.834
+      "micros": 209.958
     }
   ]
 }

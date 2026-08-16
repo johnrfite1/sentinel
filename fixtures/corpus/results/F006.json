@@ -2,6 +2,7 @@
   "fixtureId": "F006",
   "class": "boundary-and-over-limit-native-value",
   "intent": "The mandate's value ceiling is raised above the policy's, so the policy is the tighter of the two, and the action sits between them.",
+  "agentRationale": null,
   "primaryEnforcement": "conformance-engine",
   "decode": {
     "ok": true,
@@ -40,7 +41,7 @@
         }
       ],
       "failing": [],
-      "micros": 9.5
+      "micros": 22.333
     },
     {
       "layer": "L2_policy_plus_effects",
@@ -135,7 +136,7 @@
       "failing": [
         "EVAL_VALUE_WITHIN_POLICY"
       ],
-      "micros": 151.375
+      "micros": 328.292
     },
     {
       "layer": "L3_full_conformance",
@@ -295,7 +296,7 @@
       "failing": [
         "EVAL_VALUE_WITHIN_POLICY"
       ],
-      "micros": 128.834
+      "micros": 374.25
     }
   ]
 }

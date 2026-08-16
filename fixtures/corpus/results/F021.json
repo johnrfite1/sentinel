@@ -2,6 +2,7 @@
   "fixtureId": "F021",
   "class": "wrong-chain-vault-target-mandate-policy",
   "intent": "The action names a vault address that is not the deployed vault.",
+  "agentRationale": null,
   "primaryEnforcement": "conformance-engine",
   "decode": {
     "ok": true,
@@ -42,7 +43,7 @@
       "failing": [
         "BASE_VAULT_BOUND"
       ],
-      "micros": 8.083
+      "micros": 19.125
     },
     {
       "layer": "L2_policy_plus_effects",
@@ -138,7 +139,7 @@
         "EVAL_NATIVE_DELTA_UNOBSERVED",
         "EVAL_VAULT_BOUND"
       ],
-      "micros": 124.875
+      "micros": 273.709
     },
     {
       "layer": "L3_full_conformance",
@@ -299,7 +300,7 @@
         "EVAL_NATIVE_DELTA_UNOBSERVED",
         "EVAL_VAULT_BOUND"
       ],
-      "micros": 100.208
+      "micros": 222.959
     }
   ]
 }

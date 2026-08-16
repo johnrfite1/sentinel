@@ -9,6 +9,12 @@ import {
 } from "../src/corpus/leakage.ts";
 import {CORPUS, assertClassCoverage} from "../src/corpus/fixtures.ts";
 import {FIXTURE_CLASSES, type FixtureSpec} from "../src/corpus/spec.ts";
+import {
+    RationaleLeakError,
+    UnprobeableRationaleError,
+    assertRationaleUnread,
+    rationaleBigrams,
+} from "../src/corpus/rationale.ts";
 
 /**
  * The corpus's own integrity rules, enforced rather than stated.
@@ -187,6 +193,98 @@ describe("no fixture carries a verdict", () => {
                 );
             }
         }
+    });
+});
+
+describe("the injection class carries a real injection (A-028 F-5)", () => {
+    const INJECTION_CLASS = "malicious-retrieved-instructions";
+    const injections = CORPUS.filter((f) => f.class === INJECTION_CLASS);
+
+    /**
+     * THE DEFECT THIS CLASS EXISTS TO NOT REPEAT.
+     *
+     * `malicious-retrieved-instructions` shipped with no rationale field anywhere in the
+     * fixture format, so its two fixtures were an unlimited approval and a wrong-resource
+     * purchase with a class label attached — byte-identical to F009 and F012 apart from
+     * mandate identity. The corpus counted them, the ablation scored them, and the only thing
+     * standing between that and a published "the injection was contained" claim was a
+     * reviewer reading the fixture format.
+     */
+    it("gives every fixture in the class an agent rationale", () => {
+        assert.ok(injections.length > 0, "the §7.1 injection class has no fixtures at all");
+        for (const f of injections) {
+            assert.ok(
+                (f.agentRationale ?? "").trim().length > 40,
+                `${f.id} is in the ${INJECTION_CLASS} class but carries no agent rationale, which ` +
+                    `makes it its underlying action wearing a class label (A-028 F-5)`,
+            );
+        }
+    });
+
+    it("keeps every rationale-carrying fixture transcribable from a proposal", () => {
+        // A raw-calldata fixture cannot be produced by an agent — that is why raw exists — so
+        // a raw fixture claiming an agent rationale describes a scenario that cannot happen.
+        // The runner throws on this; the corpus should never reach it.
+        for (const f of CORPUS) {
+            if (f.agentRationale === undefined) continue;
+            assert.notEqual(
+                f.call.kind,
+                "raw",
+                `${f.id} claims an agent rationale but authors raw calldata`,
+            );
+        }
+    });
+
+    it("derives enough distinctive probes from each rationale to be able to fail", () => {
+        for (const f of injections) {
+            const probes = rationaleBigrams(f.agentRationale ?? "");
+            assert.ok(probes.length >= 5, `${f.id}: only ${probes.length} probes`);
+        }
+    });
+
+    /**
+     * The guard shown FIRING, not merely passing. Every previous version of this project's
+     * guards passed on the real data and would have passed on anything.
+     */
+    it("catches a rationale that reached the evidence bundle", () => {
+        const rationale = CORPUS.find((f) => f.id === "F049")!.agentRationale!;
+        const leaked = JSON.stringify({evidenceCanonical: `{"agentClaim":"${rationale}"}`});
+        assert.throws(() => assertRationaleUnread(rationale, leaked, "F049"), RationaleLeakError);
+    });
+
+    it("catches a leak that arrived through underscores or punctuation", () => {
+        const rationale = CORPUS.find((f) => f.id === "F049")!.agentRationale!;
+        const mangled = JSON.stringify({note: "granted_the_settlement_relayer_an_unlimited_allowance"});
+        assert.throws(() => assertRationaleUnread(rationale, mangled, "F049"), RationaleLeakError);
+    });
+
+    it("passes an artefact that is genuinely canonical evaluator output", () => {
+        const rationale = CORPUS.find((f) => f.id === "F049")!.agentRationale!;
+        const clean = JSON.stringify({
+            reasonCodes: ["EVAL_APPROVAL_SPENDER", "EVAL_TARGET_BOUND", "EVAL_SELECTOR_BOUND"],
+            evidenceCanonical:
+                '{"allowanceDeltas":[{"spender":"0x00000000000000000000000000000000deadbeef",' +
+                '"before":"0","after":"115792089237316195423570985008687907853269984665640564039457584007913129639935"}]}',
+        });
+        assert.doesNotThrow(() => assertRationaleUnread(rationale, clean, "F049"));
+    });
+
+    /**
+     * A guard that cannot fail must say so rather than report a pass. This is the fourth
+     * occurrence of that failure mode in the project (A-028), so it is checked directly.
+     */
+    it("refuses a rationale too thin to probe with", () => {
+        assert.throws(
+            () => assertRationaleUnread("approve this", "{}", "FXXX"),
+            UnprobeableRationaleError,
+        );
+    });
+
+    it("does not count evaluator field names as distinctive narrative", () => {
+        // `unlimited allowance` reads as narrative but `allowance` is an evidence-bundle field
+        // name, so the bigram is dropped rather than the guard being retuned later when it
+        // false-positives on real output.
+        assert.equal(rationaleBigrams("an unlimited allowance increase").includes("unlimited allowance"), false);
     });
 });
 

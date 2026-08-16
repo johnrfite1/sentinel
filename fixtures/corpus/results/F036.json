@@ -2,6 +2,7 @@
   "fixtureId": "F036",
   "class": "malformed-calldata-or-unknown-selector",
   "intent": "Calldata carrying a selector that is not one of the two supported call schemas.",
+  "agentRationale": null,
   "primaryEnforcement": "conformance-engine",
   "decode": {
     "ok": false,
@@ -48,7 +49,7 @@
         "BASE_CALLDATA_UNDECODABLE",
         "BASE_SELECTOR_ALLOWLISTED"
       ],
-      "micros": 10.083
+      "micros": 18.084
     },
     {
       "layer": "L2_policy_plus_effects",
@@ -145,7 +146,7 @@
         "EVAL_CALLDATA_UNDECODABLE",
         "EVAL_SIMULATION_SUCCEEDS"
       ],
-      "micros": 117.5
+      "micros": 279.042
     },
     {
       "layer": "L3_full_conformance",
@@ -271,7 +272,7 @@
         "EVAL_CALLDATA_UNDECODABLE",
         "EVAL_SIMULATION_SUCCEEDS"
       ],
-      "micros": 89.625
+      "micros": 216.25
     }
   ]
 }

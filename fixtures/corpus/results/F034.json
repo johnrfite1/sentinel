@@ -2,6 +2,7 @@
   "fixtureId": "F034",
   "class": "expired-mandate-receipt-or-override",
   "intent": "The action's own deadline is in the past.",
+  "agentRationale": null,
   "primaryEnforcement": "conformance-engine",
   "decode": {
     "ok": true,
@@ -40,7 +41,7 @@
         }
       ],
       "failing": [],
-      "micros": 2.708
+      "micros": 8.5
     },
     {
       "layer": "L2_policy_plus_effects",
@@ -135,7 +136,7 @@
       "failing": [
         "EVAL_ACTION_DEADLINE"
       ],
-      "micros": 120.375
+      "micros": 302.792
     },
     {
       "layer": "L3_full_conformance",
@@ -295,7 +296,7 @@
       "failing": [
         "EVAL_ACTION_DEADLINE"
       ],
-      "micros": 106.709
+      "micros": 236.334
     }
   ]
 }

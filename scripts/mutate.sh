@@ -645,10 +645,22 @@ run_mutation "B8 layers: L3 silently becomes L2" \
 # here does not produce a wrong number — it produces a meaningless one that reads as success,
 # because the corpus is the only evidence bearing on whether the verdicts are RIGHT.
 
-run_mutation "C1 leakage: compare the key case-sensitively again (the real bug)" \
+# C1 AND C3 WERE ROTTEN AND BOTH ERRORED, WHICH IS ITSELF THE FINDING.
+#
+# Both were written against the pre-A-028 leakage guard, which matched `"key"` inside the
+# serialised text. That implementation was replaced by a recursive key walk when A-028 F-3
+# showed the old one let every prefixed name through — and nobody re-ran batch C afterwards,
+# so two of the five corpus mutations had been reporting "anchor not unique" ever since.
+# `run_mutation` counts those separately rather than as caught, so nothing false was
+# published; but a mutation that cannot apply measures exactly as much as a test that cannot
+# fail, and this batch existed to catch a defect in the guard it had stopped exercising.
+# Re-aimed at the current implementation, keeping each one pointed at the historical bug it
+# was named for.
+
+run_mutation "C1 leakage: match the key exactly again, so every prefixed name passes" \
     "src/corpus/leakage.ts" \
-    "        if (haystack.includes(\`\"\${key.toLowerCase()}\"\`)) {" \
-    "        if (haystack.includes(\`\"\${key}\"\`)) {"
+    "            if (lowered.includes(forbidden.toLowerCase())) {" \
+    "            if (lowered === forbidden.toLowerCase()) {"
 
 run_mutation "C2 leakage: empty the denylist" \
     "src/corpus/leakage.ts" \
@@ -657,10 +669,15 @@ run_mutation "C2 leakage: empty the denylist" \
     "export const FORBIDDEN_KEYS = [
     \"__never__\","
 
-run_mutation "C3 leakage: match values as well as keys (false positives)" \
+run_mutation "C3 leakage: compare the key case-sensitively again (the first real bug)" \
     "src/corpus/leakage.ts" \
-    "        if (haystack.includes(\`\"\${key.toLowerCase()}\"\`)) {" \
-    "        if (haystack.includes(key.toLowerCase())) {"
+    "        const lowered = key.toLowerCase();" \
+    "        const lowered = key;"
+
+run_mutation "C3b leakage: let the allowlist exempt everything" \
+    "src/corpus/leakage.ts" \
+    "        if (isDeclared(key)) {" \
+    "        if (true) {"
 
 run_mutation "C4 corpus: drop the §7.1 size bound" \
     "src/corpus/fixtures.ts" \
@@ -671,5 +688,36 @@ run_mutation "C5 corpus: stop checking class coverage" \
     "src/corpus/fixtures.ts" \
     "    const missing = FIXTURE_CLASSES.filter((c) => !covered.has(c));" \
     "    const missing: string[] = [];"
+
+# C6-C10 cover the A-028 F-5 remediation: the injection class carries a real rationale and
+# the run measures that it reached nothing. The guard is new, so the question is not whether
+# it passes — it does — but whether removing it would be noticed.
+
+run_mutation "C6 rationale: drop the floor, so an unprobeable rationale reports a pass" \
+    "src/corpus/rationale.ts" \
+    "    if (probes.length < MIN_BIGRAMS) throw new UnprobeableRationaleError(fixtureId, probes.length);" \
+    "    if (probes.length < 0) throw new UnprobeableRationaleError(fixtureId, probes.length);"
+
+run_mutation "C7 rationale: never actually report a leak" \
+    "src/corpus/rationale.ts" \
+    "        if (haystack.includes(phrase)) throw new RationaleLeakError(fixtureId, phrase);" \
+    "        if (false && haystack.includes(phrase)) throw new RationaleLeakError(fixtureId, phrase);"
+
+run_mutation "C8 rationale: stop normalising, so a punctuated leak slips past" \
+    "src/corpus/rationale.ts" \
+    "    const haystack = artefact.toLowerCase().replace(/[^a-z]+/g, \" \");" \
+    "    const haystack = artefact.toLowerCase();"
+
+run_mutation "C9 rationale: let evaluator field names count as narrative" \
+    "src/corpus/rationale.ts" \
+    "        .filter((w) => w.length >= 4 && !GENERIC.has(w));" \
+    "        .filter((w) => w.length >= 4);"
+
+run_mutation "C10 corpus: return the injection class to its vacuous state" \
+    "src/corpus/fixtures.ts" \
+    "        agentRationale:
+            \"This authorization call grants the settlement relayer \" +" \
+    "        agentRationaleRemovedByMutation:
+            \"This authorization call grants the settlement relayer \" +"
 
 echo "=== ${caught} caught, ${survived} survived, ${errored} did not apply, ${skipped} skipped ==="

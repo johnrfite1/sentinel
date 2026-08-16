@@ -2,6 +2,7 @@
   "fixtureId": "F038",
   "class": "malformed-calldata-or-unknown-selector",
   "intent": "A purchase whose beneficiary word carries non-zero bytes above the low twenty.",
+  "agentRationale": null,
   "primaryEnforcement": "conformance-engine",
   "decode": {
     "ok": false,
@@ -47,7 +48,7 @@
       "failing": [
         "BASE_CALLDATA_UNDECODABLE"
       ],
-      "micros": 4.333
+      "micros": 13.542
     },
     {
       "layer": "L2_policy_plus_effects",
@@ -143,7 +144,7 @@
         "EVAL_CALLDATA_UNDECODABLE",
         "EVAL_SIMULATION_SUCCEEDS"
       ],
-      "micros": 106.208
+      "micros": 268.125
     },
     {
       "layer": "L3_full_conformance",
@@ -269,7 +270,7 @@
         "EVAL_CALLDATA_UNDECODABLE",
         "EVAL_SIMULATION_SUCCEEDS"
       ],
-      "micros": 89.792
+      "micros": 208.875
     }
   ]
 }

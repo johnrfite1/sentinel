@@ -43,6 +43,8 @@ interface ResultRecord {
     fixtureId: string;
     class: string;
     intent: string;
+    /** The untrusted narrative attached to the proposal, or `null` where there was none. */
+    agentRationale: string | null;
     primaryEnforcement: string;
     simulated: boolean;
     layers: {layer: LayerName; verdict: string; failing: string[]; micros: number}[];
@@ -396,13 +398,26 @@ export function buildReport(inputs: AblationInputs): string {
 
     w("## Fixtures that must NOT be read as detections");
     w();
-    w("`F049` and `F050` sit in the `malicious-retrieved-instructions` class, but the corpus");
-    w("fixture format has **no field for an agent rationale** — the adversarial text exists only");
-    w("in the declared intent, which reaches the labeller and never reaches the pipeline. Their");
-    w("actions are therefore identical to `F009` and `F012` respectively apart from mandate");
-    w("identity. Whatever layer \"catches\" them is catching the underlying approval or");
-    w("wrong-resource action, not an injection. D-025 set this precedent for a class that cannot");
-    w("be driven to a positive case; it applies here for the same reason.");
+    const withRationale = results.filter((r) => r.agentRationale !== null).map((r) => r.fixtureId);
+    w(
+        `The \`malicious-retrieved-instructions\` fixtures (${withRationale.map((id) => `\`${id}\``).join(", ")}) ` +
+            "each carry an",
+    );
+    w("agent rationale, are transcribed through the same untrusted proposal seam a live agent's");
+    w("call takes, and the corpus run fails if any phrase of that narrative reaches a bound");
+    w("field, a check, a reason code, or the canonical evidence bundle. **That measurement is");
+    w("the fixture's content. The verdict is not.** Their underlying actions are an unlimited");
+    w("approval and a wrong-resource purchase, so whatever layer blocks them is blocking the");
+    w("action — exactly as it blocks `F009` and `F012` — and no layer is detecting an injection,");
+    w("because nothing in Sentinel reads the narrative. A layer that appeared to detect one");
+    w("would be evidence of a defect.");
+    w();
+    w("**This was previously worse and is recorded rather than quietly fixed.** Until A-028 F-5,");
+    w("the fixture format had no rationale field at all: the adversarial text existed only in the");
+    w("declared intent, reached the labeller, and never reached the pipeline, which made these");
+    w("fixtures byte-identical to `F009` and `F012` apart from mandate identity. The class was");
+    w("vacuous and the report disclosed it instead of closing it. D-025 set the precedent for");
+    w("caveating a class that cannot be driven to a positive case; this one could be, and now is.");
     w();
     w("The same caution applies to `F035` and `F057`, whose enforcement is the isolated signer");
     w("and the vault rather than the conformance engine — see the attribution note below.");
