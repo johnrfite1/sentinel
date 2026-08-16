@@ -103,7 +103,11 @@ WHAT IS COVERED, by layer, each with the limit that layer cannot exceed:
            in deterministic tests. `SentinelVault.backstops.t.sol` adds thirteen tests
            each named for a deliberate defect that SURVIVED a green 43-test run, among
            them §3.3(9)'s "nonce consumed before the external call", which the
-           reentrancy guard masks and which nothing had ever verified.
+           reentrancy guard masks and which nothing had ever verified. A second review then
+           found five MORE survivors, three of them properties the contract's own comments
+           claim: `nonReentrant` droppable from the OVERRIDE path (a double-spend, on two
+           shapes, since the guard is shared), the override's binding to one exact review
+           receipt untested, and `CallFailed` asserted by nothing. Covered now.
            LIMIT: proves the vault ENFORCES a receipt, never that the receipt carried a
            CORRECT verdict. A vault that faithfully executes a wrong decision passes
            every one of these tests. The invariant handler's action set also defines
@@ -177,9 +181,12 @@ WHAT IS COVERED, by layer, each with the limit that layer cannot exceed:
            50 fixtures over two demo contracts and two call schemas is not an accuracy claim
            about EVM transactions (§7.3: "do not claim general transaction-safety accuracy").
            The `malicious-retrieved-instructions` class carries a real rationale as of
-           2026-08-15 and the run measures that none of it reaches a check, a reason code,
-           or the evidence bundle — but NO LAYER DETECTS AN INJECTION and none should:
-           nothing reads the narrative, so a layer that appeared to would be a defect.
+           2026-08-15, and the run measures that no derived adjacent word-pair of it — nor a
+           base64 or hex carriage of the whole — reaches a bound field, a check, a reason
+           code, or the evidence bundle. That is a REGRESSION guard, not a proof of absence:
+           a single leaked word, a paraphrase, or an unanticipated encoding passes. NO LAYER
+           DETECTS AN INJECTION and none should: nothing reads the narrative, so a layer that
+           appeared to would be a defect.
            The single full-configuration false allow is F035, whose enforcement is the
            isolated signer rather than the engine. The labels of record are the THIRD round
            (E/F): round 1 scored a spec since amended, and round 2 was discarded as
@@ -213,8 +220,12 @@ WHAT IS NOT COVERED:
     reported UNCERTIFIED on every run, and no agent may clear them.
   - The evidence dashboard (outside S2 unless John adds it at the gate, D-009).
   - Gate 8 (five-minute comprehension), which D-032 makes PRE-PUBLICATION rather than S2.
-  - Reproducible labelling views: re-running the corpus rewrites 33 of 50 view files,
-    because entitlement expiry follows chain time (A-029).
+  - Reproducible labelling views: re-running the corpus rewrites 32 of 50 view files
+    purely because entitlement expiry follows chain time (A-029).
+  - Labeller independence from PRIOR FINDINGS about specific fixtures (A-030). The
+    independence from the IMPLEMENTATION is real and enforced. The specification the
+    protocol grants has carried a walkthrough of F049 since before any labelling round,
+    and every labeller of record read it. OPEN FORK for John.
   - An independent review of steps 7-8, which have had NONE, and of steps 1-3 that
     completed. Steps 4-6 HAVE now had a full
     independent adversarial pass under D-017 (see A-022): fixed commit, 12 findings, all 12

@@ -108,9 +108,12 @@ function normalise(text: string): string {
  * digest shares no words with its preimage. Base64 and plain hex are the other two forms a
  * developer reaches for. None of them is prose, so none is a bigram, and all three passed.
  *
- * This does not make the guard complete. It cannot be: an encoding nobody anticipated will
- * pass, which is why `rationale.ts` claims absence of THESE FORMS rather than absence of the
- * rationale. Stating the limit is the part that survives the next encoding.
+ * THE MOST LIKELY ONE OF THE THREE IS NOT COVERED AND CANNOT BE. A `rationaleHash` — keccak
+ * of the string, which is how this project commits to everything else — shares no bytes with
+ * its preimage, so no scan of the artefact can find it. A guard that scans cannot detect a
+ * commitment; only reading the bundle schema can. That is a real hole, it is named here rather
+ * than papered over, and it is the reason this file claims absence of THESE FORMS rather than
+ * absence of the rationale. An encoding nobody anticipated passes too.
  */
 function encodingProbes(rationale: string): string[] {
     const bytes = Buffer.from(rationale, "utf8");

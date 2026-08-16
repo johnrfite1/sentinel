@@ -975,10 +975,15 @@ run_sol_mutation "S21 vault: drop nonReentrant from executeWithOverride" \
     '        bytes calldata ownerSig
     ) external returns (bytes memory) {'
 
+# The anchor spans both lines on purpose. Dropping only the comparison leaves `receiptHash`
+# unused, which `deny = "warnings"` turns into a build failure — so the first version of this
+# mutation reported ERROR and measured nothing. A mutation must be a change the compiler
+# accepts, or it is a statement about the compiler.
 run_sol_mutation "S22 vault: drop the review-receipt term from the override binding" \
     "contracts/src/SentinelVault.sol" \
-    '            auth.reviewReceiptHash != receiptHash || auth.actionHash != T.hashAction(action)' \
-    '            auth.actionHash != T.hashAction(action)'
+    '        bytes32 receiptHash = _checkReceipt(action, receipt, receiptSig);' \
+    '        _checkReceipt(action, receipt, receiptSig);
+        bytes32 receiptHash = auth.reviewReceiptHash;'
 
 run_sol_mutation "S23 vault: report a failed external call as success" \
     "contracts/src/SentinelVault.sol" \

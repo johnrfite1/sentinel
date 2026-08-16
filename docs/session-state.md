@@ -63,7 +63,7 @@ fork. Routine engineering judgment is yours.
 
 ## 3. Where the build actually is
 
-**60/60 Foundry + 349/349 TypeScript + 70/70 verifier tests.** Run `./scripts/test.sh`; use
+**66/66 Foundry + 369/369 TypeScript + 70/70 verifier tests.** Run `./scripts/test.sh`; use
 `--gate` for gate evidence (20,000 fuzz runs, 262,144 calls per invariant). It prints its own
 coverage boundary — read all of it. That block is ONE statement, not a running log; when a
 step lands, rewrite the affected layer rather than appending.
@@ -84,8 +84,9 @@ Done: §9 steps 1–9.
   real chain with per-fixture snapshot isolation. **The `malicious-retrieved-instructions`
   class is no longer vacuous** (A-028 F-5): both fixtures carry an `agentRationale`, F049's
   verbatim from the pinned recording, are transcribed through the untrusted proposal seam, and
-  the run fails if any phrase of the narrative reaches a bound field, a check, a reason code,
-  or the evidence bundle.
+  the run fails if a derived adjacent word-pair of the narrative — or a base64 or hex carriage
+  of the whole — reaches a bound field, a check, a reason code, or the evidence bundle. It is a
+  REGRESSION guard, not a proof of absence; the first version's probes could not fire at all.
 - **Independent labelling** — **labellers E and F are the labels of record.** Round 1 (A/B)
   scored a spec since amended; round 2 (C/D) was **discarded as contaminated** (A-028 F-1).
   **Labeller G (2026-08-15) is a two-fixture re-check**, not a round: it re-labelled F049 and
@@ -114,12 +115,14 @@ gates). Added since:
 | A-029 | The labeller views are not byte-reproducible — chain time flows into entitlement expiry |
 | A-030 | **OPEN FORK for John** — the specification has become a contamination channel for labellers, and the frozen prompt no longer matches it |
 | A-031 | The five owed items are built; three agent-made design calls recorded, one flagged reversible |
+| A-032 | Three adversarial reviews of the same day's work: two blockers, fourteen others, all remediated |
 
 ## 5. What to do next, in order
 
 1. **Run Gate S2 as a facilitated session.** The pack is `docs/gate-s2-evidence.md`; its §12
-   lists five questions, none of them an agent's call. Gate 5 is PART MET by construction —
-   its two certification conditions are John's and no agent may clear them.
+   lists five questions, none of them an agent's call. **Gate 5 is NOT MET** — 0 of 9 capability
+   rows carry a date or a source, which is unsatisfied rather than merely uncertified, and
+   clearing it means editing §2 rather than signing anything.
 2. **Put A-030 to John before the next labelling round.** Every available response changes a
    ratified protocol, so it cannot be resolved in the build loop. **Read the entry, not this
    line:** its first version claimed the labels of record were unaffected, and a second review
@@ -146,6 +149,26 @@ The pre-2026-08-15 entries below the line still hold. Added since:
 
 **Dead ends and traps — do not repeat:**
 
+- **A guard whose probes are built from a FILTERED sequence can match strings that never
+  existed.** The rationale guard filtered words and then paired them, so 10 of 17 probes for
+  one fixture were dead and the injection payload could pass verbatim. Pair from the ORIGINAL
+  sequence and filter the pair; then assert every probe occurs in its own source text, because
+  that invariant is what makes "the guard can fail" true rather than hoped.
+- **A floor that counts probes is not a floor that counts probes which can fire.**
+- **Unit-testing a guard does not test that anything CALLS it.** Six of ten mutations against
+  the injection wiring survived because every test drove the pure function and none drove the
+  pipeline. When behaviour cannot be reached from the suite, assert the structure that produces
+  it — read the caller's source and require the call site — and say in the test why.
+- **`test.sh` never runs the corpus**, so nothing in `ts/src/corpus/run.ts` is covered by the
+  gate. That is the standing hole the above works around, and A-029 makes running it costly.
+- **A mutation set inherits its author's blind spots even when the author is a reviewer.** All
+  twenty inherited vault mutants targeted `_checkAction`, `_checkReceipt` or the override
+  binding; a second reviewer found five survivors in the three areas none of them touched.
+- **A non-zero `forge test` exit is not a catch if the build failed** — and a forge-LINT
+  refusal is a third thing again: the mutant compiles, so it is unmeasurable rather than
+  defective. Bucket the three separately or a security-relevant mutation class disappears.
+- **`mktemp` creates the backup file before you copy into it.** A trap armed between those two
+  moments restores zero bytes over the source. Copy to a temp name and `mv` it into place.
 - **A mutation harness rots silently when the code it mutates is repaired.** Two of the five
   corpus mutations had anchors from a guard that was rewritten one commit earlier, and had been
   reporting "anchor not unique" ever since. The counter distinguishes errors from catches, so
