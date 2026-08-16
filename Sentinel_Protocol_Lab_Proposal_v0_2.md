@@ -194,7 +194,7 @@ The signer exposes no generic sign-bytes method. It independently recomputes the
 5. Any mutation to a bound field invalidates authorization.
 6. The automatic path accepts only a current, unexpired allow receipt from the active signer.
 7. A review path requires both the signed review receipt and a separate owner-signed OverrideAuthorization for that exact action. **A block cannot be overridden directly.** *Amended 2026-08-15 (D-026): the remedy for a block depends on what failed.* A **conformance** block — the action does not match the signed mandate — requires a new mandate or policy. An **executability** block — the vault is paused, the signer has been rotated, the action's nonce is not the vault's, the deadline has passed, or the value exceeds the vault's own hard cap — is cleared by changing the vault state or the action, and needs no new mandate. Both are non-overridable; only the remedy differs. The previous text said a block "requires a new mandate or policy" without qualification, which is true of the first kind and false of the second, and three independent labellers converged on the gap. The executability class is enumerated in §5.7 and mirrors the isolated signer's EXECUTABILITY severity tier.
-8. Missing or conflicting state, unsupported calls, undecodable calldata, stale mandate or policy, code-identity mismatch, or critical dependency failure never produces automatic allow.
+8. Missing or conflicting state, unsupported calls, undecodable calldata, stale mandate or policy, code-identity mismatch, or critical dependency failure never produces automatic allow. *Clarified 2026-08-15 (D-030): this is a FLOOR, not a verdict — it rules out ALLOW and each listed condition is classified separately.* Code-identity mismatch and undecodable calldata are evidence gaps following `failureMode` (D-015, D-028); a reverting simulation is a failed rule (D-021); pause, nonce, deadline and the vault's hard cap are the EXECUTABILITY class (D-026); and **conflicting state is a failed rule and blocks** — where the operands are known and the comparison fails, nothing is unestablished, and describing a determinate contradiction as missing information would be the wrong reading. Recorded caveat: a vault reaching a self-contradictory state means something upstream already went wrong, so this is arguably a system inconsistency rather than a property of the action; see D-030 for the objection and the condition that would reopen it.
 9. A single monotonically increasing action nonce stored in SentinelVault prevents receipt and override replay and is consumed before the external call.
 10. Owner-only mandate revocation, policy activation, pause, recovery, and signer rotation remain outside agent authority.
 11. Unsupported top-level operations and unexpected internal calls are denied or reviewed by default.
@@ -332,7 +332,7 @@ The MVP supports one EOA owner. The principal must equal the current vault owner
 
 The owner activates the canonical policy hash in SentinelVault.
 
-Mandate and policy constraints are intersected. Any failed rule blocks. Any unknown required check is governed by `failureMode`: it reviews under REVIEW and blocks under FAIL_CLOSED. Automatic allow requires every required check to pass.
+Mandate and policy constraints are intersected. Any failed rule blocks. Any unknown required check is governed by `failureMode`: it reviews under REVIEW and blocks under FAIL_CLOSED. Automatic allow requires every required check to pass. **A failed rule takes precedence over an unresolved check (D-029):** where both are present the verdict is BLOCK, whatever `failureMode` says. An unresolved check is an absence of information and cannot undo a positive finding — learning that something else is unknown does not make a known violation less certain.
 
 *Amended 2026-08-15 (D-021).* A **reverting simulation is a failed rule** and therefore blocks; it is not an "unknown required check" and does not follow `failureMode`. The reasoning: a revert is a determinate observed fact — the simulation succeeded in reporting that the call does not execute — so nothing about it is unknown. The consequence is stated because it is sharp and was argued against: §3.3(7) makes a block remediable only by a new mandate or policy, so an action that reverts for a trivially correctable reason costs a new mandate rather than a corrected re-proposal.
 
@@ -510,6 +510,29 @@ Supported effects:
 - Emitted events as supporting evidence.
 
 An event alone is not proof of entitlement; conformance checks the resulting contract state.
+
+#### 5.7.1 Check coverage (auditable; the identifiers are not normative)
+
+*Added 2026-08-15 (D-031), after an independent labeller working only from this document noticed that §5.7's prose never names the mandate-to-active-policy binding, and drew the consequence itself: an evaluator built from §5.7 alone omits it, and the wrong-policy fixture then ALLOWs. Measuring the gap rather than assuming its size found **eleven** of the engine's forty-one checks with no home in the prose above, including all three binding checks §3.3(4) and §3.3(5) rest on.*
+
+**What this list is and is not.** The prose above is normative — it says what is checked and why. This table exists so the prose can be AUDITED for completeness against a working implementation, and its identifiers are deliberately **not** normative: a reimplementer should derive behaviour from the descriptions, not transcribe names. That distinction is the whole value D-010 demonstrated — an independent implementer failing against a written schema is what reveals where the schema is thin, and a copyable identifier list would replace that signal with a transcription exercise.
+
+`scripts/check-eval-codes.sh` fails the project gate if a check exists in the engine and not here. **It asserts COVERAGE, not correctness** — that someone declared where a check belongs, not that the description is right. That is weaker than the §5.8 type-string guard, which compares two byte-exact strings, and the difference is stated rather than glossed.
+
+**Binding and activation** — §3.3(4), §3.3(5), §5.1:
+`EVAL_CHAIN_BOUND`, `EVAL_VAULT_BOUND`, `EVAL_TARGET_BOUND`, `EVAL_SELECTOR_BOUND`, `EVAL_NONCE_CURRENT`, `EVAL_CALLDATA_BINDING` (the presented bytes hash to the action's `dataHash`), `EVAL_ACTION_BINDS_MANDATE_AND_POLICY` (the action names the hashes the vault reports active), `EVAL_MANDATE_BINDS_POLICY` (the mandate's embedded `policyHash` is the active policy), `EVAL_MANDATE_ACTIVE`, `EVAL_POLICY_ACTIVE`, `EVAL_MANDATE_PRINCIPAL_IS_OWNER`.
+
+**Windows and deadlines:** `EVAL_MANDATE_WINDOW`, `EVAL_POLICY_WINDOW`, `EVAL_ACTION_DEADLINE`.
+
+**Ceilings, intersected per §5.2:** `EVAL_VALUE_WITHIN_MANDATE`, `EVAL_VALUE_WITHIN_POLICY`, `EVAL_VALUE_WITHIN_VAULT_CAP` (the vault's own constructor cap — a third ceiling, outside the mandate-and-policy intersection).
+
+**Operation and vault state:** `EVAL_OPERATION_SUPPORTED`, `EVAL_POLICY_OPERATION`, `EVAL_VAULT_NOT_PAUSED`.
+
+**Decoded parameters against the mandate:** `EVAL_PURCHASE_RESOURCE`, `EVAL_PURCHASE_BENEFICIARY`, `EVAL_PURCHASE_DURATION`, `EVAL_PURCHASE_RECURRENCE`, `EVAL_APPROVAL_SPENDER`, `EVAL_APPROVAL_CEILING`, `EVAL_CALLDATA_UNDECODABLE` (an evidence gap per D-028).
+
+**Simulated effects:** `EVAL_SIMULATION_SUCCEEDS` (a revert is a failed rule per D-021), `EVAL_NATIVE_DELTA_MATCHES_VALUE`, `EVAL_ALLOWANCE_EFFECT_WITHIN_CEILING`, `EVAL_ENTITLEMENT_ADVANCED`, `EVAL_ENTITLEMENT_RECURRENCE`, `EVAL_CALL_GRAPH_EXPECTED` (enforces an empty graph; `allowedCallGraphHash` is reserved per D-025), `EVAL_TARGET_CODE_IDENTITY` (an evidence gap per D-015/D-027).
+
+**Evidence that did not arrive** — each is UNRESOLVED and travels rather than being inferred away (§3.3(8), A-019(e)): `EVAL_SIMULATION_UNAVAILABLE`, `EVAL_NATIVE_DELTA_UNOBSERVED`, `EVAL_ALLOWANCE_EFFECT_UNOBSERVED`, `EVAL_ENTITLEMENT_UNOBSERVED`, `EVAL_SIM_CALL_TRACE_UNAVAILABLE`, `EVAL_SIM_STOP_IMPERSONATION_FAILED`, `EVAL_SIM_UNRECOGNISED`.
 
 Explicitly unsupported:
 

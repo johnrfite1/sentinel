@@ -32,6 +32,9 @@ step "labelling-prompt freeze (D-011a)"
 step "published EIP-712 type strings (D-023)"
 ./scripts/check-type-strings.sh || fail=1
 
+step "§5.7.1 check coverage (D-031)"
+./scripts/check-eval-codes.sh || fail=1
+
 step "solidity build + tests (profile: $PROFILE)"
 if command -v forge >/dev/null 2>&1; then
     (cd contracts && FOUNDRY_PROFILE="$PROFILE" forge test -vv) || fail=1
@@ -131,27 +134,30 @@ WHAT IS COVERED, by layer, each with the limit that layer cannot exceed:
            REACHABLE from a proposal; an adversarial review demonstrated one
            (`fUXSEz2ajwh(bytes32)` collides with `purchase(...)`, found in 106 seconds).
            It fails CLOSED — the decode failure is UNRESOLVED, so no wrong ALLOW — but the
-           earlier wording here claimed unreachability as an absolute and was false. See
-           A-028. The malformed classes are still authored as raw calldata in the corpus;
-           the
-           proposals are PINNED transcripts, which fix the agent's output and therefore
-           say nothing about whether the injection still reproduces against a live
-           model. That is the D-007 canary, and it is S2.
+           earlier wording here claimed unreachability as an absolute and was false (A-028).
+           The malformed classes are still authored as raw calldata in the corpus. And the
+           proposals are PINNED transcripts, which fix the agent's output and therefore say
+           nothing about whether the injection still reproduces against a live model. That
+           is the D-007 canary, and it is S2.
 
   §9 s8    The §7.1 corpus and the §7.3 ablation. 50 fixtures across all 20 declared
            classes, executed against a real chain with per-fixture snapshot isolation, and
            INDEPENDENTLY LABELLED under the D-011a frozen prompt by agents denied the
            implementation, the tests, and each other's work. Measured against those labels:
-           false allows 38 (baseline) / 19 (policy+effects) / 1 (full). Detection
-           contribution — baseline alone 9, effect extraction adds 18, mandate conformance
-           adds 20. Inter-labeller disagreement 10.0%.
+           false allows 38 (baseline) / 17 (policy+effects) / 1 (full). Detection
+           contribution — baseline alone 9, effect extraction adds 20, mandate conformance
+           adds 17. Inter-labeller disagreement 0.0% on a freshly drawn sample, with both
+           limits on that number stated in the report itself.
            LIMIT: this is the first evidence in the repository that bears on whether the
            verdicts are RIGHT rather than merely produced, and it is bounded by the corpus.
            50 fixtures over two demo contracts and two call schemas is not an accuracy claim
            about EVM transactions (§7.3: "do not claim general transaction-safety accuracy").
            The single full-configuration false allow is F035, whose enforcement is the
-           isolated signer rather than the engine. Four fixtures' labels are OWED a re-label
-           under D-021, which reclassified a reverting simulation after they were labelled.
+           isolated signer rather than the engine. The labels of record are the THIRD round
+           (E/F): round 1 scored a spec since amended, and round 2 was discarded as
+           contaminated when a review found the brief had handed the labeller a finding
+           derived from reading the evaluator (A-028 F-1). All earlier rounds are retained
+           as audit trail.
 
   D-010    The independent Python receipt verifier, in `verifier/`. Zero third-party
            dependencies; its own RFC 8785, Keccak-f[1600] and secp256k1 recovery, built by
