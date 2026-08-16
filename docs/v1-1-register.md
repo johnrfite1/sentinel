@@ -165,7 +165,30 @@ not and is the only one that could be done today.**
   authorization was used or what the owner's recorded reason was. Every other item in §3.3(2)
   gets a dedicated event.
 
-## 6. Owed on the §2 capability table, after Gate 5's certification (D-038)
+## 6. The specification defines no refusal record (A-041)
+
+**The highest-value item this session produced, and it is a spec item rather than a code one.**
+
+D-012 requires that a refusal leave a recorded artifact, *"or 'the signer refused' and 'the
+signer was never asked' are indistinguishable"*. **That requirement appears nowhere in the
+published specification.** §5.4 defines `SignedDecisionReceipt` as payload plus signature and
+stops; the word "refusal" does not occur in §5 at all. The only gesture toward it is a
+parenthetical `(A-011, D-012)` in a §5.7 note, pointing at a decision record that implementers
+and labellers are denied by protocol.
+
+So an independent implementer building from the published document **cannot implement refusal
+handling** — which is precisely the class of gap D-010 was promoted into v1 to surface, and it
+took an agent denied the implementation to find it.
+
+**Owed at v1.1:** a §5 payload for the signed refusal record — its fields, its type string, and
+how it is authenticated — so the D-010 verifier can establish a refusal rather than refusing to
+certify one. Until then the verifier's conservative behaviour is correct but is a placeholder
+for a decision, not the decision.
+
+**Do not fix this by loosening the verifier.** It currently fails closed on an unauthenticated
+refusal claim, which is the right side to err on while the spec is silent.
+
+## 7. Owed on the §2 capability table, after Gate 5's certification (D-038)
 
 Two citations are weaker than they could be — one row cited for fewer criteria than the vendor
 may document, and one still pointing at a marketing page rather than technical documentation.

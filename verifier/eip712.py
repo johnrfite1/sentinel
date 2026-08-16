@@ -6,6 +6,7 @@ string, no domain type. Everything below the field-name list is a derivation
 recorded in REPORT.md, not something the spec states. See REPORT.md finding F-1.
 """
 
+import re
 from typing import Dict, List, Tuple
 
 from keccak import keccak256
@@ -130,11 +131,71 @@ def _bits(solidity_type: str) -> int:
     return int(solidity_type[4:]) if solidity_type != "uint" else 256
 
 
+# --------------------------------------------------------------------------
+# Strict scalar parsing
+# --------------------------------------------------------------------------
+# §5 never states how a payload field is encoded *in JSON* -- see REPORT.md
+# F-17. Every scalar in every shipped payload is one of exactly three shapes: a
+# `0x`-prefixed even-length hex string, a canonical decimal string, or a native
+# JSON `true`/`false`. This parser accepts those and nothing else.
+#
+# The reason is not tidiness. `mandateHash`, `policyHash` and `actionHash` are
+# recomputed from these documents and compared against the receipt, so the
+# document -> 32-byte-word map must be INJECTIVE or "the recomputed hash
+# matches" stops pinning the document it was recomputed from. Before this,
+# `"120"`, `" 120 "`, `"1_20"`, `"0120"`, `120` and `120.9` all encoded to the
+# same word, and `bool` mapped every unrecognised string -- `"True"`, `"yes"`,
+# `"1 "` -- to false. Six byte-distinct mandates could share one mandateHash,
+# and the one an operator read was not necessarily the one the signer signed.
+# Reject rather than coerce: a producer using another encoding gets a clean
+# failure instead of a silent collision.
+_CANONICAL_DECIMAL = re.compile(r"(?:0|[1-9][0-9]*)")
+_HEX_BODY = re.compile(r"(?:[0-9a-fA-F]{2})*")
+
+
+def parse_uint(solidity_type: str, value) -> int:
+    """Parse a canonical decimal string into a non-negative integer."""
+    if isinstance(value, bool) or not isinstance(value, str):
+        raise EncodingError(
+            f"{solidity_type} value must be a canonical decimal string, got "
+            f"{type(value).__name__} {value!r}; a JSON number, boolean or null "
+            "is refused rather than coerced"
+        )
+    # fullmatch, not ^...$ -- the §5.4/D-022 anchoring lesson applies here too:
+    # `$` would accept a trailing newline and `"5\n"` would parse as 5.
+    if not _CANONICAL_DECIMAL.fullmatch(value):
+        raise EncodingError(
+            f"{solidity_type} value {value!r} is not a canonical decimal "
+            "string; a sign, whitespace, underscores, leading zeros, a "
+            "fraction or an exponent are all refused rather than coerced"
+        )
+    return int(value)
+
+
+def hex_to_bytes(value, label: str = "value") -> bytes:
+    """Parse a strict `0x`-prefixed, even-length hex string into bytes."""
+    if not isinstance(value, str):
+        raise EncodingError(
+            f"{label} must be a 0x-prefixed hex string, got "
+            f"{type(value).__name__} {value!r}"
+        )
+    if not value.startswith("0x"):
+        raise EncodingError(f"{label} {value!r} is missing its 0x prefix")
+    if not _HEX_BODY.fullmatch(value[2:]):
+        raise EncodingError(
+            f"{label} {value!r} is not an even-length run of hex digits; "
+            "whitespace and separators are refused rather than stripped "
+            "(bytes.fromhex accepts them, so '0xde ad' and '0xdead' used to "
+            "produce the same word)"
+        )
+    return bytes.fromhex(value[2:])
+
+
 def encode_value(solidity_type: str, value) -> bytes:
     """abi.encode a single EIP-712 atomic value into one 32-byte word."""
     if solidity_type.startswith("bytes") and solidity_type[5:].isdigit():
         width = int(solidity_type[5:])
-        raw = bytes.fromhex(_strip0x(value))
+        raw = hex_to_bytes(value, f"{solidity_type} value")
         if len(raw) != width:
             raise EncodingError(
                 f"{solidity_type} value is {len(raw)} bytes: {value!r}"
@@ -142,19 +203,31 @@ def encode_value(solidity_type: str, value) -> bytes:
         # bytesN is right-padded (EIP-712 / ABI), unlike uintN and address.
         return raw.ljust(32, b"\x00")
     if solidity_type == "address":
-        raw = bytes.fromhex(_strip0x(value))
+        raw = hex_to_bytes(value, "address value")
         if len(raw) != 20:
             raise EncodingError(f"address value is {len(raw)} bytes: {value!r}")
         return bytes(12) + raw
     if solidity_type == "string":
-        text = value if isinstance(value, str) else str(value)
-        return keccak256(text.encode("utf-8"))
+        if not isinstance(value, str):
+            raise EncodingError(
+                f"string value must be a JSON string, got "
+                f"{type(value).__name__} {value!r}"
+            )
+        return keccak256(value.encode("utf-8"))
     if solidity_type == "bool":
-        return (1 if value in (True, "true", 1, "1") else 0).to_bytes(32, "big")
+        # Only a native JSON true/false. A string is refused: the old rule
+        # (`value in (True, "true", 1, "1")`) silently read "True", "TRUE" and
+        # "yes" as FALSE, which is the worst available failure for a field
+        # named recurringAllowed.
+        if not isinstance(value, bool):
+            raise EncodingError(
+                f"bool value must be a JSON true/false literal, got "
+                f"{type(value).__name__} {value!r}; strings are refused rather "
+                "than coerced"
+            )
+        return (1 if value else 0).to_bytes(32, "big")
     if solidity_type.startswith("uint"):
-        number = int(value)  # sample payloads carry every integer as a string
-        if number < 0:
-            raise EncodingError(f"{solidity_type} value is negative: {value!r}")
+        number = parse_uint(solidity_type, value)
         width = _bits(solidity_type)
         if number >= 1 << width:
             raise EncodingError(
@@ -162,12 +235,6 @@ def encode_value(solidity_type: str, value) -> bytes:
             )
         return number.to_bytes(32, "big")
     raise EncodingError(f"unsupported EIP-712 atomic type {solidity_type!r}")
-
-
-def _strip0x(value: str) -> str:
-    if not isinstance(value, str):
-        raise EncodingError(f"expected a hex string, got {type(value).__name__}")
-    return value[2:] if value.startswith(("0x", "0X")) else value
 
 
 def type_hash(type_string: str) -> bytes:

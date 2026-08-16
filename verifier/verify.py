@@ -154,7 +154,21 @@ def verify_sample(sample_dir, domain_path=None, tamper=None):
         raise ValueError(f"unknown tamper mode {tamper!r}")
 
     # ---- 1. recanonicalize ---------------------------------------------
-    canonical_actual = jcs.canonicalize(evidence)
+    try:
+        canonical_actual = jcs.canonicalize(evidence)
+    except jcs.CanonicalizationError as exc:
+        # RFC 8785 requires termination on input it cannot canonicalize (an
+        # unpaired surrogate, for one). Terminating is right; crashing out of
+        # the middle of verify_sample is not. Report it as the failed check it
+        # is, and stop: with no canonical bytes there is no evidenceHash, and
+        # every check downstream of it would be answering nothing.
+        checks.append(Check(
+            "RFC 8785 recanonicalization matches evidence.canonical.json",
+            False,
+            f"{exc}\nthe bundle cannot be canonicalized, so evidenceHash "
+            "cannot be recomputed and nothing bound to it can be checked",
+        ))
+        return False, checks
     ok = canonical_actual == canonical_expected
     detail = ""
     if not ok:
@@ -184,20 +198,8 @@ def verify_sample(sample_dir, domain_path=None, tamper=None):
     signature = receipt_doc.get("signature")
 
     if refused or receipt is None or signature is None:
-        reason = receipt_doc.get("refusalReason") or receipt_doc.get("reason")
-        note = "signer refused to issue a receipt" if refused else "no receipt/signature present"
-        if reason:
-            note += f": {reason}"
-        note += "\nevidence checks above still apply; receipt-bound checks are not applicable"
-        checks.append(Check("receipt evidenceHash binding", True, note, skipped=True))
-        checks.append(Check("EIP-712 signature recovers the declared signer", True, note, skipped=True))
-        if refused and receipt is not None:
-            checks.append(Check(
-                "refusal shape is self-consistent",
-                False,
-                "refused is true but a receipt body is also present; a refusal "
-                "must not carry a signed receipt",
-            ))
+        checks.extend(_unauthenticated_receipt_checks(
+            receipt_doc, evidence, refused, receipt, signature))
         return all(c.ok for c in checks), checks
 
     # ---- 3. receipt binds the evidence ----------------------------------
@@ -260,7 +262,7 @@ def verify_sample(sample_dir, domain_path=None, tamper=None):
     checks.append(_verdict_check(sample_dir, receipt))
 
     # ---- 6. the rest of the hash chain ----------------------------------
-    checks.extend(_chain_checks(sample_dir, receipt, evidence))
+    checks.extend(_chain_checks(sample_dir, receipt, evidence, domain))
 
     # ---- 7. reason codes (§5.4 as amended by D-022) ----------------------
     checks.extend(_reason_code_checks(receipt_doc, receipt))
@@ -271,7 +273,157 @@ def verify_sample(sample_dir, domain_path=None, tamper=None):
     return all(c.ok for c in checks), checks
 
 
-def _chain_checks(sample_dir, receipt, evidence):
+def _unauthenticated_receipt_checks(receipt_doc, evidence, refused, receipt,
+                                    signature):
+    """No signed receipt was presented, so nothing here can be certified.
+
+    §5.4 defines `SignedDecisionReceipt` as "DecisionReceiptPayload plus
+    sentinelSignature" and defines **no refusal record at all** -- signed or
+    unsigned. The string "refus" does not occur anywhere in
+    `Sentinel_Protocol_Lab_Proposal_v0_2.md`; `refused` and `refusalReason` are
+    fixture-harness fields (`index.json` carries `signerRefused` per case), not
+    protocol. See REPORT.md F-13 and its F-13 resolution.
+
+    So a bundle whose `receipt.json` reads `{"refused": true}` carries nothing
+    an independent party can authenticate. "The isolated signer refused", "the
+    signer was never asked", and "somebody deleted the ALLOW receipt on the way
+    here" are the same bytes -- and the third is not hypothetical: the evidence
+    bundle sitting beside it may record `"verdict": "ALLOW"`. Certifying that
+    is certifying an unsigned assertion made by whoever handed over the
+    directory, which is precisely the party the receipt exists to constrain.
+
+    The evidence checks above still ran and are still reported; they establish
+    that the bundle is internally consistent, which is a strictly weaker claim
+    than "Sentinel decided this". This function refuses to let the weaker claim
+    be printed as `=> PASS`.
+    """
+    if refused:
+        stated = receipt_doc.get("refusalReason") or receipt_doc.get("reason")
+        opening = "receipt.json asserts `refused: true`"
+        if stated:
+            opening += f", stating: {stated!r}"
+    elif receipt is None:
+        opening = "receipt.json carries no `receipt` body"
+    else:
+        opening = "receipt.json carries a receipt body but no `signature`"
+
+    detail = [
+        opening,
+        "§5.4 defines SignedDecisionReceipt as DecisionReceiptPayload plus "
+        "sentinelSignature and defines no refusal record; the specification "
+        "never says a refusal is signed, by whom, or over what.",
+        "Nothing in this bundle is authenticated, so a genuine refusal, a "
+        "signer that was never asked, and a deleted receipt are "
+        "indistinguishable to any third party.",
+    ]
+    if isinstance(evidence, dict) and evidence.get("verdict") is not None:
+        detail.append(
+            f"the evidence bundle beside it records verdict "
+            f"{evidence['verdict']!r}; presenting that as a refusal is exactly "
+            "the substitution this check exists to stop."
+        )
+
+    out = [Check("a signed receipt is present to verify (§5.4)", False,
+                 "\n".join(detail))]
+    if refused and receipt is not None:
+        out.append(Check(
+            "refusal shape is self-consistent",
+            False,
+            "refused is true but a receipt body is also present; a refusal "
+            "must not carry a signed receipt",
+        ))
+    return out
+
+
+def _binding_checks(payloads, domain):
+    """§3.3(4)/§3.3(5) chain and vault binding, established from the bundle.
+
+    §5.8: the payload hashes are bare `hashStruct` values -- "no `\\x19\\x01`
+    prefix and no domain separator is applied. Chain and vault binding for
+    these hashes therefore comes solely from the `chainId` and `vault` members
+    of the payloads themselves."
+
+    That sentence is only true if somebody reads those members. Nothing else in
+    this file does: `domain.json` is an unsigned side file supplied by whoever
+    presents the bundle, and the §5.8 warning block records that a receipt "is
+    not self-describing", so the domain cannot be the authority on which chain
+    and which vault a bundle belongs to. These are the checks that do not
+    depend on it -- the cross-payload agreement is establishable from the
+    bundle alone, per §3.3(4) ("Authorization binds the exact chain, vault,
+    ...") and §3.3(5) ("Any mutation to a bound field invalidates
+    authorization").
+
+    The last two also tie the presented domain back to the signed payloads, so
+    a genuinely-signed bundle cannot be re-presented under a domain naming
+    another deployment. §5.8 fixes `verifyingContract` as "the SentinelVault
+    address", which is the same address §5.1-§5.3 call `vault`.
+    """
+    if not payloads:
+        return [Check("§3.3(4) chain and vault binding", True,
+                      "no §5.1-§5.3 payload file in this sample", skipped=True)]
+
+    chains, vaults, errors = {}, {}, []
+    for label, doc in payloads:
+        for name in ("chainId", "vault"):
+            try:
+                raw = doc[name]
+            except (KeyError, TypeError):
+                errors.append(f"{label}: missing required member {name!r}")
+                continue
+            try:
+                if name == "chainId":
+                    chains[label] = eip712.parse_uint("uint256", raw)
+                else:
+                    vaults[label] = "0x" + eip712.hex_to_bytes(raw, name).hex()
+            except eip712.EncodingError as exc:
+                errors.append(f"{label}.{name}: {exc}")
+    if errors:
+        return [Check(
+            "every §5.1-§5.3 payload carries a well-formed chainId and vault",
+            False, "\n".join(errors))]
+
+    out = []
+    for name, values in (("chainId", chains), ("vault", vaults)):
+        distinct = sorted({str(v) for v in values.values()})
+        ok = len(distinct) == 1
+        out.append(Check(
+            f"§5.1/§5.2/§5.3 payloads all bind the same {name} (§3.3(4))",
+            ok,
+            f"{len(values)} payload(s) agree on {distinct[0]}" if ok else
+            "payloads disagree, so no single deployment is bound:\n"
+            + "\n".join(f"  {label}: {values[label]}"
+                        for label in sorted(values))))
+
+    try:
+        domain_chain = eip712.parse_uint("uint256", domain["chainId"])
+        domain_vault = "0x" + eip712.hex_to_bytes(
+            domain["verifyingContract"], "verifyingContract").hex()
+    except (KeyError, TypeError, eip712.EncodingError) as exc:
+        out.append(Check(
+            "the presented domain carries a well-formed chainId and "
+            "verifyingContract", False, str(exc)))
+        return out
+
+    for name, values, expected, domain_field in (
+        ("chainId", chains, domain_chain, "chainId"),
+        ("vault", vaults, domain_vault, "verifyingContract"),
+    ):
+        bad = {label: v for label, v in values.items() if v != expected}
+        out.append(Check(
+            f"every payload's {name} equals the presented domain's "
+            f"{domain_field} (§5.8)",
+            not bad,
+            f"both say {expected}" if not bad else
+            f"the domain this bundle was presented with names "
+            f"{domain_field} {expected}, but the signed payloads bind:\n"
+            + "\n".join(f"  {label}: {bad[label]}" for label in sorted(bad))
+            + "\n§5.8: chain and vault binding for the payload hashes comes "
+              "solely from these members, so the bundle and the domain "
+              "describe different deployments."))
+    return out
+
+
+def _chain_checks(sample_dir, receipt, evidence, domain):
     """Recompute every other hash the receipt commits to.
 
     §5 does not say these are EIP-712 hashStruct values; that was recovered by
@@ -285,6 +437,17 @@ def _chain_checks(sample_dir, receipt, evidence):
         return _read_json(path) if os.path.isfile(path) else None
 
     mandate, policy, action = load("mandate.json"), load("policy.json"), load("action.json")
+
+    # §3.3(4)/§3.3(5) chain and vault binding, from the payload members §5.8
+    # says the binding lives in. Runs first: if the bundle does not name one
+    # deployment, every hash recomputation below is answering the wrong
+    # question.
+    out.extend(_binding_checks(
+        [(name, doc) for name, doc in
+         (("mandate.json", mandate), ("policy.json", policy), ("action.json", action))
+         if doc is not None],
+        domain,
+    ))
 
     for doc, fn, field, label in (
         (mandate, eip712.mandate_hash, "mandateHash", "§5.1 MandatePayload"),
@@ -308,12 +471,21 @@ def _chain_checks(sample_dir, receipt, evidence):
             "" if ok else f"computed {computed}\nreceipt  {declared}",
         ))
 
-    # calldata -> dataHash, the one place the raw call is bound.
+    # calldata -> dataHash, the one place the raw call is bound. Parsed
+    # strictly: bytes.fromhex silently ignores embedded whitespace, so
+    # "0xc188 528b..." and "0xc188528b..." used to hash identically and
+    # dataHash stopped pinning the presented bytes.
     if action and "callData" in action:
-        computed = "0x" + keccak256(bytes.fromhex(_norm_hex(action["callData"])[2:])).hex()
-        ok = computed == _norm_hex(action.get("dataHash", ""))
-        out.append(Check("keccak256(callData) matches action.dataHash", ok,
-                         "" if ok else f"computed {computed}\naction   {action.get('dataHash')}"))
+        try:
+            raw = eip712.hex_to_bytes(action["callData"], "action.callData")
+        except eip712.EncodingError as exc:
+            out.append(Check("keccak256(callData) matches action.dataHash",
+                             False, str(exc)))
+        else:
+            computed = "0x" + keccak256(raw).hex()
+            ok = computed == _norm_hex(action.get("dataHash", ""))
+            out.append(Check("keccak256(callData) matches action.dataHash", ok,
+                             "" if ok else f"computed {computed}\naction   {action.get('dataHash')}"))
 
     # Cross-references that §5 lists as fields but never requires to agree.
     if mandate and policy:
@@ -395,6 +567,31 @@ def _override_checks(sample_dir, receipt, domain, tamper=None):
     ok = recovered == owner
     out.append(Check("override signature recovers ownerAddress", ok,
                      f"recovered {recovered}" + ("" if ok else f"\ndeclared  {owner}")))
+
+    # Same rule as the receipt's signature, applied for the same reason.
+    #
+    # §5 says nothing about signature encoding for EITHER signature -- not the
+    # 65-byte r||s||v layout, not v in {27,28}, not EIP-2 low-s (REPORT.md
+    # F-10). The low-s rule on the receipt therefore comes from EIP-2, not from
+    # this specification, and EIP-2 is not about receipts: it is about
+    # secp256k1 ECDSA. §5.8 gives the override the same construction as the
+    # receipt -- an EIP-712 digest under the same domain, signed with a
+    # secp256k1 key -- so there is no basis anywhere in §5 for holding one to a
+    # canonical-form rule and not the other. The asymmetry was an omission.
+    #
+    # What it let through: (r, n-s, v^1) recovers the SAME address as (r, s, v),
+    # so an override could be handed on with a second, byte-distinct signature
+    # that verifies identically. §3.3(9) puts replay prevention in the vault's
+    # nonce rather than in the credential's bytes, so this is not a replay --
+    # but a verifier that reports two different documents as the same valid
+    # override is describing them wrongly, and any consumer keyed on signature
+    # bytes sees two authorizations where the owner produced one.
+    _, s_value, v_value = parse_signature(signature)
+    out.append(Check(
+        "override signature is EIP-2 canonical (low-s) and v in {27,28}",
+        is_low_s(s_value) and v_value in (27, 28),
+        f"v={v_value}, low-s={is_low_s(s_value)}",
+    ))
 
     # 2. §3.3(7): the override is a credential the isolated signer cannot mint.
     #    If the owner were the Sentinel signer, an override would be forgeable by

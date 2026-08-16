@@ -21,15 +21,48 @@ import jcs  # noqa: E402
 import reasoncodes  # noqa: E402
 import verify  # noqa: E402
 from keccak import keccak256_hex  # noqa: E402
-from secp256k1 import G, N, point_mul, public_key_to_address  # noqa: E402
+from secp256k1 import (  # noqa: E402
+    G, N, is_low_s, parse_signature, point_mul, public_key_to_address,
+    recover_address, sign_digest,
+)
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SAMPLES = os.path.join(REPO, "fixtures", "samples")
+
+# Anvil account #1, which domain.json names as the Sentinel signer. Its private
+# key is PUBLISHED, so anyone presenting a bundle can mint a perfectly valid
+# signature over whatever receipt they like. That is the position a third-party
+# verifier is actually in, and it is why "the signature verified" cannot stand
+# in for the bundle-internal binding checks.
+SIGNER_KEY = verify._SENTINEL_SIGNER_TEST_KEY
 
 
 def read_json(*parts):
     with open(os.path.join(*parts), "rb") as handle:
         return json.loads(handle.read().decode("utf-8"))
+
+
+def write_json(path, doc):
+    with open(path, "w", encoding="ascii") as handle:
+        json.dump(doc, handle)  # ensure_ascii=True, so lone surrogates escape
+
+
+def stage(case, tmp, domain=None):
+    """Copy a sample directory into `tmp`, with a domain.json beside it."""
+    target = os.path.join(tmp, os.path.basename(case))
+    shutil.copytree(case, target)
+    write_json(os.path.join(tmp, "domain.json"),
+               read_json(SAMPLES, "domain.json") if domain is None else domain)
+    return target
+
+
+def reseal(target, domain):
+    """Re-sign a staged receipt.json with the published signer key."""
+    doc = read_json(target, "receipt.json")
+    doc["signature"] = sign_digest(
+        eip712.receipt_digest(domain, doc["receipt"]), SIGNER_KEY)
+    write_json(os.path.join(target, "receipt.json"), doc)
+    return doc
 
 
 def sample_dirs():
@@ -160,6 +193,100 @@ class TestJCSStructure(unittest.TestCase):
         # it would produce a hash neither party could reproduce.
         with self.assertRaises(jcs.CanonicalizationError):
             jcs.canonicalize({"n": 2 ** 53 + 1})
+
+
+class TestJCSSurrogates(unittest.TestCase):
+    """RFC 8785 section 3.2.2.2 on invalid Unicode:
+
+        "Since invalid Unicode data like 'lone surrogates' (e.g., U+DEAD) may
+        lead to interoperability issues including broken signatures,
+        occurrences of such data MUST cause a compliant JCS implementation to
+        terminate with an appropriate error."
+
+    Terminate with an error -- not substitute U+FFFD, not emit CESU-8, and not
+    raise UnicodeEncodeError out of the middle of canonicalization, which is
+    what this implementation used to do.
+
+    Nothing in the Sentinel corpus reaches this path: every byte of every
+    shipped bundle is ASCII and `aiExplanation` -- the one free-form model
+    output field, and the one most likely to carry whatever a model emitted --
+    is null in all six (REPORT.md F-6). These tests are its only coverage.
+    """
+
+    def test_lone_high_surrogate_in_a_value(self):
+        with self.assertRaises(jcs.CanonicalizationError):
+            jcs.canonicalize({"a": "\ud800"})
+
+    def test_lone_low_surrogate_mid_string(self):
+        with self.assertRaises(jcs.CanonicalizationError):
+            jcs.canonicalize({"a": "before\udeadafter"})
+
+    def test_lone_surrogate_in_an_object_key(self):
+        with self.assertRaises(jcs.CanonicalizationError):
+            jcs.canonicalize({"\udfff": 1})
+
+    def test_reversed_surrogate_pair_is_two_lone_surrogates(self):
+        with self.assertRaises(jcs.CanonicalizationError):
+            jcs.canonicalize({"a": "\udc00\ud800"})
+
+    def test_nested_inside_an_array(self):
+        with self.assertRaises(jcs.CanonicalizationError):
+            jcs.canonicalize({"a": [{"b": ["\ud800"]}]})
+
+    def test_the_path_a_real_bundle_takes(self):
+        # json.loads decodes the \ud800 escape into a lone surrogate without
+        # complaint, so the bad data arrives already parsed.
+        value = jcs.parse('{"a":"\\ud800"}')
+        self.assertEqual(value, {"a": "\ud800"})
+        with self.assertRaises(jcs.CanonicalizationError):
+            jcs.canonicalize(value)
+
+    def test_the_error_is_a_jcs_error_not_a_codec_crash(self):
+        with self.assertRaises(jcs.CanonicalizationError) as ctx:
+            jcs.canonicalize({"a": "\ud800"})
+        self.assertNotIsInstance(ctx.exception, UnicodeEncodeError)
+        self.assertIn("3.2.2.2", str(ctx.exception),
+                      "the error should cite the rule it enforces")
+
+    def test_a_valid_surrogate_pair_is_unaffected(self):
+        # The control. An astral character is not invalid Unicode; it is one
+        # code point that happens to need two UTF-16 code units. It must still
+        # canonicalize, and literally, per section 3.2.2.2.
+        self.assertEqual(jcs.canonicalize({"a": "\U0001f600"}),
+                         '{"a":"\U0001f600"}'.encode("utf-8"))
+        self.assertEqual(jcs.parse('{"a":"\\ud83d\\ude00"}'), {"a": "\U0001f600"})
+        # And the UTF-16 key-sorting rule still sees it as a surrogate pair.
+        self.assertEqual(jcs.canonicalize({"�": 1, "\U0001f600": 2}),
+                         '{"\U0001f600":2,"�":1}'.encode("utf-8"))
+
+    def test_cesu8_input_bytes_are_a_clean_error(self):
+        # A surrogate encoded directly as three UTF-8 bytes: rejected at the
+        # decode step, as a CanonicalizationError rather than a UnicodeDecodeError.
+        with self.assertRaises(jcs.CanonicalizationError):
+            jcs.parse_bytes(b'{"a":"\xed\xa0\x80"}')
+
+    def test_non_string_object_key_is_a_clean_error(self):
+        # Same family: this branch used to be unreachable because the sort key
+        # called .encode() on the key first and raised AttributeError.
+        with self.assertRaises(jcs.CanonicalizationError):
+            jcs.canonicalize({1: "a"})
+
+    def test_a_bundle_with_a_lone_surrogate_fails_verification(self):
+        # End to end: a verification failure with a named reason, not a
+        # traceback out of the middle of the run.
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp)
+        target = stage(os.path.join(SAMPLES, "case-1-allow"), tmp)
+        bundle = read_json(target, "evidence.json")
+        self.assertIsNone(bundle["aiExplanation"])
+        bundle["aiExplanation"] = "the model said \ud800"
+        write_json(os.path.join(target, "evidence.json"), bundle)
+
+        ok, checks = verify.verify_sample(target)  # must not raise
+        self.assertFalse(ok)
+        canon = [c for c in checks if "recanonicalization" in c.name]
+        self.assertTrue(canon and not canon[0].ok)
+        self.assertIn("surrogate", canon[0].detail)
 
 
 class TestSecp256k1(unittest.TestCase):
@@ -394,19 +521,25 @@ class TestTamper(unittest.TestCase):
 
 class TestRefusedShape(unittest.TestCase):
     """No shipped sample sets refused=true (REPORT.md F-13), so the shape is
-    synthesised here rather than left untested."""
+    synthesised here rather than left untested.
 
-    def _refused_copy(self, body):
+    §5.4 defines `SignedDecisionReceipt` as the payload plus a signature and
+    defines no refusal record at all -- the string "refus" does not occur
+    anywhere in the published specification. So an unsigned refusal claim is
+    not a weaker receipt, it is not a receipt: nothing about it is
+    authenticated, and it cannot be certified. See REPORT.md F-13.
+    """
+
+    def _refused_copy(self, body, case=None):
         tmp = tempfile.mkdtemp()
         self.addCleanup(shutil.rmtree, tmp)
         target = os.path.join(tmp, "case-refused")
-        shutil.copytree(sample_dirs()[0], target)
-        with open(os.path.join(target, "receipt.json"), "w") as handle:
-            json.dump(body, handle)
+        shutil.copytree(case or sample_dirs()[0], target)
+        write_json(os.path.join(target, "receipt.json"), body)
         shutil.copy(os.path.join(SAMPLES, "domain.json"), tmp)
         return target
 
-    def test_refused_receipt_still_verifies_evidence(self):
+    def test_unsigned_refusal_is_not_certified(self):
         path = self._refused_copy({
             "refused": True,
             "refusalReason": "signer declined: evidence anchor unavailable",
@@ -414,15 +547,53 @@ class TestRefusedShape(unittest.TestCase):
             "signature": None,
         })
         ok, checks = verify.verify_sample(path)
-        self.assertTrue(ok, [c.name for c in checks if not c.ok])
-        skipped = [c.name for c in checks if c.skipped]
-        self.assertEqual(len(skipped), 2, "receipt-bound checks should be skipped")
+        self.assertFalse(ok, "an unsigned refusal claim was certified")
+        failed = [c for c in checks if not c.ok]
+        self.assertTrue(any("signed receipt is present" in c.name for c in failed))
+        # What the tool *could* establish is still reported as established:
+        # refusing to certify is not refusing to check.
         self.assertTrue(any("recanonicalization" in c.name and c.ok for c in checks))
+        self.assertTrue(any("keccak256(canonical bytes)" in c.name and c.ok
+                            for c in checks))
+
+    def test_an_allow_cannot_be_presented_as_a_refusal(self):
+        # The reported symptom, exactly: take a real ALLOW bundle, replace
+        # receipt.json with a bare refusal claim, and the CLI used to print
+        # `=> PASS` and exit 0 while evidence.json beside it said ALLOW.
+        allow_case = os.path.join(SAMPLES, "case-1-allow")
+        self.assertEqual(read_json(allow_case, "evidence.json")["verdict"], "ALLOW")
+        path = self._refused_copy(
+            {"refused": True, "refusalReason": "nothing to see here"},
+            case=allow_case)
+        ok, checks = verify.verify_sample(path)
+        self.assertFalse(ok)
+        detail = "\n".join(c.detail for c in checks if not c.ok)
+        self.assertIn("ALLOW", detail,
+                      "the report should name the verdict being suppressed")
+        with open(os.devnull, "w") as devnull:
+            saved, sys.stdout = sys.stdout, devnull
+            try:
+                self.assertEqual(verify.main([path]), 1, "exit status must be non-zero")
+            finally:
+                sys.stdout = saved
 
     def test_refused_with_omitted_keys_does_not_crash(self):
         path = self._refused_copy({"refused": True})
-        ok, _ = verify.verify_sample(path)
-        self.assertTrue(ok)
+        ok, checks = verify.verify_sample(path)  # must not raise
+        self.assertFalse(ok)
+        self.assertTrue(any("signed receipt is present" in c.name and not c.ok
+                            for c in checks))
+
+    def test_a_receipt_without_a_signature_is_not_certified(self):
+        # "refused" is not the only way to present nothing signed: dropping the
+        # signature leaves a well-formed receipt body that nothing attests to.
+        doc = read_json(sample_dirs()[0], "receipt.json")
+        doc.pop("signature")
+        path = self._refused_copy(doc)
+        ok, checks = verify.verify_sample(path)
+        self.assertFalse(ok, "a receipt with no signature was certified")
+        self.assertTrue(any("signed receipt is present" in c.name and not c.ok
+                            for c in checks))
 
     def test_refused_but_signed_is_a_failure(self):
         # A refusal that nonetheless carries a signed receipt is contradictory
@@ -877,6 +1048,322 @@ class TestOverrideChainBinding(unittest.TestCase):
             dict(p, chainId="8453"), dict(a, chainId="8453"), r)
         self.assertNotEqual(base_receipt, moved_receipt,
                             "the receipt hashStruct must move with the chain")
+
+
+# ---------------------------------------------------------------------------
+# §3.3(4)/§3.3(5) chain and vault binding, established from the bundle
+# ---------------------------------------------------------------------------
+
+class TestChainAndVaultBinding(unittest.TestCase):
+    """§5.8: the payload hashes are bare hashStruct values, so "Chain and vault
+    binding for these hashes therefore comes solely from the `chainId` and
+    `vault` members of the payloads themselves."
+
+    domain.json is an unsigned side file supplied by whoever presents the
+    bundle, and §5.8's own warning block says a receipt "is not
+    self-describing" -- so the domain cannot be the authority on which
+    deployment a bundle belongs to. These tests pin the checks that read the
+    payload members instead.
+    """
+
+    def test_cross_payload_agreement_needs_no_domain_at_all(self):
+        # §5.8's claim is about "a verifier that never saw the domain", so the
+        # agreement checks must fire with no domain knowledge whatsoever.
+        case = os.path.join(SAMPLES, "case-1-allow")
+        mandate = read_json(case, "mandate.json")
+        policy = read_json(case, "policy.json")
+        action = dict(read_json(case, "action.json"), chainId="8453")
+        checks = verify._binding_checks(
+            [("mandate.json", mandate), ("policy.json", policy),
+             ("action.json", action)], {})
+        agreement = [c for c in checks if "all bind the same chainId" in c.name]
+        self.assertTrue(agreement, "no cross-payload chainId check exists")
+        self.assertFalse(agreement[0].ok)
+
+    def test_cross_payload_vault_agreement_needs_no_domain_at_all(self):
+        case = os.path.join(SAMPLES, "case-1-allow")
+        mandate = dict(read_json(case, "mandate.json"), vault="0x" + "44" * 20)
+        action = read_json(case, "action.json")
+        checks = verify._binding_checks(
+            [("mandate.json", mandate), ("action.json", action)], {})
+        agreement = [c for c in checks if "all bind the same vault" in c.name]
+        self.assertTrue(agreement)
+        self.assertFalse(agreement[0].ok)
+
+    def test_samples_pass_the_binding_checks(self):
+        for path in sample_dirs():
+            with self.subTest(sample=os.path.basename(path)):
+                _, checks = verify.verify_sample(path)
+                binding = [c for c in checks
+                           if "bind the same" in c.name or "equals the presented" in c.name]
+                self.assertEqual(len(binding), 4)
+                self.assertTrue(all(c.ok for c in binding))
+
+    def test_bundle_presented_under_another_deployments_domain_is_rejected(self):
+        # A genuinely-signed bundle, re-presented with a domain.json naming a
+        # different chain AND a different contract. The receipt is re-signed
+        # with the published signer key, so every cryptographic check passes:
+        # the signature is valid, it recovers receipt.signer, and it recovers
+        # the address domain.json names. Only the payload members notice.
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp)
+        domain = read_json(SAMPLES, "domain.json")
+        domain["chainId"] = "8453"
+        domain["verifyingContract"] = "0x" + "22" * 20
+        target = stage(os.path.join(SAMPLES, "case-1-allow"), tmp, domain)
+        reseal(target, domain)
+
+        ok, checks = verify.verify_sample(target)
+        self.assertFalse(
+            ok, "a bundle was certified against a domain naming another chain "
+                "and another vault")
+        for name in ("EIP-712 digest recomputed from §5.4 field list",
+                     "recovered signer == receipt.signer",
+                     "recovered signer == domain.json signerAddress",
+                     "signature is EIP-2 canonical (low-s) and v in {27,28}"):
+            found = [c for c in checks if c.name == name]
+            self.assertTrue(found and found[0].ok,
+                            f"{name} should still pass -- the point is that the "
+                            "cryptography cannot notice this")
+        self.assertEqual(
+            sorted(c.name for c in checks if not c.ok),
+            sorted(["every payload's chainId equals the presented domain's chainId (§5.8)",
+                    "every payload's vault equals the presented domain's "
+                    "verifyingContract (§5.8)"]))
+
+    def test_mandate_naming_another_vault_than_the_action_is_rejected(self):
+        # A fully self-consistent bundle whose mandate binds a different vault
+        # than its action. Every hash is recomputed correctly and matches the
+        # receipt; the receipt is validly signed. Nothing but the cross-payload
+        # agreement check can see that two deployments are being described.
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp)
+        domain = read_json(SAMPLES, "domain.json")
+        target = stage(os.path.join(SAMPLES, "case-1-allow"), tmp)
+
+        mandate = read_json(target, "mandate.json")
+        mandate["vault"] = "0x" + "33" * 20
+        write_json(os.path.join(target, "mandate.json"), mandate)
+        mandate_hash = "0x" + eip712.mandate_hash(mandate).hex()
+
+        action = read_json(target, "action.json")
+        action["mandateHash"] = mandate_hash
+        write_json(os.path.join(target, "action.json"), action)
+        action_hash = "0x" + eip712.action_hash(action).hex()
+
+        doc = read_json(target, "receipt.json")
+        doc["receipt"]["mandateHash"] = mandate_hash
+        doc["receipt"]["actionHash"] = action_hash
+        write_json(os.path.join(target, "receipt.json"), doc)
+        reseal(target, domain)
+
+        ok, checks = verify.verify_sample(target)
+        self.assertFalse(ok, "a mandate binding a different vault than the "
+                             "action it authorises was accepted")
+        for name in ("recomputed mandateHash from §5.1 MandatePayload matches the receipt",
+                     "recomputed actionHash from §5.3 ActionPayload matches the receipt",
+                     "recovered signer == receipt.signer",
+                     "action binds the same mandate and policy as the receipt"):
+            found = [c for c in checks if c.name == name]
+            self.assertTrue(found and found[0].ok,
+                            f"{name} should still pass -- the bundle is internally "
+                            "consistent, which is exactly the problem")
+        self.assertIn("§5.1/§5.2/§5.3 payloads all bind the same vault (§3.3(4))",
+                      [c.name for c in checks if not c.ok])
+
+    def test_a_malformed_binding_member_fails_rather_than_being_skipped(self):
+        checks = verify._binding_checks(
+            [("mandate.json", {"chainId": "31337"})], {})
+        self.assertEqual(len(checks), 1)
+        self.assertFalse(checks[0].ok)
+        self.assertIn("vault", checks[0].detail)
+
+
+# ---------------------------------------------------------------------------
+# Strict payload-field parsing: the recomputed hash must pin the document
+# ---------------------------------------------------------------------------
+
+class TestStrictFieldParsing(unittest.TestCase):
+    """`mandateHash` and friends are recomputed from these documents and
+    compared against the receipt. If several byte-distinct documents encode to
+    the same 32-byte word, "the recomputed hash matches" stops being a
+    statement about the document in front of the operator.
+
+    §5 never states how a payload field is encoded in JSON at all, so what is
+    accepted is a choice recorded in REPORT.md F-17, not a spec reading.
+    """
+
+    def test_only_one_spelling_of_an_integer_survives(self):
+        spellings = ["86400", " 86400 ", "86400\n", "86_400", "0086400",
+                     "+86400", "86400.0", 86400, 86400.0, 86400.9, True]
+        accepted = []
+        for spelling in spellings:
+            try:
+                accepted.append(eip712.encode_value("uint64", spelling))
+            except eip712.EncodingError:
+                continue
+        self.assertEqual(len(accepted), 1,
+                         "more than one spelling encodes, so equal hashes no "
+                         "longer imply equal documents")
+        self.assertEqual(accepted[0], (86400).to_bytes(32, "big"))
+
+    def test_each_lossy_integer_spelling_is_named_in_its_own_error(self):
+        for bad in (" 86400 ", "86_400", "0086400", "+86400", "-1", "",
+                    "0x151800", "86400.0", 86400, 86400.0, 86400.9, True,
+                    False, None, ["86400"]):
+            with self.subTest(bad=bad):
+                with self.assertRaises(eip712.EncodingError):
+                    eip712.encode_value("uint64", bad)
+
+    def test_zero_and_canonical_decimals_still_encode(self):
+        for good, expected in (("0", 0), ("1", 1), ("31337", 31337),
+                               ("4000000000", 4000000000)):
+            with self.subTest(good=good):
+                self.assertEqual(eip712.encode_value("uint256", good),
+                                 expected.to_bytes(32, "big"))
+
+    def test_bool_no_longer_reads_True_and_yes_as_false(self):
+        # The old rule was `value in (True, "true", 1, "1")`, so "True",
+        # "TRUE" and "yes" all encoded as FALSE -- silently, on a field called
+        # recurringAllowed.
+        for bad in ("True", "TRUE", "yes", "true", "false", "1", "0", 1, 0,
+                    None, ""):
+            with self.subTest(bad=bad):
+                with self.assertRaises(eip712.EncodingError):
+                    eip712.encode_value("bool", bad)
+        self.assertEqual(eip712.encode_value("bool", True), (1).to_bytes(32, "big"))
+        self.assertEqual(eip712.encode_value("bool", False), bytes(32))
+
+    def test_hex_rejects_whitespace_and_a_missing_prefix(self):
+        good = "0x70997970c51812dc3a010c7d01b50e0d17dc79c8"
+        self.assertEqual(eip712.encode_value("address", good)[12:].hex(), good[2:])
+        for bad in (good[:12] + " " + good[12:],   # bytes.fromhex used to strip it
+                    good[2:],                       # no 0x prefix
+                    "0X" + good[2:],                # a different document
+                    good + "\n",
+                    "0x" + "z" * 40,
+                    7, None, True):
+            with self.subTest(bad=bad):
+                with self.assertRaises(eip712.EncodingError):
+                    eip712.encode_value("address", bad)
+
+    def test_mixed_case_hex_is_still_accepted(self):
+        # EIP-55 casing is a checksum, not data: the same 20 bytes either way,
+        # and the fixture set is internally inconsistent about it (REPORT.md
+        # F-11). Rejecting it would invent a rule §5 does not have.
+        lower = "0x70997970c51812dc3a010c7d01b50e0d17dc79c8"
+        checksummed = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+        self.assertEqual(eip712.encode_value("address", lower),
+                         eip712.encode_value("address", checksummed))
+
+    def test_string_type_rejects_non_strings(self):
+        # str(value) used to be hashed for anything non-string.
+        for bad in (2, None, True, ["a"]):
+            with self.subTest(bad=bad):
+                with self.assertRaises(eip712.EncodingError):
+                    eip712.encode_value("string", bad)
+
+    def test_calldata_whitespace_no_longer_hashes_to_dataHash(self):
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp)
+        target = stage(os.path.join(SAMPLES, "case-1-allow"), tmp)
+        action = read_json(target, "action.json")
+        action["callData"] = action["callData"][:10] + " " + action["callData"][10:]
+        write_json(os.path.join(target, "action.json"), action)
+        ok, checks = verify.verify_sample(target)
+        self.assertFalse(ok, "callData with embedded whitespace still hashed "
+                             "to the committed dataHash")
+        data = [c for c in checks if "callData" in c.name]
+        self.assertTrue(data and not data[0].ok)
+
+    def test_two_byte_distinct_mandates_no_longer_share_one_mandateHash(self):
+        # The defect in its operational form. `"durationSeconds": "86400"` and
+        # `"durationSeconds": 86400` are different JSON documents that used to
+        # produce the same mandateHash, so both verified against the same
+        # receipt -- and §5.7 as amended by D-020 makes durationSeconds an
+        # EQUALITY check against the mandate, so which document the operator is
+        # reading is load-bearing.
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp)
+        target = stage(os.path.join(SAMPLES, "case-1-allow"), tmp)
+        mandate = read_json(target, "mandate.json")
+        original = dict(mandate)
+        mandate["durationSeconds"] = int(mandate["durationSeconds"])
+        mandate["validAfter"] = " " + mandate["validAfter"] + " "
+        self.assertNotEqual(json.dumps(mandate), json.dumps(original))
+        write_json(os.path.join(target, "mandate.json"), mandate)
+
+        ok, checks = verify.verify_sample(target)
+        self.assertFalse(ok, "a re-spelled mandate still recomputed the "
+                             "receipt's mandateHash")
+        failed = [c for c in checks if not c.ok]
+        self.assertTrue(any("mandateHash" in c.name for c in failed))
+
+
+# ---------------------------------------------------------------------------
+# Signature canonical form: the receipt and the override, held to one rule
+# ---------------------------------------------------------------------------
+
+class TestSignatureCanonicalForm(unittest.TestCase):
+    """§5 says nothing about signature encoding for EITHER signature -- not the
+    r||s||v layout, not v in {27,28}, not EIP-2 low-s (REPORT.md F-10). The
+    receipt's low-s check therefore comes from EIP-2, which is a rule about
+    secp256k1 ECDSA rather than about receipts, and §5.8 gives the override the
+    same construction: an EIP-712 digest under the same domain, signed with a
+    secp256k1 key. There is no basis in §5 for one rule on one and none on the
+    other, so the asymmetry was an omission rather than a decision.
+    """
+
+    def malleate(self, signature):
+        """(r, s, v) -> (r, n-s, v^1): the same signature, reflected."""
+        r, s, v = parse_signature(signature)
+        self.assertTrue(is_low_s(s), "the fixture should start out canonical")
+        return ("0x" + r.to_bytes(32, "big").hex()
+                + (N - s).to_bytes(32, "big").hex()
+                + bytes([{27: 28, 28: 27}[v]]).hex())
+
+    def test_a_malleated_signature_recovers_the_same_address(self):
+        # The premise. This is not a forgery and not a corruption: it is a
+        # second, byte-distinct encoding of the owner's own authorization, and
+        # every identity check passes on it. Only a canonical-form rule can
+        # tell the two apart.
+        doc = read_json(OVERRIDE_SAMPLE, "override.json")
+        digest = eip712.override_digest(read_json(SAMPLES, "domain.json"),
+                                        doc["override"])
+        malleated = self.malleate(doc["ownerSignature"])
+        self.assertNotEqual(malleated, doc["ownerSignature"])
+        self.assertEqual(recover_address(digest, doc["ownerSignature"]),
+                         recover_address(digest, malleated))
+        self.assertEqual(recover_address(digest, malleated),
+                         doc["ownerAddress"].lower())
+
+    def test_high_s_override_signature_is_rejected(self):
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp)
+        target = stage(OVERRIDE_SAMPLE, tmp)
+        doc = read_json(target, "override.json")
+        doc["ownerSignature"] = self.malleate(doc["ownerSignature"])
+        write_json(os.path.join(target, "override.json"), doc)
+
+        ok, checks = verify.verify_sample(target)
+        self.assertFalse(ok, "a non-canonical (high-s) override signature was "
+                             "accepted")
+        low_s = [c for c in checks
+                 if "override signature is EIP-2 canonical" in c.name]
+        self.assertTrue(low_s and not low_s[0].ok)
+        owner = [c for c in checks
+                 if c.name == "override signature recovers ownerAddress"]
+        self.assertTrue(owner and owner[0].ok,
+                        "the owner check must still pass -- otherwise this "
+                        "tests signature parsing, not canonical form")
+
+    def test_the_receipt_and_the_override_are_held_to_the_same_rule(self):
+        _, checks = verify.verify_sample(OVERRIDE_SAMPLE)
+        canonical = [c for c in checks if "EIP-2 canonical (low-s)" in c.name]
+        self.assertEqual(len(canonical), 2,
+                         "both signatures in a bundle must be held to the "
+                         "same canonical-form rule")
+        self.assertTrue(all(c.ok for c in canonical))
 
 
 if __name__ == "__main__":

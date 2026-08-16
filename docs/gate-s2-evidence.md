@@ -451,9 +451,24 @@ prevent.
   token balance, and `maxAllowanceIncreaseBaseUnits` has no onchain counterpart. **The claim is
   corrected; the cap is v1.1.** The flagship Case 2 attack is refused by the evaluator with
   nothing behind it, and that is now said plainly rather than implied away.
-  **The D-010 verifier certified a forged refusal and a cross-domain receipt as PASS.** Repair
-  commissioned from an agent that has not read the implementation, to preserve the independence
-  that makes it evidence — dented, because the symptoms themselves are implementation-derived.
+  **The D-010 verifier certified a forged refusal and a cross-domain receipt as PASS. REPAIRED
+  (A-041), 70 tests → 101, by an agent that never read the implementation.** Both exploits
+  re-run and now exit 1; all six genuine samples still exit 0. Two pre-existing tests had to
+  change because they **asserted the defect as intended behaviour** — `assertTrue(ok)` on an
+  unsigned refusal. A structural cause worth carrying: `SKIP` counted as `ok=True` in the
+  aggregate, so "was not checked" summed as "passed".
+  **And the repair's most valuable output is a SPECIFICATION finding: §5 defines no refusal
+  record at all.** D-012's requirement — that a refusal leave a recorded artifact, or "the
+  signer refused" and "the signer was never asked" are indistinguishable — lives only in
+  `decisions.md`, which implementers and labellers are denied. An independent implementer
+  cannot build refusal handling from the published document. That is exactly the gap D-010 was
+  promoted into v1 to surface, and it took an agent denied the implementation to find it. The
+  verifier now refuses to certify an unauthenticated refusal rather than inventing an envelope;
+  a §5 payload is owed at v1.1.
+  **The verifier's independence is DENTED, and both dents are recorded:** the symptoms it was
+  given were implementation-derived, and a workspace guard it ran printed one-line excerpts from
+  two `ts/` files (published Anvil key constants only — nothing about canonicalisation, hashing
+  or EIP-712). Any future claim about this verifier must carry both qualifications.
   **None of this was hidden from the signing session; §11 named it as absent from it**, and
   D-041's first ruling was to sign with that recorded as a limit. The signature stands,
   annotated. A reader weighing it should read A-040 beside it.

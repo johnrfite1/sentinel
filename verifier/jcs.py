@@ -11,6 +11,8 @@ Implemented rules (RFC 8785 sections 3.2.1 - 3.2.4):
     other code point emitted literally as UTF-8.
   * Numbers serialised per ECMAScript Number::toString on the IEEE-754 double,
     with RFC 8785's requirement that the shortest round-tripping form is used.
+  * Invalid Unicode -- an unpaired UTF-16 surrogate anywhere in a string or a
+    key -- terminates with a CanonicalizationError, as section 3.2.2.2 requires.
   * Output encoded as UTF-8.
 """
 
@@ -49,7 +51,18 @@ def parse_bytes(raw: bytes) -> Any:
     # tolerating it, since it would change the hash.
     if raw.startswith(b"\xef\xbb\xbf"):
         raise CanonicalizationError("input begins with a UTF-8 BOM")
-    return parse(raw.decode("utf-8"))
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        # CESU-8 (a surrogate encoded as three UTF-8 bytes, e.g. ED A0 80) and
+        # every other malformed sequence land here. RFC 8785 section 3.2.2.2
+        # requires a compliant implementation to terminate with an appropriate
+        # error on invalid Unicode; a raw UnicodeDecodeError escaping to the
+        # caller is a crash, not an error report.
+        raise CanonicalizationError(
+            f"input is not valid UTF-8, so it is not RFC 8785 input data: {exc}"
+        )
+    return parse(text)
 
 
 # --------------------------------------------------------------------------
@@ -111,8 +124,29 @@ _SHORT_ESCAPES = {
 
 def serialize_string(value: str) -> str:
     out = ['"']
-    for char in value:
+    for index, char in enumerate(value):
         cp = ord(char)
+        if 0xD800 <= cp <= 0xDFFF:
+            # RFC 8785 section 3.2.2.2: "Since invalid Unicode data like 'lone
+            # surrogates' (e.g., U+DEAD) may lead to interoperability issues
+            # including broken signatures, occurrences of such data MUST cause
+            # a compliant JCS implementation to terminate with an appropriate
+            # error."
+            #
+            # Python's json module decodes \ud800 into a lone surrogate happily,
+            # and the failure then surfaced as a raw UnicodeEncodeError from the
+            # final .encode("utf-8") -- a crash out of the middle of
+            # canonicalization rather than a defined outcome. There is no
+            # correct canonical form to fall back to: substituting U+FFFD or
+            # emitting CESU-8 would both invent bytes the producer never wrote,
+            # and the hash would then pin the substitution rather than the
+            # document. Terminate, as the RFC requires.
+            raise CanonicalizationError(
+                "unpaired UTF-16 surrogate U+%04X at index %d of %r: RFC 8785 "
+                "section 3.2.2.2 requires a compliant implementation to "
+                "terminate with an error rather than canonicalize invalid "
+                "Unicode" % (cp, index, value)
+            )
         escape = _SHORT_ESCAPES.get(cp)
         if escape is not None:
             out.append(escape)
@@ -170,9 +204,14 @@ def _serialize(value: Any, out: list) -> None:
         out.append("]")
     elif isinstance(value, dict):
         out.append("{")
-        for i, key in enumerate(sorted(value.keys(), key=_sort_key)):
+        # Checked before sorting, not inside the loop: _sort_key calls .encode()
+        # and a non-string key used to raise AttributeError out of sorted()
+        # before this branch could report it.
+        for key in value:
             if not isinstance(key, str):
-                raise CanonicalizationError("object keys must be strings")
+                raise CanonicalizationError(
+                    f"object keys must be strings, got {type(key).__name__} {key!r}")
+        for i, key in enumerate(sorted(value.keys(), key=_sort_key)):
             if i:
                 out.append(",")
             out.append(serialize_string(key))
@@ -187,7 +226,14 @@ def canonicalize(value: Any) -> bytes:
     """Canonicalize an already-parsed JSON value to RFC 8785 UTF-8 bytes."""
     out: list = []
     _serialize(value, out)
-    return "".join(out).encode("utf-8")
+    try:
+        return "".join(out).encode("utf-8")
+    except UnicodeEncodeError as exc:  # pragma: no cover - serialize_string
+        # Unreachable: every string, value and key alike, passes through
+        # serialize_string, which rejects surrogates. Kept so that a future
+        # edit which routes around it still terminates with a JCS error rather
+        # than a raw codec exception.
+        raise CanonicalizationError(f"value is not encodable as UTF-8: {exc}")
 
 
 def canonicalize_text(text: str) -> bytes:

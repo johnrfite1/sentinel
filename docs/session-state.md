@@ -274,6 +274,7 @@ means only that no NEW class went vacuous. Read their output, not their exit sta
 | D-041 | **GATE S2 SIGNED — PASS, John, 2026-08-16.** Signed on §11's limits, not despite them. Steps 1–3's limit recorded not retired; dashboard stays outside S2; 14/20 does not flip a gate |
 | A-040 | The steps 1–3 review S2 was signed WITHOUT. **The encoding held; the two layers built on it did not.** Vault caps native value only; the invariant campaign killed nothing the fast tests did; the D-010 verifier certified a forged refusal |
 | D-042 | **S2 stands, annotated.** §7.1's containment claim corrected (cap → v1.1); the campaign gets its two missing arms; the verifier is repaired by an agent that has not read the implementation |
+| A-041 | Verifier repaired, 70 → 101 tests, both exploits now fail closed. **Its best output is a spec finding: §5 defines no refusal record at all**, so D-012's requirement is unbuildable from the published document |
 
 ## 5. Traces — what worked, and what was a dead end
 
@@ -362,9 +363,14 @@ means only that no NEW class went vacuous. Read their output, not their exit sta
   syntax only, and relative imports need the `.ts` extension.
 - `.env` is gitignored and holds `ANTHROPIC_API_KEY`. The pre-commit hook blocks it.
 - **Claude Opus 5 rejects `temperature`/`top_p`/`top_k` (400).**
-- **After a Solidity mutation sweep, `contracts/out` holds the LAST mutant's bytecode.** Run
-  `forge build --force` before emitting samples, or the artifacts are signed against a
-  deliberately broken vault.
+- **After ANY Solidity mutation — `scripts/mutate.sh` or a hand-rolled `sed` — `contracts/out`
+  holds the LAST mutant's bytecode.** Run `forge build --force` before emitting samples, or the
+  artifacts are signed against a deliberately broken vault. **THE SYMPTOM IS MISLEADING AND COST
+  A DETOUR ON 2026-08-16: the gate reports `corpus: DIGEST MISMATCH — the committed labeller
+  views are NOT what this code now produces`,** which reads as "your change moved the labelling
+  views" — the re-label trigger — when the source is clean and only the build artifacts are
+  stale. Check `git diff contracts/src` FIRST; if it is empty, force-rebuild before believing
+  the mismatch.
 - **The harness injects the workspace `CLAUDE.md` and John's `MEMORY.md` into every subagent.**
   Five labellers reported it; one declined an instruction inside it that would have breached the
   labelling protocol. This cannot be fixed from the repository — assume every labeller starts

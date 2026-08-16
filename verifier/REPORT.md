@@ -32,6 +32,17 @@ rather than pretending otherwise.
 fields but not their wire types is not implementable by an independent party — which is the
 exact property the receipt layer exists to demonstrate.
 
+> **Amended 2026-08-16, after an adversarial review of the shipped CLI.** The headline held
+> and D-022/D-023 closed the hash computations, but the review found that **the remaining gaps
+> in §5 were not neutral**: in four places this verifier had filled a silence with a decision,
+> and in each the decision made it weaker than reporting the gap would have. An ALLOW bundle
+> could be presented as a refusal (F-13), a receipt could be presented against a deployment it
+> was not issued for (F-14), invalid Unicode crashed instead of failing (F-15), and six
+> byte-distinct payload documents recomputed one hash (F-16). All four are now repaired and the
+> §5 wording each needs is proposed with it. The pattern is worth naming separately from the
+> individual findings: **a spec gap that has been written up is not a spec gap that has been
+> handled**, and a report entry can make an unexamined choice look examined. See §2, items 7–11.
+
 ## 1. Findings
 
 **BLOCKER** = cannot implement from the spec. **MAJOR** = two readings produce different
@@ -487,6 +498,38 @@ All five samples are 65-byte `r‖s‖v`, `v ∈ {27,28}`, low-`s`, `0x`-prefixe
 > `v ∈ {27, 28}`, and MUST be EIP-2 canonical (`s ≤ n/2`). EIP-2098 compact signatures are not
 > accepted."
 
+#### F-10 — the asymmetry this created, found by adversarial review 2026-08-16
+
+*The finding above is preserved as written. This subsection records what came of it.*
+
+Because §5 states no rule, the low-`s` check was applied where a reader happened to think of
+it — the **receipt** — and not to the **override**, whose `ownerSignature` was checked for
+signer identity and nothing else. An adversarial review caught the asymmetry and asked whether
+it was correct. **It was not, and the spec cannot be what decides that**, because the spec says
+nothing about either signature.
+
+What settles it is that the rule does not come from §5 at all. It comes from EIP-2, which is a
+rule about secp256k1 ECDSA rather than a rule about receipts, and §5.8 gives the override the
+*same construction as the receipt*: an EIP-712 digest over the same domain separator, signed
+with a secp256k1 key. There is no property of §5.5 that distinguishes it. **The asymmetry was
+an omission, not a decision**, and the repair is to hold both to the same rule.
+
+What it let through is narrower than "a forgery" and worth stating precisely, because
+overstating it would be the easy error. `(r, n−s, v^1)` recovers the **same address** as
+`(r, s, v)` — it is the owner's own authorization reflected, not somebody else's. §3.3(9) puts
+replay prevention in the vault's nonce rather than in the credential's bytes, so this is not a
+replay. What it is: a second, byte-distinct document that this verifier reported as the same
+valid override, so any consumer keyed on signature bytes — a log, a dedupe table, an operator
+comparing two files — sees two authorizations where the owner produced one. A test now
+constructs the malleated signature, confirms it still recovers `ownerAddress` (so the check is
+demonstrably the *only* thing that notices), and requires it rejected. A second test asserts
+that a bundle carrying both signatures runs exactly **two** canonical-form checks, so the
+asymmetry cannot silently return.
+
+> **Still proposed for §5.4 and §5.5, unchanged in substance and now with a reason to prefer
+> one sentence over two:** state the signature envelope **once**, for every signature §5
+> defines, rather than per payload. A per-payload statement is what produced the asymmetry.
+
 ### F-11 — MINOR — address casing is inconsistent across the fixtures and unspecified
 
 `receipt.signer` and `domain.verifyingContract` are lowercase; `domain.signerAddress` is EIP-55
@@ -527,6 +570,232 @@ self-contradictory. Tests synthesise all three shapes since no fixture does.
 > **Proposed.** Specify the refusal envelope in §5.4, decide explicitly whether refusals are
 > signed, add a refusal fixture to §7.1.
 
+#### F-13 — UPGRADED to BLOCKER on adversarial review, 2026-08-16. The guesswork was wrong.
+
+*The finding above is preserved as written. This subsection records the outcome and, more
+usefully, records that **the finding correctly identified the gap and then resolved it in the
+most dangerous available direction**.*
+
+**The symptom.** Take any shipped sample directory, replace `receipt.json` with
+`{"refused": true, "refusalReason": "..."}`, and this verifier printed `=> PASS` and exited 0
+— while `evidence.json` beside it recorded `"verdict": "ALLOW"`. No signature was checked, and
+none was present to check. The two receipt-bound checks reported `SKIP`, `SKIP` counted as
+"not a failure", and the aggregate was a pass. **An ALLOW could be presented to a third party
+as a refusal, by deleting a file.**
+
+**What the specification actually says, having gone back to look.** Nothing. Not "refusals are
+unsigned", not "refusals are signed" — nothing. The string `refus` does not occur anywhere in
+`Sentinel_Protocol_Lab_Proposal_v0_2.md`. §5.4 defines `SignedDecisionReceipt` as
+"DecisionReceiptPayload plus sentinelSignature" and stops. The nearest thing to an
+acknowledgement that the isolated signer can decline at all is a **parenthetical citation** in
+§5.7's D-026 note — "the isolated signer's EXECUTABILITY severity tier (A-011, D-012)" — and
+D-012 is not part of the published document. So the one pointer §5 offers toward a refusal
+record points outside the specification. A third party has no refusal record to verify because
+§5 does not define one.
+
+**Where the original reading went wrong.** F-13 asked the right question — "is a refusal
+signed? if not, anyone can forge one" — and then answered it with "for a fail-closed system
+arguably acceptable". That reasoning has a hole, and the hole is the whole of it: an unsigned
+refusal is only fail-closed **from the vault's side**, where nothing executes without an ALLOW.
+From a *verifier's* side it is fail-**open**, because the verifier's output is a certification
+and certifying an unauthenticated document is the permissive act. F-13 reasoned about the wrong
+party's failure mode. The consequence it did name — "a forged refusal is a denial-of-service on
+a legitimate action" — is also the *lesser* of the two available attacks; the greater one is
+the reverse, using a forged refusal to suppress a decision that was actually reached.
+
+**What was implemented.** A bundle presenting no signed receipt — `refused: true`, a null or
+absent `receipt`, or a receipt body with no `signature` — is now a **verification failure**,
+reported as `a signed receipt is present to verify (§5.4)`. The evidence checks still run and
+are still reported as passing where they pass: refusing to certify is not refusing to check,
+and the distinction is the point. Where the bundle records a verdict, the failure detail names
+it, so an operator sees `evidence.json records verdict 'ALLOW'` beside the refusal claim rather
+than having to open the file. `refused: true` alongside a populated receipt remains a separate
+hard failure.
+
+**This is a choice, and it is the conservative one rather than the certain one.** Absent any
+definition in §5, "cannot be certified" is not the only defensible verdict — a specification
+that defined an unsigned refusal envelope and said verifiers should report it as such would
+also be coherent, and this verifier would then be wrong. What is *not* defensible is the
+previous behaviour, which reported an unauthenticated assertion as a verified one. Until §5
+says otherwise, the failure is the honest output.
+
+**Still untested by any artifact.** No shipped sample sets `refused: true`; `index.json`
+carries `signerRefused: false` on all six. Every refusal shape here is synthesised in
+`test_verifier.py`. §7.1 still owes a refusal fixture, and it now owes a *decision* first.
+
+> **Proposed for §5.4, sharpened.** Define the refusal record explicitly and **sign it**:
+> a `RefusalPayload` carrying at minimum `schemaVersion`, `actionHash`, `evidenceHash`,
+> `reasonCodesHash`, `issuedAt`, `expiresAt` and `signer`, with its own §5.8 type string, so
+> that "the signer refused" is a statement the signer made rather than a statement about the
+> signer. Then say what a verifier does with a bundle carrying neither a receipt nor a signed
+> refusal: it MUST fail, because it has been handed nothing to verify. Without both halves the
+> §4.2 evidence-uncertainty demonstration and a deleted ALLOW are the same artifact.
+
+### F-14 — MAJOR — §5.8 says where chain and vault binding lives, and nothing says a verifier must read it
+
+§5.8 is explicit and correct: the payload hashes are bare `hashStruct` values, "no `\x19\x01`
+prefix and no domain separator is applied. **Chain and vault binding for these hashes therefore
+comes solely from the `chainId` and `vault` members of the payloads themselves.**"
+
+That sentence describes where the binding *lives*. It does not say that anybody has to go and
+look, and this verifier did not. `chainId` and `vault` were fed into `mandate_hash`,
+`policy_hash` and `action_hash` as opaque encoded words and never compared to anything —
+neither to each other, nor to the domain the bundle was presented under.
+
+**Why "the signature verified" does not cover it, which is the part that is easy to get
+wrong.** It looks like the domain separator already binds the chain: change `domain.json`'s
+`chainId` and the digest moves and recovery fails. That argument holds only against an attacker
+who cannot sign. Every sample is signed by Anvil account #1, **whose private key is published**
+— this file's own tamper suite uses it to forge the §3.3(7) case — so anyone presenting a
+bundle can mint a valid signature over any receipt under any domain. That is not a fixture
+artifact to be waved away; it is the general position of a third-party verifier, which by
+construction cannot know that the signer key is not the presenter's. Against a presenter who
+can sign, the domain separator establishes nothing about which deployment the bundle belongs
+to, because the presenter chose the domain. The payload members are the only chain and vault
+statement in the bundle that the *signer* made.
+
+Two concrete cases, both of which passed every check before the repair:
+
+1. A bundle re-presented with a `domain.json` naming **another chain and another contract**,
+   with the receipt re-signed under it. Signature valid, recovers `receipt.signer`, recovers
+   `domain.signerAddress`, low-`s`, every payload hash recomputes and matches. The only
+   contradiction in the directory is that `action.json` says chain 31337 and vault
+   `0xe7f1…0512` while the domain says chain 8453 and `0x2222…2222`.
+2. A `mandate.json` binding a **different vault than its own action's**, with the dependent
+   hashes recomputed and the receipt re-signed. Internally flawless; describes two deployments.
+   §3.3(4) says authorization binds "the exact chain, vault, …" — one chain and one vault, not
+   a set.
+
+**Implemented:** four checks, run before the hash recomputations because if the bundle does not
+name a single deployment then every hash below is answering the wrong question. Two are
+establishable **from the bundle alone, with no domain at all** — the §5.1/§5.2/§5.3 payloads
+must agree on `chainId`, and on `vault` — which is what §5.8's "a verifier that never saw the
+domain" claim actually requires of an implementation. Two tie the presented domain back to the
+signed payloads: every payload's `chainId` must equal the domain's `chainId`, and every
+payload's `vault` must equal the domain's `verifyingContract`, which §5.8 fixes as "the
+SentinelVault address" — the same address §5.1–§5.3 call `vault`.
+
+**One thing §5 does not settle and I chose:** §5.8 never states that `vault` and
+`verifyingContract` are required to be the same address. It says `verifyingContract` *is* the
+SentinelVault address and §5.1–§5.3 say `vault` is the vault, so the identification is a
+reading rather than a statement. A deployment that deliberately separated them — a verifying
+contract that is not the vault — would fail here. I judged that reading safe because the F-2
+§5.5 resolution already measured and recorded it ("in this design `vault` *is* the
+`verifyingContract`"), but §5.8 should say so in one clause rather than leave two sections to
+be joined by the reader.
+
+> **Proposed for §5.8**, appended to the paragraph that already names the mechanism: "A
+> verifier MUST check these members rather than assume them. Specifically: the `chainId` and
+> `vault` members of every §5.1–§5.3 payload in a bundle MUST be equal to one another, and MUST
+> equal the `chainId` and `verifyingContract` of the domain the bundle is verified under, which
+> for this protocol are the same chain and the same address. This is not implied by a valid
+> signature: the domain is supplied by whoever presents the bundle, so a presenter able to sign
+> can choose it, and the payload members are the only chain and vault binding the signer made."
+
+### F-15 — MAJOR — §5.6 adopts RFC 8785 without saying what happens when RFC 8785 refuses
+
+§5.6 says "EvidenceBundle uses RFC 8785 JSON canonicalization and keccak256 for evidenceHash."
+It does not say that RFC 8785 has inputs it **declines to process**, or what a verifier does
+with one.
+
+RFC 8785 section 3.2.2.2 is unambiguous: *"Since invalid Unicode data like 'lone surrogates'
+(e.g., U+DEAD) may lead to interoperability issues including broken signatures, occurrences of
+such data MUST cause a compliant JCS implementation to terminate with an appropriate error."*
+So the RFC settles the question — **the correct handling is termination**, and there is no
+canonical form to fall back to. Substituting `U+FFFD` or emitting CESU-8 would both invent
+bytes the producer never wrote, and `evidenceHash` would then pin the substitution rather than
+the document.
+
+This implementation terminated, but by **crashing**: `json.loads` decodes `"\ud800"` into a
+lone surrogate without complaint, the value survived key-sorting (which uses
+`errors="surrogatepass"`), and the failure surfaced as a raw `UnicodeEncodeError` out of the
+final `.encode("utf-8")` — an unhandled codec exception from the middle of canonicalization
+rather than a reported verification outcome. "Terminate with an appropriate error" and "raise
+whatever the runtime raises" are not the same requirement.
+
+**Why this is a spec finding and not only an implementation bug.** §5.6's field list contains
+`aiExplanation`, which is free-form model output, and §6 puts model output firmly in the
+**untrusted** column. It is the one bundle member whose contents an adversary or a
+misbehaving model chooses, and the one place a lone surrogate arrives from in practice — a
+truncated UTF-16 emit, a bad transcoder, or a deliberate probe. §5.6 constrains it not at all.
+The corpus reaches none of this: `aiExplanation` is `null` in all six samples and every byte of
+every shipped bundle is ASCII (F-6), so **the tests written here are the only coverage this
+path has**, and they are unit tests rather than fixtures.
+
+**Implemented:** an unpaired surrogate anywhere in a string or an object key raises
+`CanonicalizationError` citing RFC 8785 3.2.2.2; malformed UTF-8 input bytes (CESU-8 among
+them) raise the same rather than `UnicodeDecodeError`; and `verify.py` turns a
+canonicalization failure into a reported failing check and stops there, since without canonical
+bytes there is no `evidenceHash` and nothing bound to it can be checked. Valid astral
+characters are unaffected, and a control test pins that — `U+1F600` is not invalid Unicode, and
+rejecting it would break the UTF-16 key-sorting property F-6 warns about.
+
+> **Proposed for §5.6.** "A bundle MUST be valid Unicode. Per RFC 8785 section 3.2.2.2, invalid
+> data such as an unpaired UTF-16 surrogate MUST cause canonicalization to terminate with an
+> error; a verifier encountering one MUST report a verification failure and MUST NOT substitute
+> a replacement character or emit CESU-8, either of which would produce an `evidenceHash` over
+> bytes the producer never wrote. This applies with particular force to `aiExplanation`, which
+> carries untrusted model output (§6)."
+>
+> **Also for §7.1**, alongside F-6's non-ASCII fixture: one bundle whose `aiExplanation`
+> contains an unpaired surrogate, expected to **fail**. It is the only negative fixture in the
+> set that tests the canonicalizer rather than the signer.
+
+### F-16 — MAJOR — §5 never states the JSON encoding of a payload field, and six spellings recomputed one hash
+
+§5.1–§5.5 list field names and §5.8 gives their **Solidity** types. Nothing anywhere says how a
+field is written **in JSON**, which is the form a verifier is actually handed. The samples have
+a consistent convention — integers as decimal strings, hashes and addresses as `0x`-prefixed
+hex strings, booleans as native JSON literals — and F-6 records the *reason* for the first of
+those, but only for the EvidenceBundle, and §5 never states any of it as a rule.
+
+Left to `int()` and a membership test, the parser accepted far more than the convention:
+
+| written in `mandate.json` | encoded word | |
+|---|---|---|
+| `"durationSeconds": "86400"` | `…0x15180` | the shipped form |
+| `"durationSeconds": " 86400 "` | `…0x15180` | `int()` strips whitespace |
+| `"durationSeconds": "86_400"` | `…0x15180` | `int()` accepts PEP 515 separators |
+| `"durationSeconds": "0086400"` | `…0x15180` | leading zeros |
+| `"durationSeconds": 86400` | `…0x15180` | JSON number |
+| `"durationSeconds": 86400.9` | `…0x15180` | truncated, silently |
+
+Six byte-distinct documents, one `mandateHash`. **"The recomputed hash matches the receipt"
+therefore did not pin the document it was recomputed from** — which is the entire claim that
+check exists to make, and §5.7 as amended by D-020 makes `durationSeconds` an *equality* check
+against the mandate, so which document an operator is reading is load-bearing rather than
+cosmetic. `bool` was worse than lossy, it was wrong: the rule `value in (True, "true", 1, "1")`
+mapped every unrecognised string to **false**, so `"True"`, `"TRUE"` and `"yes"` encoded as
+`false` — on a field named `recurringAllowed`. And `bytes.fromhex` silently ignores embedded
+whitespace, so `"0xc188 528b…"` and `"0xc188528b…"` produced the same word, including on
+`action.callData`, whose whole job is to be pinned by `dataHash`.
+
+**Implemented, and this is a choice §5 does not make.** Accepted: a canonical decimal string
+(`\A(?:0|[1-9][0-9]*)\z`, matched with `fullmatch` — the §5.4/D-022 anchoring lesson applies
+here too, since `$` would accept `"5\n"`), a `0x`-prefixed even-length hex string, and a native
+JSON `true`/`false`. Everything else is **rejected rather than coerced**, including forms that
+are individually harmless — a bare JSON number, `"0X"` casing, a leading `+`. They are rejected
+not because they are wrong but because admitting a second spelling of a value re-opens the
+collision: the document→word map has to be injective for the hash to pin the document. Mixed-
+case hex is still accepted, because EIP-55 casing is a checksum rather than data and the
+fixture set is internally inconsistent about it (F-11); rejecting it would invent a rule.
+
+**What I could not determine and had to decide.** §5 gives no basis for preferring the
+string-encoded convention to a JSON-number one — the samples use strings, F-6 gives a good
+reason for it in the bundle, and that is the whole of the evidence. A producer emitting
+`"actionNonce": 0` is now cleanly rejected by a verifier that has no written rule to point at.
+That is the right failure direction (loud, not silent) but it is my convention being enforced,
+not the specification's, and it is the single most likely thing in this repair to be wrong.
+
+> **Proposed for §5**, once, ahead of §5.1: "Every payload field is carried in JSON as follows,
+> and a verifier MUST reject any other encoding rather than coerce it. `uintN` and enum fields:
+> a canonical decimal **string** — no sign, whitespace, separators, leading zeros, fraction or
+> exponent — never a JSON number, for the reason §5.6 gives about IEEE-754. `bytesN` and
+> `address`: a `0x`-prefixed, even-length hex string; case is not significant. `bool`: a JSON
+> `true` or `false` literal, never a string. This matters because the payload hashes are
+> recomputed from these documents: if two spellings of a value encode identically, two distinct
+> documents share one hash and the hash stops identifying the document."
+
 ## 2. What was got wrong, and what corrected it
 
 1. **Uniform `uint256` for the receipt's integer fields** — the conventional choice, and wrong;
@@ -551,6 +820,36 @@ self-contradictory. Tests synthesise all three shapes since no fixture does.
    `hashlib.sha3_256` (F-7), a trailing newline on canonical bytes (F-8), sorting JCS keys by
    code point (F-6), and right- vs left-padding for `bytes4 selector` (F-2).
 
+*Appended 2026-08-16, after an adversarial review of the shipped CLI. Items 7–11 are a
+different class from 1–6: those were wrong readings of a thin spec, caught while building.
+These are places where the spec was thin, a gap was correctly identified, and then **filled
+with a decision that made the verifier weaker than saying nothing would have**. That is the
+more dangerous failure, because a recorded finding reads as due diligence.*
+
+7. **Reporting an unauthenticated refusal as a pass (F-13).** The gap was found, written up,
+   and resolved with "for a fail-closed system arguably acceptable" — reasoning about the
+   *vault's* failure direction while implementing the *verifier's*. Nothing is fail-closed
+   about certifying a document nobody signed. Corrected by re-reading §5.4 and finding that it
+   defines no refusal record at all, which makes "cannot be certified" the only output that
+   describes what happened.
+8. **Treating `SKIP` as "not a failure" in the aggregate.** Structural, and it is what let 7
+   through quietly: two receipt-bound checks reported SKIP, `all(c.ok)` counted skips as
+   passes, and the run printed PASS. A skip is a statement that something was *not checked*,
+   which is the wrong shape for the top-level verdict of a tool whose entire output is a
+   certification.
+9. **Assuming a valid signature implied the deployment (F-14).** The domain separator does bind
+   the chain — against an attacker who cannot sign. The signer key in this corpus is published,
+   and a third-party verifier can never assume otherwise, so the domain is presenter-controlled
+   and only the payload members carry the signer's statement about chain and vault.
+10. **Accepting whatever `int()` accepted (F-16).** Six spellings of one integer, one hash. The
+    error was reaching for the language's permissive parser in a place whose contract is
+    injectivity — the same class of error as `re.match` vs `re.fullmatch` in F-3, and it was
+    made *after* that lesson was written down in this file.
+11. **Applying a rule where it was thought of rather than where it applies (F-10).** EIP-2
+    low-`s` was checked on the receipt and not the override. §5 mandates neither, so nothing
+    external would ever have flagged the inconsistency; it took someone asking whether the
+    asymmetry was deliberate.
+
 ## 3. What this verifier does *not* prove
 
 - ~~**`reasonCodesHash` is unchecked** (F-3) — reason codes are not tamper-evident to any
@@ -563,7 +862,19 @@ self-contradictory. Tests synthesise all three shapes since no fixture does.
   raised in F-2 was measured and **retired** — see the F-2 §5.5 resolution.
 - **RFC 8785's number and non-ASCII paths are unexercised by the corpus** (F-6) — this
   implementation is pinned to the RFC's vectors; agreement with the *evaluator* on those paths
-  is untested by anything, because no fixture reaches them.
+  is untested by anything, because no fixture reaches them. **The invalid-Unicode path is now
+  implemented and tested but is in the same position** (F-15): the tests here assert that a
+  lone surrogate is rejected, and nothing asserts that the evaluator rejects it too. If the
+  evaluator substitutes or crashes, this verifier and the evaluator disagree about which
+  bundles exist, and no fixture would show it.
+- **No shipped artifact exercises a refusal** (F-13) — `index.json` records
+  `signerRefused: false` on all six samples. The refusal shapes are synthesised in the test
+  suite, so what is pinned is this verifier's *behaviour* on them, not any agreement with the
+  signer about what a refusal looks like. There is nothing to agree with: §5 defines no
+  refusal record.
+- **The payload-field JSON encoding this verifier enforces is a convention, not a rule**
+  (F-16) — it is the one the six samples use, and §5 states none. A legitimate producer using
+  another encoding is rejected here, and would be right to complain.
 - **The bundle's factual content is not checked against a chain** — this confirms the bundle is
   the one the receipt commits to and that the receipt is correctly signed. It cannot confirm
   `observedPreState`, `nativeBalanceDeltas` or `targetCodeIdentity` reflect what happened on
@@ -590,6 +901,14 @@ If only three things are fixed:
 F-6's fixture additions are the cheapest real increase in corpus strength available; F-8's
 trailing-newline sentence is one line that prevents a class of accidental corpus-wide breakage.
 
+*Revised 2026-08-16.* If only three things are fixed and F-1/F-2 are already done by D-023,
+the list is now **F-13, F-14, F-4** — in that order. F-13 and F-14 are the two places where §5's
+silence is not friction but a hole a bundle can be pushed through: an ALLOW presented as a
+refusal, and a receipt presented against a deployment it was not issued for. Both were passing
+this verifier a day ago. F-16 is cheaper than either and should go in with them, since it is
+one paragraph and it is the only one of the four whose repair currently rests on a convention
+rather than on a sentence in the document.
+
 ## 5. Reproduction
 
 ```sh
@@ -599,6 +918,14 @@ python3 verifier/verify.py --tamper --all fixtures/samples # negative self-test
 python3 verifier/verify.py --print-types                   # the recovered type strings
 python3 verifier/test_verifier.py                          # test suite
 ```
+
+*Correction, 2026-08-16:* `--print-types` as written above exits 2 — `sample` is declared
+`nargs="+"`, so argparse demands a positional even for the mode that ignores it. Use
+`python3 verifier/verify.py --print-types .`. Left as an accurate note rather than silently
+repaired, because relaxing it to `nargs="*"` would make a bare `verify.py` print
+`0/0 sample(s) verified` and exit **0**, and a verifier that succeeds when handed nothing is a
+worse defect than a documented command that needs a dummy argument. Fixing it properly means
+adding an explicit "no targets" error, which is a CLI change nobody has asked for.
 
 **Results at time of writing (2026-08-15):** 5/5 samples PASS · 15/15 tamper cases rejected ·
 39/39 tests OK. Per sample, 16 checks pass and 1 (`reasonCodesHash`) reports NOT VERIFIABLE.
@@ -623,3 +950,27 @@ here. It now runs the reason-code tamper modes against a set of size one — the
 construction is most easily got wrong at — and `reasons-reorder` correctly reports N/A on it.
 The two count assertions in `test_verifier.py` were RAISED rather than removed; they are what
 would notice the sample set silently shrinking.
+
+**Results after the adversarial-review repairs (2026-08-16, F-10 asymmetry, F-13, F-14, F-15,
+F-16):** **6/6 samples PASS · 42/42 applicable tamper cases behave as specified · 101/101 tests
+OK.** Per sample, 23 checks (was 19); the override sample runs 33 (was 28). The four new
+per-sample checks are the F-14 chain and vault bindings; the override sample's fifth is the
+F-10 canonical-form check it was missing.
+
+Two previously-passing tests were **changed rather than kept**, and both for the same reason:
+they asserted the F-13 defect as intended behaviour. `test_refused_receipt_still_verifies_
+evidence` asserted that a bundle with `refused: true` and no signature verifies
+(`assertTrue(ok)`); `test_refused_with_omitted_keys_does_not_crash` asserted the same for a
+bare `{"refused": true}`. Both now assert the failure, under names that say what is being
+claimed. The second kept its "does not crash" purpose — it still checks that a receipt document
+missing every optional key is handled rather than raising. Nothing else in the suite was
+weakened, and the 42 tamper cases and 6 passing samples are unchanged counts, not relaxed ones.
+
+Reproduction for the repaired defects specifically:
+
+```sh
+# F-13: an ALLOW bundle re-presented as a refusal. Was "=> PASS", exit 0.
+cp -r fixtures/samples/case-1-allow /tmp/c1 && cp fixtures/samples/domain.json /tmp/
+printf '{"refused":true,"refusalReason":"signer unavailable"}' > /tmp/c1/receipt.json
+python3 verifier/verify.py /tmp/c1     # => FAIL, exit 1, and names the ALLOW it suppresses
+```
