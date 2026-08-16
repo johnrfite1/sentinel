@@ -257,10 +257,19 @@ The pre-2026-08-15 entries below the line still hold. Added since:
 `scripts/mutate.sh` — deliberate defects across signer, decoders, pipeline, evaluator, the
 D-012/D-014 rulings, the D-017 corrections, the step-7 transcriber (batch `P`), the ablation
 layers (batch `B`), the corpus guards (batch `C`), and **the vault (batch `S`, Solidity)**. Run
-`./scripts/mutate.sh` for all or `./scripts/mutate.sh C` for one batch. **Get the count by
+`./scripts/mutate.sh` for all, `./scripts/mutate.sh C` for one batch, or `./scripts/mutate.sh C12` for one mutation. **Get the count by
 running it, not by grepping.** A full sweep now takes well over an hour and is not wired into
 `test.sh`.
 
-Latest measured results: **batch C 11/11 caught**, **batch S 26/26 caught** (20 vault + 6
-simulate), 0 survived, 0 failed to apply. The vault batch's numbers are **not** comparable to
-A-028's "29 of 45 survived" — the tests that kill these mutants were written for them.
+Latest measured results: **batch C 14/14 caught**, **batch S 31/31 caught** (25 vault + 6
+simulate), 0 survived, 0 failed to apply. Read that with three qualifications, because the
+number alone is the kind of thing this project keeps getting wrong:
+
+- It is **not** comparable to A-028's "29 of 45 survived". The tests that kill these mutants
+  were written for them.
+- Two of the vault mutants (S22) and two of the corpus mutants (C8, C9) reported ERROR or
+  would have, until they were re-anchored — twice in one day, both times because the code they
+  target was rewritten. **Re-run the batch whose target you just edited.**
+- C12 SURVIVED on its first run and is the most useful result in the sweep: it showed a test
+  passing for a reason other than the one it named. The harness found what three independent
+  reviews and a green suite had not.
