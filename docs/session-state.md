@@ -186,6 +186,19 @@ capable of changing the verdict was raised after the signing.
 **The next instance's job is NOT to find the next gate.** There isn't one until pre-publication.
 What is owed is v1.1 work, §5 below, and it is bounded by the re-label decision.
 
+**D-043 set the direction: CONSOLIDATE.** Work the v1.1 register down; open no new front. §14.8's
+ladder is available — rung 2 (executed vendor comparisons) and the 14.3 attestation stretch are
+both eligible now — **and both were declined.** Rung 2 in particular reverses D-001 and would
+require unwinding D-008(2) and the vendor-honesty guard, putting executed-comparison claims into
+a project whose whole honesty apparatus was built on their absence. **Do not start either without
+John saying so; "S2 is signed" is not that permission.**
+
+**The one unblocked piece of real work outstanding:** now that §5.5.1 publishes `RefusalRecord`,
+a fresh **schema-only** agent can implement refusal VERIFICATION in the D-010 verifier, which
+currently fails closed. Brief it exactly as A-041's was — allowlist `verifier/**` and the
+proposal, deny `ts/**` and `contracts/**` — or the independence that makes the verifier evidence
+is spent for nothing.
+
 ### 5. Deferred to v1.1, riding on the re-label decision (D-035)
 
 - **F032 does not isolate policy expiry.** Its action deadline expires one second before the
@@ -274,7 +287,8 @@ means only that no NEW class went vacuous. Read their output, not their exit sta
 | D-041 | **GATE S2 SIGNED — PASS, John, 2026-08-16.** Signed on §11's limits, not despite them. Steps 1–3's limit recorded not retired; dashboard stays outside S2; 14/20 does not flip a gate |
 | A-040 | The steps 1–3 review S2 was signed WITHOUT. **The encoding held; the two layers built on it did not.** Vault caps native value only; the invariant campaign killed nothing the fast tests did; the D-010 verifier certified a forged refusal |
 | D-042 | **S2 stands, annotated.** §7.1's containment claim corrected (cap → v1.1); the campaign gets its two missing arms; the verifier is repaired by an agent that has not read the implementation |
-| A-041 | Verifier repaired, 70 → 101 tests, both exploits now fail closed. **Its best output is a spec finding: §5 defines no refusal record at all**, so D-012's requirement is unbuildable from the published document |
+| A-041 | Verifier repaired, 70 → 101 tests, both exploits now fail closed. **Its best output is a spec finding: §5 defined no refusal record at all**, so D-012's requirement was unbuildable from the published document |
+| D-043 | **CONSOLIDATE — no new front, no ladder rung.** Re-label bound to pre-publication with a named trigger; §5.5.1 RefusalRecord published; override event added; Anvil keys re-baselined |
 
 ## 5. Traces — what worked, and what was a dead end
 

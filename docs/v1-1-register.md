@@ -88,6 +88,13 @@ observed harm: every labeller found and used `INSUFFICIENT` regardless.
 Fixing any of these changes the view the labels of record were drawn against, so each belongs
 **with** a re-label rather than before one.
 
+**RULED 2026-08-16 (D-043): the re-label is bound to PRE-PUBLICATION with a named trigger** —
+any move toward publication fires it, alongside Gate 8 and D-016's rename gate. All five defects
+are fixed together and all 50 re-labelled **under the same frozen prompt**: D-035 ruled the
+prompt is not at fault, so `check-label-prompt.sh` stays green and no re-freeze is involved. The
+cost is fresh labeller runs, replacing E and F as the labels of record, and re-running the §7.3
+ablation. **The trigger is named because pre-publication is where deferred things go quiet.**
+
 - **F032 does not isolate policy expiry.** Its action deadline expires one second before the
   policy window, so it fails two checks in different D-026 remedy classes.
 - **F026 and F051 pin different `allowedCallGraphHash` values over an identical observed call
@@ -163,14 +170,29 @@ not and is the only one that could be done today.**
   `test_LIMIT_receiptFromAFutureSignerGoesLiveOnRotation`. Those tests assert the LIMIT — when
   epoch binding is added they fail, and the failure is the signal to update the comment and this
   entry, not to delete the tests. The binding itself is still owed.*
-- **Log the override authorization.** §3.3(2) requires override be *logged*; `ActionExecuted`
-  records only `viaOverride` and the receipt's `decisionId`, so an auditor cannot say which owner
-  authorization was used or what the owner's recorded reason was. Every other item in §3.3(2)
-  gets a dedicated event.
+- ~~**Log the override authorization.**~~ **DONE 2026-08-16 (D-043).** §3.3(2) requires override
+  be *logged* and it was not. `SentinelVault.OverrideAuthorized` now emits the override's own
+  hash, the review receipt it names, the owner's `reasonHash` and its expiry — after
+  authentication and before the call, so the log records only authorizations that passed.
+  Done now rather than at v1.1 because an unmet stated invariant is a defect, not a feature.
+  **Verified not to disturb the corpus:** the committed labelling views are unchanged.
 
-## 6. The specification defines no refusal record (A-041)
+## 6. ~~The specification defines no refusal record~~ — PUBLISHED 2026-08-16 (D-043)
 
-**The highest-value item this session produced, and it is a spec item rather than a code one.**
+**§5.5.1 now publishes `RefusalRecord`** — fields, order, domain tag, digest construction, and
+the injectivity argument for the newline-joined preimage. It was a documentation correction, not
+new design: the signer has produced this artifact since D-012.
+
+**What is still owed:** the D-010 verifier does not yet VERIFY refusals — it fails closed on an
+unauthenticated refusal claim, which is correct while it has nothing to check against. Now that
+§5.5.1 exists, a fresh schema-only agent can implement verification from the published document,
+which is how D-010 is meant to work. **That is the natural next piece and it is now unblocked.**
+
+The original entry is kept below because the lesson is worth more than the fix.
+
+---
+
+**The highest-value item this session produced, and it was a spec item rather than a code one.**
 
 D-012 requires that a refusal leave a recorded artifact, *"or 'the signer refused' and 'the
 signer was never asked' are indistinguishable"*. **That requirement appears nowhere in the

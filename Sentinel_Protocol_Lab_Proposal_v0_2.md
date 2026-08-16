@@ -412,6 +412,39 @@ SignedOverrideAuthorization contains OverrideAuthorizationPayload plus ownerSign
 
 The vault accepts an override only with the matching signed review receipt. A block receipt cannot be overridden.
 
+### 5.5.1 RefusalRecord (normative)
+
+*Added 2026-08-16 (D-043). **This section publishes an artifact the signer has produced since D-012 and the specification had never described.** An independent verifier built from this document — which is what D-010 requires — therefore could not establish a refusal, and the D-010 CLI shipped certifying an unsigned `{"refused": true}` claim as a PASS. The implementation anticipated this precisely: the comment beside `refusalDigest` reads "the D-010 verifier will need to check these, and a refusal nobody else can verify is not evidence." It was written down in the one place the verifier is not allowed to read. **The general lesson, and the reason this correction is worth its own note: a requirement ratified in the decision log is not a requirement an implementer can build. Only the published document is.***
+
+D-012 requires that a refusal leave a recorded artifact — otherwise "the signer refused" and "the signer was never asked" are indistinguishable, and a party presenting an evidence bundle can suppress a receipt and call it a refusal.
+
+    schemaVersion
+    chainId
+    vault
+    actionHash
+    evidenceHash
+    requestedVerdict
+    reasonCodesHash
+    refusedAt
+    signer
+
+`SignedRefusalRecord` contains RefusalRecord plus `signerSignature`.
+
+**This record is NOT an EIP-712 typed structure, and the difference is deliberate.** Its digest is a domain-tagged, newline-joined string preimage:
+
+    keccak256(utf8(
+        "sentinel.refusal.v0.2" ‖ "\n" ‖
+        schemaVersion ‖ "\n" ‖ chainId ‖ "\n" ‖ vault ‖ "\n" ‖
+        actionHash ‖ "\n" ‖ evidenceHash ‖ "\n" ‖ requestedVerdict ‖ "\n" ‖
+        reasonCodesHash ‖ "\n" ‖ refusedAt ‖ "\n" ‖ signer
+    ))
+
+`schemaVersion`, `chainId` and `refusedAt` are decimal digits; `vault` and `signer` are lowercase `0x` addresses; the three hashes are lowercase `0x` 32-byte hex; `requestedVerdict` is a §5.9 verdict NAME. **Field order is part of the format.** The encoding is injective because every field is a fixed charset that cannot contain the newline delimiter — which is what makes a joined preimage safe here where it would not be for free-form text.
+
+`reasonCodesHash` uses the same encoding as a receipt's (§5.4): identifiers sorted ascending by bytes, joined with a single `\n`, UTF-8, keccak256.
+
+**A refusal is attributable or it is not issued.** Where a request is too malformed to name an action — a payload contradicting its own calldata — the signer emits no record rather than one it cannot honestly attribute, and a verifier must treat an absent record as an unestablished refusal rather than an established one.
+
 ### 5.9 Enumerations (normative)
 
 *Added 2026-08-15 (D-024), because all three of these were undocumented and the document's own prose ordering implies the wrong values for the first.*

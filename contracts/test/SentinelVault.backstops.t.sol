@@ -611,6 +611,44 @@ contract SentinelVaultBackstopsTest is Test {
         assertEq(v.actionNonce(), 1, "one nonce consumed for unlimited token authority");
     }
 
+    /// @notice §3.3(2) requires override be LOGGED, and until D-043 it was not.
+    ///
+    /// @dev Asserts the authorization is identifiable from the log alone — the override's own
+    ///      hash, the review receipt it names, the owner's reasonHash, and its expiry. Before
+    ///      this, `ActionExecuted` carried only `viaOverride` and the RECEIPT's decisionId, so
+    ///      an auditor could see that an override happened and never which one.
+    function test_overrideAuthorizationIsLogged() public {
+        bytes memory data = _callData();
+        T.ActionPayload memory a = _action(data);
+        T.DecisionReceiptPayload memory r = _receipt(a, T.Verdict.REVIEW);
+        bytes memory sig = _sign(SIGNER_PK, T.hashReceipt(r));
+
+        T.OverrideAuthorizationPayload memory auth = T.OverrideAuthorizationPayload({
+            schemaVersion: 1,
+            reviewReceiptHash: T.hashReceipt(r),
+            actionHash: T.hashAction(a),
+            mandateHash: a.mandateHash,
+            policyHash: a.policyHash,
+            actionNonce: a.actionNonce,
+            reasonHash: keccak256("owner: verified with the counterparty out of band"),
+            issuedAt: uint64(block.timestamp),
+            expiresAt: uint64(block.timestamp + 30 minutes)
+        });
+        bytes memory ownerSig = _sign(OWNER_PK, T.hashOverride(auth));
+
+        vm.expectEmit(true, true, true, true);
+        emit SentinelVault.OverrideAuthorized(
+            auth.actionHash,
+            T.hashOverride(auth),
+            auth.reviewReceiptHash,
+            auth.reasonHash,
+            auth.expiresAt
+        );
+        vault.executeWithOverride(a, data, r, sig, auth, ownerSig);
+
+        assertEq(vault.actionNonce(), 1, "the override did not execute");
+    }
+
     /// @notice ROTATION IS NOT REVOCATION. Asserts the limit, not a protection.
     ///
     /// @dev A-040. The comment at the signer check used to claim the named-signer half stops

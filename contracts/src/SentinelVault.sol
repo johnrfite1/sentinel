@@ -70,6 +70,28 @@ contract SentinelVault {
         bytes32 indexed actionHash, uint256 indexed actionNonce, bytes32 decisionId, bool viaOverride
     );
 
+    /// @notice The owner authorization an override executed under.
+    ///
+    /// @dev ADDED 2026-08-16 (D-043). §3.3(2) requires that override be "separately
+    ///      authenticated, unavailable to the agent, and LOGGED". The first two were enforced;
+    ///      the third was not. `ActionExecuted` carried only `viaOverride: true` and the
+    ///      RECEIPT's `decisionId` — so an auditor reconstructing history from the log could
+    ///      see THAT an override happened and never which owner authorization permitted it,
+    ///      or what the owner's recorded reason was. Every other item in §3.3(2) already had
+    ///      a dedicated event; override was the omission. Found by adversarial review (A-040).
+    ///
+    ///      `reasonHash` is the owner's justification, and it is the field that makes this
+    ///      more than bookkeeping: §3.3(7) makes a review override the one path where a human
+    ///      overrules the automatic decision, and an override with no recorded reason is
+    ///      exactly the event a hostile reader would ask about first.
+    event OverrideAuthorized(
+        bytes32 indexed actionHash,
+        bytes32 indexed overrideHash,
+        bytes32 reviewReceiptHash,
+        bytes32 reasonHash,
+        uint64 expiresAt
+    );
+
     // ---------------------------------------------------------------------
     // State
     // ---------------------------------------------------------------------
@@ -224,8 +246,16 @@ contract SentinelVault {
         // forge-lint: disable-next-line(block-timestamp)
         if (block.timestamp > auth.expiresAt) revert OverrideExpired();
 
-        bytes32 digest = T.digest(_domainSeparator(), T.hashOverride(auth));
+        bytes32 overrideHash = T.hashOverride(auth);
+        bytes32 digest = T.digest(_domainSeparator(), overrideHash);
         if (digest.recover(ownerSig) != owner) revert NotOwnerOverride();
+
+        // §3.3(2)'s "logged", emitted AFTER authentication and BEFORE the call — so the log
+        // records only authorizations that actually passed, and records them even if the
+        // external call then reverts the transaction away. (D-043)
+        emit OverrideAuthorized(
+            auth.actionHash, overrideHash, auth.reviewReceiptHash, auth.reasonHash, auth.expiresAt
+        );
 
         return _consumeAndCall(action, callData, receipt.decisionId, true);
     }
