@@ -111,6 +111,32 @@ reasoned; **two are new and unruled**, and they are the register's newest items:
 - **`conflicting-block-state`** — F048 REVIEWs on simulation-unavailable and code-identity, which
   is an outage shape, not the conflicting-state shape D-030 calls a failed rule that blocks.
 
-Both are corpus defects of the A-036 family and therefore **inherit its deferral**: repairing a
-fixture changes the view the labels of record were drawn against, so they ride with the re-label.
-What does NOT ride with it is the guard, which is why building it first was worth doing.
+**RULED 2026-08-16 (D-039), and the two are not the same kind of defect:**
+
+- **`owner-override-and-block-behaviour` — ACCEPTED DELEGATION, nothing owed.** F054/F055 declare
+  `primaryEnforcement: vault-foundry-invariants` and the vault suite genuinely tests the override
+  path. The declaration is accurate; the corpus layer is not where it is proved.
+- **`conflicting-block-state` — A GAP, and it OWES A FIXTURE.** F048 declares
+  `primaryEnforcement: conformance-engine`, claiming to be proved *here*, and is not. Nothing
+  else covers it. **This is the one new v1.1 work item this session produced.**
+
+The GAP inherits A-036's deferral — repairing F048 changes the view the labels of record were
+drawn against — so the fixture rides with the re-label. What did NOT ride with it is the guard,
+which is why building it first was worth doing, and the guard now carries a `status` of
+DELEGATED / RESERVED / GAP so this distinction lives in the instrument rather than only here.
+
+## 5. Owed on the §2 capability table, after Gate 5's certification (D-038)
+
+Two citations are weaker than they could be — one row cited for fewer criteria than the vendor
+may document, and one still pointing at a marketing page rather than technical documentation.
+Neither blocks anything; both would move accuracy in the direction that does *not* flatter
+Sentinel.
+
+**The detail is in `docs/gate-5-vendor-audit.md`, not here, and the split is not editorial:**
+that file is the one artifact `check-vendor-honesty.sh` excludes from D-008(4), because it
+cannot do its job without naming the parties. This register is a measurement artifact and must
+stay free of vendor names. The guard caught a first draft of this very section for exactly that
+reason, which is the second time it has fired on this session's own work.
+
+**Any edit to the §2 table makes D-038's certification stale**, so these ride together with
+whatever else touches that table rather than being applied one at a time.

@@ -100,7 +100,20 @@ Three things in that register a reader should not have to find for themselves:
   `scripts/check-class-coverage.sh`, in the gate. It found two more vacuous classes (A-038),
   both awaiting John.** See §3 and A-038.
 
-### 3. Prepare Gate 5's certification for John; do not perform it
+### 3. ~~Prepare Gate 5's certification for John~~ — **CERTIFIED 2026-08-16 (D-038)**
+
+**Gate 5 is MET.** John ruled all seven forks at a facilitated session; §2 is rewritten to match.
+`check-vendor-honesty.sh` reports **11 of 11 rows cited** and D-008(3) **certified by record**,
+naming D-038 — it checks that a named certification exists and says on every run that it cannot
+check the certification is right. Rows 2 and 8 split; Circle and Hypernative marked
+`(inference)`; Safe re-cited rather than narrowed; §13 gained #25–#28.
+
+**The certification goes stale on ANY edit to the §2 table** — the guard prints that where the
+certification prints. **Owed at v1.1:** Coinbase was left at two documented criteria without the
+re-cite lookup that rescued Safe, and Tenderly stays on a marketing page the audit called thin.
+Both would improve accuracy in the direction that does not flatter Sentinel.
+
+<details><summary>The original preparation note (superseded)</summary>
 
 `docs/gate-5-vendor-audit.md` holds a completed source-verification pass — all nine cited pages
 fetched and read 2026-08-15 — and, appended to the same file, **the certification packet: every
@@ -135,11 +148,16 @@ version has to match the layout John rules for, so it is sequenced behind him.
 
 **An agent may not write those cells.** The diff is prepared; put it in front of him.
 
-### 4. Run Gate S2 as a facilitated session
+</details>
+
+### 4. Run Gate S2 as a facilitated session — **NOW UNBLOCKED**
 
 Pack: `docs/gate-s2-evidence.md`. Read §11 (what is NOT in evidence) and §12 (the questions)
-first. **Gate 5 is NOT MET** until step 3 resolves — 0 of 9 rows are dated or linked, which is
-unsatisfied rather than merely uncertified.
+first. **Gate 5 was the blocker and is now MET (D-038)** — it was unsatisfied rather than merely
+uncertified, because 0 of 9 rows were dated or linked. That is now 11 of 11.
+
+**S2 evidence needs re-reading against this session before the session runs:** it was written
+when Gate 5 was open and when the class table read as 20-of-20 covered. Both changed.
 
 ### 5. Deferred to v1.1, riding on the re-label decision (D-035)
 
@@ -218,7 +236,10 @@ class went vacuous. Read their output, not their exit status.
 | A-034 | Agent call not to re-freeze — **TRIGGERED, superseded by D-035** |
 | A-036 | Two fixtures do not exercise the class they name; no check asserts they do |
 | A-037 | **Two sessions ran the same measurement and one overwrote the other's committed evidence.** Caught by luck, not by any guard |
-| A-038 | A-036's check **built** and in the gate: 14/20 classes exercise the class they name; two new vacuous classes found, both **unruled** |
+| A-038 | A-036's check **built** and in the gate: 14/20 classes exercise the class they name; two new vacuous classes found |
+| D-037 | **One agent session at a time on this tree.** Resolves A-037 |
+| D-038 | **GATE 5 CERTIFIED.** Seven rulings; §2 rewritten; 11/11 cited; stale on any §2 edit |
+| D-039 | The two A-038 classes ruled apart: override is an accepted **delegation**, conflicting-block-state is a **GAP owing a fixture** |
 
 ## 5. Traces — what worked, and what was a dead end
 

@@ -194,26 +194,59 @@ fi
 # Parsed from the proposal rather than transcribed here, so the count cannot drift out of
 # agreement with the table it describes.
 echo
-echo "vendor honesty — CERTIFICATION PENDING (John only; agents may not clear these)"
+echo "vendor honesty — D-008(1) and (3): John's to certify; agents may not clear these"
 
-rows=$(awk '/^\| Category \| Examples \| Existing capability \| Consequence for Sentinel \|/{t=1;next} t&&/^\|---/{next} t&&/^\|/{n++} t&&!/^\|/{exit} END{print n+0}' "$PROPOSAL")
-cited=$(awk '/^\| Category \| Examples \| Existing capability \| Consequence for Sentinel \|/{t=1;next} t&&/^\|---/{next} t&&/^\|/{if ($0 ~ /\[§13#[0-9]+ read [0-9]{4}-[0-9]{2}-[0-9]{2}\]/) n++} t&&!/^\|/{exit} END{print n+0}' "$PROPOSAL")
+# THE MARKER IS COUNTED IN THE CAPABILITY CELL, NOT ANYWHERE IN THE ROW.
+#
+# The first version tested `$0` while its own message said "appended to the capability cell", so
+# a marker sitting in "Consequence for Sentinel" would have counted. Nothing exploited it — the
+# count was 0 of 9 for the guard's whole life before certification — but a guard whose message
+# and whose test disagree is this project's most repeated defect, and it was recorded in the
+# Gate 5 packet as owed. Field 4 under `-F'|'` is the capability cell: a leading empty field
+# precedes Category(2), Examples(3), Existing capability(4), Consequence(5).
+rows=$(awk -F'|' '/^\| Category \| Examples \| Existing capability \| Consequence for Sentinel \|/{t=1;next} t&&/^\|---/{next} t&&/^\|/{n++} t&&!/^\|/{exit} END{print n+0}' "$PROPOSAL")
+cited=$(awk -F'|' '/^\| Category \| Examples \| Existing capability \| Consequence for Sentinel \|/{t=1;next} t&&/^\|---/{next} t&&/^\|/{if ($4 ~ /\[§13#[0-9]+ read [0-9]{4}-[0-9]{2}-[0-9]{2}\]/) n++} t&&!/^\|/{exit} END{print n+0}' "$PROPOSAL")
 
-echo "  UNCERTIFIED  §2 capability table: $cited of $rows rows carry a per-cell source and access date"
-echo "               D-008(1) requires every cell documentation-only, DATED, and LINKED to its"
-echo "               cited source. §13 lists the sources; the cells do not reference them, and"
-echo "               nothing records when each page was read. The marker this check counts is"
-echo "               [§13#N read YYYY-MM-DD], appended to the capability cell."
-echo "  UNCERTIFIED  §2 capability table: inference marking (D-008(3)) is a reading of each"
-echo "               sentence against its source, which is John's certification, not a grep."
+# D-008(1) has a mechanical half — dated and linked — and this script may report that half as
+# MET when it is met. It may not report the judgement half, which is the next block.
+if [ "$cited" -eq "$rows" ] && [ "$rows" -gt 0 ]; then
+    echo "  ok    §2 capability table: $cited of $rows rows carry a per-cell source and access date"
+    echo "        D-008(1)'s mechanical half. A row added later without [§13#N read YYYY-MM-DD]"
+    echo "        in its capability cell FAILS this gate — the count is a ratchet, not a snapshot."
+else
+    echo "  FAIL  §2 capability table: only $cited of $rows rows carry a per-cell source and date"
+    echo "        D-008(1) requires every cell documentation-only, DATED, and LINKED to its cited"
+    echo "        source. The marker this check counts is [§13#N read YYYY-MM-DD], in the"
+    echo "        CAPABILITY cell. Cite the row; do not delete it to make the count agree."
+    fail=1
+fi
+
+# CONDITION (3) IS REPORTED BY RECORD, NEVER BY THIS SCRIPT'S OWN JUDGEMENT.
+#
+# Whether a sentence fairly describes somebody else's product is John's under the verification
+# partition. What is mechanical is whether a NAMED certification exists in the document. So this
+# looks for the certification line §2 carries and reports the decision id it names. It does not
+# and cannot check that the certification is correct.
+certline=$(grep -oE '\*Certified by John at the Gate 5 session, [0-9]{4}-[0-9]{2}-[0-9]{2} \(D-[0-9]+\)\.\*' "$PROPOSAL" | head -1)
+if [ -n "$certline" ]; then
+    echo "  ok    §2 capability table: inference marking (D-008(3)) certified by record —"
+    echo "        ${certline}"
+    echo "        THIS SCRIPT DID NOT AND CANNOT CHECK THAT THE CERTIFICATION IS RIGHT. It checks"
+    echo "        that a named certification exists. If the table changes, the certification is"
+    echo "        stale and this line becomes a claim nobody re-examined."
+else
+    echo "  UNCERTIFIED  §2 capability table: inference marking (D-008(3)) is a reading of each"
+    echo "               sentence against its source, which is John's certification, not a grep."
+    echo "               No certification line found in §2."
+fi
 echo
-echo "  These two are NOT failures of this script and NOT passes of Gate 5. They are the part"
-echo "  of the gate the verification partition assigns to John: public claims, autonomy none."
-echo "  docs/gate-5-vendor-audit.md holds the per-row audit prepared for that session."
+echo "  Neither line above is this script deciding a public claim. The verification partition"
+echo "  gives those to John: public claims, autonomy none. docs/gate-5-vendor-audit.md holds the"
+echo "  per-row audit and the certification packet the Gate 5 session ruled from."
 
 echo
 if [ "$fail" -ne 0 ]; then
     echo "vendor honesty: MECHANICAL CONDITIONS FAILED"
     exit 1
 fi
-echo "vendor honesty: mechanical conditions pass; certification pending (D-008(1),(3))"
+echo "vendor honesty: mechanical conditions pass; D-008(1) met and (3) certified by record"

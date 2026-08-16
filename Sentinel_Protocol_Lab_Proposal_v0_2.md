@@ -85,15 +85,19 @@ The market, however, is already active. Agent-wallet and wallet-security provide
 
 | Category | Examples | Existing capability | Consequence for Sentinel |
 |---|---|---|---|
-| Pact-first agent authorization | Cobo Agentic Wallet | Owner-approved task pacts, scoped and revocable credentials, parameter matching, completion conditions, rolling limits, and allow/review/deny enforcement | Intent-aware authorization is not an empty category |
-| Wallet policy infrastructure | Coinbase Policy Engine; Privy | Rules over value, network, destination, contract, signer, and decoded calldata | Generic policy-as-code is a substitute |
-| Agent payment wallets | Circle Agent Wallets | Spend limits, address controls, compliance screening, and agent-native execution | Spend governance is increasingly bundled |
-| Direct agent-wallet security | Sigil | ERC-4337 wallet, Guardian co-signing, deterministic rules, simulation, AI risk scoring, policies, and recovery | Close overlap with the original stack |
-| Smart-account controls | Safe | Guards, allowances, multisignature approval, recovery, and agent spending patterns | Do not invent production custody |
-| Wallet-native controls | MetaMask Agent Wallet | Protocol policies, simulation, threat scanning, MEV protection, and human escalation | Policy plus simulation is moving into wallet UX |
-| Institutional transaction guard | Hypernative Transaction Guard | Pre-sign simulation, custom policy, intent verification, approval workflows, and audit records | Direct substitute for an inline transaction guard |
-| Simulation and threat APIs | Tenderly; Blockaid | Decoded effects, execution simulation, and known-threat detection | Integrate or compare against these primitives |
-| Signing metadata | ERC-7730 | Chain/address-bound clear-signing metadata for calldata and typed messages | Consume the standard; do not invent a parallel manifest without evidence of a gap |
+| Pact-first agent authorization | Cobo Agentic Wallet | Owner-approved task pacts, scoped and revocable credentials, parameter matching, completion conditions, rolling limits, and allow/review/deny enforcement [§13#5 read 2026-08-15] [§13#6 read 2026-08-15] | Intent-aware authorization is not an empty category |
+| Wallet policy infrastructure | Privy | Rules over value, network, destination, contract, and decoded calldata [§13#9 read 2026-08-15] | Generic policy-as-code is a substitute |
+| Wallet policy infrastructure | Coinbase Policy Engine | Rules over value and destination [§13#7 read 2026-08-15] | Generic policy-as-code is a substitute |
+| Agent payment wallets | Circle Agent Wallets | Spend limits, address controls, compliance screening, and agent-native execution (inference) [§13#8 read 2026-08-15] | Spend governance is increasingly bundled |
+| Direct agent-wallet security | Sigil | ERC-4337 wallet, Guardian co-signing, deterministic rules, simulation, AI risk scoring, policies, and recovery [§13#12 read 2026-08-15] | Close overlap with the original stack |
+| Smart-account controls | Safe | Guards, allowance modules, multisignature approval, recovery modules, and agent spending patterns [§13#10 read 2026-08-15] [§13#25 read 2026-08-15] [§13#26 read 2026-08-15] | Do not invent production custody |
+| Wallet-native controls | MetaMask Agent Wallet | Protocol policies, simulation, threat scanning, MEV protection, and human escalation [§13#11 read 2026-08-15] | Policy plus simulation is moving into wallet UX |
+| Institutional transaction guard | Hypernative Transaction Guard | Pre-sign simulation, custom policy, intent verification (inference), approval workflows, and audit records [§13#13 read 2026-08-15] [§13#27 read 2026-08-16] [§13#28 read 2026-08-16] | Direct substitute for an inline transaction guard |
+| Simulation and threat APIs | Blockaid | Decoded effects, execution simulation, and known-threat detection [§13#14 read 2026-08-15] | Integrate or compare against these primitives |
+| Simulation APIs | Tenderly | Decoded effects and execution simulation [§13#15 read 2026-08-15] | Integrate or compare against these primitives |
+| Signing metadata | ERC-7730 | Chain/address-bound clear-signing metadata for calldata and typed messages [§13#16 read 2026-08-15] | Consume the standard; do not invent a parallel manifest without evidence of a gap |
+
+*Certified by John at the Gate 5 session, 2026-08-16 (D-038).* Every entry in "Existing capability" is quoted or closely paraphrased from its cited source as read on the marked date; clauses marked `(inference)` are not. **The "Consequence for Sentinel" column is Sentinel's own inference throughout** — no vendor documents what its product implies for this project.
 
 The honest market thesis is therefore:
 
@@ -918,6 +922,16 @@ Wallet, authorization, and security alternatives:
 13. [Hypernative — Asset Manager Transaction Protection](https://hypernative.io/industry/asset-managers)
 14. [Blockaid — Transaction Security](https://blockaid.io/transaction-security)
 15. [Tenderly — Simulation for Onchain Operations](https://tenderly.co/)
+
+Additional vendor sources, added at the Gate 5 certification session (D-038). **Appended rather
+than inserted into the 5–15 block on purpose:** inserting would renumber 16–24 and silently
+invalidate every `§13 #N` reference already written, which is a worse citation defect than the
+one being repaired.
+
+25. [Safe — How do Safe Smart Accounts work?](https://docs.safe.global/advanced/smart-account-overview)
+26. [Safe — AI agent with a spending limit for a treasury](https://docs.safe.global/home/ai-agent-quickstarts/agent-with-spending-limit)
+27. [Hypernative — How Institutions Verify a Transaction Is Safe Before It Executes](https://www.hypernative.io/insights/blog/how-institutions-verify-a-transaction-is-safe-before-it-executes)
+28. [Hypernative — Guardian Brings Transaction Simulation to MPC Wallets](https://www.hypernative.io/blog/hypernative-guardian-for-web3s-institutional-moment)
 
 Standards and implementation:
 

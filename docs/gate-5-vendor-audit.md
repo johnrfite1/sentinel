@@ -441,3 +441,53 @@ shape: an instrument that exists and points at something other than what it says
 **Not fixed yet, deliberately** — the tightened awk must match the cell layout John actually
 rules for, and the row split changes that layout. Sequencing: rule, apply, then tighten the
 guard and re-run. Recorded here so it is not lost between the two.
+
+---
+
+---
+
+# RULED — the Gate 5 certification session, 2026-08-16 (D-038)
+
+**Gate 5 is MET.** John ruled all seven forks; §2 is rewritten to match. This section records
+what was applied so the packet above is not mistaken for the outcome.
+
+| Fork | Ruling |
+|---|---|
+| Q1 marker | `[§13#N read YYYY-MM-DD]`, access date **2026-08-15** — the date the pages were fetched, not today |
+| Q2 inference | **One column declaration + per-clause marks.** Rejected 11 per-cell suffixes, and rejected narrowing D-008(3) to the capability column |
+| Row 2 | **Split** Privy / Coinbase; `signer` struck from both |
+| Row 3 | Circle's "agent-native execution" marked `(inference)` |
+| Row 5 | Safe **re-cited** (adds §13 #25, #26), reworded "allowance modules" / "recovery modules" — the narrow-to-Guards option rejected on the record |
+| Row 7 | **Re-cited AND marked `(inference)`** (adds §13 #27, #28, read 2026-08-16), under a fallback fixed before the evidence was seen |
+| Row 8 | **Split** Blockaid / Tenderly; "known-threat detection" struck from Tenderly; its category relabelled "Simulation APIs" so the layout stops asserting it |
+
+**Row 7's method is the part worth re-reading.** The first re-cite fetch contradicted itself and
+was reported as a failed lookup rather than turned into a citation. John then authorised ONE
+further verified read **with the fallback declared in advance** — success re-cites, failure or
+ambiguity marks `(inference)`, never strikes. Two independent pages then carried the language in
+body text ("simulation has to interpret intent"; MPC "doesn't secure transaction intent") but not
+the phrase "intent verification" — so Q2's rule applied on its own terms. The two rulings
+intersected; no new option was invented after the result was known.
+
+## What the guard reports now, and what it still cannot do
+
+`check-vendor-honesty.sh` reports **11 of 11 rows cited** and D-008(3) **certified by record**,
+naming D-038. It checks that a NAMED certification exists in §2 and states on every run that it
+did not and cannot check the certification is *right*.
+
+**Two defects in that guard were fixed here, both previously recorded as owed.** The marker was
+counted against `$0` — the whole row — while the message said "appended to the capability cell",
+so a marker in the Consequence column would have counted; it now tests field 4. And its prose
+still read "the cells do not reference them", which stopped being true the moment the table was
+written. Three mutations confirm the tightening: marker moved to the Consequence cell, uncited
+row added, and certification line removed are all caught.
+
+## The certification's expiry, stated rather than assumed
+
+**Any edit to the §2 table makes this certification stale.** The guard prints that where the
+certification prints, because a certification with no expiry is a claim nobody re-examines.
+
+**Owed at v1.1, declined here only to stop Gate 5 blocking Gate S2:** Coinbase was left at two
+documented criteria without the re-cite lookup that rescued Safe, and Tenderly stays cited to a
+marketing page this audit called thin. Both would move accuracy in the direction that does not
+flatter Sentinel. Recorded in `docs/v1-1-register.md` §5.

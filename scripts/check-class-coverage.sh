@@ -123,42 +123,52 @@ const ABOUT = {
 // --- The baseline: classes known not to be exercised, each with a reason -----
 //
 // A RATCHET, not an exemption list. A class here is reported on every run and never counted as
-// covered. `ruling` records who accepted it: a decision id where one exists, or UNRULED where
-// this guard found it and nobody has ruled yet. UNRULED entries are work, not settled state.
+// covered. `ruling` records who accepted it. `status` records WHAT KIND of not-covered it is,
+// and D-039 exists because that distinction was being lost:
+//
+//   DELEGATED — the property is proved somewhere else and the fixture SAYS so via
+//               primaryEnforcement. Not owed anything. This guard cannot see the delegate and
+//               does not credit it; it reports the delegation.
+//   RESERVED  — ratified as undrivable in v1. Not owed a fixture until the reservation lifts.
+//   GAP       — the class claims to be proved HERE and is not, and nothing else covers it.
+//               OWED A FIXTURE. A GAP is work, not settled state.
 const BASELINE = {
   'unexpected-internal-call': {
-    ruling: 'D-025',
+    ruling: 'D-025', status: 'RESERVED',
     why: 'allowedCallGraphHash is RESERVED in v1 and read by nothing, so the class cannot be ' +
          'driven to a positive case. Ratified, and the ablation says so where the table is.',
   },
   'reentrancy-attempt': {
-    ruling: 'A-036',
+    ruling: 'A-036', status: 'DELEGATED',
     why: 'F056 is decided by the exact-target rule; its target has empty bytecode and cannot ' +
          're-enter. Delegated to the vault Foundry suite, which does test reentrancy. ' +
          'Deferred with D-035 because repairing the fixture changes the labelled view.',
   },
   'invalid-or-rotated-signer': {
-    ruling: 'D-010',
+    ruling: 'D-010', status: 'DELEGATED',
     why: 'Receipt authentication belongs to the isolated signer and the evaluator has no code ' +
          'for it, so no corpus fixture can exercise it. F035 is ALLOW with nothing failing. ' +
          'The signer has its own 42 tamper cases and the independent Python verifier.',
   },
   'malicious-retrieved-instructions': {
-    ruling: 'A-028 F-5',
+    ruling: 'A-028 F-5', status: 'DELEGATED',
     why: 'The class subject is containment, measured by the corpus leak guard rather than by a ' +
          'check. The ablation states these verdicts must not be read as detections.',
   },
   'owner-override-and-block-behaviour': {
-    ruling: 'UNRULED',
-    why: 'FOUND BY THIS GUARD. F054/F055 are marked vault-foundry-invariants and fail on code ' +
-         'identity and wrong resource — neither is about the override path. The override path ' +
-         'is genuinely tested in the vault suite; it is not exercised at the corpus layer.',
+    ruling: 'D-039', status: 'DELEGATED',
+    why: 'Found by this guard. F054/F055 fail on code identity and wrong resource, neither ' +
+         'about the override path — but they declare primaryEnforcement vault-foundry-invariants ' +
+         'and the vault suite does test the override path. Ruled an accepted delegation: the ' +
+         'declaration is accurate, the corpus layer is simply not where it is proved.',
   },
   'conflicting-block-state': {
-    ruling: 'UNRULED',
-    why: 'FOUND BY THIS GUARD. F048 fails EVAL_SIMULATION_UNAVAILABLE and ' +
-         'EVAL_TARGET_CODE_IDENTITY and REVIEWs — that is an outage shape, not the ' +
-         'conflicting-state shape D-030 describes as a failed rule that blocks.',
+    ruling: 'D-039', status: 'GAP',
+    why: 'Found by this guard, and RULED A GENUINE UNCOVERED CLASS. F048 declares ' +
+         'primaryEnforcement conformance-engine — it claims to be proved HERE — then fails on ' +
+         'EVAL_SIMULATION_UNAVAILABLE and EVAL_TARGET_CODE_IDENTITY and REVIEWs, which is an ' +
+         'outage shape, not the failed-rule-that-blocks shape D-030 describes. Nothing else ' +
+         'covers it. OWES A FIXTURE at v1.1, riding with the re-label per A-036.',
   },
 };
 
@@ -266,15 +276,22 @@ console.log(`  ok    ${exercised.length} of ${corpusClasses.size} classes exerci
 console.log('');
 console.log('corpus class coverage — CARRIED, never counted as covered');
 for (const [cls, b] of Object.entries(BASELINE)) {
-  const tag = b.ruling === 'UNRULED' ? 'UNRULED  ' : `${b.ruling.padEnd(9)}`;
-  console.log(`  ${tag} ${cls}`);
-  for (const line of b.why.match(/.{1,74}(\s|$)/g) || []) console.log(`            ${line.trim()}`);
+  console.log(`  ${(b.status || 'UNRULED').padEnd(9)} ${cls}   [${b.ruling}]`);
+  for (const line of b.why.match(/.{1,72}(\s|$)/g) || []) console.log(`            ${line.trim()}`);
 }
-const unruled = Object.entries(BASELINE).filter(([, b]) => b.ruling === 'UNRULED').map(([c]) => c);
+const gaps = Object.entries(BASELINE).filter(([, b]) => b.status === 'GAP').map(([c]) => c);
+const unruled = Object.entries(BASELINE).filter(([, b]) => !b.status || b.ruling === 'UNRULED').map(([c]) => c);
+console.log('');
+if (gaps.length) {
+  console.log(`  ${gaps.length} GAP: ${gaps.join(', ')}`);
+  console.log('  A GAP claims to be proved at this layer and is not. It OWES A FIXTURE — carried');
+  console.log('  so the ratchet can arm, not because the class is covered.');
+}
 if (unruled.length) {
-  console.log('');
   console.log(`  ${unruled.length} class(es) are UNRULED — found by this guard and not yet decided by John.`);
-  console.log('  They are carried so the ratchet can arm, NOT because anyone accepted them.');
+}
+if (!gaps.length && !unruled.length) {
+  console.log('  All carried classes are DELEGATED or RESERVED with a ruling. None owes a fixture.');
 }
 
 process.exit(fail);
