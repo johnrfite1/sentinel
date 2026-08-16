@@ -3,32 +3,31 @@
 Rewritten at the end of each working session. **This file, not the conversation, is the
 memory.** If it disagrees with anything an agent remembers, this file wins.
 
-Last updated: **2026-08-15**, at commit `216c570` on branch `step-3/isolated-signer`
-(pushed; the repository is PRIVATE and D-016 still blocks all publication).
+Last updated: **2026-08-15** (evening session), on branch `step-3/isolated-signer`
+(the repository is PRIVATE and D-016 still blocks all publication).
 
 ---
 
 ## 0. If you read nothing else, read this
 
-**Gate S1 is SIGNED — PASS, John, 2026-07-28**, scope bounded by D-018. Gate S2 is NOT signed
-and is signed by John alone, in a facilitated session, never by an agent (D-002).
+**Gate S1 is SIGNED — PASS, John, 2026-07-28**, scope bounded by D-018. **Gate S2 is NOT
+signed**, is signed by John alone in a facilitated session, and never by an agent (D-002).
 
-**Four independent adversarial reviews ran on 2026-08-15 at commit `9059346` and found real
-defects, most of them in work done that same day.** The full record is **A-028** in
-`docs/decisions.md` — read it before building on anything here. Headline: one LIVE code defect
-inside Gate S1's signed scope (since fixed), a test that could not fail, a contaminated
-labelling round, a leakage guard bypassed by any prefixed key with a live leak already through
-it, and several overstated numbers in the ablation report.
+**All six items A-028 left owed are now built.** The §7.5 evidence pack is assembled at
+`docs/gate-s2-evidence.md` and is UNSIGNED. Running the S2 session is the next thing, and it
+is John's.
 
-**All of the above are now remediated except the items listed in §5.** The suite is green and
-the numbers in this file are post-remediation.
-
-**The pattern worth carrying forward, because it recurred four times in one session:** every
-one of those defects was an *honesty* defect — a claim stronger than its evidence — and none
+**Carry this forward, because it was the shape of every defect found in the last two
+sessions:** the defects were *honesty* defects — a claim stronger than its evidence — and none
 was found by the build loop's own checks. Mutation testing missed what line coverage caught;
 line coverage missed what branch coverage would have caught; all three missed what an
 adversarial reviewer caught. **Do not treat a green suite, a clean mutation run, or your own
 re-reading as sufficient before claiming something is done.**
+
+It happened again this session, in a smaller way and worth knowing about: two of the five
+corpus mutations had been silently ERRORING since the guard they mutate was rewritten — a
+mutation that cannot apply measures exactly as much as a test that cannot fail, and nothing
+in the project re-runs the mutation harness after the code it mutates is repaired.
 
 ---
 
@@ -36,12 +35,14 @@ re-reading as sufficient before claiming something is done.**
 
 1. `Sentinel_Protocol_Lab_Proposal_v0_2.md` — the spec. §14.8 and §14.9 supersede conflicting
    prose elsewhere in it. §5.7.1, §5.8 and §5.9 were added 2026-08-15 and are load-bearing.
-2. `docs/decisions.md` — **canonical**. D-001…D-032 ratified; A-001…A-028 agent-flagged.
-   **A-028 is the longest and most important entry in the file.**
-3. `HANDOFF.md` — the build brief: corridor, gates, house rules, verification partition.
-4. `../AGENTS.md` — workspace rules. Binding. Not auto-loaded.
-5. `../vault/Topics/AI-ML/prompting-agents-playbook.md` — the build-loop method.
-6. `verifier/REPORT.md` — the D-010 independent reimplementation report. Still the single most
+2. `docs/decisions.md` — **canonical**. D-001…D-032 ratified; A-001…A-031 agent-flagged.
+   **A-028 is the longest and most important entry**; **A-030 is an OPEN FORK for John.**
+3. `docs/gate-s2-evidence.md` — the §7.5 pack, unsigned. Read §11 ("What is NOT in evidence")
+   and §12 (the questions) before doing anything toward S2.
+4. `HANDOFF.md` — the build brief: corridor, gates, house rules, verification partition.
+5. `../AGENTS.md` — workspace rules. Binding. Not auto-loaded.
+6. `../vault/Topics/AI-ML/prompting-agents-playbook.md` — the build-loop method.
+7. `verifier/REPORT.md` — the D-010 independent reimplementation report. Still the single most
    useful document about where the specification is thin.
 
 ## 2. Authority — the line that matters most
@@ -53,155 +54,137 @@ fork. Routine engineering judgment is yours.
   the session; never answer or pre-fill it.
 - **The five D-008 comprehension questions are held by John and must stay unseen.** Do not ask
   for them, guess them, or write substitutes. The build loop seeing them voids the check.
+  Under D-032 that check is now a PRE-PUBLICATION condition, not an S2 one.
 - D-007…D-011 were ruled by delegation and are revisitable on field evidence. Delegation
   covered design forks only — gate signing is not delegable.
-- **A worked pattern for decision sessions**, used throughout 2026-08-15 and worth repeating:
-  present ONE fork at a time with verified facts, real options, costs, and a recommendation;
-  record the ruling immediately, including the counter-argument and the condition that would
-  reverse it. Twelve decisions (D-020…D-032) were taken this way in one session.
+- **A worked pattern for decision sessions:** present ONE fork at a time with verified facts,
+  real options, costs, and a recommendation; record the ruling immediately, including the
+  counter-argument and the condition that would reverse it.
 
 ## 3. Where the build actually is
 
-**43/43 Foundry + 341/341 TypeScript.** Run `./scripts/test.sh`; use `--gate` for gate evidence
-(20,000 fuzz runs, 262,144 calls per invariant). It prints its own coverage boundary — read all
-of it. That block is ONE statement, not a running log; when a step lands, rewrite the affected
-layer rather than appending.
+**60/60 Foundry + 349/349 TypeScript + 70/70 verifier tests.** Run `./scripts/test.sh`; use
+`--gate` for gate evidence (20,000 fuzz runs, 262,144 calls per invariant). It prints its own
+coverage boundary — read all of it. That block is ONE statement, not a running log; when a
+step lands, rewrite the affected layer rather than appending.
 
-**Five mechanical guards now run in the gate:** secrets (A-007), rename (D-016), labelling-prompt
-freeze (D-011a), published EIP-712 type strings (D-023), and §5.7.1 check coverage (D-031).
+**Six mechanical guards run in the gate:** secrets (A-007), rename (D-016), labelling-prompt
+freeze (D-011a), published EIP-712 type strings (D-023), §5.7.1 check coverage (D-031), and
+**vendor honesty (§7.5 Gate 5, D-008)**. A seventh stage — the Gate 7 canary history — prints
+and deliberately cannot fail the gate.
 
-Done: §9 steps 1–8 and most of 9.
+Done: §9 steps 1–9.
 
 - **Steps 1–6** — typed payloads, vault, isolated signer, decoders, effect pipeline,
-  conformance engine. See the prior entries A-011…A-022.
+  conformance engine. See A-011…A-022.
 - **§9 step 7** — `ts/src/propose/`, the agent-proposal seam. D-019 rules that Sentinel encodes
-  calldata from the agent's typed arguments. `propose.e2e.test.ts` drives both arms of the
-  pinned `claude-haiku-4-5` recording through to the vault.
+  calldata from the agent's typed arguments. The two-arm procedure now lives in
+  `ts/src/spike/arms.ts`, shared by the spike and the canary.
 - **§9 step 8** — `ts/src/corpus/`, 50 fixtures across all 20 §7.1 classes, executed against a
-  real chain with per-fixture snapshot isolation.
+  real chain with per-fixture snapshot isolation. **The `malicious-retrieved-instructions`
+  class is no longer vacuous** (A-028 F-5): both fixtures carry an `agentRationale`, F049's
+  verbatim from the pinned recording, are transcribed through the untrusted proposal seam, and
+  the run fails if any phrase of the narrative reaches a bound field, a check, a reason code,
+  or the evidence bundle.
 - **Independent labelling** — **labellers E and F are the labels of record.** Round 1 (A/B)
-  scored a spec since amended; round 2 (C/D) was **discarded as contaminated** (A-028 F-1). All
-  four earlier files are retained as audit trail. E and F carry provenance attestations.
+  scored a spec since amended; round 2 (C/D) was **discarded as contaminated** (A-028 F-1).
+  **Labeller G (2026-08-15) is a two-fixture re-check**, not a round: it re-labelled F049 and
+  F050 after the view gained the rationale field, agreed with E and F on both, and — unprompted
+  — produced the finding recorded as A-030.
 - **§7.2 baseline + §7.3 ablation** — `ts/src/ablation/`, report at `docs/ablation-report.md`.
-  Post-remediation: **false allows 38 / 17 / 1**; detection contribution — baseline alone 9,
-  effect extraction adds 20, mandate conformance adds **17**; exact match 12 / 32 / 49 of 50;
-  inter-labeller disagreement 0.0% on a freshly drawn sample.
+  **False allows 38 / 17 / 1**; detection contribution — baseline alone 9, effect extraction
+  adds 20, mandate conformance adds **17**; exact match 12 / 32 / 49 of 50; inter-labeller
+  disagreement 0.0% on a freshly drawn sample. **These numbers did not move this session** —
+  the corpus was re-run twice and the only diffs were chain timestamps and latency.
 - **D-010 verifier** — `verifier/`, Python, zero third-party dependencies, built by an agent
-  that never read `ts/`. 5/5 samples verify, all tamper modes rejected, 70 tests. It now checks
-  `reasonCodesHash` and the §5.5 override, and it **retired its own chain-binding concern on
-  evidence** after constructing the cross-deployment case.
+  that never read `ts/`. **6/6 samples verify, 42/42 applicable tamper cases behave as
+  specified, 70/70 of its own tests pass.** The sixth sample is `edge-single-reason-code`
+  (A-027): nothing had pinned the single-element case of `reasonCodesHash`.
+- **Gate 7's live canary** — `npm --prefix ts run canary`. First live run 2026-08-15:
+  `claude-haiku-4-5`, INJECTION LANDED, **agrees with the pinned recording**. History at
+  `fixtures/injection/canary-history.jsonl`; `./scripts/test.sh` prints it every run.
 
-## 4. Decisions taken 2026-08-15 (D-019…D-032)
+## 4. Decisions and findings
 
-Read them in `docs/decisions.md`; this is an index, not a substitute.
+D-019…D-032 were ratified 2026-08-15 (see the index in `decisions.md`; D-032 split §7.5's
+gates). Added since:
 
 | | Subject |
 |---|---|
-| D-019 | Sentinel encodes calldata from the agent's typed args; §4.2 Case 2 amended |
-| D-020 | Mandate purpose fields compare for EQUALITY, not as ceilings |
-| D-021 | A reverting simulation is a FAILED RULE and blocks |
-| D-022 | `reasonCodesHash` defined in §5.4; verifier extended to check it |
-| D-023 | EIP-712 type strings published in §5.8 and guarded; override sample added |
-| D-024 | Verdict/FailureMode/Operation enums documented in §5.9, with the inversion warned |
-| D-025 | `allowedCallGraphHash` is RESERVED in v1 and not consulted |
-| D-026 | The EXECUTABILITY class added; §3.3(7)'s remedy clause narrowed |
-| D-027 | §5.7's code-hash line aligned with D-015 (evidence check, not failed rule) |
-| D-028 | Undecodable calldata is an evidence gap; the asymmetry named not removed |
-| D-029 | A failed rule takes precedence over an unresolved check |
-| D-030 | "Conflicting state" is a failed rule — **with John's caveat recorded** |
-| D-031 | §5.7.1 documents all 41 checks; `check-eval-codes.sh` guards coverage |
-| D-032 | §7.5 split: six gates are S2 conditions, Gate 8 is PRE-PUBLICATION |
-
-**A-023…A-028** are the agent-flagged findings from the same day, including the D-019 revisit
-measurement, the corpus construction findings, and the four-review record.
+| A-029 | The labeller views are not byte-reproducible — chain time flows into entitlement expiry |
+| A-030 | **OPEN FORK for John** — the specification has become a contamination channel for labellers, and the frozen prompt no longer matches it |
+| A-031 | The five owed items are built; three agent-made design calls recorded, one flagged reversible |
 
 ## 5. What to do next, in order
 
-1. **The vacuous `malicious-retrieved-instructions` class (A-028 F-5).** `FixtureSpec` has no
-   field for an agent rationale, so F049 and F050 are byte-identical to F009 and F012 apart
-   from mandate identity — the adversarial text reaches the labeller and never reaches the
-   pipeline. Currently DISCLOSED in the ablation report but not fixed. Fixing it means adding
-   a rationale field to the fixture format and carrying it into the run. **Note this changes
-   the labeller view's declared shape**, so `ALLOWED_VIEW_KEYS` in `ts/src/corpus/leakage.ts`
-   must be updated deliberately — that guard exists precisely to make the change conscious.
-2. **The Solidity mutation gap.** `scripts/mutate.sh` is TypeScript-only, and A-028's F2, F5
-   and F6 all live in that gap — §3.3(9)'s "nonce consumed before the external call" is
-   verified by nothing, the vault's `allowedSelector` backstop and `WrongVault` check are
-   uncovered, and `executeWithOverride` is absent from the invariant campaign's handler set.
-   **A ready-made regression test for the ordering property is already written and verified**
-   at `docs/review-2026-08-15/artifacts/OrderingProbe.t.sol` — it passes on HEAD and fails
-   under the S7 mutation. It sits outside `contracts/test/` deliberately so Foundry does not
-   compile it; moving it in is the remediation decision.
-3. **Gate 5's missing vendor-honesty check (D-032 keeps this an S2 condition).** D-008 says the
-   empty-column condition "is mechanically checkable" and no check exists. Write
-   `scripts/check-vendor-honesty.sh` and wire it into the gate beside the others. Also owed: an
-   audit of §2's capability table against D-008's conditions — every cell documentation-only,
-   dated, linked to its source, inference marked as inference.
-4. **Gate 7's live canary.** D-007 requires one live run alongside the pinned transcripts,
-   never failing CI, with its run history in the S2 evidence bundle — "an unobserved canary is
-   not evidence." Not built. Nothing in the suite calls a model.
-5. **A single-reason-code sample fixture (A-027).** No sample has exactly one reason code, so
-   nothing pins the no-trailing-delimiter edge in `reasonCodesHash`; a producer emitting
-   `code + "\n"` for a single-element set would pass every shipped fixture.
-6. **Assemble the §7.5 pack and run Gate S2 as a facilitated session.** A draft of the pack
-   exists at `docs/review-2026-08-15/gate-s2-hard-gates-draft.md` — **it predates D-032 and
-   still treats Gate 8 as an S2 condition, so it needs updating before use.**
+1. **Run Gate S2 as a facilitated session.** The pack is `docs/gate-s2-evidence.md`; its §12
+   lists five questions, none of them an agent's call. Gate 5 is PART MET by construction —
+   its two certification conditions are John's and no agent may clear them.
+2. **Put A-030 to John before the next labelling round.** Every available response changes a
+   ratified protocol, so it cannot be resolved in the build loop. Nothing is blocked on it
+   today: the labels of record stand and G agreed with them.
+3. **§9 steps 7–8 have never had an independent review.** Steps 4–6 had a full adversarial pass
+   (A-022); steps 1–3's earlier review (A-016) had most of its verifications cut short by a
+   spend limit, and that limit is NOT retired by the later review. This is the largest
+   remaining hole in the evidence, and this session's own work is inside it.
+4. **A-029, if John wants it fixed before S2.** Diagnosis and the reason it was not fixed under
+   time pressure are in the entry.
+5. **Gate 8 and the rename gate** are PRE-PUBLICATION (D-032, D-016), and Gate 8 additionally
+   needs the dashboard D-009 holds outside S2.
 
-**Carried and still true:** three separate times before this session, and four times during it,
-code shipped whose tests could not fail. Run `./scripts/mutate.sh` after any substantive change,
-check *branch* coverage not just line coverage, and prefer an independent reviewer over your own
-re-reading for anything you are about to call done.
+**Carried and still true:** three separate times before 2026-08-15, and four times during it,
+code shipped whose tests could not fail. Run `./scripts/mutate.sh` after any substantive
+change, check *branch* coverage not just line coverage, and prefer an independent reviewer over
+your own re-reading for anything you are about to call done.
 
 ## 6. Traces — what worked, and what was a dead end
 
-The pre-2026-08-15 entries below the line still hold. Added this session:
+The pre-2026-08-15 entries below the line still hold. Added since:
 
 **Dead ends and traps — do not repeat:**
 
-- **A denylist matched by substring only catches the spellings it declares.** The leakage guard
-  was fixed twice and was wrong both times: first it lowercased the haystack but not the needle
-  (so `reasonCodes` never fired), then it matched `"key"` with both quotes (so `engineVerdict`
-  and every other prefixed name passed). Testing it with the exact names it declares can only
-  ever confirm those names. The working shape is a **recursive key walk using `contains`, plus
-  a declared allowlist** — and where the two conflict, the allowlist wins, because a decision
-  must overrule a heuristic.
-- **A name-based guard cannot catch a semantic leak.** `calldataDecodedByASupportedSchema`
-  carried the evaluator's decoder output under a name containing no forbidden word. Only the
-  shape allowlist catches that class.
-- **A `for` loop whose body `continue`s on every element is a test that cannot fail.** Measured:
-  0 of 7. It read as a limit assertion and asserted nothing.
-- **Do not summarise ratified decisions for an independent labeller.** The C/D round was
-  contaminated because the brief quoted D-025, which was derived by reading the evaluator.
-  Give labellers the specification and deny `docs/` — including `decisions.md`.
-- **Do not reuse a sample across labelling rounds.** Round 2 reused round 1's ten fixture ids,
-  so its disagreement rate re-measured a question already settled between the rounds. Draw a
-  fresh sample with a salted hash.
-- **A mutation named for a hole is not a mutation that tests it.** `V2` was named "treat
-  decoded:false as a blanket escape hatch" and mutated a different branch, reporting caught
-  while the hatch sat open. Check that a mutation actually reaches the code it names.
-- **The corpus runner picks a random port and occasionally collides.** A failed run is usually
-  transient; re-run before diagnosing.
+- **A mutation harness rots silently when the code it mutates is repaired.** Two of the five
+  corpus mutations had anchors from a guard that was rewritten one commit earlier, and had been
+  reporting "anchor not unique" ever since. The counter distinguishes errors from catches, so
+  nothing false was published — but nobody looked. **Re-run the affected batch as part of any
+  fix to the code it targets.**
+- **A `forge test` exit code does not distinguish "the suite caught it" from "it did not
+  compile".** With `deny = "warnings"`, deleting a check that leaves an unused variable breaks
+  the build, and a naive harness scores that as caught — the instrument reading as maximally
+  effective at the moment it is broken. Build first, report a non-compiling mutant as an error.
+- **Two mutation batches must not share a letter.** `mutate.sh S` now matches both the simulate
+  batch and the vault batch. Harmless but confusing; the vault batch kept `S1…S20` deliberately
+  so its ids match `docs/review-2026-08-15/artifacts/sol_mutants.json`.
+- **A denylist matched by substring only catches the spellings it declares.** (Carried from the
+  earlier session; the leakage guard was wrong twice for this reason.) The working shape is a
+  **recursive key walk using `contains`, plus a declared allowlist** — and where the two
+  conflict, the allowlist wins, because a decision must overrule a heuristic.
+- **A name-based guard cannot catch a semantic leak.** Only the shape allowlist catches a field
+  that carries evaluator output under an innocuous name.
+- **A `for` loop whose body `continue`s on every element is a test that cannot fail.**
+- **Do not summarise ratified decisions for an independent labeller**, and **do not reuse a
+  sample across labelling rounds**.
+- **A mutation named for a hole is not a mutation that tests it.** Check that it reaches the
+  code it names.
+- **The corpus runner picks a random port and occasionally collides.** Re-run before diagnosing.
 
 **What worked:**
 
 - **Adversarial review with a fixed commit, told to prove the work fails.** Four lenses found
   eight material defects in one pass, including one live security defect the entire test suite,
-  mutation harness, and two prior reviews had missed. Every one of the four also reported what
-  it attacked and could NOT break, which is what makes the positive findings trustworthy.
-- **Asking a reviewer to settle its own concern with evidence rather than argument.** The D-010
-  verifier raised the §5.5 chain-binding worry, then constructed the cross-deployment case and
-  **retired its own concern**, showing the two binding mechanisms are independent rather than
-  redundant. A retired concern is as valuable as a confirmed one.
-- **Requiring provenance attestation from labellers.** Labeller E disclosed, unprompted, that
-  it had seen two filenames in `labels/` and that the harness injects a workspace memory file —
-  neither of which it had to volunteer, and the second of which nobody had considered.
+  mutation harness, and two prior reviews had missed.
+- **Asking an independent agent for a provenance attestation.** It has now produced a
+  first-order finding twice, from two different labellers, both unprompted: the harness-injected
+  memory file (E), and the specification-as-contamination-channel finding (G, A-030). **Ask for
+  it every time.**
+- **Deriving a guard's probes from the data it guards.** `rationale.ts` builds its probe set
+  from the fixture's own rationale as word bigrams, so adding a fixture extends the guard and
+  editing one re-aims it. A hand-written phrase list can only ever confirm the phrases it lists.
+- **Making a guard state what it cannot check.** `check-vendor-honesty.sh` fails on the
+  mechanical conditions and prints the other two as UNCERTIFIED, never as a pass. A gate that
+  reports a pass for a condition no machine evaluated is worse than no gate.
 - **Implementing a spec amendment from the amended text, via the party that found the gap.**
-  The verifier built `reasonCodesHash` from the new §5.4 and immediately found three defects in
-  the wording — including a published regex that admits a hash collision in Python and Ruby.
-  **Documentation written to close a finding is itself unreviewed work.**
-- **Measuring a rejected option instead of arguing about it.** D-019's rejected branch was
-  re-tested on John's direction (A-023); 4 of 4 proposals across two models produced undecodable
-  calldata, settling it more firmly than the original reasoning had.
+- **Measuring a rejected option instead of arguing about it.**
 
 ---
 
@@ -223,7 +206,8 @@ The pre-2026-08-15 entries below the line still hold. Added this session:
   observable only in-process with a deliberately slow signer.
 - **Do not measure mutation results by parsing the `node:test` reporter.** Use exit status, and
   assert the mutation actually applied.
-- **`scripts/check-secrets.sh` scans TRACKED files.** Use `--staged` after `git add`.
+- **`scripts/check-secrets.sh` scans TRACKED files.** Use `--staged` after `git add`. The same
+  is true of `check-vendor-honesty.sh`: an uncommitted artifact is not scanned.
 - **Do not run an adversarial review while still editing the tree.** Freeze, then review.
 - **A mutation set written by the implementer probes only the checks the implementer already
   thought about.** Enumerate the code's own declared surface and assert exhaustiveness
@@ -232,25 +216,25 @@ The pre-2026-08-15 entries below the line still hold. Added this session:
 **Environment facts:**
 
 - Foundry v1.7.1 at `$HOME/.foundry/bin` — **not on the agent's non-interactive PATH**; export
-  it explicitly.
+  it explicitly. `scripts/mutate.sh` now does this itself.
 - Node v26.3.0, npm 11.16.0, viem 2.55.10. The signer runs under Node's native type stripping,
   which requires erasable syntax only: no enums, no namespaces, no constructor parameter
   properties, and relative imports must carry the `.ts` extension.
 - `.env` exists, is gitignored, holds `ANTHROPIC_API_KEY`. The pre-commit hook blocks it.
 - **Claude Opus 5 rejects `temperature`/`top_p`/`top_k` (400)** and has thinking on by default.
+- **A full `contracts` rebuild is `forge build --force`.** After a Solidity mutation sweep,
+  `contracts/out` holds the LAST mutant's bytecode — rebuild before emitting samples, or the
+  artifacts are signed against a deliberately broken vault.
 
 ## 8. Verification tooling
 
 `scripts/mutate.sh` — deliberate defects across signer, decoders, pipeline, evaluator, the
 D-012/D-014 rulings, the D-017 corrections, the step-7 transcriber (batch `P`), the ablation
-layers (batch `B`), and the corpus guards (batch `C`). Run `./scripts/mutate.sh` for all or
-`./scripts/mutate.sh E` for one batch. **Get the count by running it, not by grepping.** A full
-sweep takes ~30 minutes and is not wired into `test.sh`.
+layers (batch `B`), the corpus guards (batch `C`), and **the vault (batch `S`, Solidity)**. Run
+`./scripts/mutate.sh` for all or `./scripts/mutate.sh C` for one batch. **Get the count by
+running it, not by grepping.** A full sweep now takes well over an hour and is not wired into
+`test.sh`.
 
-**It is TypeScript-only.** There is no Solidity mutation harness, and A-028 measured 20 of its
-own Solidity mutations surviving a green suite. That is item 2 in §5.
-
-**Standing warning:** the harness once left `ts/src` empty by restoring with
-`rm -rf src; cp -R backup src` and being killed mid-restore. It now touches one file at a time
-and traps TERM. **A repair tool must never have a window in which the thing it repairs does not
-exist**, and uncommitted work is the only work that cannot be recovered — commit first.
+Latest measured results: **batch C 11/11 caught**, **batch S 26/26 caught** (20 vault + 6
+simulate), 0 survived, 0 failed to apply. The vault batch's numbers are **not** comparable to
+A-028's "29 of 45 survived" — the tests that kill these mutants were written for them.

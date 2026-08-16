@@ -6,23 +6,25 @@
     "chainId": "31337",
     "vault": "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512",
     "actionNonce": "0",
-    "target": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0",
-    "valueWei": "0",
-    "dataHash": "0x94acadc14a4a976198f95cf50e4777b91f7a5f149bc1c99898189e6df9c72ef1",
+    "target": "0x5fbdb2315678afecb367f032d93f642f64180aa3",
+    "valueWei": "1000000000000000",
+    "dataHash": "0xcae1b6e927242739f50475c4c5305ac2c18952d8847ee2554fbb5f28b057bc68",
     "operation": "0",
-    "mandateHash": "0x6a5147a3add511ac685f08b7cfe41d30e7f2bd02caa4a6d8acb1e116067d580a",
+    "mandateHash": "0xcc561ecfbf0a0ea80ec9adb0f2e31dbc845f2a1eb640afd2948eb3a1396d9a56",
     "policyHash": "0x8abd037dc7df8d7fa4dce928139c9c1306555aa6853d82b58daa8891a13b0bff",
     "deadline": "4000000000",
-    "callData": "0x095ea7b300000000000000000000000000000000000000000000000000000000deadbeefffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+    "callData": "0xc188528bfa61acd212c1c7e98d52043ae4ebe291c2755a407594f27e75b84f8394d309ed000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb9226600000000000000000000000000000000000000000000000000000000000151800000000000000000000000000000000000000000000000000000000000000000"
   },
   "decodedSelectorAndParameters": {
     "decoded": "true",
-    "selector": "0x095ea7b3",
-    "schema": "DemoERC20.approve",
-    "description": "DemoERC20.approve(spender=0x00000000000000000000000000000000deadbeef, amount=115792089237316195423570985008687907853269984665640564039457584007913129639935)",
+    "selector": "0xc188528b",
+    "schema": "DemoPay.purchase",
+    "description": "DemoPay.purchase(resource=0xfa61acd212c1c7e98d52043ae4ebe291c2755a407594f27e75b84f8394d309ed, beneficiary=0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266, duration=86400s, recurring=false)",
     "parameters": {
-      "spender": "0x00000000000000000000000000000000deadbeef",
-      "amount": "115792089237316195423570985008687907853269984665640564039457584007913129639935"
+      "resourceId": "0xfa61acd212c1c7e98d52043ae4ebe291c2755a407594f27e75b84f8394d309ed",
+      "beneficiary": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+      "durationSeconds": "86400",
+      "recurring": false
     }
   },
   "policyChecks": [
@@ -63,8 +65,8 @@
     },
     {
       "code": "EVAL_TARGET_BOUND",
-      "outcome": "VIOLATION",
-      "detail": "action target 0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0 is not the mandate's 0x5fbdb2315678afecb367f032d93f642f64180aa3"
+      "outcome": "PASS",
+      "detail": ""
     },
     {
       "code": "EVAL_OPERATION_SUPPORTED",
@@ -88,8 +90,8 @@
     },
     {
       "code": "EVAL_TARGET_CODE_IDENTITY",
-      "outcome": "UNRESOLVED",
-      "detail": "target code hash 0x3715c0836193ddf75afe858ba6d9ea4744ea3f450c56bab3ddbf41e577c9b0cd is not the pinned 0x28b986ea45370917941b4baa7c9f4c3131216a87d1543071acdc841c39b5b726; the target's behaviour is no longer established"
+      "outcome": "PASS",
+      "detail": ""
     },
     {
       "code": "EVAL_MANDATE_WINDOW",
@@ -128,18 +130,28 @@
     },
     {
       "code": "EVAL_SELECTOR_BOUND",
-      "outcome": "VIOLATION",
-      "detail": "selector 0x095ea7b3 is not the mandate's 0xc188528b"
+      "outcome": "PASS",
+      "detail": ""
     },
     {
-      "code": "EVAL_APPROVAL_CEILING",
+      "code": "EVAL_PURCHASE_RESOURCE",
       "outcome": "VIOLATION",
-      "detail": "approves 115792089237316195423570985008687907853269984665640564039457584007913129639935, policy ceiling is 0"
+      "detail": "purchases 0xfa61acd212c1c7e98d52043ae4ebe291c2755a407594f27e75b84f8394d309ed, mandate authorises 0x1878e089565039fe0f4ac9769a9fb8f9b28aa23ed7c9e9f9dfa9b926988a5264"
     },
     {
-      "code": "EVAL_APPROVAL_SPENDER",
-      "outcome": "VIOLATION",
-      "detail": "spender 0x00000000000000000000000000000000deadbeef is not the mandate's beneficiary"
+      "code": "EVAL_PURCHASE_BENEFICIARY",
+      "outcome": "PASS",
+      "detail": ""
+    },
+    {
+      "code": "EVAL_PURCHASE_DURATION",
+      "outcome": "PASS",
+      "detail": ""
+    },
+    {
+      "code": "EVAL_PURCHASE_RECURRENCE",
+      "outcome": "PASS",
+      "detail": ""
     },
     {
       "code": "EVAL_SIMULATION_SUCCEEDS",
@@ -157,9 +169,14 @@
       "detail": ""
     },
     {
-      "code": "EVAL_ALLOWANCE_EFFECT_WITHIN_CEILING",
-      "outcome": "VIOLATION",
-      "detail": "resulting allowance 115792089237316195423570985008687907853269984665640564039457584007913129639935 exceeds ceiling 0"
+      "code": "EVAL_ENTITLEMENT_ADVANCED",
+      "outcome": "PASS",
+      "detail": ""
+    },
+    {
+      "code": "EVAL_ENTITLEMENT_RECURRENCE",
+      "outcome": "PASS",
+      "detail": ""
     }
   ],
   "expectedEffects": {
@@ -179,60 +196,63 @@
         "wei": "1000000000000000000"
       },
       {
-        "address": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0",
+        "address": "0x5fbdb2315678afecb367f032d93f642f64180aa3",
         "wei": "0"
       },
       {
-        "address": "0x00000000000000000000000000000000deadbeef",
-        "wei": "0"
+        "address": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+        "wei": "9998995386760718501662"
       }
     ],
-    "allowances": [
+    "allowances": [],
+    "entitlements": [
       {
-        "token": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0",
-        "owner": "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512",
-        "spender": "0x00000000000000000000000000000000deadbeef",
-        "amount": "0"
+        "contract": "0x5fbdb2315678afecb367f032d93f642f64180aa3",
+        "beneficiary": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+        "resourceId": "0xfa61acd212c1c7e98d52043ae4ebe291c2755a407594f27e75b84f8394d309ed",
+        "expiry": "0",
+        "recurring": false
       }
-    ],
-    "entitlements": []
+    ]
   },
   "observedPostState": {
     "outcome": "success",
     "revertReason": null,
-    "gasUsed": "46077",
+    "gasUsed": "50468",
     "nativeBalances": [
       {
         "address": "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512",
-        "wei": "1000000000000000000"
+        "wei": "999000000000000000"
       },
       {
-        "address": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0",
-        "wei": "0"
+        "address": "0x5fbdb2315678afecb367f032d93f642f64180aa3",
+        "wei": "1000000000000000"
       },
       {
-        "address": "0x00000000000000000000000000000000deadbeef",
-        "wei": "0"
+        "address": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+        "wei": "9998995386760718501662"
       }
     ],
-    "allowances": [
+    "allowances": [],
+    "entitlements": [
       {
-        "token": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0",
-        "owner": "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512",
-        "spender": "0x00000000000000000000000000000000deadbeef",
-        "amount": "115792089237316195423570985008687907853269984665640564039457584007913129639935"
+        "contract": "0x5fbdb2315678afecb367f032d93f642f64180aa3",
+        "beneficiary": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+        "resourceId": "0xfa61acd212c1c7e98d52043ae4ebe291c2755a407594f27e75b84f8394d309ed",
+        "expiry": "1786931184",
+        "recurring": false
       }
     ],
-    "entitlements": [],
     "events": [
       {
-        "address": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0",
+        "address": "0x5fbdb2315678afecb367f032d93f642f64180aa3",
         "topics": [
-          "0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925",
+          "0x6343d044b1bc2c4e11375166e8a5c0b23929ee543cd6407692a257eec1dbeac6",
           "0x000000000000000000000000e7f1725e7734ce288f8367e1bb143e90bb3f0512",
-          "0x00000000000000000000000000000000000000000000000000000000deadbeef"
+          "0x000000000000000000000000f39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+          "0xfa61acd212c1c7e98d52043ae4ebe291c2755a407594f27e75b84f8394d309ed"
         ],
-        "data": "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+        "data": "0x0000000000000000000000000000000000000000000000000000000000015180000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000038d7ea4c68000000000000000000000000000000000000000000000000000000000006a8267f0"
       }
     ]
   },
@@ -240,46 +260,35 @@
     {
       "address": "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512",
       "before": "1000000000000000000",
-      "after": "1000000000000000000",
-      "delta": "0"
+      "after": "999000000000000000",
+      "delta": "-1000000000000000"
     },
     {
-      "address": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0",
+      "address": "0x5fbdb2315678afecb367f032d93f642f64180aa3",
       "before": "0",
-      "after": "0",
-      "delta": "0"
+      "after": "1000000000000000",
+      "delta": "1000000000000000"
     },
     {
-      "address": "0x00000000000000000000000000000000deadbeef",
-      "before": "0",
-      "after": "0",
+      "address": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+      "before": "9998995386760718501662",
+      "after": "9998995386760718501662",
       "delta": "0"
     }
   ],
-  "allowanceDeltas": [
-    {
-      "token": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0",
-      "owner": "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512",
-      "spender": "0x00000000000000000000000000000000deadbeef",
-      "before": "0",
-      "after": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
-      "delta": "115792089237316195423570985008687907853269984665640564039457584007913129639935"
-    }
-  ],
+  "allowanceDeltas": [],
   "internalCallTrace": [],
   "targetCodeIdentity": {
-    "target": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0",
+    "target": "0x5fbdb2315678afecb367f032d93f642f64180aa3",
     "pinnedByMandate": "0x28b986ea45370917941b4baa7c9f4c3131216a87d1543071acdc841c39b5b726",
-    "observedOnChain": "0x3715c0836193ddf75afe858ba6d9ea4744ea3f450c56bab3ddbf41e577c9b0cd",
-    "matches": false
+    "observedOnChain": "0x28b986ea45370917941b4baa7c9f4c3131216a87d1543071acdc841c39b5b726",
+    "matches": true
   },
   "citedContextReferences": [],
-  "unresolvedChecks": [
-    "EVAL_TARGET_CODE_IDENTITY"
-  ],
+  "unresolvedChecks": [],
   "aiExplanation": null,
   "anchor": {
-    "blockNumber": "7",
-    "blockHash": "0x87aafe0714956798cb296dcd34a7af8c2fff9c980e79356730f2af15a162c0c9"
+    "blockNumber": "15",
+    "blockHash": "0x4ecc13a7217509270ff7860090852498696222585f4bbf5d6a7a4933636dd521"
   }
 }

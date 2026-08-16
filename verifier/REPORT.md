@@ -612,3 +612,14 @@ that must *still verify* rather than be rejected.
 **Results after D-023 (2026-08-15):** 5/5 samples PASS · 36/36 applicable tamper cases behave
 as specified · 70/70 tests OK. The override sample runs 11 additional checks. All six §5.8
 type strings are exercised; none of the six hash computations is unverifiable.
+
+**Results after A-027's owed fixture (2026-08-15, appended by the build loop — not by this
+report's author):** **6/6 samples PASS · 42/42 applicable tamper cases behave as specified ·
+70/70 tests OK.** The sixth sample is `edge-single-reason-code`, added because F-x of this
+report's own finding list left one thing unpinned: **no sample committed to exactly ONE reason
+code**, so §5.4's no-trailing-delimiter rule was untested by every artifact a third party could
+obtain, and a producer emitting `code + delimiter` for a one-element set would have verified
+here. It now runs the reason-code tamper modes against a set of size one — the size the
+construction is most easily got wrong at — and `reasons-reorder` correctly reports N/A on it.
+The two count assertions in `test_verifier.py` were RAISED rather than removed; they are what
+would notice the sample set silently shrinking.

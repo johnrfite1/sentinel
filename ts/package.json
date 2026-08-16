@@ -10,7 +10,8 @@
     "sample-check": "node src/tools/sample-check.ts",
     "emit-samples": "node src/tools/emit-samples.ts",
     "corpus": "node src/corpus/run.ts",
-    "ablation": "node src/ablation/report.ts"
+    "ablation": "node src/ablation/report.ts",
+    "canary": "node src/spike/canary.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.70.0",

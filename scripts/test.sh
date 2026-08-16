@@ -35,6 +35,12 @@ step "published EIP-712 type strings (D-023)"
 step "§5.7.1 check coverage (D-031)"
 ./scripts/check-eval-codes.sh || fail=1
 
+# Reads its own output, not just its exit status: this one passes on the mechanical half
+# while printing two conditions only John can clear. A green gate here does NOT mean Gate 5
+# is satisfied.
+step "vendor honesty (§7.5 Gate 5, D-008)"
+./scripts/check-vendor-honesty.sh || fail=1
+
 step "solidity build + tests (profile: $PROFILE)"
 if command -v forge >/dev/null 2>&1; then
     (cd contracts && FOUNDRY_PROFILE="$PROFILE" forge test -vv) || fail=1
@@ -56,6 +62,14 @@ elif ! command -v anvil >/dev/null 2>&1; then
 else
     npm --prefix ts run typecheck || fail=1
     npm --prefix ts test || fail=1
+
+    # OBSERVATION, NOT A STAGE. D-007's canary "never fails CI", so this prints its recorded
+    # history and cannot set `fail`. It is here because the other half of that ruling —
+    # "an unobserved canary is not evidence" — is only satisfied if the history is put in
+    # front of somebody on every gate run. NEVER RUN is a legitimate thing for it to print,
+    # and it is louder here than in a file nobody opens.
+    step "Gate 7 canary observation (D-007; never fails the gate)"
+    npm --prefix ts run --silent canary -- --report || true
 fi
 
 printf '\n'
@@ -83,10 +97,18 @@ WHAT IS COVERED, by layer, each with the limit that layer cannot exceed:
 
   §9 s1-2  Vault + typed payloads. Exact-action binding, nonce single-use, verdict
            gating, override binding, pause, owner-only controls, signer rotation,
-           reentrancy, and stateful invariants over all of it.
+           reentrancy, and stateful invariants over all of it. The override path is IN
+           the stateful campaign as of 2026-08-15 — before that the entire second
+           execution path, the one that moves funds on a REVIEW verdict, appeared only
+           in deterministic tests. `SentinelVault.backstops.t.sol` adds thirteen tests
+           each named for a deliberate defect that SURVIVED a green 43-test run, among
+           them §3.3(9)'s "nonce consumed before the external call", which the
+           reentrancy guard masks and which nothing had ever verified.
            LIMIT: proves the vault ENFORCES a receipt, never that the receipt carried a
            CORRECT verdict. A vault that faithfully executes a wrong decision passes
-           every one of these tests.
+           every one of these tests. The invariant handler's action set also defines
+           what "cannot bypass" was tested against: a path it never generates was not
+           tested.
 
   §9 s3    Isolated signer, as a separate OS process behind a two-method 0600 socket.
            All 33 declared checks triggered individually; every severity tier asserted
@@ -138,7 +160,9 @@ WHAT IS COVERED, by layer, each with the limit that layer cannot exceed:
            The malformed classes are still authored as raw calldata in the corpus. And the
            proposals are PINNED transcripts, which fix the agent's output and therefore say
            nothing about whether the injection still reproduces against a live model. That
-           is the D-007 canary, and it is S2.
+           gap is now covered OUTSIDE this suite by the D-007 canary (`npm --prefix ts run
+           canary`), whose history this script prints; nothing in the suite itself calls a
+           model, and the canary is deliberately not a stage here.
 
   §9 s8    The §7.1 corpus and the §7.3 ablation. 50 fixtures across all 20 declared
            classes, executed against a real chain with per-fixture snapshot isolation, and
@@ -152,6 +176,10 @@ WHAT IS COVERED, by layer, each with the limit that layer cannot exceed:
            verdicts are RIGHT rather than merely produced, and it is bounded by the corpus.
            50 fixtures over two demo contracts and two call schemas is not an accuracy claim
            about EVM transactions (§7.3: "do not claim general transaction-safety accuracy").
+           The `malicious-retrieved-instructions` class carries a real rationale as of
+           2026-08-15 and the run measures that none of it reaches a check, a reason code,
+           or the evidence bundle — but NO LAYER DETECTS AN INJECTION and none should:
+           nothing reads the narrative, so a layer that appeared to would be a defect.
            The single full-configuration false allow is F035, whose enforcement is the
            isolated signer rather than the engine. The labels of record are the THIRD round
            (E/F): round 1 scored a spec since amended, and round 2 was discarded as
@@ -161,8 +189,11 @@ WHAT IS COVERED, by layer, each with the limit that layer cannot exceed:
 
   D-010    The independent Python receipt verifier, in `verifier/`. Zero third-party
            dependencies; its own RFC 8785, Keccak-f[1600] and secp256k1 recovery, built by
-           an agent that never read this repository's TypeScript. 5/5 samples verify, all
-           tamper modes rejected, 39/39 of its own tests pass. Its keccak is pinned to
+           an agent that never read this repository's TypeScript. 6/6 samples verify, 42/42
+           applicable tamper cases behave as specified, 70/70 of its own tests pass. The
+           sixth sample commits to exactly ONE reason code — until 2026-08-15 nothing
+           pinned that edge, and a producer appending the delimiter after a one-element
+           set would have verified here (A-027). Its keccak is pinned to
            published vectors and its JCS to RFC 8785's appendix-B vectors, so green means
            agreement with the STANDARD, not with itself.
            LIMIT: it verifies that a bundle is the one a receipt commits to and that the
@@ -177,11 +208,13 @@ WHAT IS NOT COVERED:
   - A LIVE agent. §9 step 7 connected the proposal to the pipeline, so the D-018 gap is
     closed for the recorded case, but every agent proposal exercised here comes from a
     pinned D-007 transcript. Nothing in this suite calls a model.
-  - The §7.5 evidence pack. Per D-032 six of the eight gates are S2 pass conditions,
-    Gate 5 (vendor honesty) remains one and still needs its mechanical check, and Gate 8
-    (five-minute comprehension) is now a PRE-PUBLICATION condition, not an S2 one.
-  - Gate 7's live D-007 canary. Nothing in this suite calls a model.
+  - Gate 5's CERTIFICATION half. The mechanical conditions run above and pass; D-008(1)
+    and (3) — every capability cell dated and linked, inference marked — are John's, are
+    reported UNCERTIFIED on every run, and no agent may clear them.
   - The evidence dashboard (outside S2 unless John adds it at the gate, D-009).
+  - Gate 8 (five-minute comprehension), which D-032 makes PRE-PUBLICATION rather than S2.
+  - Reproducible labelling views: re-running the corpus rewrites 33 of 50 view files,
+    because entitlement expiry follows chain time (A-029).
   - An independent review of steps 7-8, which have had NONE, and of steps 1-3 that
     completed. Steps 4-6 HAVE now had a full
     independent adversarial pass under D-017 (see A-022): fixed commit, 12 findings, all 12

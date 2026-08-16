@@ -1,0 +1,11 @@
+{
+  "id": "edge-single-reason-code",
+  "title": "§5.4 edge — a receipt committing to exactly one reason code",
+  "note": "Pins the no-trailing-delimiter edge in reasonCodesHash (A-027). A producer appending the delimiter after a one-element set hashes identically to a correct one on every other sample in this directory.",
+  "verdict": "BLOCK",
+  "reasonCodes": [
+    "EVAL_PURCHASE_RESOURCE"
+  ],
+  "failureMode": "REVIEW",
+  "signerRefused": false
+}

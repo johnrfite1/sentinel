@@ -212,6 +212,16 @@ interface SampleSpec {
     valueWei: bigint;
     failureMode: bigint;
     mandateOverrides?: Partial<MandatePayload>;
+    /**
+     * Assert the signed receipt commits to exactly this many reason codes, or fail the run.
+     *
+     * Only set where the COUNT is the point of the sample. It is not an expected verdict and
+     * not a hint: the verdict is whatever the engine produces, and no sample carries one.
+     * This exists because an edge pinned by a fixture that stops exercising it is not pinned
+     * at all — the single-code sample below would quietly become a two-code sample the first
+     * time an unrelated signer finding started firing on it, and nothing would say so.
+     */
+    expectReasonCodeCount?: number;
 }
 
 function purchaseCalldata(resource: Hex, duration = DURATION, recurring = false): Hex {
@@ -278,6 +288,39 @@ const SAMPLES: SampleSpec[] = [
         failureMode: 0n,
         mandateOverrides: {targetCodeHash: keccak256(stringToBytes("a different code hash"))},
     },
+    {
+        /**
+         * A-027, the owed fixture. Nothing in the corpus pinned the SINGLE-element case of
+         * `reasonCodesHash`.
+         *
+         * §5.4 defines the preimage as the codes joined by a delimiter, with no trailing
+         * one. Every shipped sample had either zero codes or two or more, so a producer that
+         * emitted `code + "\n"` for a one-element set — the single most natural way to write
+         * the loop wrong — hashed identically to a correct implementation on every artifact
+         * a third-party verifier could obtain. The bug would be undetectable until the day a
+         * real receipt carried one code.
+         *
+         * The scenario is Case 3's wrong-resource purchase, which fails exactly one
+         * evaluator check, under its OWN mandate id. The distinct mandate is not decoration:
+         * the signer's per-nonce reservation is keyed by the vault's active mandate and
+         * policy, so a sample reusing Case 1's mandate picks up
+         * `SIGNER_NONCE_ALREADY_ATTESTED` as a second code and stops being a single-code
+         * sample — which is exactly what happened to `case-3-wrong-purpose-block` and is why
+         * the gap existed.
+         */
+        id: "edge-single-reason-code",
+        title: "§5.4 edge — a receipt committing to exactly one reason code",
+        note:
+            "Pins the no-trailing-delimiter edge in reasonCodesHash (A-027). A producer " +
+            "appending the delimiter after a one-element set hashes identically to a correct " +
+            "one on every other sample in this directory.",
+        target: demoPay,
+        callData: purchaseCalldata(WRONG_RESOURCE),
+        valueWei: VALUE,
+        failureMode: 1n,
+        mandateOverrides: {mandateId: keccak256(stringToBytes("mandate:single-reason-code-edge"))},
+        expectReasonCodeCount: 1,
+    },
 ];
 
 rmSync(OUT, {recursive: true, force: true});
@@ -341,6 +384,21 @@ for (const spec of SAMPLES) {
             simulationBlockHash: simulation.anchor.blockHash,
         },
     });
+
+    // Checked against the SIGNED set — the union the receipt actually commits to — not the
+    // evaluator's codes, because the union is what `reasonCodesHash` is computed over and
+    // therefore the only count that pins anything.
+    if (spec.expectReasonCodeCount !== undefined) {
+        const committed = signed.refused ? [] : signed.reasonCodes;
+        if (committed.length !== spec.expectReasonCodeCount) {
+            throw new Error(
+                `${spec.id} was written to commit to exactly ${spec.expectReasonCodeCount} reason ` +
+                    `code(s) and commits to ${committed.length}: [${committed.join(", ")}]. The ` +
+                    `edge this sample exists to pin is no longer pinned — fix the sample, not ` +
+                    `the assertion.`,
+            );
+        }
+    }
 
     const dir = join(OUT, spec.id);
     mkdirSync(dir, {recursive: true});

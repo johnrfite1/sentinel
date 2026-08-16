@@ -1,0 +1,23 @@
+{
+  "refused": false,
+  "receipt": {
+    "schemaVersion": "1",
+    "decisionId": "0xc45a50cdcc8cbcd6711dc589b57e75c51dc36ad05e98e9aa880d3b75cb4e9e66",
+    "actionHash": "0xb4252f3fe7f5d692dd085660f9ff6f3aafea9116d6522ecdab7dc7fa62ad6d1f",
+    "mandateHash": "0xcc561ecfbf0a0ea80ec9adb0f2e31dbc845f2a1eb640afd2948eb3a1396d9a56",
+    "policyHash": "0x8abd037dc7df8d7fa4dce928139c9c1306555aa6853d82b58daa8891a13b0bff",
+    "verdict": "0",
+    "reasonCodesHash": "0x2228b8b1179a3004229276d5c7d68c420ad485719a5eb1c137136403343c0409",
+    "evidenceHash": "0x522505f50d17b5f9178222757f8c5809d999e2149b40d0b22f59828f592244eb",
+    "simulationBlockNumber": "15",
+    "simulationBlockHash": "0x4ecc13a7217509270ff7860090852498696222585f4bbf5d6a7a4933636dd521",
+    "issuedAt": "1786844784",
+    "expiresAt": "1786845084",
+    "signer": "0x70997970c51812dc3a010c7d01b50e0d17dc79c8"
+  },
+  "signature": "0xe8cbb498790750d9ad0285903e68dd89bc229ac42aaebea8e1c6aaedcb8b300e1a8d190870b4415e8b9086f4b3df3b06642e1481c42feac8abf8f8d2ce2249a11b",
+  "reasonCodes": [
+    "EVAL_PURCHASE_RESOURCE"
+  ],
+  "signerFindings": []
+}

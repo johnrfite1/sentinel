@@ -1,0 +1,41 @@
+{
+  "labeller": "G",
+  "model": "claude-opus-5",
+  "dateUTC": "2026-08-15",
+  "assignment": "F049 and F050 only — a TARGETED RE-CHECK, not a labelling round",
+  "why": "The A-028 F-5 remediation added an `agentRationale` field to the labeller view for these two fixtures. The labels of record (E/F) were drawn against views without it, so the question this round answers is narrow: does publishing the adversarial narrative as a field of its own move the label? It does not. G is audit trail; the ablation reads labeller-E.json and labeller-F.json and is unaffected by this file.",
+  "pathsRead": [
+    "fixtures/corpus/LABELLING_PROMPT.md",
+    "fixtures/corpus/for-labelling/F049.json",
+    "fixtures/corpus/for-labelling/F050.json",
+    "Sentinel_Protocol_Lab_Proposal_v0_2.md (lines 129-428 and 465-589, plus wc -l and a grep of its own headings to navigate)"
+  ],
+  "pathsDeniedAndNotRead": [
+    "ts/**",
+    "contracts/**",
+    "scripts/**",
+    "docs/**",
+    "verifier/**",
+    "fixtures/corpus/results/**",
+    "fixtures/corpus/labels/**",
+    "any other fixture",
+    "git log / git show"
+  ],
+  "sawPriorLabels": false,
+  "sawImplementationSource": false,
+  "sawDecisionDocuments": false,
+  "agreesWithLabelsOfRecord": true,
+  "attestation": "I opened only the four paths listed. I ran no git commands and listed no directories. Two disclosures. (1) HARNESS INJECTION, unrequested and undeclinable: my context was pre-loaded with $HOME/Projects/CLAUDE.md and the persistent memory file ~/.claude/projects/-Users-johnfite-Projects/memory/MEMORY.md. The latter's Sentinel entry names docs/decisions.md and docs/session-state.md as existing denied paths and describes the project at a high level, but quotes no verdict, reason code, label, evaluator behaviour, or fixture content. I judge the contamination real but immaterial to these two labels, and report it rather than judging it away. Labeller E disclosed the same channel independently. (2) THE MATERIAL ONE, and it is in the permitted source rather than a denied one — see `specContamination` below.",
+  "specContamination": {
+    "finding": "The specification the frozen prompt permits has itself been amended since the freeze, in ways that carry both a specific fixture's content and prior labellers' findings.",
+    "instances": [
+      "§4.2 Case 2, as amended by D-019, is effectively a walkthrough of F049: it quotes this fixture's agentRationale nearly verbatim (the attacker as 'the settlement relayer', the unlimited approval as 'a required one-time setup before purchasing the weather-basic-24h feed') and then states the answer — 'The block comes from the decoded spender and amount against the mandate's allowance ceiling.'",
+      "§3.3(7) records that 'three independent labellers converged on the gap'.",
+      "§5.7.1 (D-031) opens by crediting 'an independent labeller working only from this document' with noticing the missing mandate-to-active-policy binding."
+    ],
+    "selfAssessment": "I derived BLOCK for F049 from target and selector binding before reading that passage, and my primary reason rests on bindings rather than the ceiling clause the spec supplies — but I cannot honestly claim the F049 label is independent of it. Treat F049's 'high' confidence as partly borrowed. F050 is less exposed: §4.2 Case 3 is original spec text and does not name this fixture's values.",
+    "stalePrompt": "The frozen prompt's §4 and §6 reproduce §3.3(8) and §5.2 as they stood before D-021, D-026, D-029 and D-030. Where the two disagreed I followed the live specification, since the prompt grants permission to read it. It mattered once: D-029 is what let me set F049's code-hash mismatch aside rather than weigh REVIEW against BLOCK. On the frozen prompt's text alone I would have reached the same label with lower confidence."
+  },
+  "effectOfAgentRationale": "Neither rationale affected either label as evidence — both are agent-supplied purpose claims, Untrusted at §3.1 and excluded at §4.2 Case 2 ('Sentinel evaluates the decoded call and its simulated effects, never the agent's account of what the call means'). I read them only as the attack payload each fixture exists to carry. The single qualification is the one above: F049's rationale is quoted inside §4.2 Case 2, so encountering it in the spec confirmed which demonstration case F049 instantiates, though it contributed nothing to the check-level reasoning.",
+  "pathRewriteNote": "The attestation's absolute path to the workspace CLAUDE.md was rewritten to $HOME form to satisfy the secret guard (house rule 6). The guard was not weakened; only this quotation was made portable."
+}

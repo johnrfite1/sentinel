@@ -190,7 +190,14 @@ class TestSecp256k1(unittest.TestCase):
 class TestSamples(unittest.TestCase):
     def test_every_sample_verifies(self):
         dirs = sample_dirs()
-        self.assertEqual(len(dirs), 5, "expected the five §4.2 demonstration samples")
+        # Five §4.2 demonstration samples plus `edge-single-reason-code`, added
+        # 2026-08-15 for A-027: no sample committed to exactly ONE reason code,
+        # so nothing pinned the no-trailing-delimiter edge of reasonCodesHash and
+        # a producer emitting `code + delimiter` for a one-element set hashed
+        # identically to a correct one on every artifact a third party could get.
+        # The count assertion stays -- it is what would notice the sample set
+        # silently shrinking -- and is raised deliberately, not deleted.
+        self.assertEqual(len(dirs), 6, "expected the five §4.2 samples plus the single-reason-code edge")
         for path in dirs:
             with self.subTest(sample=os.path.basename(path)):
                 ok, checks = verify.verify_sample(path)
@@ -274,9 +281,15 @@ class TestTamper(unittest.TestCase):
                         self.assertTrue(ok, f"{mode} was WRONGLY REJECTED")
                     else:
                         self.assertFalse(ok, f"{mode} was WRONGLY ACCEPTED")
-        # 5 samples x 3 core modes = 15; reason-code modes 17 (case-1's empty
-        # list makes 3 N/A); override modes 4 (only case-4-review has one).
-        self.assertEqual(exercised, 36, "expected 36 applicable tamper cases")
+        # 6 samples x 3 core modes = 18; reason-code modes 20 (case-1's empty
+        # list makes 3 N/A, and edge-single-reason-code's one-element list makes
+        # reorder N/A); override modes 4 (only case-4-review has one).
+        #
+        # Was 36 across 5 samples before `edge-single-reason-code` was added for
+        # A-027. The six new cases are the point of that sample: the reason-code
+        # tamper modes now run against a set of size ONE, which is the size the
+        # published hash construction is most easily got wrong at.
+        self.assertEqual(exercised, 42, "expected 42 applicable tamper cases")
 
     def test_evidence_tamper_breaks_the_receipt_binding(self):
         # Specifically: it must fail the receipt.evidenceHash check, not merely
