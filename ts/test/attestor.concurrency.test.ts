@@ -2,7 +2,7 @@ import {describe, it} from "node:test";
 import assert from "node:assert/strict";
 import {keccak256, stringToBytes} from "viem";
 import {createAttestor} from "../src/signer/attest.ts";
-import {evidenceStub} from "./harness.ts";
+import {decodablePurchaseCallData, evidenceStub} from "./harness.ts";
 import {domainSeparator, hashMandate, hashPolicy} from "../src/signer/eip712.ts";
 import type {Keystore} from "../src/signer/keystore.ts";
 import type {ChainReader, VaultState} from "../src/signer/vault.ts";
@@ -45,8 +45,8 @@ const SIGNER_ADDRESS: Hex = "0x4444444444444444444444444444444444444444";
 const CHAIN_ID = 31337n;
 const BLOCK_HASH: Hex = keccak256(stringToBytes("pinned block"));
 
-const CALLDATA: Hex = "0xdeadbeef00000000000000000000000000000000000000000000000000000000";
-const SELECTOR: Hex = "0xdeadbeef";
+const CALLDATA: Hex = decodablePurchaseCallData("concurrency-a");
+const SELECTOR: Hex = "0xc188528b";
 
 const policy: PolicyPayload = {
     schemaVersion: 1n,
@@ -188,7 +188,7 @@ describe("attestation guard atomicity", () => {
         // so both are otherwise fully conforming — the guard is the only thing that can
         // separate them.
         const callDataA: Hex = CALLDATA;
-        const callDataB: Hex = `0xdeadbeef${"11".repeat(28)}` as Hex;
+        const callDataB: Hex = decodablePurchaseCallData("concurrency-b");
         const a = action({dataHash: keccak256(hexToBytes(callDataA))});
         const b = action({dataHash: keccak256(hexToBytes(callDataB))});
 
@@ -248,7 +248,7 @@ describe("attestation guard atomicity", () => {
         });
 
         const a = action({dataHash: keccak256(hexToBytes(CALLDATA))});
-        const callDataB: Hex = `0xdeadbeef${"22".repeat(28)}` as Hex;
+        const callDataB: Hex = decodablePurchaseCallData("concurrency-c");
         const b = action({dataHash: keccak256(hexToBytes(callDataB))});
 
         const blockRequest = {...requestFor(a, CALLDATA)};

@@ -484,6 +484,29 @@ export function evidenceStub(note: string, callData: Hex): string {
     });
 }
 
+/**
+ * Calldata the signer's own `decodeBySelector` CAN read — a well-formed DemoPay.purchase.
+ *
+ * A-043. Unit fixtures used to reach for an arbitrary unsupported selector (`0xdeadbeef…`,
+ * `0xa1b2c3d4…`) whenever they needed "some calldata" for a test about something else — the
+ * nonce guard, the reason-code table, fail-closed behaviour. That was load-bearing in a way
+ * nobody intended: an undecodable selector made the signer's own decode fail, the evidence
+ * stub then honestly reported `decoded:"false"`, and the signer returned NO finding for an
+ * ALLOW. **Eleven tests were therefore passing through the exact hole this review found**, and
+ * they went red the moment it was closed — which is the only reason the blast radius was
+ * visible at all.
+ *
+ * `seed` varies the resourceId so callers can build distinct-but-decodable actions, which is
+ * what the nonce-guard tests actually need. Prefer this over an arbitrary selector in any test
+ * that is not specifically ABOUT undecodable calldata.
+ */
+export function decodablePurchaseCallData(seed = "fixture"): Hex {
+    const w = (h: string) => h.replace(/^0x/, "").padStart(64, "0");
+    return `0xc188528b${w(keccak256(stringToBytes(seed)))}${w(
+        "f39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+    )}${w((86_400n).toString(16))}${w("0")}` as Hex;
+}
+
 export function sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }

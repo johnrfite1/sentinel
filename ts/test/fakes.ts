@@ -1,6 +1,6 @@
 import {keccak256, stringToBytes, toBytes} from "viem";
 import {domainSeparator, hashMandate, hashPolicy} from "../src/signer/eip712.ts";
-import {evidenceStub} from "./harness.ts";
+import {decodablePurchaseCallData, evidenceStub} from "./harness.ts";
 import type {Keystore} from "../src/signer/keystore.ts";
 import type {ChainReader, VaultState} from "../src/signer/vault.ts";
 import type {
@@ -45,8 +45,17 @@ export const SIM_BLOCK_HASH: Hex = keccak256(stringToBytes("pinned simulation bl
 export const TARGET_CODE_HASH: Hex = keccak256(stringToBytes("DemoPay runtime code"));
 
 /** `purchase(bytes32,address,uint64,bool)`-shaped: a 4-byte selector plus four words. */
-export const SELECTOR: Hex = "0xa1b2c3d4";
-export const CALLDATA: Hex = `0xa1b2c3d4${"00".repeat(128)}` as Hex;
+export const SELECTOR: Hex = "0xc188528b"; // DemoPay.purchase — must match CALLDATA below (A-043)
+/**
+ * The shared fixture calldata, and it MUST be decodable by the signer's own decoder.
+ *
+ * A-043. This was `0xa1b2c3d4…`, an unsupported selector, chosen as arbitrary bytes for tests
+ * about other things. That made the signer's own decode fail, which made the evidence stub
+ * honestly report `decoded:"false"`, which made the signer return NO finding for an ALLOW —
+ * so the default fixture for the whole unit suite ran through the exact hole this review
+ * found. Tests about undecodable calldata should say so explicitly with their own bytes.
+ */
+export const CALLDATA: Hex = decodablePurchaseCallData("shared-fixture");
 
 /** A clock the tests control. All windows below are open at this instant. */
 export const NOW = 1_800_000_000n;

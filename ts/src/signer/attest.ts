@@ -557,6 +557,31 @@ function checkEvidenceDecoding(
     //
     // The correct rule follows the remit boundary rather than the truth table:
     if (claimed.decoded === "false") {
+        // AN ALLOW OVER A BUNDLE THAT DECLINES TO DECODE IS REFUSED, WHATEVER THE REASON.
+        //
+        // A-043, 2026-08-16. This guard used to live one level down, inside the
+        // TARGET_BINDING_FAILURES branch only — so A-028 F1's repair closed the hole for
+        // target-binding failure codes and left it wide open for every other code. An
+        // adversarial reviewer walked straight through the gap it left: append 32 bytes to
+        // otherwise-conforming calldata, claim `decoded:"false"` with
+        // `failureCode: DECODE_LENGTH_MISMATCH`, and the signer's own decode fails too, so the
+        // old `return mine.ok ? [...] : []` returned NOTHING. A wrong-resource purchase and an
+        // unlimited approve were both signed ALLOW with `signerFindings: []` and executed
+        // onchain. Reproduced end to end against the real socket and the compiled vault.
+        //
+        // THE ORIGINAL JUSTIFICATION WAS ALWAYS BRANCH-INDEPENDENT and the fix should have been
+        // here the first time: `decode.ok === false` makes EVAL_CALLDATA_UNDECODABLE UNRESOLVED
+        // for ANY failure code, and `verdictOf` returns ALLOW only when nothing is unresolved
+        // (§3.3(8) — undecodable calldata never produces an automatic allow). No honest
+        // evaluator can emit this pair. The previous placement generalised the DEMONSTRATION
+        // rather than the ARGUMENT, which is why a second reviewer found the other half.
+        //
+        // D-017 IS NOT RE-BROKEN. That defect refused TRUTHFUL BLOCK and REVIEW bundles for
+        // target-substitution shapes, leaving no receipt of any verdict for the natural
+        // injection cases. Those ask for BLOCK or REVIEW and fall through untouched; only the
+        // ALLOW combination no honest evaluator produces is refused here.
+        if (requestedVerdict === "ALLOW") return ["SIGNER_EVIDENCE_DECODING_MISMATCH"];
+
         const failureCode = typeof claimed.failureCode === "string" ? claimed.failureCode : "";
         if (TARGET_BINDING_FAILURES.has(failureCode)) {
             // Declined for a reason the signer is ratified not to opine on. Accept it for a
@@ -583,7 +608,7 @@ function checkEvidenceDecoding(
             // bundles fatally, leaving no receipt of any verdict for target-substitution
             // shapes — the natural injection cases. Those ask for BLOCK or REVIEW and are
             // untouched here; only the combination no honest evaluator produces is refused.
-            return requestedVerdict === "ALLOW" ? ["SIGNER_EVIDENCE_DECODING_MISMATCH"] : [];
+            return [];
         }
         // Declined for any other reason — one within the signer's remit — so the signer's own
         // selector-level decode must also have failed. If it succeeded, the bundle is wrong

@@ -1,4 +1,5 @@
 import {describe, it} from "node:test";
+import {decodablePurchaseCallData} from "./harness.ts";
 import assert from "node:assert/strict";
 import {keccak256, stringToBytes} from "viem";
 import {createAttestor} from "../src/signer/attest.ts";
@@ -279,7 +280,7 @@ describe("the reason-code table is exhaustive", () => {
         });
         assert.equal((await attestor.evaluateAndSign(request)).refused, false);
 
-        const other = buildFixture({callData: `0xa1b2c3d4${"11".repeat(128)}` as Hex});
+        const other = buildFixture({callData: decodablePurchaseCallData("rc-11")});
         const second = await attestor.evaluateAndSign(other.request);
         assert.equal(second.refused, true);
         assert.ok(findingsOf(second).includes("SIGNER_NONCE_ALREADY_ATTESTED"));
@@ -312,7 +313,7 @@ describe("the attestation guard is scoped to the authorisation basis", () => {
         // comes from the vault, never from the request.
         const corrected = buildFixture({
             mandate: {mandateId: keccak256(stringToBytes("mandate:corrected"))},
-            callData: `0xa1b2c3d4${"22".repeat(128)}` as Hex,
+            callData: decodablePurchaseCallData("rc-22"),
         });
         activate(corrected);
 
@@ -338,7 +339,7 @@ describe("the attestation guard is scoped to the authorisation basis", () => {
         });
         assert.equal((await attestor.evaluateAndSign(request)).refused, false);
 
-        const sameMandate = buildFixture({callData: `0xa1b2c3d4${"33".repeat(128)}` as Hex});
+        const sameMandate = buildFixture({callData: decodablePurchaseCallData("rc-33")});
         const second = await attestor.evaluateAndSign(sameMandate.request);
         assert.equal(second.refused, true);
         assert.ok(findingsOf(second).includes("SIGNER_NONCE_ALREADY_ATTESTED"));
@@ -367,7 +368,7 @@ describe("the attestation guard is scoped to the authorisation basis", () => {
         assert.equal((await attestor.evaluateAndSign(shortRetry.request)).refused, false);
 
         clock = NOW + 10n; // past the 1s TTL, far inside the 3600s one
-        const rival = buildFixture({callData: `0xa1b2c3d4${"44".repeat(128)}` as Hex});
+        const rival = buildFixture({callData: decodablePurchaseCallData("rc-44")});
         const result = await attestor.evaluateAndSign(rival.request);
         assert.equal(result.refused, true, "the long reservation must still hold the nonce");
         assert.ok(findingsOf(result).includes("SIGNER_NONCE_ALREADY_ATTESTED"));

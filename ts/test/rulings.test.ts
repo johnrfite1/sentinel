@@ -14,7 +14,7 @@ import {
     fakeKeystore,
     type FixtureOverrides,
 } from "./fakes.ts";
-import {SIGNER_KEY, evidenceStub} from "./harness.ts";
+import {SIGNER_KEY, decodablePurchaseCallData, evidenceStub} from "./harness.ts";
 
 /**
  * D-012 and D-014, the two rulings that changed code.
@@ -332,7 +332,7 @@ describe("D-013 — the nonce guard's CLAIM is narrowed, not its mechanism", () 
         const first = buildFixture({});
         assert.equal((await attestorFor(first).evaluateAndSign(first.request)).refused, false);
 
-        const other = buildFixture({callData: `0xa1b2c3d4${"88".repeat(128)}` as Hex});
+        const other = buildFixture({callData: decodablePurchaseCallData("d013-other")});
         assert.equal(
             (await attestorFor(other).evaluateAndSign(other.request)).refused,
             false,
@@ -636,4 +636,77 @@ describe("D-014: the target-binding escape hatch cannot switch off the attestati
         assert.equal(result.refused, true);
         assert.ok(findingsOf(result).includes("SIGNER_EVIDENCE_DECODING_MISMATCH"));
     });
+
+    /**
+     * A-043 — THE OTHER HALF OF THE SAME HOLE, which A-028's repair left open for a year of
+     * commits and which the tests above could not reach BY CONSTRUCTION.
+     *
+     * Every case above pairs a lying bundle with `decodableCallData`, so the signer's own
+     * decode SUCCEEDS and the old `return mine.ok ? [MISMATCH] : []` fired. The comment above
+     * `decodableCallData` even names the alternative — an unsupported selector, "against which
+     * the signer's own decode fails too, so bundle and signer honestly agree and nothing
+     * fires" — and treats it as a fixture hazard to avoid rather than as the live bypass it
+     * was. **That sentence describes the vulnerability and files it as a testing
+     * inconvenience.**
+     *
+     * The attack: calldata the EVM accepts and this decoder does not. `decode/abi.ts` says so
+     * in its own header — Solidity ignores calldata past the declared parameters, so trailing
+     * bytes execute normally onchain while `decodeBySelector` refuses them. Append 32 bytes,
+     * claim `decoded:"false"` with a NON-target failure code, and both sides "agree" that the
+     * bytes are unreadable. An ALLOW was then signed with `signerFindings: []`, and an
+     * adversarial reviewer executed a wrong-resource purchase and an unlimited approve onchain
+     * through it.
+     */
+    const paddedCallData = `${decodableCallData}${"00".repeat(32)}` as Hex;
+
+    for (const failureCode of ["DECODE_LENGTH_MISMATCH", "DECODE_UNSUPPORTED_SELECTOR"]) {
+        it(`refuses an ALLOW when BOTH sides fail to decode (${failureCode})`, async () => {
+            const result = await run({
+                verdict: "ALLOW",
+                callData: paddedCallData,
+                evidenceCanonical: JSON.stringify({
+                    decodedSelectorAndParameters: {
+                        decoded: "false",
+                        selector: "0xc188528b",
+                        failureCode,
+                    },
+                }),
+            });
+            assert.equal(
+                result.refused,
+                true,
+                "an ALLOW over a bundle carrying no parameters must never be signed",
+            );
+            assert.ok(
+                findingsOf(result).includes("SIGNER_EVIDENCE_DECODING_MISMATCH"),
+                `expected the decoding mismatch finding, got ${findingsOf(result).join(",")}`,
+            );
+        });
+    }
+
+    /**
+     * D-017 stays fixed on this branch too. The guard is scoped to ALLOW alone, so a truthful
+     * BLOCK or REVIEW over undecodable bytes still gets its receipt — which is the whole point
+     * of the D-017 correction and the thing a careless fix would break.
+     */
+    for (const verdict of ["BLOCK", "REVIEW"] as const) {
+        it(`still issues a ${verdict} receipt when both sides fail to decode`, async () => {
+            const result = await run({
+                verdict,
+                callData: paddedCallData,
+                evidenceCanonical: JSON.stringify({
+                    decodedSelectorAndParameters: {
+                        decoded: "false",
+                        selector: "0xc188528b",
+                        failureCode: "DECODE_LENGTH_MISMATCH",
+                    },
+                }),
+            });
+            assert.equal(
+                findingsOf(result).includes("SIGNER_EVIDENCE_DECODING_MISMATCH"),
+                false,
+                "a truthful undecodable bundle must still get a non-ALLOW receipt (D-017)",
+            );
+        });
+    }
 });

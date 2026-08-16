@@ -235,7 +235,7 @@ design forks. Never sign a gate, never certify a public claim.
 
 ## 3. Where the build is
 
-**73/73 Foundry · 380/380 TypeScript · 146/146 verifier · 50 corpus fixtures · 7 samples ·
+**73/73 Foundry · 384/384 TypeScript · 146/146 verifier · 50 corpus fixtures · 7 samples ·
 gate green at the deep profile · workspace guards OK.** *(This line read 66/66 and 70/70 for
 most of 2026-08-16 while all three numbers moved underneath it — in the file that opens by
 declaring itself the memory. Update it in the same edit that changes a suite, not later.)*
@@ -301,6 +301,7 @@ means only that no NEW class went vacuous. Read their output, not their exit sta
 | D-042 | **S2 stands, annotated.** §7.1's containment claim corrected (cap → v1.1); the campaign gets its two missing arms; the verifier is repaired by an agent that has not read the implementation |
 | A-041 | Verifier repaired, 70 → 101 tests, both exploits now fail closed. **Its best output is a spec finding: §5 defined no refusal record at all**, so D-012's requirement was unbuildable from the published document |
 | D-043 | **CONSOLIDATE — no new front, no ladder rung.** Re-label bound to pre-publication with a named trigger; §5.5.1 RefusalRecord published; override event added; Anvil keys re-baselined |
+| A-043 | **CRITICAL, fixed.** A signed ALLOW was obtainable for calldata nobody decoded, and executed onchain twice in reproduction. A-028's repair covered one of two branches; **11 tests were passing through the hole** |
 | D-044 | **Session close.** Pushed; one last review of §9 step 3 (A-016's 6 unadjudicated skeptics); both capability deferrals CONFIRMED; **pre-publication NOT started** |
 | A-042 | **The D-010 experiment run properly:** a schema-only build met a real signed refusal it had never seen. Everything §5.5.1 STATED matched first time; the envelope it omitted diverged, plus three defects in the section — all mine, all corrected. 101 → 146 tests |
 
@@ -308,6 +309,20 @@ means only that no NEW class went vacuous. Read their output, not their exit sta
 
 **Dead ends and traps — do not repeat:**
 
+- **A REPAIR CAN GENERALISE THE DEMONSTRATION INSTEAD OF THE ARGUMENT.** A-028 F1 fixed the
+  branch its reviewer exploited and left the identical hole in the sibling branch two lines
+  down, though the justification it wrote covered both. A second reviewer walked through the
+  other half a year of commits later (A-043). **When you fix a defect, ask what the ARGUMENT
+  covers, not what the reproduction touched.**
+- **A COMMENT THAT DESCRIBES A VULNERABILITY AND CALLS IT A FIXTURE HAZARD.** A-028's test file
+  says an unsupported selector means "the signer's own decode fails too, so bundle and signer
+  honestly agree and nothing fires" — and routes around it to avoid a test passing for the
+  wrong reason. That sentence IS the bypass, written down and filed as an inconvenience.
+- **Fixtures chosen as "arbitrary bytes" are never arbitrary.** Eleven tests used an undecodable
+  selector because they needed *some* calldata for tests about other things, and every one was
+  passing through A-043's hole. They went red the moment it closed, which is the only reason
+  the blast radius was visible. Use `decodablePurchaseCallData()`; say so explicitly when a
+  test is genuinely about undecodable bytes.
 - **A guard, a test or a mutation can exist and point at the wrong thing.** Three times this
   session: mutation anchors rotted when the code they targeted was rewritten (twice in one
   day); a leak guard built probes by pairing FILTERED words, so 10 of 17 could never match and
