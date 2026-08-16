@@ -91,7 +91,12 @@ Done: §9 steps 1–9.
   scored a spec since amended; round 2 (C/D) was **discarded as contaminated** (A-028 F-1).
   **Labeller G (2026-08-15) is a two-fixture re-check**, not a round: it re-labelled F049 and
   F050 after the view gained the rationale field, agreed with E and F on both, and — unprompted
-  — produced the finding recorded as A-030.
+  — produced the finding recorded as A-030. **Labellers H and J (2026-08-15) are D-033's two
+  measurement arms**, not rounds: H read the PRE-AMENDMENT spec on E and F's model, J read the
+  current spec on a different model, both over the same nine fixtures. **All four agree with
+  the labels of record, 9 of 9, zero disagreements** (A-033). Read A-033 for what that does and
+  does not establish — the labels are robust; the disagreement RATE is a weaker instrument than
+  it looks, because the prompt and the spec both steer.
 - **§7.2 baseline + §7.3 ablation** — `ts/src/ablation/`, report at `docs/ablation-report.md`.
   **False allows 38 / 8 / 1**; detection contribution — baseline alone 9, effect extraction
   adds 29, mandate conformance adds **8**; exact match 12 / 41 / 49 of 50; inter-labeller
@@ -120,6 +125,7 @@ gates). Added since:
 | A-032 | Three adversarial reviews of the same day's work: two blockers, fourteen others, all remediated |
 | D-033 | **Ruled by John** — measure A-030's contamination channel (control re-label vs the pre-amendment spec), and add a labeller from a different model |
 | D-034 | **Ruled by John** — the §7.3 partition gets a criterion; mandate conformance 17 → 8, and the 8 are exactly the wrong-purpose class |
+| A-033 | D-033 executed: labellers H (pre-amendment spec) and J (different model) agree with the labels of record **9 of 9**. The channel is real and broader than A-030 said; it moved no label |
 
 ## 5. What to do next, in order
 

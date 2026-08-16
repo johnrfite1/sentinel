@@ -1,0 +1,49 @@
+{
+  "labeller": "J",
+  "model": "claude-sonnet (a different model from E, F, G and H)",
+  "dateUTC": "2026-08-15",
+  "assignment": "F012 F016 F024 F025 F038 F044 F046 F049 F050 — the D-033 DIVERSITY ARM, not a labelling round",
+  "design": "D-033. J reads the CURRENT specification and the current views — the same material as the labels of record — so its only variable is the model. Paired with H, whose only variable is the spec text.",
+  "result": {
+    "agreementWithLabelsOfRecord": "9 of 9 — zero disagreements with labeller E",
+    "agreementWithControlArm": "9 of 9 — zero disagreements with labeller H",
+    "confidence": "high on all nine, where H (pre-amendment spec) was medium on five"
+  },
+  "pathsRead": [
+    "fixtures/corpus/LABELLING_PROMPT.md",
+    "Sentinel_Protocol_Lab_Proposal_v0_2.md",
+    "fixtures/corpus/for-labelling/{F012,F016,F024,F025,F038,F044,F046,F049,F050}.json"
+  ],
+  "toolUseBeyondReading": "J ran python3 via Bash to ABI-decode calldata strings already present in the nine authorised fixtures. It disclosed, unprompted, that a first hand-transcribed attempt produced an off-by-one-nibble mis-slice on F038's beneficiary word that 'could have led me to a wrong conclusion', that it caught this with a length sanity check, and that it redid the decode by loading the fixture files programmatically. No path outside the nine was touched.",
+  "pathsDeniedAndNotRead": [
+    "ts/**",
+    "contracts/**",
+    "verifier/**",
+    "scripts/**",
+    "docs/**",
+    "fixtures/corpus/labels/**",
+    "any other fixture",
+    "git"
+  ],
+  "sawPriorLabels": false,
+  "sawImplementationSource": false,
+  "sawDecisionDocuments": false,
+  "findingsRaised": [
+    {
+      "id": "J-1",
+      "severity": "OPEN — this is the systematic version of A-030",
+      "finding": "J's specBasis citations show the contamination channel is BROADER than the single §4.2 walkthrough A-030 identified. J cited amendment text as the basis for at least five of nine labels, and named the effect itself: F016 'is essentially D-020's own worked example'; F025 'is the literal wrong-policy fixture example named in D-031 as the case a prose-only evaluator would miss and wrongly ALLOW'; F046 'appears purpose-built to test D-029'; F038 turns on D-028's asymmetry note; F049's rationale 'is the exact wording D-019 discusses'. Verified directly against the specification: §5.7.1's own note (line 516) says an evaluator built from §5.7 alone 'omits it, and the wrong-policy fixture then ALLOWs' — a second fixture scenario named WITH its answer."
+    },
+    {
+      "id": "J-2",
+      "severity": "OPEN — new",
+      "finding": "§5.7.1 (line 523) PUBLISHES ELEVEN OF THE EVALUATOR'S OWN REASON-CODE IDENTIFIERS — EVAL_MANDATE_BINDS_POLICY, EVAL_MANDATE_PRINCIPAL_IS_OWNER and nine others. J cited those identifiers as `specBasis` for F024 and F025. D-031's own recorded caveat rejected making EVAL_CODES normative precisely because it 'welds the specification to the implementation's naming and would make reimplementation a transcription exercise'; the identifiers were published anyway 'for auditability'. A labeller has now used them as the basis for a label, which is the cost that caveat anticipated arriving on the labelling side rather than the reimplementation side."
+    },
+    {
+      "id": "J-3",
+      "severity": "recurring",
+      "finding": "The harness injected the workspace CLAUDE.md and the user's MEMORY.md before J's first tool call. J quoted the Sentinel entry and noted it revealed 'this work feeds Gate S2' and that gate-signing stays with John. FOURTH labeller to report this channel unprompted (E, G, H, J)."
+    }
+  ],
+  "adversarialContent": "J identified the agentRationale strings in F049 and F050 as persuasive text aimed at a reader, treated both as inert data describing the attack under test, and stated that neither label depended on them."
+}
