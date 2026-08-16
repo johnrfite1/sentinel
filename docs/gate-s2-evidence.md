@@ -367,6 +367,29 @@ prevent.
 
 ## 12. Questions for the session — none of them an agent's call
 
+**Five of these were put to John on 2026-08-15 and RULED. What remains is marked.**
+
+**RULED — D-036:** the canary runs monthly and a DRIFT row is a finding about the model, never
+a build failure; D-009's priority order stands; A-029 is accepted as bounded.
+
+**RULED — D-035:** the labelling-protocol question (A-030/A-034) is resolved by measuring five
+fixtures against the pre-amendment specification and treating the offending PASSAGES as a v1.1
+correction rather than re-freezing the prompt. **Escalation threshold declared in advance: two
+or more of the five moved sends a full re-freeze and re-label of all 50 back to John.**
+
+**RULED — D-034:** the §7.3 partition criterion; mandate conformance is 8, not 17.
+
+**STILL OPEN, and both are John's alone:**
+
+1. **Gate 5's certification** (D-008(1) and (3)). Four capability rows do not match their cited
+   sources — see §6 and `docs/gate-5-vendor-audit.md`. This is the only thing standing between
+   Gate 5 and MET.
+2. **The S2 signature itself** (D-002, non-delegable).
+
+The original list follows, retained because the reasoning behind each is still the reasoning.
+
+
+
 1. **Gate 5.** The mechanical conditions pass; D-008(1) and (3) need certification. Does S2 pass
    on the mechanical half with certification tracked separately, or does the certification
    happen at the session?
