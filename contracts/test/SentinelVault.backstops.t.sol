@@ -546,4 +546,91 @@ contract SentinelVaultBackstopsTest is Test {
 
         assertEq(address(vault).balance, 10 ether, "a refused recovery must move nothing");
     }
+
+    /// @notice THE VAULT PLACES NO LIMIT ON ERC20 AUTHORITY. This test asserts the LIMIT, not
+    ///         a protection, and it is here so the limit cannot regress into an assumption.
+    ///
+    /// @dev Found by an independent adversarial review, 2026-08-16, and recorded as D-042.
+    ///      §7.1 listed "evaluator or signer compromise scenario within the vault's hard caps"
+    ///      and §5.7.1/D-026 calls the vault's ceiling "a THIRD ceiling, independent of the
+    ///      mandate-and-policy intersection" — neither said the ceiling is NATIVE-VALUE ONLY.
+    ///
+    ///      One valid ALLOW receipt for `approve(spender, type(uint256).max)` passes every
+    ///      onchain check: pause, chain, vault, nonce, deadline, mandate, policy, operation,
+    ///      dataHash, target allowlist, selector allowlist. The wei ceiling never engages
+    ///      because `valueWei` is zero. `PolicyPayload.maxAllowanceIncreaseBaseUnits` exists
+    ///      precisely because unlimited approval is the flagship Case 2 attack, and the vault
+    ///      has no counterpart — so that attack is refused by the CONFORMANCE EVALUATOR with
+    ///      nothing behind it.
+    ///
+    ///      This is a deliberate v1 boundary (§2: do not invent production custody; a
+    ///      vault-side token cap would partly mask what the harness measures), NOT a defect
+    ///      to fix quietly. If a per-action allowance ceiling is ever added, this test should
+    ///      fail — and that failure is the signal to update §7.1 and the v1.1 register, not to
+    ///      delete the test.
+    function test_LIMIT_vaultCapsNativeValueOnlyAndNotTokenAuthority() public {
+        TokenStub token = new TokenStub();
+        address[] memory targets = new address[](1);
+        targets[0] = address(token);
+        bytes4[] memory selectors = new bytes4[](1);
+        selectors[0] = TokenStub.approve.selector;
+
+        SentinelVault v = new SentinelVault(owner, signerAddr, MAX_VALUE, targets, selectors);
+        vm.startPrank(owner);
+        v.activateMandate(MANDATE_HASH);
+        v.activatePolicy(POLICY_HASH);
+        vm.stopPrank();
+
+        address attacker = address(0xBAD);
+        bytes memory data = abi.encodeCall(TokenStub.approve, (attacker, type(uint256).max));
+
+        T.ActionPayload memory a = T.ActionPayload({
+            schemaVersion: 1,
+            chainId: block.chainid,
+            vault: address(v),
+            actionNonce: v.actionNonce(),
+            target: address(token),
+            valueWei: 0, // the wei ceiling is never consulted
+            dataHash: keccak256(data),
+            operation: uint8(T.Operation.CALL),
+            mandateHash: MANDATE_HASH,
+            policyHash: POLICY_HASH,
+            deadline: uint64(block.timestamp + 1 hours)
+        });
+        T.DecisionReceiptPayload memory r = _receipt(a, T.Verdict.ALLOW);
+        bytes memory sig = _signFor(v, SIGNER_PK, T.hashReceipt(r));
+
+        vm.prank(attacker); // execution is permissionless; the receipt is the authority
+        v.executeWithReceipt(a, data, r, sig);
+
+        assertEq(
+            token.allowance(address(v), attacker),
+            type(uint256).max,
+            "REGRESSION or REPAIR: the vault now constrains token authority - see D-042"
+        );
+        assertEq(v.actionNonce(), 1, "one nonce consumed for unlimited token authority");
+    }
+
+    /// @dev `_sign` is bound to the suite's own vault; this variant signs for another.
+    function _signFor(SentinelVault v, uint256 pk, bytes32 structHash)
+        internal
+        view
+        returns (bytes memory)
+    {
+        bytes32 digest = T.digest(T.domainSeparator(block.chainid, address(v)), structHash);
+        (uint8 vv, bytes32 rr, bytes32 ss) = vm.sign(pk, digest);
+        return abi.encodePacked(rr, ss, vv);
+    }
+}
+
+/// @notice Minimal ERC20 approve/allowance surface. Deliberately not DemoERC20: this test is
+///         about the VAULT's indifference to token semantics, so the token should be the
+///         smallest thing that can record an allowance.
+contract TokenStub {
+    mapping(address => mapping(address => uint256)) public allowance;
+
+    function approve(address spender, uint256 amount) external returns (bool) {
+        allowance[msg.sender][spender] = amount;
+        return true;
+    }
 }

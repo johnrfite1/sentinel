@@ -605,7 +605,7 @@ Build 30–50 labeled fixtures covering:
 - Unsupported multicall or delegatecall.
 - Owner override and block behavior.
 - Reentrancy attempt.
-- Evaluator or signer compromise scenario within the vault’s hard caps.
+- Evaluator or signer compromise scenario within the vault’s hard caps. *Corrected 2026-08-16 (D-042), after an adversarial review demonstrated the claim was wider than the vault: **the hard caps bound the NATIVE-VALUE dimension only.** Pause, nonce, deadline and the vault’s own wei ceiling are enforced onchain (§5.7.1, D-026). **Token authority is not capped by the vault at all.** One valid ALLOW receipt for `approve(spender, type(uint256).max)` passes every vault check — the native ceiling never engages, because `valueWei` is zero — and the vault’s entire token balance is then transferable. `PolicyPayload.maxAllowanceIncreaseBaseUnits` has no onchain counterpart, so the flagship Case 2 attack is refused by the CONFORMANCE EVALUATOR with nothing behind it. That is a deliberate v1 boundary — §2 says do not invent production custody, and a vault-side token cap would partly mask what the harness exists to measure — but it must not be read as containment. Reproduced in `contracts/test/SentinelVault.backstops.t.sol`. A per-action allowance-increase ceiling is v1.1 work (`docs/v1-1-register.md`).*
 
 ### 7.2 Fair Baselines
 

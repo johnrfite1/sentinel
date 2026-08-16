@@ -286,6 +286,21 @@ WHAT IS NOT COVERED:
   - A LIVE agent. §9 step 7 connected the proposal to the pipeline, so the D-018 gap is
     closed for the recorded case, but every agent proposal exercised here comes from a
     pinned D-007 transcript. Nothing in this suite calls a model.
+  - THAT THE VAULT CONSTRAINS TOKEN AUTHORITY. It does not, and §7.1 said otherwise until
+    2026-08-16 (D-042). The hard caps bound the NATIVE-VALUE dimension only: pause, nonce,
+    deadline and the wei ceiling. One valid ALLOW receipt for approve(spender, max) passes
+    every onchain check — the wei ceiling never engages, valueWei being zero — and the
+    vault's whole token balance becomes transferable. The flagship Case 2 attack is
+    refused by the EVALUATOR with nothing behind it. A per-action allowance ceiling is
+    v1.1; test_LIMIT_vaultCapsNativeValueOnlyAndNotTokenAuthority asserts the limit so it
+    cannot regress into an assumption.
+  - WHAT THE STATEFUL CAMPAIGN ADDS OVER THE DETERMINISTIC TESTS. Measured 2026-08-16 and
+    the answer was NOTHING: 31 mutations, 31/31 caught by the 56 deterministic tests, and
+    31/31 still caught with the whole campaign disabled. Five survived all invariants,
+    including a vault accepting arbitrary FUTURE nonces. Two arms were added (D-042) and
+    both of those mutations are now killed — but the honest reading of Gate 6's line is
+    that the deterministic tests carry it and the campaign corroborates. A campaign's
+    coverage is bounded by what its handler can BUILD, not by its call count.
   - THAT GATE 5's CITATIONS POINT ANYWHERE. Certified by John 2026-08-16 (D-038), and
     the check now reports 11 of 11 rows and "certified by record" rather than
     UNCERTIFIED. What it verifies is the SHAPE of a marker in the capability cell:

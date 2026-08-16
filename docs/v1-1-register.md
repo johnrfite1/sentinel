@@ -137,7 +137,35 @@ drawn against — so the fixture rides with the re-label. What did NOT ride with
 which is why building it first was worth doing, and the guard now carries a `status` of
 DELEGATED / RESERVED / GAP so this distinction lives in the instrument rather than only here.
 
-## 5. Owed on the §2 capability table, after Gate 5's certification (D-038)
+## 5. Owed on the vault and its evidence environment (D-042, A-040)
+
+From the §9 steps 1–3 adversarial review. **The first two ride with the re-label; the third does
+not and is the only one that could be done today.**
+
+- **A per-action allowance-increase ceiling in the vault.** Today the vault caps native value
+  only, so one valid ALLOW receipt for `approve(spender, max)` moves the entire token balance —
+  the flagship Case 2 attack refused by the evaluator with nothing behind it.
+  `PolicyPayload.maxAllowanceIncreaseBaseUnits` has no onchain counterpart. §7.1 is corrected and
+  `test_LIMIT_vaultCapsNativeValueOnlyAndNotTokenAuthority` asserts the limit; **when the cap is
+  built that test fails, and the failure is the signal to update §7.1, not to delete the test.**
+- **The corpus vault configuration.** `ts/src/corpus/run.ts` and `ts/src/tools/emit-samples.ts`
+  allowlist the ecrecover precompile `0x…0001` as an execution target and do NOT allowlist
+  DemoERC20 — contradicting §7.2 and their own offchain baseline. **Verified to ride with the
+  re-label:** `targetOnVaultAllowlist` is in the labelling view, F009's view carries `false`
+  today, and labeller E's note cites "the target is off the vault allowlist" by name. Repairing
+  it changes what the labellers saw. There is also no setter for the allowlists, so a
+  misconfigured backstop needs a redeploy.
+- **Receipt-to-signer-epoch binding.** Rotation is not revocation: a receipt from a rotated-out
+  signer executes if that key is ever reinstated, and a receipt pre-minted by a standby key goes
+  live the instant the owner rotates to it. **This does not touch the corpus and is not blocked
+  by the re-label.** The comment in `SentinelVault.sol` claiming the named-signer check prevents
+  this is wrong and should be corrected whether or not the binding is added.
+- **Log the override authorization.** §3.3(2) requires override be *logged*; `ActionExecuted`
+  records only `viaOverride` and the receipt's `decisionId`, so an auditor cannot say which owner
+  authorization was used or what the owner's recorded reason was. Every other item in §3.3(2)
+  gets a dedicated event.
+
+## 6. Owed on the §2 capability table, after Gate 5's certification (D-038)
 
 Two citations are weaker than they could be — one row cited for fewer criteria than the vendor
 may document, and one still pointing at a marketing page rather than technical documentation.

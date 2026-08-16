@@ -291,6 +291,33 @@ contract VaultHandler is Test {
     bool public everExecutedForgedOverride;
     bool public everExecutedMismatchedOverride;
 
+    // --- Ghost state added 2026-08-16 (D-042), after an adversarial review MEASURED that this
+    //     campaign had zero marginal killing power ---
+    //
+    // 31 mutations of the vault's own checks: 31/31 caught by the deterministic suite, and
+    // 31/31 STILL caught with this entire campaign disabled. Five survived all invariants,
+    // and two of those were invisible for the same reason — the handler could not construct
+    // the input that would expose them:
+    //
+    //   * `actionNonce != current` weakened to `< current`, i.e. the vault honours receipts
+    //     for arbitrary FUTURE nonces. Every action here submitted either the current nonce
+    //     (executeValid, executeNonAllow, the override arms) or a stale one (executeReplay
+    //     bounds to [0, current-1]). Nothing ever offered a future nonce, so the hole could
+    //     not be seen — and `invariant_nonceEqualsSuccessfulExecutions` still held, because a
+    //     mutated vault still advances the nonce by exactly one per execution.
+    //   * a failed external call reported as success. DemoPay could not fail in this campaign:
+    //     `_data` bounds duration to [1, 30 days], derives a non-zero beneficiary, and
+    //     `_bundle` bounds value to [1, 0.01 ether] — so all three of DemoPay's revert
+    //     conditions were unreachable by construction.
+    //
+    // THE LESSON, WHICH GENERALISES BEYOND THESE TWO: a stateful campaign's coverage is
+    // bounded by what its handler can BUILD, not by how many calls it makes. 262,144 calls
+    // that never construct a future nonce prove nothing about future nonces.
+    bool public everExecutedFutureNonce;
+    bool public everExecutedKnownFailingCall;
+    uint256 public futureNonceAttempts;
+    uint256 public failingCallAttempts;
+
     constructor(
         SentinelVault _vault,
         DemoPay _demoPay,
@@ -378,6 +405,54 @@ contract VaultHandler is Test {
             _bundle(seed, vault.actionNonce(), T.Verdict.ALLOW, data);
         bool wasPaused = vault.paused();
         try vault.executeWithReceipt(a, data, r, sig) {
+            _record(T.hashAction(a), wasPaused, T.Verdict.ALLOW, false);
+        } catch {
+            rejectedAttempts++;
+        }
+    }
+
+    /// @notice FUTURE nonce: a correctly signed bundle pinned to a nonce the vault has not
+    ///         reached yet. §3.3(9) makes the nonce a single monotonically increasing counter,
+    ///         so "not yet" must be refused exactly as firmly as "already used" — a vault that
+    ///         accepts N+k lets a signer pre-authorise actions out of order and lets a holder
+    ///         choose when they land. `executeReplay` covers the stale direction; this covers
+    ///         the other one, and until D-042 nothing did.
+    function executeFutureNonce(uint256 seed) external {
+        uint256 future = vault.actionNonce() + bound(seed, 1, 1000);
+        bytes memory data = _data(seed);
+        (T.ActionPayload memory a, T.DecisionReceiptPayload memory r, bytes memory sig) =
+            _bundle(seed, future, T.Verdict.ALLOW, data);
+        futureNonceAttempts++;
+        bool wasPaused = vault.paused();
+        try vault.executeWithReceipt(a, data, r, sig) {
+            everExecutedFutureNonce = true;
+            _record(T.hashAction(a), wasPaused, T.Verdict.ALLOW, false);
+        } catch {
+            rejectedAttempts++;
+        }
+    }
+
+    /// @notice A call the TARGET will reject. Everything the vault checks is valid — signature,
+    ///         nonce, binding, caps — and DemoPay reverts on `durationSeconds == 0`. §5.7 and
+    ///         D-021 treat a revert as a determinate observed failure, so the vault must not
+    ///         report it as a successful execution. Nothing in this campaign could previously
+    ///         build a call that fails at the callee.
+    function executeFailingCall(uint256 seed) external {
+        bytes memory data = abi.encodeCall(
+            DemoPay.purchase,
+            (
+                keccak256(abi.encode(seed, "fail")),
+                address(uint160(uint256(keccak256(abi.encode(seed, "fb"))))),
+                uint64(0), // DemoPay.ZeroDuration
+                false
+            )
+        );
+        (T.ActionPayload memory a, T.DecisionReceiptPayload memory r, bytes memory sig) =
+            _bundle(seed, vault.actionNonce(), T.Verdict.ALLOW, data);
+        failingCallAttempts++;
+        bool wasPaused = vault.paused();
+        try vault.executeWithReceipt(a, data, r, sig) {
+            everExecutedKnownFailingCall = true;
             _record(T.hashAction(a), wasPaused, T.Verdict.ALLOW, false);
         } catch {
             rejectedAttempts++;
@@ -601,7 +676,14 @@ contract SentinelVaultInvariantTest is Test {
         targetContract(address(handler));
         // Explicit selector list. Without it the runner also fuzzes inherited
         // forge-std helpers on the handler, which crowd out the actions we care about.
-        bytes4[] memory sel = new bytes4[](12);
+        // REGISTERING A HANDLER ACTION IS A SEPARATE STEP FROM WRITING ONE, and forgetting it
+        // is silent. D-042's two arms were written, their non-vacuity test passed (it calls
+        // them directly), the whole suite went green — and the future-nonce mutation still
+        // survived, because the fuzzer was never told these selectors existed. The new
+        // invariants were pointing at nothing. Caught only by re-running the mutation rather
+        // than trusting the green suite. If you add an action below, add its selector here and
+        // then re-run the mutation it was written for.
+        bytes4[] memory sel = new bytes4[](14);
         sel[0] = VaultHandler.executeValid.selector;
         sel[1] = VaultHandler.executeReplay.selector;
         sel[2] = VaultHandler.executeNonAllow.selector;
@@ -616,6 +698,10 @@ contract SentinelVaultInvariantTest is Test {
         sel[9] = VaultHandler.executeOverrideOnNonReview.selector;
         sel[10] = VaultHandler.executeOverrideWithForgedOwnerSig.selector;
         sel[11] = VaultHandler.executeOverrideForAnotherAction.selector;
+        // D-042, after a review measured this campaign killing nothing the deterministic tests
+        // did not. These two are the inputs it could not previously construct.
+        sel[12] = VaultHandler.executeFutureNonce.selector;
+        sel[13] = VaultHandler.executeFailingCall.selector;
         targetSelector(FuzzSelector({addr: address(handler), selectors: sel}));
     }
 
@@ -694,6 +780,28 @@ contract SentinelVaultInvariantTest is Test {
         assertEq(vault.actionNonce(), 1, "a rejected override consumed a nonce");
     }
 
+    /// @notice The two arms added by D-042 really construct their inputs and really get
+    ///         rejected — without this, the new invariants would pass vacuously in exactly
+    ///         the way the campaign they were added to already failed once.
+    function test_nonVacuity_futureNonceAndFailingCallArmsAreReachable() public {
+        handler.executeFutureNonce(21);
+        assertEq(handler.futureNonceAttempts(), 1, "the future-nonce arm did not build an action");
+        assertFalse(handler.everExecutedFutureNonce(), "a future nonce executed");
+        assertEq(vault.actionNonce(), 0, "a rejected future-nonce action consumed a nonce");
+
+        handler.executeFailingCall(22);
+        assertEq(handler.failingCallAttempts(), 1, "the failing-call arm did not build an action");
+        assertFalse(handler.everExecutedKnownFailingCall(), "a reverting call counted as an execution");
+        assertEq(vault.actionNonce(), 0, "a reverted call consumed a nonce");
+
+        // The arms must reject for the RIGHT reason. A future-nonce action that failed for an
+        // unrelated cause, or a "failing" call the callee actually accepted, would leave both
+        // new invariants green while testing nothing — the F051 shape, one layer down.
+        assertEq(handler.rejectedAttempts(), 2, "an arm was not actually attempted");
+        handler.executeValid(23);
+        assertEq(vault.actionNonce(), 1, "the valid path stopped working");
+    }
+
     /// @notice Proves the paused and rotated states the campaign relies on are reachable.
     function test_nonVacuity_ownerControlsAreReachable() public {
         handler.togglePause(true);
@@ -711,6 +819,38 @@ contract SentinelVaultInvariantTest is Test {
     ///         exactly once per execution — never skipping, never repeating.
     function invariant_nonceEqualsSuccessfulExecutions() public view {
         assertEq(vault.actionNonce(), handler.successfulExecutions());
+    }
+
+    /// @notice §3.3(9): the nonce is a single monotonically increasing counter, so a receipt
+    ///         for a nonce the vault has not reached must be refused exactly as firmly as one
+    ///         for a nonce already consumed.
+    ///
+    /// @dev ADDED D-042, and it is the invariant this campaign most needed. Weakening the
+    ///      vault's `!=` to `<` — accepting arbitrary future nonces — survived all ten prior
+    ///      invariants across 262,144 calls, because no handler action ever offered one.
+    ///      `invariant_nonceEqualsSuccessfulExecutions` cannot catch it: a mutated vault still
+    ///      advances the nonce by one per execution, so the count stays consistent while the
+    ///      authorization model is broken.
+    function invariant_futureNonceNeverExecutes() public view {
+        assertFalse(
+            handler.everExecutedFutureNonce(),
+            "a receipt pinned to an unreached nonce executed - future-nonce authorization"
+        );
+    }
+
+    /// @notice A call the target rejects must never be recorded as a successful execution.
+    ///
+    /// @dev ADDED D-042. "Failed external call reported as success" also survived every prior
+    ///      invariant, for a different reason: DemoPay could not be made to fail by the old
+    ///      handler at all — duration was bounded away from zero, the beneficiary was derived
+    ///      non-zero, and value was bounded above zero, which are exactly its three revert
+    ///      conditions. The blind spot was in what the handler could BUILD, not in the
+    ///      assertions.
+    function invariant_failedCallNeverCountsAsExecution() public view {
+        assertFalse(
+            handler.everExecutedKnownFailingCall(),
+            "an action whose callee reverted was recorded as a successful execution"
+        );
     }
 
     /// @notice No action hash executes twice, across the whole campaign.

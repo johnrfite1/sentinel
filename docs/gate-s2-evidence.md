@@ -436,6 +436,27 @@ prevent.
 - **A live agent in CI.** Every proposal in the suite comes from a pinned transcript. The canary
   is the only live call, it runs on demand, and it is not a CI stage.
 - **The evidence dashboard** — outside S2 unless John adds it at the gate (D-009).
+- ~~**An independent review of §9 steps 1–3.**~~ **RUN 2026-08-16, HOURS AFTER THIS PACK WAS
+  SIGNED, and it found real defects in layers the signature rests on (A-040, D-042).** The
+  encoding itself held — a 4-way struct-hash differential found zero divergences, all six type
+  strings are byte-identical across five sources, all ten of §3.3(4)'s bound fields are in the
+  encoding, and no collision exists at this layer. **What did not hold:**
+  **Gate 6's claim was carried by the deterministic tests, not by the campaign it names.** 31
+  mutations: 31/31 caught by the 56 deterministic tests, and 31/31 still caught with the entire
+  stateful campaign disabled. Five survived all ten invariants, including a vault honouring
+  receipts for arbitrary FUTURE nonces. **Repaired** — the two arms the handler could not build
+  were added and both mutations are now killed, verified by re-running them.
+  **§7.1's "within the vault's hard caps" overstated containment.** The vault caps native value
+  only; one valid ALLOW receipt for `approve(spender, max)` transfers authority over the entire
+  token balance, and `maxAllowanceIncreaseBaseUnits` has no onchain counterpart. **The claim is
+  corrected; the cap is v1.1.** The flagship Case 2 attack is refused by the evaluator with
+  nothing behind it, and that is now said plainly rather than implied away.
+  **The D-010 verifier certified a forged refusal and a cross-domain receipt as PASS.** Repair
+  commissioned from an agent that has not read the implementation, to preserve the independence
+  that makes it evidence — dented, because the symptoms themselves are implementation-derived.
+  **None of this was hidden from the signing session; §11 named it as absent from it**, and
+  D-041's first ruling was to sign with that recorded as a limit. The signature stands,
+  annotated. A reader weighing it should read A-040 beside it.
 - **An independent review of §9 steps 1–3's cut-short verifications.** Steps 4–6 had a full
   adversarial pass under D-017 (A-022); **steps 7–8 were reviewed on 2026-08-15, ten findings,
   all remediated** — this entry previously said they had had none, and that is now stale.

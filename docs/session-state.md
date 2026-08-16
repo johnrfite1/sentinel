@@ -272,6 +272,8 @@ means only that no NEW class went vacuous. Read their output, not their exit sta
 | A-039 | **Two adversarial reviews, 25 findings.** Both new guards were defeatable; several claims exceeded their evidence. 11 of 12 exploits now caught, 1 documented residual |
 | D-040 | Closes A-039: **F002 stays** (it earns its place by blocking), the class map widens to §7.1's four hard caps, condition (2)'s residual accepted as documented |
 | D-041 | **GATE S2 SIGNED — PASS, John, 2026-08-16.** Signed on §11's limits, not despite them. Steps 1–3's limit recorded not retired; dashboard stays outside S2; 14/20 does not flip a gate |
+| A-040 | The steps 1–3 review S2 was signed WITHOUT. **The encoding held; the two layers built on it did not.** Vault caps native value only; the invariant campaign killed nothing the fast tests did; the D-010 verifier certified a forged refusal |
+| D-042 | **S2 stands, annotated.** §7.1's containment claim corrected (cap → v1.1); the campaign gets its two missing arms; the verifier is repaired by an agent that has not read the implementation |
 
 ## 5. Traces — what worked, and what was a dead end
 
@@ -304,6 +306,16 @@ means only that no NEW class went vacuous. Read their output, not their exit sta
   decided at.
 - **Do not summarise ratified decisions for a labeller**, and do not reuse a sample across
   rounds.
+- **A HANDLER ACTION MUST BE REGISTERED AS WELL AS WRITTEN, and forgetting it is silent.**
+  D-042's two invariant arms were written, their non-vacuity test passed — it calls them
+  directly — and the whole suite went green, while the mutation they were written for still
+  survived, because `targetSelector` had not been told the new selectors existed. **The
+  invariants existed and pointed at nothing.** Caught only by re-running the mutation instead of
+  trusting the green suite. This is the project's most-repeated defect appearing *inside the fix
+  for a finding about the same defect*.
+- **A stateful campaign's coverage is bounded by what its handler can BUILD, not by its call
+  count.** 262,144 calls that never construct a future nonce prove nothing about future nonces.
+  Before D-042 the campaign killed nothing the 56 deterministic tests did not.
 - **A clean `git status` is a statement about one instant, not a lock.** A-037: a second session
   committed between this session's check and its write, and the write silently clobbered it.
   The collision was caught only because both sessions picked the same letter. **Nothing in the
