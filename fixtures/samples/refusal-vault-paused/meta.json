@@ -1,0 +1,9 @@
+{
+  "id": "refusal-vault-paused",
+  "title": "D-012/§5.5.1 — the signer refuses; vault paused",
+  "note": "A conforming purchase submitted while the vault is paused. SIGNER_VAULT_PAUSED is EXECUTABILITY, so the signer refuses to attest and emits a signed refusal record instead of a receipt. The only sample whose receipt.json has refused: true, and the only artifact a third party can use to check that a refusal is authentic and attributable rather than merely asserted.",
+  "verdict": "ALLOW",
+  "reasonCodes": [],
+  "failureMode": "REVIEW",
+  "signerRefused": true
+}

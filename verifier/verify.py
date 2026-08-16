@@ -3,8 +3,15 @@
 
 Independent reimplementation. Shares no canonicalization, hashing, or signing
 code with the Sentinel evaluator: RFC 8785 in jcs.py, Keccak-f[1600] in
-keccak.py, and secp256k1 recovery in secp256k1.py are all written here from the
-published specifications. Zero third-party dependencies; stock Python 3.8+.
+keccak.py, secp256k1 recovery in secp256k1.py, and the §5.5.1 refusal digest in
+refusal.py are all written here from the published specifications. Zero
+third-party dependencies; stock Python 3.8+.
+
+A bundle presents EITHER a §5.4 SignedDecisionReceipt or a §5.5.1
+SignedRefusalRecord. Both are verified; a bundle presenting neither, or
+presenting an unsigned claim that the signer refused, fails -- §5.5.1: "a
+verifier must treat an absent record as an unestablished refusal rather than an
+established one."
 
     python3 verifier/verify.py fixtures/samples/case-1-allow
     python3 verifier/verify.py --tamper fixtures/samples/case-1-allow
@@ -24,9 +31,11 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import eip712  # noqa: E402
 import jcs  # noqa: E402
 import reasoncodes  # noqa: E402
+import refusal  # noqa: E402
 from keccak import keccak256  # noqa: E402
 from secp256k1 import (  # noqa: E402
-    RecoveryError, is_low_s, parse_signature, recover_address, sign_digest,
+    G, RecoveryError, is_low_s, parse_signature, point_mul,
+    public_key_to_address, recover_address, sign_digest,
 )
 
 # §5.4 lists `verdict` with no enumeration and no encoding. The receipts carry
@@ -96,6 +105,16 @@ TAMPER_MODES = (
     "reasons-substitute", "reasons-add", "reasons-remove", "reasons-reorder",
     "override-reviewreceipt", "override-nonce", "override-wrongkey",
     "override-otherchain",
+    # §5.5.1. Every one of these leaves a *validly signed* SignedRefusalRecord
+    # behind except `refusal-signature` and `refusal-strip-signature`: the
+    # record is mutated and then re-signed with the published signer key, so
+    # what is being tested is the binding, not the cryptography. A refusal that
+    # verifies as a signature and names another action is the whole failure
+    # mode §5.5.1's attributability sentence exists to close.
+    "refusal-actionhash", "refusal-evidencehash", "refusal-chainid",
+    "refusal-vault", "refusal-verdict", "refusal-reasonhash",
+    "refusal-signature", "refusal-strip-signature", "refusal-wrongkey",
+    "refusal-otherchain", "refusal-reasons-add", "refusal-reasons-remove",
 )
 
 # Modes whose mutation must NOT break verification. A pure reorder of the
@@ -116,33 +135,54 @@ def verify_sample(sample_dir, domain_path=None, tamper=None):
     evidence_raw = _read_bytes(os.path.join(sample_dir, "evidence.json"))
     canonical_expected = _read_bytes(os.path.join(sample_dir, "evidence.canonical.json"))
     hash_expected = _read_bytes(os.path.join(sample_dir, "evidence.hash")).decode().strip()
-    receipt_doc = _read_json(os.path.join(sample_dir, "receipt.json"))
+    # §5.5.1 publishes SignedRefusalRecord as an artifact in its own right, so a
+    # bundle carrying one and no receipt.json is not malformed -- there is no
+    # receipt to carry. With neither file this still raises, which is right:
+    # the bundle presents nothing to verify.
+    receipt_path = os.path.join(sample_dir, "receipt.json")
+    if os.path.isfile(receipt_path) or not os.path.isfile(
+            os.path.join(sample_dir, "refusal.json")):
+        receipt_doc = _read_json(receipt_path)
+    else:
+        receipt_doc = {}
     domain = _read_json(_find_domain(sample_dir, domain_path))
 
     override_tamper = None
+    refusal_tamper = None
     evidence = jcs.parse_bytes(evidence_raw)
     if tamper == "evidence":
         evidence = _tamper_json(evidence)
     elif tamper == "receipt":
         receipt_doc = copy.deepcopy(receipt_doc)
-        if receipt_doc.get("receipt"):
-            # Flip the low bit of issuedAt: still a well-typed uint64, so the
-            # struct still encodes -- only the digest, and so the recovered
-            # address, changes.
-            body = receipt_doc["receipt"]
-            body["issuedAt"] = str(int(body["issuedAt"]) ^ 1)
+        if not receipt_doc.get("receipt"):
+            # A mode that mutates nothing is not a passing self-test, it is a
+            # vacuous one -- and it reported PASS until a §5.5.1 refusal bundle
+            # (which has no receipt body) arrived in the corpus to expose it.
+            raise NotApplicable(
+                "receipt needs a §5.4 receipt body; this sample has none")
+        # Flip the low bit of issuedAt: still a well-typed uint64, so the
+        # struct still encodes -- only the digest, and so the recovered
+        # address, changes.
+        body = receipt_doc["receipt"]
+        body["issuedAt"] = str(int(body["issuedAt"]) ^ 1)
     elif tamper == "signature":
         receipt_doc = copy.deepcopy(receipt_doc)
-        if receipt_doc.get("signature"):
-            sig = receipt_doc["signature"]
-            flipped = "%02x" % (int(sig[2:4], 16) ^ 0x01)
-            receipt_doc["signature"] = "0x" + flipped + sig[4:]
+        if not receipt_doc.get("signature"):
+            raise NotApplicable(
+                "signature needs a §5.4 receipt signature; this sample has none")
+        sig = receipt_doc["signature"]
+        flipped = "%02x" % (int(sig[2:4], 16) ^ 0x01)
+        receipt_doc["signature"] = "0x" + flipped + sig[4:]
     elif tamper and tamper.startswith("override-"):
         if not os.path.isfile(os.path.join(sample_dir, "override.json")):
             raise NotApplicable(
                 f"{tamper} needs an override.json; this sample has none"
             )
         override_tamper = tamper
+    elif tamper and tamper.startswith("refusal-"):
+        # Applicability cannot be decided from a filename: §5.5.1 does not say
+        # which file carries the record. Decided below, once it is located.
+        refusal_tamper = tamper
     elif tamper and tamper.startswith("reasons-"):
         receipt_doc, applied = _tamper_reasons(receipt_doc, tamper)
         if not applied:
@@ -196,6 +236,31 @@ def verify_sample(sample_dir, domain_path=None, tamper=None):
     refused = bool(receipt_doc.get("refused"))
     receipt = receipt_doc.get("receipt")
     signature = receipt_doc.get("signature")
+
+    # ---- 2a. §5.5.1 SignedRefusalRecord ---------------------------------
+    # Located BEFORE the receipt branch, because a bundle presenting a signed
+    # refusal is a different artifact from a bundle presenting nothing, and
+    # only §5.5.1 tells the two apart. Locating is separate from verifying:
+    # `_locate_refusal` reports how the record was presented, and every claim
+    # it makes is then checked in `_refusal_checks`.
+    located, locate_errors = _locate_refusal(sample_dir, receipt_doc)
+    if locate_errors:
+        checks.append(Check(
+            "the bundle presents at most one §5.5.1 SignedRefusalRecord, in a "
+            "recognisable shape",
+            False, "\n".join(locate_errors)))
+        return False, checks
+    if refusal_tamper and not located:
+        raise NotApplicable(
+            f"{refusal_tamper} needs a §5.5.1 SignedRefusalRecord; this "
+            "sample presents a §5.4 receipt")
+    if located:
+        record = located[0]
+        if refusal_tamper:
+            record, domain = _tamper_refusal(record, domain, refusal_tamper)
+        checks.extend(_refusal_checks(
+            sample_dir, record, receipt_doc, evidence, evidence_hash, domain))
+        return all(c.ok for c in checks), checks
 
     if refused or receipt is None or signature is None:
         checks.extend(_unauthenticated_receipt_checks(
@@ -275,22 +340,26 @@ def verify_sample(sample_dir, domain_path=None, tamper=None):
 
 def _unauthenticated_receipt_checks(receipt_doc, evidence, refused, receipt,
                                     signature):
-    """No signed receipt was presented, so nothing here can be certified.
+    """Neither a signed receipt nor a §5.5.1 refusal record: nothing to certify.
 
     §5.4 defines `SignedDecisionReceipt` as "DecisionReceiptPayload plus
-    sentinelSignature" and defines **no refusal record at all** -- signed or
-    unsigned. The string "refus" does not occur anywhere in
-    `Sentinel_Protocol_Lab_Proposal_v0_2.md`; `refused` and `refusalReason` are
-    fixture-harness fields (`index.json` carries `signerRefused` per case), not
-    protocol. See REPORT.md F-13 and its F-13 resolution.
+    sentinelSignature". §5.5.1 (added 2026-08-16) now defines the other half --
+    `SignedRefusalRecord`, "RefusalRecord plus `signerSignature`". A bundle
+    reaching this function presented neither.
 
-    So a bundle whose `receipt.json` reads `{"refused": true}` carries nothing
-    an independent party can authenticate. "The isolated signer refused", "the
-    signer was never asked", and "somebody deleted the ALLOW receipt on the way
-    here" are the same bytes -- and the third is not hypothetical: the evidence
-    bundle sitting beside it may record `"verdict": "ALLOW"`. Certifying that
-    is certifying an unsigned assertion made by whoever handed over the
-    directory, which is precisely the party the receipt exists to constrain.
+    `refused`, `refusalReason` and `reason` are fixture-harness fields, not
+    protocol: §5.5.1 gives the refusal a *record* and a *signature*, and a bare
+    boolean is neither. So a bundle whose `receipt.json` reads
+    `{"refused": true}` still carries nothing an independent party can
+    authenticate. "The isolated signer refused", "the signer was never asked",
+    and "somebody deleted the ALLOW receipt on the way here" are the same bytes
+    -- and the third is not hypothetical: the evidence bundle sitting beside it
+    may record `"verdict": "ALLOW"`.
+
+    §5.5.1 now says this in its own words, which is what turned the previous
+    conservative choice (REPORT.md F-13) into a specified requirement: "a
+    verifier must treat an absent record as an unestablished refusal rather
+    than an established one."
 
     The evidence checks above still ran and are still reported; they establish
     that the bundle is internally consistent, which is a strictly weaker claim
@@ -310,8 +379,11 @@ def _unauthenticated_receipt_checks(receipt_doc, evidence, refused, receipt,
     detail = [
         opening,
         "§5.4 defines SignedDecisionReceipt as DecisionReceiptPayload plus "
-        "sentinelSignature and defines no refusal record; the specification "
-        "never says a refusal is signed, by whom, or over what.",
+        "sentinelSignature; §5.5.1 defines SignedRefusalRecord as RefusalRecord "
+        "plus signerSignature. This bundle presents neither, and a bare "
+        "`refused` boolean is not a §5.5.1 record.",
+        "§5.5.1: \"a verifier must treat an absent record as an unestablished "
+        "refusal rather than an established one\".",
         "Nothing in this bundle is authenticated, so a genuine refusal, a "
         "signer that was never asked, and a deleted receipt are "
         "indistinguishable to any third party.",
@@ -323,8 +395,8 @@ def _unauthenticated_receipt_checks(receipt_doc, evidence, refused, receipt,
             "the substitution this check exists to stop."
         )
 
-    out = [Check("a signed receipt is present to verify (§5.4)", False,
-                 "\n".join(detail))]
+    out = [Check("a signed receipt is present to verify (§5.4), or a signed "
+                 "refusal record (§5.5.1)", False, "\n".join(detail))]
     if refused and receipt is not None:
         out.append(Check(
             "refusal shape is self-consistent",
@@ -332,6 +404,518 @@ def _unauthenticated_receipt_checks(receipt_doc, evidence, refused, receipt,
             "refused is true but a receipt body is also present; a refusal "
             "must not carry a signed receipt",
         ))
+    return out
+
+
+# --------------------------------------------------------------------------
+# §5.5.1 SignedRefusalRecord
+# --------------------------------------------------------------------------
+# §5.5.1 defines the record, its field order, its charsets and its digest. It
+# does NOT define how the record is carried in an evidence bundle -- no
+# filename, no JSON key, no nesting. That silence is F-18.2 in REPORT.md, and
+# it is resolved here by accepting the two shapes the rest of the corpus makes
+# plausible, and by refusing outright when a bundle presents two records that
+# disagree. Being liberal about *where* the record sits costs nothing: every
+# record found is put through the identical verification, so a location this
+# verifier accepts and the signer never writes to simply never occurs, while a
+# location it rejects and the signer does write to fails loudly rather than
+# silently. Being liberal about *what* the record contains would cost
+# everything, and `refusal.canonical_fields` is correspondingly strict.
+_REFUSAL_NESTED_KEYS = ("refusal", "refusalRecord", "record")
+_REFUSAL_SIGNATURE_KEYS = ("signerSignature", "signature")
+# Fields that may travel beside the record without being part of it. Anything
+# NOT in this list, and not a §5.5.1 field, is a hard error rather than an
+# ignored extra: an unrecognised sibling key may be a field its producer
+# believes is signed, and §5.5.1's preimage covers exactly nine values.
+_REFUSAL_ANCILLARY_KEYS = ("refused", "refusalReason", "reason", "reasonCodes",
+                           "signerFindings")
+
+
+def _extract_refusal(doc, source, allow_flat, signature_keys, _depth=0):
+    """Pull one (record, signature) pair out of a document. -> (found, errors)."""
+    if not isinstance(doc, dict):
+        return None, [f"{source}: expected a JSON object, got "
+                      f"{type(doc).__name__}"]
+
+    nested = [k for k in _REFUSAL_NESTED_KEYS if isinstance(doc.get(k), dict)]
+    if len(nested) > 1:
+        return None, [f"{source} carries a refusal record under more than one "
+                      f"key: {nested}"]
+    if nested:
+        inner = doc[nested[0]]
+        if _depth < 2 and not any(k in inner for k in refusal.FIELD_NAMES):
+            # `doc[key]` is not the record: it is another envelope carrying the
+            # record and its signature. §5.5.1 specifies neither envelope, so
+            # neither depth is more correct than the other -- descend rather
+            # than reject, and record the ambiguity (REPORT.md F-18.2).
+            return _extract_refusal(inner, f"{source} -> {nested[0]}", True,
+                                    _REFUSAL_SIGNATURE_KEYS, _depth + 1)
+        record = inner
+    elif allow_flat and any(k in doc for k in refusal.FIELD_NAMES):
+        # §5.5.1 says "SignedRefusalRecord contains RefusalRecord plus
+        # signerSignature", which reads equally well as a nested object and as
+        # nine fields with a signature beside them. Both are accepted.
+        record = {k: doc[k] for k in refusal.FIELD_NAMES if k in doc}
+        leftover = sorted(k for k in doc
+                          if k not in refusal.FIELD_NAMES
+                          and k not in signature_keys
+                          and k not in _REFUSAL_ANCILLARY_KEYS)
+        if leftover:
+            return None, [
+                f"{source} presents a flat RefusalRecord alongside "
+                f"unrecognised key(s) {leftover}; §5.5.1's preimage commits to "
+                "exactly nine fields, so these are unauthenticated and the "
+                "shape is refused rather than silently narrowed"]
+    else:
+        return None, []
+
+    present = [k for k in signature_keys if doc.get(k) is not None]
+    values = [doc[k] for k in present]
+    if len(values) > 1 and any(v != values[0] for v in values[1:]):
+        return None, [f"{source} carries two different signatures, under "
+                      f"{present}; §5.5.1 names exactly one, `signerSignature`"]
+    return ({"source": source, "record": record, "doc": doc,
+             "signature": values[0] if values else None}, [])
+
+
+def _locate_refusal(sample_dir, receipt_doc):
+    """Find the SignedRefusalRecord, if the bundle presents one at all."""
+    located, errors = [], []
+
+    path = os.path.join(sample_dir, "refusal.json")
+    if os.path.isfile(path):
+        found, errs = _extract_refusal(
+            _read_json(path), "refusal.json", True, _REFUSAL_SIGNATURE_KEYS)
+        errors.extend(errs)
+        if found is not None:
+            located.append(found)
+        elif not errs:
+            errors.append(
+                "refusal.json is present but carries no §5.5.1 RefusalRecord, "
+                "under any of the shapes this verifier recognises "
+                f"({', '.join(_REFUSAL_NESTED_KEYS)}, or the nine fields flat)")
+
+    # Only the §5.5.1 name is accepted inside receipt.json: `signature` there
+    # already means the receipt's own sentinelSignature, and reading it as the
+    # refusal's would let one signature be presented as attesting two different
+    # documents.
+    found, errs = _extract_refusal(
+        receipt_doc, "receipt.json", False, ("signerSignature",))
+    errors.extend(errs)
+    if found is not None:
+        located.append(found)
+
+    if len(located) > 1:
+        first, second = located[0], located[1]
+        if (first["record"] != second["record"]
+                or first["signature"] != second["signature"]):
+            errors.append(
+                f"the bundle presents two DIFFERENT refusal records, in "
+                f"{first['source']} and {second['source']}. §5.5.1 does not "
+                "say where the record lives, so a verifier cannot choose "
+                "between two answers to \"what did the signer refuse\"; both "
+                "are rejected.")
+    return located, errors
+
+
+def _refusal_label_check(sample_dir):
+    """Cross-check the fixture label, the way _verdict_check does for a receipt."""
+    expected = None
+    meta_path = os.path.join(sample_dir, "meta.json")
+    if os.path.isfile(meta_path):
+        expected = _read_json(meta_path).get("signerRefused")
+    if expected is None:
+        index_path = os.path.join(os.path.dirname(sample_dir), "index.json")
+        if os.path.isfile(index_path):
+            for entry in _read_json(index_path):
+                if entry.get("id") == os.path.basename(sample_dir):
+                    expected = entry.get("signerRefused")
+    if expected is None:
+        return Check("the case label records a signer refusal", True,
+                     "no meta.json/index.json to cross-check against",
+                     skipped=True)
+    return Check(
+        "the case label records a signer refusal", expected is True,
+        "" if expected is True else
+        f"the case label says signerRefused: {expected!r}, but the bundle "
+        "presents a §5.5.1 SignedRefusalRecord")
+
+
+def _refusal_checks(sample_dir, located, receipt_doc, evidence, evidence_hash,
+                    domain):
+    """Verify a §5.5.1 SignedRefusalRecord end to end.
+
+    The order matters. Shape and charset first, because §5.5.1's injectivity
+    argument -- and therefore the meaning of the digest -- is conditional on
+    them. Then the digest and the signature, which establish *who said it*.
+    Then the bindings, which establish *what they said it about*: a refusal
+    that recovers the Sentinel signer and names another action is a genuine
+    refusal of something else, and certifying it here would be the same
+    substitution F-13 was about, merely with a valid signature attached.
+    """
+    out = []
+    record = located["record"]
+    signature = located["signature"]
+    source = located["source"]
+
+    # ---- 0. a refusal excludes a receipt, and vice versa -----------------
+    receipt = receipt_doc.get("receipt")
+    if receipt is not None or receipt_doc.get("signature") is not None:
+        out.append(Check(
+            "the bundle presents a decision OR a refusal, not both", False,
+            f"a §5.5.1 SignedRefusalRecord in {source} sits beside a §5.4 "
+            "receipt body. The isolated signer either signed a decision or "
+            "declined to; a bundle asserting both describes no coherent event, "
+            "and a verifier certifying it would be certifying whichever half "
+            "the reader happens to look at."))
+    if "refused" in receipt_doc and not receipt_doc["refused"]:
+        out.append(Check(
+            "the bundle's `refused` flag agrees with the refusal record", False,
+            f"receipt.json says refused: {receipt_doc['refused']!r} while "
+            f"{source} presents a signed refusal record"))
+    out.append(_refusal_label_check(sample_dir))
+
+    # ---- 1. shape and charsets (§5.5.1) ---------------------------------
+    shape_name = ("RefusalRecord carries exactly the nine §5.5.1 fields, each "
+                  "inside its stated charset")
+    try:
+        fields = refusal.canonical_fields(record)
+    except refusal.RefusalError as exc:
+        out.append(Check(shape_name, False, str(exc)))
+        return out
+    out.append(Check(
+        shape_name, True,
+        f"9 field(s) validated with absolute anchors\n"
+        f"presented in {source}"))
+
+    loose = refusal.noncanonical_decimals(record)
+    if loose:
+        out.append(Check(
+            "the record's decimal fields are in canonical form", True,
+            f"{loose} carry leading zeros. §5.5.1 says only \"decimal "
+            "digits\", and the field enters the preimage verbatim, so this "
+            "produces a different digest rather than a colliding one and is "
+            "advisory. It is surfaced because two spellings of one chainId is "
+            "a place two implementations diverge silently.",
+            skipped=True))
+
+    # ---- 2. the record is signed at all ---------------------------------
+    if not isinstance(signature, str) or not signature:
+        out.append(Check(
+            "the refusal record is signed (§5.5.1 SignedRefusalRecord)", False,
+            f"{source} carries a RefusalRecord with no `signerSignature`. "
+            "§5.5.1 defines the verifiable artifact as SignedRefusalRecord = "
+            "RefusalRecord plus signerSignature; an unsigned record is a claim "
+            "about the signer rather than a claim by it, and \"a refusal is "
+            "attributable or it is not issued\"."))
+        return out
+
+    # ---- 3. the §5.5.1 digest -------------------------------------------
+    digest = refusal.digest(record)
+    out.append(Check(
+        "§5.5.1 digest recomputed from the domain-tagged newline-joined "
+        "preimage", True,
+        f"preimage  {refusal.render_preimage(record)}\n"
+        f"digest    0x{digest.hex()}\n"
+        "10 segments, 9 delimiters, no trailing newline; not EIP-712, so no "
+        "\\x19\\x01 and no domain separator"))
+
+    # ---- 4. who signed it ------------------------------------------------
+    try:
+        recovered = recover_address(digest, signature)
+        recover_error = None
+    except (RecoveryError, ValueError) as exc:
+        recovered, recover_error = None, str(exc)
+
+    declared = fields["signer"]
+    if recover_error:
+        out.append(Check("the signature recovers the record's declared signer",
+                         False, recover_error))
+        return out
+
+    ok = recovered == declared
+    detail = f"recovered {recovered}"
+    if not ok:
+        detail = (f"recovered {recovered}\ndeclared  {declared}\n"
+                  + _refusal_signature_diagnosis(record, signature, declared))
+    out.append(Check("the signature recovers the record's declared signer", ok,
+                     detail))
+
+    # §5.5.1 puts `signer` inside the preimage, so the signature commits to the
+    # claimed signer -- but a self-declared signer is not an identity. Anyone
+    # can mint a record naming their own key and sign it, and every check above
+    # passes. What makes it a *Sentinel* refusal is that the key is Sentinel's,
+    # and §5.5.1 never says where a verifier learns that. domain.json is the
+    # only place this bundle names it (REPORT.md F-9, F-18.4).
+    domain_signer = _norm_hex(domain.get("signerAddress", ""))
+    out.append(Check(
+        "the recovered signer is the deployment's Sentinel signer",
+        recovered == domain_signer,
+        "" if recovered == domain_signer else
+        f"recovered {recovered}\ndomain    {domain_signer}\n"
+        "a refusal signed by any other key is somebody else's refusal; §5.5.1 "
+        "does not say where a verifier learns the signer's identity, so this "
+        "check reads domain.json, exactly as the receipt path does"))
+
+    _, s_value, v_value = parse_signature(signature)
+    out.append(Check(
+        "refusal signature is EIP-2 canonical (low-s) and v in {27,28}",
+        is_low_s(s_value) and v_value in (27, 28),
+        f"v={v_value}, low-s={is_low_s(s_value)}"))
+
+    # ---- 5. what it is a refusal OF (§5.5.1 attributability) -------------
+    out.extend(_refusal_binding_checks(
+        sample_dir, fields, evidence, evidence_hash, domain))
+
+    # ---- 6. reason codes, §5.5.1 deferring to §5.4 -----------------------
+    out.extend(_refusal_reason_code_checks(located, receipt_doc, fields))
+
+    # ---- 7. the stated reason is not authenticated -----------------------
+    doc = located.get("doc") or {}
+    stated = (doc.get("refusalReason") or doc.get("reason")
+              or receipt_doc.get("refusalReason") or receipt_doc.get("reason"))
+    if stated is not None:
+        out.append(Check(
+            "the free-text refusal reason is NOT covered by the signature",
+            True,
+            f"{stated!r} is not a §5.5.1 field, so nothing commits to it and a "
+            "presenter may rewrite it without breaking anything above. The "
+            "authenticated statement of reasons is reasonCodesHash.",
+            skipped=True))
+    return out
+
+
+def _refusal_signature_diagnosis(record, signature, declared):
+    """Name the near-misses when recovery fails. See REPORT.md F-18.1.
+
+    §5.5.1 gives a digest and never says how a signature over it is produced.
+    This verifier recovers over the digest directly. If a producer instead
+    reached for a wallet library's `signMessage`, the signature is over an
+    EIP-191 wrapping and the only symptom is a signer mismatch -- which reads
+    as a forgery. §5.8 warns about exactly this class of failure for the type
+    strings ("a width mismatch is indistinguishable from an invalid
+    signature"). The check still FAILS; this only stops the failure being a
+    mystery.
+    """
+    try:
+        digest = refusal.digest(record)
+        candidates = (
+            ("EIP-191 personal_sign over the §5.5.1 digest",
+             refusal.eth_signed_message_digest(digest)),
+            ("EIP-191 personal_sign over the §5.5.1 preimage STRING",
+             refusal.eth_signed_message_digest(refusal.preimage(record))),
+        )
+        for label, alternative in candidates:
+            try:
+                if recover_address(alternative, signature) == declared:
+                    return (
+                        f"NOTE: this signature DOES recover {declared} under "
+                        f"{label}.\n§5.5.1 states the digest and does not state "
+                        "how it is signed; this verifier signs and recovers "
+                        "over the digest itself. One of the two "
+                        "implementations is wrong and §5.5.1 does not say "
+                        "which. See REPORT.md F-18.1.")
+            except (RecoveryError, ValueError):
+                continue
+    except (refusal.RefusalError, ValueError):
+        return ""
+    return ("the signature does not recover the declared signer under the "
+            "§5.5.1 digest, nor under either EIP-191 wrapping of it")
+
+
+def _refusal_binding_checks(sample_dir, fields, evidence, evidence_hash, domain):
+    """The bindings that make a refusal attributable to THIS bundle.
+
+    §5.5.1: "A refusal is attributable or it is not issued... a verifier must
+    treat an absent record as an unestablished refusal rather than an
+    established one." A record that is present but names another action, or
+    another evidence bundle, or another deployment, is the same problem wearing
+    a signature: the signer refused *something*, and this bundle is not it.
+
+    Note what the record does and does not carry. It carries `chainId` and
+    `vault` outright -- which the DecisionReceiptPayload does not, and which
+    §5.8 records as a "known asymmetry". It does NOT carry `mandateHash` or
+    `policyHash`; those are reached transitively, through `actionHash`, because
+    the §5.3 ActionPayload has both as members. That transitivity is only
+    available to a verifier holding action.json, which is why its absence is
+    treated as a failure here rather than a skip.
+    """
+    out = []
+
+    def load(name):
+        path = os.path.join(sample_dir, name)
+        return _read_json(path) if os.path.isfile(path) else None
+
+    mandate, policy, action = load("mandate.json"), load("policy.json"), load("action.json")
+
+    ok = fields["evidenceHash"] == evidence_hash
+    out.append(Check(
+        "refusal.evidenceHash binds the recomputed evidence", ok,
+        "" if ok else f"record    {fields['evidenceHash']}\n"
+                      f"computed  {evidence_hash}"))
+
+    out.extend(_binding_checks(
+        [(name, doc) for name, doc in
+         (("mandate.json", mandate), ("policy.json", policy),
+          ("action.json", action)) if doc is not None],
+        domain))
+
+    if action is None:
+        out.append(Check(
+            "refusal.actionHash binds the §5.3 action payload", False,
+            "the bundle carries no action.json, so the action this refusal "
+            "names cannot be exhibited. §5.5.1: \"A refusal is attributable or "
+            "it is not issued\" -- a record whose actionHash matches nothing "
+            "in front of the verifier is attributable to the signer but not to "
+            "this bundle, and it is also the only route by which the refusal "
+            "reaches the mandate and the policy at all (neither is a §5.5.1 "
+            "field). Treated as a failure rather than a skip: see REPORT.md "
+            "F-18.5."))
+        return out
+
+    out.append(_payload_hash_check(
+        action, eip712.action_hash, "actionHash", "§5.3 ActionPayload",
+        fields["actionHash"], "the refusal record"))
+    out.append(_payload_hash_check(
+        mandate, eip712.mandate_hash, "mandateHash", "§5.1 MandatePayload",
+        action.get("mandateHash"), "action.json"))
+    out.append(_payload_hash_check(
+        policy, eip712.policy_hash, "policyHash", "§5.2 PolicyPayload",
+        action.get("policyHash"), "action.json"))
+    calldata = _calldata_check(action)
+    if calldata is not None:
+        out.append(calldata)
+    if mandate is not None:
+        out.append(Check(
+            "mandate.policyHash == action.policyHash",
+            _norm_hex(mandate.get("policyHash", ""))
+            == _norm_hex(action.get("policyHash", ""))))
+
+    # The record's OWN chain and vault members. §5.5.1's digest is tagged with
+    # a constant string and nothing else -- no chainId, no verifyingContract --
+    # so unlike the receipt there is no domain separator doing this work. These
+    # two members are the entire chain-and-vault binding of a refusal, and they
+    # only bind if somebody reads them. That is F-14's lesson, arriving in a
+    # new place.
+    try:
+        record_chain = eip712.parse_uint("uint256", fields["chainId"])
+        action_chain = eip712.parse_uint("uint256", action["chainId"])
+        chain_ok = record_chain == action_chain
+    except (KeyError, eip712.EncodingError):
+        record_chain = None
+        chain_ok = False
+    out.append(Check(
+        "refusal.chainId == the action payload's chainId", chain_ok,
+        "" if chain_ok else f"record {fields['chainId']!r}, action "
+                            f"{action.get('chainId')!r}"))
+    vault_ok = fields["vault"] == _norm_hex(action.get("vault", ""))
+    out.append(Check(
+        "refusal.vault == the action payload's vault", vault_ok,
+        "" if vault_ok else f"record {fields['vault']}\naction {action.get('vault')}"))
+
+    try:
+        domain_chain = eip712.parse_uint("uint256", domain["chainId"])
+        domain_vault = "0x" + eip712.hex_to_bytes(
+            domain["verifyingContract"], "verifyingContract").hex()
+        ok = record_chain == domain_chain and fields["vault"] == domain_vault
+        detail = "" if ok else (
+            f"record chainId {fields['chainId']} vault {fields['vault']}\n"
+            f"domain chainId {domain['chainId']} verifyingContract "
+            f"{domain_vault}\n"
+            "§5.5.1's digest carries no domain separator, so these two members "
+            "are the whole of a refusal's deployment binding")
+    except (KeyError, TypeError, eip712.EncodingError) as exc:
+        ok, detail = False, str(exc)
+    out.append(Check(
+        "refusal.chainId/vault match the presented deployment (§5.5.1)",
+        ok, detail))
+
+    # requestedVerdict: the verdict the signer was asked to attest, and which
+    # it declined to. §5.5.1 does not require it to agree with anything, but
+    # the evidence bundle beside it records the evaluator's verdict, and the
+    # receipt path already holds that field to the same standard.
+    if isinstance(evidence, dict) and evidence.get("verdict") is not None:
+        ok = evidence["verdict"] == fields["requestedVerdict"]
+        out.append(Check(
+            "refusal.requestedVerdict agrees with the evidence bundle's verdict",
+            ok,
+            "" if ok else
+            f"record says {fields['requestedVerdict']}, evidence records "
+            f"{evidence['verdict']!r}. §5.5.1 does not state that these must "
+            "agree; this verifier requires it, because the requested verdict "
+            "is by construction the one the evaluator produced and the signer "
+            "declined to sign. See REPORT.md F-18.6."))
+    else:
+        out.append(Check(
+            "refusal.requestedVerdict agrees with the evidence bundle's verdict",
+            True, "the evidence bundle records no verdict", skipped=True))
+    return out
+
+
+def _refusal_reason_code_checks(located, receipt_doc, fields):
+    """§5.5.1: "reasonCodesHash uses the same encoding as a receipt's (§5.4)".
+
+    §5.4's surrounding requirements come with it, because they are properties
+    of the commitment rather than of the receipt: the identifier grammar must
+    be re-validated and rejected rather than sanitised, the full list must
+    travel alongside because the record commits to a hash and not to the list,
+    and signerFindings must be a subset rather than re-unioned.
+    """
+    out = []
+    source = located.get("doc") or {}
+    published = source.get("reasonCodes")
+    findings = source.get("signerFindings")
+    if published is None:
+        published = receipt_doc.get("reasonCodes")
+        findings = receipt_doc.get("signerFindings")
+
+    if published is None:
+        out.append(Check(
+            "refusal.reasonCodesHash recomputed from the published reason codes",
+            False,
+            "the bundle carries no `reasonCodes` array beside the refusal "
+            "record. §5.5.1 gives reasonCodesHash the same encoding as §5.4's, "
+            "and §5.4 requires the full ordered list to travel alongside; "
+            "without it the commitment cannot be checked, and reporting the "
+            "refusal as verified would misdescribe what was verified."))
+        return out
+    if not isinstance(published, list):
+        out.append(Check("reasonCodes is a list", False,
+                         f"got {type(published).__name__}"))
+        return out
+
+    try:
+        reasoncodes.validate_all(published)
+        if findings is not None:
+            reasoncodes.validate_all(findings)
+        out.append(Check(
+            "every reason-code identifier matches ^[A-Za-z0-9_.:-]{1,64}$",
+            True,
+            f"{len(published)} identifier(s) validated with absolute anchors"))
+    except reasoncodes.ReasonCodeError as exc:
+        out.append(Check(
+            "every reason-code identifier matches ^[A-Za-z0-9_.:-]{1,64}$",
+            False, str(exc)))
+        return out
+
+    computed = reasoncodes.reason_codes_hash_hex(published)
+    ok = computed == fields["reasonCodesHash"]
+    out.append(Check(
+        "refusal.reasonCodesHash recomputed from the published reason codes",
+        ok,
+        f"{len(reasoncodes.committed_set(published))} code(s) committed" if ok
+        else f"computed {computed}\nrecord   {fields['reasonCodesHash']}"))
+
+    if findings is None:
+        out.append(Check("signerFindings ⊆ reasonCodes", True,
+                         "the bundle carries no `signerFindings` array",
+                         skipped=True))
+    else:
+        missing = sorted(set(findings) - set(published))
+        out.append(Check(
+            "signerFindings ⊆ the committed reason-code set", not missing,
+            "" if not missing else
+            f"signer findings absent from reasonCodes: {missing}"))
     return out
 
 
@@ -423,6 +1007,49 @@ def _binding_checks(payloads, domain):
     return out
 
 
+def _payload_hash_check(doc, fn, field, label, declared, against):
+    """Recompute one §5.1-§5.3 hashStruct and compare it to a declared value.
+
+    Shared by the receipt path and the §5.5.1 refusal path. The refusal record
+    names only `actionHash`, so the mandate and policy hashes are compared
+    against the action payload's members instead -- which is the same chain,
+    walked one link further out.
+    """
+    if doc is None:
+        return Check(f"recomputed {field} from {label}", True,
+                     "payload file not present in this sample", skipped=True)
+    try:
+        computed = "0x" + fn(doc).hex()
+    except eip712.EncodingError as exc:
+        return Check(f"recomputed {field} from {label}", False, str(exc))
+    expected = _norm_hex(declared) if isinstance(declared, str) else declared
+    ok = computed == expected
+    return Check(
+        f"recomputed {field} from {label} matches {against}", ok,
+        "" if ok else f"computed {computed}\ndeclared {expected}")
+
+
+def _calldata_check(action):
+    """calldata -> dataHash, the one place the raw call is bound.
+
+    Parsed strictly: bytes.fromhex silently ignores embedded whitespace, so
+    "0xc188 528b..." and "0xc188528b..." used to hash identically and dataHash
+    stopped pinning the presented bytes.
+    """
+    if not action or "callData" not in action:
+        return None
+    try:
+        raw = eip712.hex_to_bytes(action["callData"], "action.callData")
+    except eip712.EncodingError as exc:
+        return Check("keccak256(callData) matches action.dataHash", False,
+                     str(exc))
+    computed = "0x" + keccak256(raw).hex()
+    ok = computed == _norm_hex(action.get("dataHash", ""))
+    return Check("keccak256(callData) matches action.dataHash", ok,
+                 "" if ok else
+                 f"computed {computed}\naction   {action.get('dataHash')}")
+
+
 def _chain_checks(sample_dir, receipt, evidence, domain):
     """Recompute every other hash the receipt commits to.
 
@@ -454,38 +1081,12 @@ def _chain_checks(sample_dir, receipt, evidence, domain):
         (policy, eip712.policy_hash, "policyHash", "§5.2 PolicyPayload"),
         (action, eip712.action_hash, "actionHash", "§5.3 ActionPayload"),
     ):
-        if doc is None:
-            out.append(Check(f"recomputed {field} from {label}", True,
-                             "payload file not present in this sample", skipped=True))
-            continue
-        try:
-            computed = "0x" + fn(doc).hex()
-        except eip712.EncodingError as exc:
-            out.append(Check(f"recomputed {field} from {label}", False, str(exc)))
-            continue
-        declared = _norm_hex(receipt.get(field, ""))
-        ok = computed == declared
-        out.append(Check(
-            f"recomputed {field} from {label} matches the receipt",
-            ok,
-            "" if ok else f"computed {computed}\nreceipt  {declared}",
-        ))
+        out.append(_payload_hash_check(doc, fn, field, label,
+                                       receipt.get(field), "the receipt"))
 
-    # calldata -> dataHash, the one place the raw call is bound. Parsed
-    # strictly: bytes.fromhex silently ignores embedded whitespace, so
-    # "0xc188 528b..." and "0xc188528b..." used to hash identically and
-    # dataHash stopped pinning the presented bytes.
-    if action and "callData" in action:
-        try:
-            raw = eip712.hex_to_bytes(action["callData"], "action.callData")
-        except eip712.EncodingError as exc:
-            out.append(Check("keccak256(callData) matches action.dataHash",
-                             False, str(exc)))
-        else:
-            computed = "0x" + keccak256(raw).hex()
-            ok = computed == _norm_hex(action.get("dataHash", ""))
-            out.append(Check("keccak256(callData) matches action.dataHash", ok,
-                             "" if ok else f"computed {computed}\naction   {action.get('dataHash')}"))
+    calldata = _calldata_check(action)
+    if calldata is not None:
+        out.append(calldata)
 
     # Cross-references that §5 lists as fields but never requires to agree.
     if mandate and policy:
@@ -789,6 +1390,89 @@ def _tamper_override(doc, domain, mode):
     else:
         raise ValueError(f"unknown override tamper mode {mode!r}")
     return doc, domain
+
+
+# A key that is NOT the Sentinel signer and NOT the owner. Used by
+# refusal-wrongkey to mint a refusal that is entirely self-consistent -- valid
+# signature, matching declared signer, correct bindings -- and simply not
+# Sentinel's. Nothing internal to the record can catch it, which is the point.
+_OUTSIDER_TEST_KEY = (
+    0x00000000000000000000000000000000000000000000000000000000000f00d1
+)
+
+
+def _tamper_refusal(located, domain, mode):
+    """Mutate a §5.5.1 SignedRefusalRecord, then RE-SIGN it.
+
+    Every mode but `refusal-signature` and `refusal-strip-signature` leaves a
+    cryptographically perfect SignedRefusalRecord behind. That is deliberate: a
+    verifier that only checks the signature accepts all of them, and §5.5.1's
+    "a refusal is attributable or it is not issued" is precisely the
+    requirement a valid signature does not satisfy on its own.
+    """
+    located = copy.deepcopy(located)
+    record = located["record"]
+
+    def flip(value):
+        return "0x" + ("%02x" % (int(value[2:4], 16) ^ 0x01)) + value[4:]
+
+    resign = True
+    if mode == "refusal-actionhash":
+        record["actionHash"] = flip(record["actionHash"])
+    elif mode == "refusal-evidencehash":
+        record["evidenceHash"] = flip(record["evidenceHash"])
+    elif mode == "refusal-chainid":
+        record["chainId"] = "8453"
+    elif mode == "refusal-vault":
+        record["vault"] = "0x" + "11" * 20
+    elif mode == "refusal-verdict":
+        record["requestedVerdict"] = next(
+            v for v in refusal.VERDICT_NAMES if v != record["requestedVerdict"])
+    elif mode == "refusal-reasonhash":
+        record["reasonCodesHash"] = flip(record["reasonCodesHash"])
+    elif mode == "refusal-signature":
+        located["signature"] = flip(located["signature"])
+        resign = False
+    elif mode == "refusal-strip-signature":
+        located["signature"] = None
+        resign = False
+    elif mode == "refusal-wrongkey":
+        # A whole refusal minted by an outsider: the record declares the
+        # outsider's own address as `signer`, so it is internally consistent
+        # and only domain.json's signerAddress can reject it.
+        outsider = public_key_to_address(point_mul(_OUTSIDER_TEST_KEY, G))
+        record["signer"] = outsider
+    elif mode == "refusal-otherchain":
+        # The untouched, genuinely-signed refusal, presented as belonging to a
+        # different deployment.
+        domain = dict(domain)
+        domain["chainId"] = "8453"
+        resign = False
+    elif mode in ("refusal-reasons-add", "refusal-reasons-remove"):
+        # The record and its signature are untouched. Only the reason-code list
+        # travelling alongside is edited -- the §5.4/D-022 substitution, which
+        # §5.5.1 inherits by giving reasonCodesHash the same encoding.
+        doc = located.get("doc") or {}
+        codes = doc.get("reasonCodes")
+        if not isinstance(codes, list):
+            raise NotApplicable(
+                f"{mode} needs a reasonCodes list beside the refusal record")
+        if mode == "refusal-reasons-add":
+            doc["reasonCodes"] = codes + ["EVAL_FABRICATED_EXTRA_CODE"]
+        else:
+            if not codes:
+                raise NotApplicable(
+                    f"{mode} cannot be applied to an empty reasonCodes list")
+            doc["reasonCodes"] = codes[1:]
+        resign = False
+    else:
+        raise ValueError(f"unknown refusal tamper mode {mode!r}")
+
+    if resign:
+        key = (_OUTSIDER_TEST_KEY if mode == "refusal-wrongkey"
+               else _SENTINEL_SIGNER_TEST_KEY)
+        located["signature"] = sign_digest(refusal.digest(record), key)
+    return located, domain
 
 
 class NotApplicable(Exception):

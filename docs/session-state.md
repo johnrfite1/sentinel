@@ -289,6 +289,7 @@ means only that no NEW class went vacuous. Read their output, not their exit sta
 | D-042 | **S2 stands, annotated.** §7.1's containment claim corrected (cap → v1.1); the campaign gets its two missing arms; the verifier is repaired by an agent that has not read the implementation |
 | A-041 | Verifier repaired, 70 → 101 tests, both exploits now fail closed. **Its best output is a spec finding: §5 defined no refusal record at all**, so D-012's requirement was unbuildable from the published document |
 | D-043 | **CONSOLIDATE — no new front, no ladder rung.** Re-label bound to pre-publication with a named trigger; §5.5.1 RefusalRecord published; override event added; Anvil keys re-baselined |
+| A-042 | **The D-010 experiment run properly:** a schema-only build met a real signed refusal it had never seen. Everything §5.5.1 STATED matched first time; the envelope it omitted diverged, plus three defects in the section — all mine, all corrected. 101 → 146 tests |
 
 ## 5. Traces — what worked, and what was a dead end
 
@@ -342,6 +343,17 @@ means only that no NEW class went vacuous. Read their output, not their exit sta
 
 **What worked:**
 
+- **Building an independent implementation from the SPEC ALONE and measuring it against a real
+  artifact it had never seen** (A-042). Keep the two halves apart, and **declare what each
+  outcome means before either finishes** — agreement means the spec is precise enough to build
+  from, divergence is a spec gap. It resolved as divergence and named the exact clause. **The
+  spec text was four days old and mine; the independent side found what I could not, because I
+  could not un-know the implementation.** This is the only technique here that tests a
+  DOCUMENT rather than code.
+- **Writing a fixture's own falsification guard into the tool that emits it.** The refusal
+  sample's spec carried "if the signer did not refuse, fail the run" — and it fired on the first
+  attempt, catching that pausing before evaluation produces a BLOCK the signer will happily
+  attest. A sample that exists to demonstrate X and silently does not is worse than no sample.
 - **Adversarial review at a fixed commit, told to prove the work fails.** Four reviews, ~24
   material findings, several missed by the suite, the mutation harness and prior reviews. Give
   each a FROZEN tree — `git worktree add <scratch> <commit>` with `node_modules` symlinked

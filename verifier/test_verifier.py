@@ -19,8 +19,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import eip712  # noqa: E402
 import jcs  # noqa: E402
 import reasoncodes  # noqa: E402
+import refusal  # noqa: E402
 import verify  # noqa: E402
-from keccak import keccak256_hex  # noqa: E402
+from keccak import keccak256, keccak256_hex  # noqa: E402
 from secp256k1 import (  # noqa: E402
     G, N, is_low_s, parse_signature, point_mul, public_key_to_address,
     recover_address, sign_digest,
@@ -65,12 +66,34 @@ def reseal(target, domain):
     return doc
 
 
-def sample_dirs():
+def all_sample_dirs():
     return sorted(
         os.path.join(SAMPLES, name)
         for name in os.listdir(SAMPLES)
         if os.path.isdir(os.path.join(SAMPLES, name))
     )
+
+
+def sample_dirs():
+    """The samples presenting a §5.4 signed receipt.
+
+    §5.5.1 (2026-08-16) split the corpus in two. A bundle presents a decision
+    OR a refusal -- never both -- so the tests that walk every sample asserting
+    a receipt property now walk this list, and `refusal_sample_dirs()` carries
+    the other kind. The split is read from `index.json`'s `signerRefused`,
+    which is fixture-harness metadata rather than protocol; the verifier makes
+    the same distinction structurally, by locating a §5.5.1 record.
+    """
+    refused = {e["id"] for e in read_json(SAMPLES, "index.json")
+               if e.get("signerRefused")}
+    return [d for d in all_sample_dirs() if os.path.basename(d) not in refused]
+
+
+def refusal_sample_dirs():
+    """The samples presenting a §5.5.1 SignedRefusalRecord."""
+    refused = {e["id"] for e in read_json(SAMPLES, "index.json")
+               if e.get("signerRefused")}
+    return [d for d in all_sample_dirs() if os.path.basename(d) in refused]
 
 
 def expected_verdicts():
@@ -1364,6 +1387,662 @@ class TestSignatureCanonicalForm(unittest.TestCase):
                          "both signatures in a bundle must be held to the "
                          "same canonical-form rule")
         self.assertTrue(all(c.ok for c in canonical))
+
+
+# ---------------------------------------------------------------------------
+# §5.5.1 SignedRefusalRecord
+# ---------------------------------------------------------------------------
+
+# A key that is neither the Sentinel signer nor the owner.
+OUTSIDER_KEY = verify._OUTSIDER_TEST_KEY
+
+
+def address_of(key):
+    return public_key_to_address(point_mul(key, G))
+
+
+def build_refusal_record(case_dir, key=SIGNER_KEY, **overrides):
+    """A §5.5.1 RefusalRecord for a sample, built from §5.5.1's field list.
+
+    Every value comes from the bundle itself or from §5.5.1's charset rules --
+    nothing is copied from a shipped refusal artifact. The point of D-010 is
+    that this is possible.
+    """
+    action = read_json(case_dir, "action.json")
+    with open(os.path.join(case_dir, "evidence.hash"), "rb") as handle:
+        evidence_hash = handle.read().decode().strip().lower()
+    record = {
+        "schemaVersion": action["schemaVersion"],
+        "chainId": action["chainId"],
+        "vault": action["vault"].lower(),
+        "actionHash": "0x" + eip712.action_hash(action).hex(),
+        "evidenceHash": evidence_hash,
+        "requestedVerdict": read_json(case_dir, "evidence.json")["verdict"],
+        "reasonCodesHash": reasoncodes.reason_codes_hash_hex(
+            read_json(case_dir, "receipt.json").get("reasonCodes") or []),
+        "refusedAt": "1786916613",
+        "signer": address_of(key),
+    }
+    record.update(overrides)
+    return record
+
+
+class TestRefusalDigest(unittest.TestCase):
+    """§5.5.1's digest, pinned against the specification's own words.
+
+    §5.5.1 prints the preimage explicitly, so unlike §5.4's EIP-712 digest
+    (REPORT.md F-1, recovered by brute-force search) nothing here is a
+    reconstruction. These tests exist to keep it that way.
+    """
+
+    RECORD = {
+        "schemaVersion": "1",
+        "chainId": "31337",
+        "vault": "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512",
+        "actionHash": "0x" + "11" * 32,
+        "evidenceHash": "0x" + "22" * 32,
+        "requestedVerdict": "BLOCK",
+        "reasonCodesHash": "0x" + "33" * 32,
+        "refusedAt": "1786916613",
+        "signer": "0x70997970c51812dc3a010c7d01b50e0d17dc79c8",
+    }
+
+    def hand_built(self):
+        # Transcribed from §5.5.1, one concatenation per printed line.
+        r = self.RECORD
+        return (
+            "sentinel.refusal.v0.2" + "\n"
+            + r["schemaVersion"] + "\n" + r["chainId"] + "\n" + r["vault"] + "\n"
+            + r["actionHash"] + "\n" + r["evidenceHash"] + "\n"
+            + r["requestedVerdict"] + "\n"
+            + r["reasonCodesHash"] + "\n" + r["refusedAt"] + "\n" + r["signer"]
+        ).encode("utf-8")
+
+    def test_preimage_is_the_section_5_5_1_string(self):
+        self.assertEqual(refusal.preimage(self.RECORD), self.hand_built())
+
+    def test_digest_is_keccak_of_that_string(self):
+        self.assertEqual(refusal.digest_hex(self.RECORD),
+                         keccak256_hex(self.hand_built()))
+
+    def test_digest_is_pinned(self):
+        # A literal, so a later refactor that changes the construction breaks
+        # loudly instead of staying self-consistent.
+        self.assertEqual(
+            refusal.digest_hex(self.RECORD),
+            "0x6805267dae6fdd49207cb4d935ebfbda542d26264e141290db3ad5e5ca492baa")
+
+    def test_no_trailing_delimiter(self):
+        # The §5.4 edge-single-reason-code fixture exists because a producer
+        # appending the delimiter hashes identically on every other sample. The
+        # same keystroke is available here.
+        self.assertFalse(refusal.preimage(self.RECORD).endswith(b"\n"))
+        self.assertEqual(refusal.preimage(self.RECORD).count(b"\n"), 9)
+        self.assertEqual(len(refusal.preimage(self.RECORD).split(b"\n")), 10)
+
+    def test_domain_tag_is_byte_exact(self):
+        self.assertEqual(refusal.DOMAIN_TAG, "sentinel.refusal.v0.2")
+        self.assertTrue(refusal.preimage(self.RECORD)
+                        .startswith(b"sentinel.refusal.v0.2\n"))
+
+    def test_a_different_domain_tag_is_a_different_digest(self):
+        saved = refusal.DOMAIN_TAG
+        try:
+            refusal.DOMAIN_TAG = "sentinel.refusal.v0.3"
+            self.assertNotEqual(refusal.digest_hex(self.RECORD),
+                                keccak256_hex(self.hand_built()))
+        finally:
+            refusal.DOMAIN_TAG = saved
+
+    def test_field_order_follows_section_5_5_1(self):
+        self.assertEqual(
+            list(refusal.FIELD_NAMES),
+            ["schemaVersion", "chainId", "vault", "actionHash", "evidenceHash",
+             "requestedVerdict", "reasonCodesHash", "refusedAt", "signer"])
+
+    def test_field_order_is_part_of_the_format(self):
+        # §5.5.1 says so in bold. Two records differing only by which of two
+        # same-charset values sits in which slot must not share a digest.
+        swapped = dict(self.RECORD,
+                       actionHash=self.RECORD["evidenceHash"],
+                       evidenceHash=self.RECORD["actionHash"])
+        self.assertNotEqual(refusal.digest_hex(swapped),
+                            refusal.digest_hex(self.RECORD))
+
+    def test_it_is_not_an_eip712_digest(self):
+        # §5.5.1: "This record is NOT an EIP-712 typed structure."
+        self.assertNotIn(b"\x19\x01", refusal.preimage(self.RECORD)[:2])
+        domain = read_json(SAMPLES, "domain.json")
+        separator = eip712.domain_separator(domain)
+        self.assertNotEqual(
+            refusal.digest(self.RECORD),
+            keccak256(b"\x19\x01" + separator + refusal.digest(self.RECORD)))
+
+
+class TestRefusalCharsets(unittest.TestCase):
+    """§5.5.1's charsets are the whole of its injectivity argument."""
+
+    def record(self, **overrides):
+        return dict(TestRefusalDigest.RECORD, **overrides)
+
+    def test_the_good_record_validates(self):
+        self.assertEqual(len(refusal.canonical_fields(self.record())), 9)
+
+    def test_rejected_values(self):
+        cases = {
+            "decimal with a sign": {"chainId": "+31337"},
+            "decimal with whitespace": {"chainId": " 31337"},
+            "decimal with a trailing newline": {"chainId": "31337\n"},
+            "decimal as a JSON number": {"chainId": 31337},
+            "decimal that is empty": {"refusedAt": ""},
+            "hex chainId": {"chainId": "0x7a69"},
+            "checksummed vault": {
+                "vault": "0xE7f1725E7734CE288F8367e1Bb143E90bb3F0512"},
+            "uppercase hash": {"actionHash": "0x" + "AB" * 32},
+            "hash missing its 0x": {"evidenceHash": "11" * 32},
+            "hash of the wrong width": {"evidenceHash": "0x" + "11" * 31},
+            "address of the wrong width": {"signer": "0x" + "11" * 19},
+            "verdict as its §5.9 number": {"requestedVerdict": "2"},
+            "verdict in lower case": {"requestedVerdict": "block"},
+            "verdict that is not one": {"requestedVerdict": "REFUSE"},
+            "verdict as a JSON null": {"requestedVerdict": None},
+            "boolean in a string slot": {"schemaVersion": True},
+        }
+        for label, override in cases.items():
+            with self.subTest(case=label):
+                with self.assertRaises(refusal.RefusalError):
+                    refusal.canonical_fields(self.record(**override))
+
+    def test_a_missing_field_cannot_be_defaulted(self):
+        for name in refusal.FIELD_NAMES:
+            with self.subTest(field=name):
+                short = self.record()
+                del short[name]
+                with self.assertRaises(refusal.RefusalError):
+                    refusal.canonical_fields(short)
+
+    def test_an_extra_field_is_refused_rather_than_ignored(self):
+        # The preimage commits to exactly nine values, so a tenth is
+        # unauthenticated data a reader would reasonably assume is signed.
+        with self.assertRaises(refusal.RefusalError):
+            refusal.canonical_fields(self.record(expiresAt="1786916913"))
+
+    def test_the_charsets_are_what_makes_the_encoding_injective(self):
+        # §5.5.1: "The encoding is injective because every field is a fixed
+        # charset that cannot contain the newline delimiter." Two DIFFERENT
+        # nine-field records, each with one delimiter smuggled into a value,
+        # join to the same bytes -- so one signature would attest to both.
+        base = self.record()
+        a = dict(base, requestedVerdict="BLOCK\nSMUGGLED",
+                 reasonCodesHash="0x" + "33" * 32)
+        b = dict(base, requestedVerdict="BLOCK",
+                 reasonCodesHash="SMUGGLED\n0x" + "33" * 32)
+        joined = lambda r: "\n".join(  # noqa: E731 - a two-line helper
+            [refusal.DOMAIN_TAG] + [r[n] for n in refusal.FIELD_NAMES])
+        self.assertNotEqual(a, b)
+        self.assertEqual(joined(a), joined(b),
+                         "the premise: without the charsets these collide")
+        for label, record in (("a", a), ("b", b)):
+            with self.subTest(record=label):
+                with self.assertRaises(refusal.RefusalError):
+                    refusal.canonical_fields(record)
+
+    def test_leading_zeros_are_advisory_not_a_collision(self):
+        # §5.5.1 says "decimal digits" and no more, so "031337" conforms. It
+        # enters the preimage verbatim, so it produces a DIFFERENT digest
+        # rather than a colliding one -- which is why it is surfaced rather
+        # than rejected. See REPORT.md F-18.3.
+        loose = self.record(chainId="031337")
+        self.assertEqual(len(refusal.canonical_fields(loose)), 9)
+        self.assertNotEqual(refusal.digest_hex(loose),
+                            refusal.digest_hex(self.record()))
+        self.assertEqual(refusal.noncanonical_decimals(loose), ["chainId"])
+        self.assertEqual(refusal.noncanonical_decimals(self.record()), [])
+
+
+class TestRefusalBundle(unittest.TestCase):
+    """End-to-end bundles, every one of them synthesised from §5.5.1.
+
+    The staged bundles use `refusal.json` with the record nested one level;
+    `refusal-vault-paused` in the corpus uses a different envelope again. Both
+    are covered, because §5.5.1 specifies neither (REPORT.md F-18.2).
+    """
+
+    CASE = os.path.join(SAMPLES, "case-1-allow")
+
+    def stage_refusal(self, key=SIGNER_KEY, sign=True, doc=None, receipt=None,
+                      meta_refused=True, case=None, **overrides):
+        case = case or self.CASE
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp)
+        target = stage(case, tmp)
+        source = read_json(case, "receipt.json")
+        record = build_refusal_record(case, key=key, **overrides)
+        envelope = {
+            "refusal": record,
+            "reasonCodes": source.get("reasonCodes") or [],
+            "signerFindings": source.get("signerFindings") or [],
+        }
+        if sign:
+            try:
+                envelope["signerSignature"] = sign_digest(
+                    refusal.digest(record), key)
+            except refusal.RefusalError:
+                # A record this malformed cannot be digested, so it cannot be
+                # signed either. Attach a well-formed but meaningless
+                # signature: the shape check runs first and must reject the
+                # bundle before anything looks at the signature at all.
+                envelope["signerSignature"] = "0x" + "11" * 64 + "1b"
+        if doc is not None:
+            envelope.update(doc)
+        write_json(os.path.join(target, "refusal.json"), envelope)
+        write_json(os.path.join(target, "receipt.json"),
+                   {"refused": True} if receipt is None else receipt)
+        meta = read_json(case, "meta.json")
+        meta["signerRefused"] = meta_refused
+        write_json(os.path.join(target, "meta.json"), meta)
+        return target
+
+    def run_sample(self, target):
+        return verify.verify_sample(target)
+
+    def assertFailsOn(self, checks, fragment):
+        failed = [c.name for c in checks if not c.ok]
+        self.assertTrue(any(fragment in name for name in failed),
+                        f"expected a failure naming {fragment!r}; failures "
+                        f"were {failed}")
+
+    # -- the happy path ---------------------------------------------------
+
+    def test_a_properly_signed_refusal_verifies(self):
+        ok, checks = self.run_sample(self.stage_refusal())
+        self.assertTrue(ok, [c.name for c in checks if not c.ok])
+        names = [c.name for c in checks]
+        for expected in (
+            "the signature recovers the record's declared signer",
+            "the recovered signer is the deployment's Sentinel signer",
+            "refusal.evidenceHash binds the recomputed evidence",
+            "recomputed actionHash from §5.3 ActionPayload matches the "
+            "refusal record",
+            "refusal.chainId/vault match the presented deployment (§5.5.1)",
+            "refusal.reasonCodesHash recomputed from the published reason codes",
+        ):
+            self.assertIn(expected, names)
+
+    def test_the_cli_exits_zero_on_a_signed_refusal(self):
+        target = self.stage_refusal()
+        with open(os.devnull, "w") as devnull:
+            saved, sys.stdout = sys.stdout, devnull
+            try:
+                self.assertEqual(verify.main([target]), 0)
+            finally:
+                sys.stdout = saved
+
+    def test_the_flat_envelope_verifies_identically(self):
+        # §5.5.1: "SignedRefusalRecord contains RefusalRecord plus
+        # signerSignature" reads equally well flat or nested, and specifies
+        # neither. Both must reach the same verdict or the envelope silently
+        # decides verification.
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp)
+        target = stage(self.CASE, tmp)
+        record = build_refusal_record(self.CASE)
+        flat = dict(record)
+        flat["signerSignature"] = sign_digest(refusal.digest(record), SIGNER_KEY)
+        flat["reasonCodes"] = []
+        write_json(os.path.join(target, "refusal.json"), flat)
+        write_json(os.path.join(target, "receipt.json"), {"refused": True})
+        meta = read_json(self.CASE, "meta.json")
+        meta["signerRefused"] = True
+        write_json(os.path.join(target, "meta.json"), meta)
+        ok, checks = self.run_sample(target)
+        self.assertTrue(ok, [c.name for c in checks if not c.ok])
+
+    def test_the_record_may_travel_inside_receipt_json(self):
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp)
+        target = stage(self.CASE, tmp)
+        record = build_refusal_record(self.CASE)
+        write_json(os.path.join(target, "receipt.json"), {
+            "refused": True,
+            "refusalRecord": record,
+            "signerSignature": sign_digest(refusal.digest(record), SIGNER_KEY),
+            "reasonCodes": [],
+        })
+        meta = read_json(self.CASE, "meta.json")
+        meta["signerRefused"] = True
+        write_json(os.path.join(target, "meta.json"), meta)
+        ok, checks = self.run_sample(target)
+        self.assertTrue(ok, [c.name for c in checks if not c.ok])
+
+    # -- unsigned, absent, contradictory ----------------------------------
+
+    def test_an_unsigned_record_is_not_certified(self):
+        ok, checks = self.run_sample(self.stage_refusal(sign=False))
+        self.assertFalse(ok, "an unsigned refusal record was certified")
+        self.assertFailsOn(checks, "the refusal record is signed")
+
+    def test_an_absent_record_is_an_unestablished_refusal(self):
+        # §5.5.1: "a verifier must treat an absent record as an unestablished
+        # refusal rather than an established one." This is the F-13 behaviour,
+        # now with a specification behind it instead of a judgement call.
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp)
+        target = stage(self.CASE, tmp)
+        write_json(os.path.join(target, "receipt.json"),
+                   {"refused": True, "refusalReason": "signer declined"})
+        ok, checks = self.run_sample(target)
+        self.assertFalse(ok)
+        self.assertFailsOn(checks, "a signed receipt is present to verify")
+
+    def test_a_refusal_beside_a_signed_receipt_fails(self):
+        ok, checks = self.run_sample(
+            self.stage_refusal(receipt=read_json(self.CASE, "receipt.json")))
+        self.assertFalse(ok)
+        self.assertFailsOn(checks, "a decision OR a refusal, not both")
+
+    def test_a_refusal_with_refused_false_fails(self):
+        ok, checks = self.run_sample(
+            self.stage_refusal(receipt={"refused": False}))
+        self.assertFalse(ok)
+        self.assertFailsOn(checks, "`refused` flag agrees")
+
+    def test_a_refusal_the_case_label_denies_fails(self):
+        ok, checks = self.run_sample(self.stage_refusal(meta_refused=False))
+        self.assertFalse(ok)
+        self.assertFailsOn(checks, "the case label records a signer refusal")
+
+    def test_two_disagreeing_records_are_both_rejected(self):
+        target = self.stage_refusal()
+        other = build_refusal_record(self.CASE, refusedAt="1786916999")
+        write_json(os.path.join(target, "receipt.json"), {
+            "refused": True,
+            "refusalRecord": other,
+            "signerSignature": sign_digest(refusal.digest(other), SIGNER_KEY),
+        })
+        ok, checks = self.run_sample(target)
+        self.assertFalse(ok)
+        self.assertFailsOn(checks, "at most one §5.5.1 SignedRefusalRecord")
+
+    # -- malformed --------------------------------------------------------
+
+    def test_malformed_records_fail(self):
+        cases = {
+            "missing a field": {"drop": "refusedAt"},
+            "extra field": {"expiresAt": "1786916913"},
+            "checksummed signer": {
+                "signer": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"},
+            "verdict as a number": {"requestedVerdict": "2"},
+            "hash of the wrong width": {"evidenceHash": "0x" + "11" * 31},
+            "delimiter smuggled into a value": {
+                "requestedVerdict": "ALLOW\nSMUGGLED"},
+        }
+        for label, override in cases.items():
+            with self.subTest(case=label):
+                drop = override.pop("drop", None)
+                target = self.stage_refusal(**override)
+                if drop:
+                    doc = read_json(target, "refusal.json")
+                    del doc["refusal"][drop]
+                    write_json(os.path.join(target, "refusal.json"), doc)
+                ok, checks = self.run_sample(target)
+                self.assertFalse(ok, f"{label} was accepted")
+                self.assertFailsOn(checks, "exactly the nine §5.5.1 fields")
+
+    def test_a_corrupt_signature_fails(self):
+        target = self.stage_refusal()
+        doc = read_json(target, "refusal.json")
+        sig = doc["signerSignature"]
+        doc["signerSignature"] = ("0x%02x" % (int(sig[2:4], 16) ^ 1)) + sig[4:]
+        write_json(os.path.join(target, "refusal.json"), doc)
+        ok, checks = self.run_sample(target)
+        self.assertFalse(ok)
+
+    def test_a_high_s_signature_is_rejected(self):
+        target = self.stage_refusal()
+        doc = read_json(target, "refusal.json")
+        r, s, v = parse_signature(doc["signerSignature"])
+        self.assertTrue(is_low_s(s))
+        doc["signerSignature"] = ("0x" + r.to_bytes(32, "big").hex()
+                                  + (N - s).to_bytes(32, "big").hex()
+                                  + bytes([{27: 28, 28: 27}[v]]).hex())
+        write_json(os.path.join(target, "refusal.json"), doc)
+        ok, checks = self.run_sample(target)
+        self.assertFalse(ok, "a malleated refusal signature was accepted")
+        self.assertFailsOn(checks, "refusal signature is EIP-2 canonical")
+        signer = [c for c in checks
+                  if c.name == "the signature recovers the record's declared "
+                               "signer"]
+        self.assertTrue(signer and signer[0].ok,
+                        "the identity check must still pass, or this tests "
+                        "signature parsing rather than canonical form")
+
+    # -- wrong signer -----------------------------------------------------
+
+    def test_a_self_consistent_outsider_refusal_fails(self):
+        # The attack the record cannot catch on its own: an outsider mints a
+        # RefusalRecord naming their OWN key as `signer` and signs it. Digest,
+        # recovery and every binding are correct. Only "is this Sentinel's
+        # key?" rejects it.
+        target = self.stage_refusal(key=OUTSIDER_KEY)
+        ok, checks = self.run_sample(target)
+        self.assertFalse(ok, "anyone could mint a refusal")
+        recovered = [c for c in checks
+                     if c.name == "the signature recovers the record's "
+                                  "declared signer"]
+        self.assertTrue(recovered and recovered[0].ok,
+                        "the forgery is internally consistent by construction")
+        self.assertFailsOn(checks, "deployment's Sentinel signer")
+
+    def test_a_swapped_signer_field_fails(self):
+        # Signed correctly, then `signer` rewritten. §5.5.1 puts signer inside
+        # the preimage, so the digest moves and recovery lands elsewhere.
+        target = self.stage_refusal()
+        doc = read_json(target, "refusal.json")
+        doc["refusal"]["signer"] = address_of(OUTSIDER_KEY)
+        write_json(os.path.join(target, "refusal.json"), doc)
+        ok, checks = self.run_sample(target)
+        self.assertFalse(ok)
+        self.assertFailsOn(checks, "recovers the record's declared signer")
+
+    def test_an_eip191_signature_fails_and_says_so(self):
+        # §5.5.1 states the digest and never states how it is signed. A
+        # producer reaching for a wallet library's signMessage lands here, and
+        # the only symptom is a signer mismatch. REPORT.md F-18.1.
+        target = self.stage_refusal(sign=False)
+        doc = read_json(target, "refusal.json")
+        digest = refusal.digest(doc["refusal"])
+        doc["signerSignature"] = sign_digest(
+            refusal.eth_signed_message_digest(digest), SIGNER_KEY)
+        write_json(os.path.join(target, "refusal.json"), doc)
+        ok, checks = self.run_sample(target)
+        self.assertFalse(ok, "an EIP-191 signature must not be accepted "
+                             "silently either")
+        detail = "\n".join(c.detail for c in checks if not c.ok)
+        self.assertIn("EIP-191", detail,
+                      "the failure must name the near-miss, or a construction "
+                      "disagreement reads as a forgery")
+
+    # -- mis-bound --------------------------------------------------------
+
+    def test_misbound_records_fail_despite_valid_signatures(self):
+        other = os.path.join(SAMPLES, "edge-single-reason-code")
+        other_action = "0x" + eip712.action_hash(
+            read_json(other, "action.json")).hex()
+        with open(os.path.join(other, "evidence.hash"), "rb") as handle:
+            other_evidence = handle.read().decode().strip().lower()
+        cases = {
+            "another action": ({"actionHash": other_action},
+                               "recomputed actionHash"),
+            "another evidence bundle": ({"evidenceHash": other_evidence},
+                                        "evidenceHash binds"),
+            "another chain": ({"chainId": "8453"}, "chainId"),
+            "another vault": ({"vault": "0x" + "11" * 20}, "vault"),
+            "another requested verdict": ({"requestedVerdict": "BLOCK"},
+                                          "requestedVerdict"),
+            "another reason set": ({"reasonCodesHash": "0x" + "44" * 32},
+                                   "reasonCodesHash"),
+        }
+        for label, (override, fragment) in cases.items():
+            with self.subTest(case=label):
+                target = self.stage_refusal(**override)
+                ok, checks = self.run_sample(target)
+                self.assertFalse(ok, f"a refusal bound to {label} was accepted")
+                self.assertFailsOn(checks, fragment)
+
+    def test_a_signed_refusal_cannot_be_lifted_to_another_deployment(self):
+        # §5.5.1's digest carries no domain separator -- the tag is a constant.
+        # The record's own chainId/vault members are the entire deployment
+        # binding, and they only bind if a verifier reads them (F-14's lesson).
+        target = self.stage_refusal()
+        elsewhere = dict(read_json(SAMPLES, "domain.json"), chainId="8453")
+        write_json(os.path.join(os.path.dirname(target), "domain.json"),
+                   elsewhere)
+        ok, checks = self.run_sample(target)
+        self.assertFalse(ok, "a refusal was accepted on another chain")
+
+    def test_the_reason_code_list_must_travel_alongside(self):
+        # §5.5.1 gives reasonCodesHash §5.4's encoding, and §5.4 requires the
+        # list to travel with the commitment.
+        target = self.stage_refusal(case=os.path.join(
+            SAMPLES, "edge-single-reason-code"))
+        doc = read_json(target, "refusal.json")
+        del doc["reasonCodes"]
+        write_json(os.path.join(target, "refusal.json"), doc)
+        ok, checks = self.run_sample(target)
+        self.assertFalse(ok)
+        self.assertFailsOn(checks, "reasonCodesHash recomputed")
+
+    def test_substituting_the_reason_code_list_fails(self):
+        target = self.stage_refusal(case=os.path.join(
+            SAMPLES, "edge-single-reason-code"))
+        doc = read_json(target, "refusal.json")
+        doc["reasonCodes"] = ["EVAL_SOMETHING_ELSE"]
+        write_json(os.path.join(target, "refusal.json"), doc)
+        ok, checks = self.run_sample(target)
+        self.assertFalse(ok)
+        self.assertFailsOn(checks, "reasonCodesHash recomputed")
+
+    def test_signer_findings_must_be_a_subset(self):
+        target = self.stage_refusal()
+        doc = read_json(target, "refusal.json")
+        doc["signerFindings"] = ["SIGNER_INVENTED_FINDING"]
+        write_json(os.path.join(target, "refusal.json"), doc)
+        ok, checks = self.run_sample(target)
+        self.assertFalse(ok)
+        self.assertFailsOn(checks, "signerFindings")
+
+    def test_a_refusal_with_no_action_payload_fails(self):
+        # §5.5.1: "A refusal is attributable or it is not issued." The record
+        # names no mandate and no policy; actionHash is the only route to
+        # either, and it is only walkable with the action payload in hand.
+        target = self.stage_refusal()
+        os.remove(os.path.join(target, "action.json"))
+        ok, checks = self.run_sample(target)
+        self.assertFalse(ok)
+        self.assertFailsOn(checks, "refusal.actionHash binds")
+
+
+class TestRefusalSampleInCorpus(unittest.TestCase):
+    """The corpus gained a §5.5.1 refusal sample on 2026-08-16.
+
+    Nothing in this verifier was tuned to it: the record's field list, order,
+    charsets, digest and signature construction were implemented from §5.5.1
+    and matched on the first run. The one thing that did NOT match is the one
+    thing §5.5.1 does not specify -- the envelope carrying the record. See
+    REPORT.md F-18.2.
+    """
+
+    def test_the_corpus_carries_at_least_one_refusal_sample(self):
+        self.assertTrue(refusal_sample_dirs(),
+                        "§5.5.1 is untested by any artifact again")
+
+    def test_every_refusal_sample_verifies(self):
+        for path in refusal_sample_dirs():
+            with self.subTest(sample=os.path.basename(path)):
+                ok, checks = verify.verify_sample(path)
+                self.assertTrue(ok, [c.name for c in checks if not c.ok])
+
+    def test_every_refusal_sample_is_actually_verified_not_skipped(self):
+        # A pass made of skips is what F-13 was. Name the checks that must
+        # have genuinely run.
+        for path in refusal_sample_dirs():
+            with self.subTest(sample=os.path.basename(path)):
+                _, checks = verify.verify_sample(path)
+                ran = {c.name for c in checks if c.ok and not c.skipped}
+                for expected in (
+                    "the signature recovers the record's declared signer",
+                    "the recovered signer is the deployment's Sentinel signer",
+                    "refusal.evidenceHash binds the recomputed evidence",
+                    "recomputed actionHash from §5.3 ActionPayload matches "
+                    "the refusal record",
+                    "refusal.reasonCodesHash recomputed from the published "
+                    "reason codes",
+                ):
+                    self.assertIn(expected, ran)
+
+    def test_no_refusal_sample_presents_a_signed_receipt(self):
+        for path in refusal_sample_dirs():
+            with self.subTest(sample=os.path.basename(path)):
+                doc = read_json(path, "receipt.json")
+                self.assertIsNone(doc.get("receipt"))
+                self.assertIsNone(doc.get("signature"))
+
+    def test_every_refusal_tamper_mode_is_rejected(self):
+        modes = [m for m in verify.TAMPER_MODES if m.startswith("refusal-")]
+        self.assertGreaterEqual(len(modes), 10)
+        for path in refusal_sample_dirs():
+            for mode in modes:
+                with self.subTest(sample=os.path.basename(path), mode=mode):
+                    try:
+                        ok, _ = verify.verify_sample(path, tamper=mode)
+                    except verify.NotApplicable:
+                        continue
+                    self.assertFalse(ok, f"{mode} was WRONGLY ACCEPTED")
+
+    def test_a_refusal_and_a_receipt_for_the_SAME_action_both_exist(self):
+        # The corpus happens to contain the sharpest available adversarial
+        # pair: a signed ALLOW receipt and a signed refusal naming the SAME
+        # actionHash, differing only in their evidence. So actionHash alone
+        # cannot tell a verifier which bundle a refusal belongs to.
+        refusal_case = os.path.join(SAMPLES, "refusal-vault-paused")
+        allow_case = os.path.join(SAMPLES, "case-1-allow")
+        if not os.path.isdir(refusal_case):
+            self.skipTest("no refusal-vault-paused sample in this corpus")
+        self.assertEqual(
+            eip712.action_hash(read_json(refusal_case, "action.json")),
+            eip712.action_hash(read_json(allow_case, "action.json")),
+            "the premise of this test no longer holds")
+
+    def test_a_refusal_cannot_be_moved_onto_a_same_action_bundle(self):
+        # Move the genuine, untouched, validly-signed refusal onto the ALLOW
+        # bundle for the same action. Its actionHash matches. Only the evidence
+        # binding says no -- which is why both bindings are checked.
+        refusal_case = os.path.join(SAMPLES, "refusal-vault-paused")
+        allow_case = os.path.join(SAMPLES, "case-1-allow")
+        if not os.path.isdir(refusal_case):
+            self.skipTest("no refusal-vault-paused sample in this corpus")
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp)
+        target = stage(allow_case, tmp)
+        for name in ("receipt.json", "meta.json"):
+            shutil.copy(os.path.join(refusal_case, name),
+                        os.path.join(target, name))
+        ok, checks = verify.verify_sample(target)
+        self.assertFalse(ok, "a signed refusal was moved onto another bundle")
+        failed = [c.name for c in checks if not c.ok]
+        self.assertIn("refusal.evidenceHash binds the recomputed evidence",
+                      failed)
+        action_bound = [c for c in checks if "recomputed actionHash" in c.name]
+        self.assertTrue(action_bound and action_bound[0].ok,
+                        "the action binding must still pass, or this tests "
+                        "something other than what it claims to")
+
+    def test_refusal_tamper_modes_are_not_applicable_to_receipt_samples(self):
+        for path in sample_dirs():
+            with self.subTest(sample=os.path.basename(path)):
+                with self.assertRaises(verify.NotApplicable):
+                    verify.verify_sample(path, tamper="refusal-actionhash")
 
 
 if __name__ == "__main__":

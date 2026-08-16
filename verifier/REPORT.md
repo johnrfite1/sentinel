@@ -43,6 +43,17 @@ exact property the receipt layer exists to demonstrate.
 > individual findings: **a spec gap that has been written up is not a spec gap that has been
 > handled**, and a report entry can make an unexamined choice look examined. See §2, items 7–11.
 
+> **Amended 2026-08-16 (second time), implementing §5.5.1 (D-043).** The headline needs its
+> first genuine counter-example. **§5.5.1 was sufficient to build from — completely, on one
+> reading, with no search against a signed artifact.** It prints its field list, its order, its
+> delimiter, its charsets, its domain tag and its full preimage, and everything it prints
+> matched a real signed refusal on the first run, including the preimage bytes and the
+> signature construction. That is what §5.4 and §5.1–§5.3 needed brute force to recover (F-1,
+> F-2), and it demonstrates that the headline's diagnosis was right and its remedy works: **a
+> section that specifies encodings rather than field names is implementable by a stranger.**
+> The one thing §5.5.1 leaves out is the one thing that diverged — the wire envelope carrying
+> the record, as opposed to the record itself. See F-18.
+
 ## 1. Findings
 
 **BLOCKER** = cannot implement from the spec. **MAJOR** = two readings produce different
@@ -631,6 +642,30 @@ carries `signerRefused: false` on all six. Every refusal shape here is synthesis
 > refusal: it MUST fail, because it has been handed nothing to verify. Without both halves the
 > §4.2 evidence-uncertainty demonstration and a deleted ALLOW are the same artifact.
 
+#### F-13 — CLOSED 2026-08-16 by §5.5.1 (D-043). Both halves of the proposal landed.
+
+§5.5.1 defines `RefusalRecord`, signs it, and states the verifier's obligation in its own
+words: "a verifier must treat an absent record as an unestablished refusal rather than an
+established one." Both halves of the proposal above were adopted, and the shape adopted is very
+close to the one proposed — `schemaVersion`, `actionHash`, `evidenceHash`, `reasonCodesHash`
+and `signer` all appear, `chainId` and `vault` were added, `issuedAt`/`expiresAt` became a
+single `refusedAt` (see F-18.10), and the digest is a domain-tagged string preimage rather than
+the §5.8 type string proposed here.
+
+**What this changes in the verifier.** A properly signed, properly bound `SignedRefusalRecord`
+now VERIFIES. Everything else about a refusal claim still FAILS, and the fail-closed behaviour
+this finding installed was not relaxed to get there — the specified path was *added beside* it.
+A bundle whose `receipt.json` reads `{"refused": true}` and nothing more still fails, now
+citing §5.5.1's own sentence rather than a judgement call. So do: an unsigned record, a record
+signed by any other key, a record missing or over-supplied with fields, a record whose charsets
+are violated, and a record correctly signed but naming another action, another evidence bundle,
+another chain, another vault, another requested verdict or another reason set.
+
+**The residual concern this finding raised is now measurable and was measured.** F-13's closing
+paragraph said "no shipped sample sets `refused: true`… §7.1 still owes a refusal fixture, and
+it now owes a *decision* first." Both arrived: the decision as §5.5.1, and the fixture as
+`refusal-vault-paused`. See F-18 for what agreed and what did not.
+
 ### F-14 — MAJOR — §5.8 says where chain and vault binding lives, and nothing says a verifier must read it
 
 §5.8 is explicit and correct: the payload hashes are bare `hashStruct` values, "no `\x19\x01`
@@ -796,6 +831,195 @@ not the specification's, and it is the single most likely thing in this repair t
 > recomputed from these documents: if two spellings of a value encode identically, two distinct
 > documents share one hash and the hash stops identifying the document."
 
+### F-18 — MAJOR — §5.5.1 specifies the refusal RECORD completely and its ENVELOPE not at all
+
+*Added 2026-08-16, implementing §5.5.1 (D-043). This entry supersedes the open half of F-13:
+the specification now defines a refusal, so "cannot be certified" is no longer the only honest
+output for one. It is still the output for a bundle that presents no record.*
+
+**§5.5.1 is the first subsection of §5 that was sufficient to build from without a single
+search against a signed artifact.** That is worth stating before the criticism, because it is
+the counter-example to this report's headline. §5.4 needed brute force (F-1). §5.1–§5.3 needed
+brute force (F-2). §5.5.1 prints its field list, its field order, its domain tag, its
+delimiter, its charsets and its full preimage, and says in bold that the order is part of the
+format. Implementing it took one reading. **Everything §5.5.1 actually states was matched on
+the first run against a real signed refusal, including the two things this report expected to
+get wrong: the exact preimage bytes and the signature construction.**
+
+What it does not state is where the record lives.
+
+**Method, stated because the result depends on it.** §5.5.1 was implemented, and every test
+vector in `TestRefusalDigest`, `TestRefusalCharsets` and `TestRefusalBundle` was constructed,
+**before any refusal artifact existed to look at** — from §5.5.1's printed preimage and charset
+sentences alone, with `ts/`, `contracts/` and `docs/` unopened as D-010 requires. The
+`refusal-vault-paused` fixture appeared in `fixtures/samples/` partway through, and was
+deliberately **not read**: the verifier was run against it and its output was treated as the
+measurement, which is the only way the question "is §5.5.1 precise enough for a stranger?" has
+an answer. The one repair made after that run — descending one envelope level — is recorded as
+F-18.2 rather than absorbed, precisely because it is the place the measurement said no.
+
+**§5.5.1 defines `SignedRefusalRecord` as "RefusalRecord plus `signerSignature`" and stops.**
+No filename. No JSON key. No nesting. No statement of whether it replaces `receipt.json`, sits
+beside it, or lives inside it. "RefusalRecord plus signerSignature" describes a *value*, and a
+bundle is a *directory of files* — the gap between those two is unwritten, and it is the whole
+of the divergence measured below. The identical omission does not bite §5.4, only because six
+shipped fixtures had already fixed `receipt.json`'s shape by example.
+
+#### What was determined, and what had to be decided
+
+Each of the following is a place §5.5.1 is silent. Each is a place two implementations diverge
+without either being wrong, so each is stated loudly rather than settled quietly.
+
+**F-18.1 — how the digest is signed. CHOSE: raw ECDSA over the digest. Confirmed correct.**
+§5.5.1 gives `keccak256(utf8(…))` and calls it "its digest". It never says what is done with
+those 32 bytes. Raw secp256k1 ECDSA over the digest is the reading its words support and the
+one the receipt path uses on its EIP-712 digest — but a producer reaching for a wallet
+library's `signMessage` would sign an EIP-191 `\x19Ethereum Signed Message:\n32` wrapping
+instead, and **the only symptom would be a signer mismatch, which reads as a forgery.** This is
+§5.8's own warning ("a width mismatch is indistinguishable from an invalid signature") in a new
+place. The verifier recovers over the digest directly and, when that fails, *also* tries both
+EIP-191 wrappings and names the near-miss in the failure detail — while still failing. A
+construction disagreement should not be reported as a forgery.
+
+**F-18.2 — the envelope. CHOSE three shapes; the corpus used a fourth. This is the finding.**
+The verifier was built to accept the record under `refusal`/`refusalRecord` in a `refusal.json`
+or in `receipt.json`, or flat with `signerSignature` beside it. The shipped
+`refusal-vault-paused` fixture uses none of those: it is `receipt.json → refusalRecord →
+{record, signature, reasonCodes}` — the record one level deeper than any guess, and the
+signature spelled `signature` rather than the `signerSignature` **§5.5.1 itself names**. Every
+one of those spellings is equally consistent with §5.5.1; none is derivable from it. Resolved
+by descending one envelope level when the nested object carries none of the nine field names,
+and by putting every located record through identical verification regardless of where it was
+found — being liberal about *location* costs nothing, since nothing about the location is
+checked, while being liberal about *content* would cost everything. **Recorded rather than
+quietly absorbed, because the alternative reading is available: that a verifier should fix one
+envelope and reject the rest, in which case this repair is wrong and §5.5.1 must say which.**
+
+**F-18.3 — leading zeros. CHOSE: verbatim into the preimage, surfaced as advisory.** §5.5.1
+says three fields are "decimal digits" and no more, so `"031337"` conforms. Field values enter
+the preimage *verbatim* — they are not re-canonicalized first, because a verifier that
+normalises and a signer that does not would compute different digests. Verbatim means a leading
+zero produces a *different* digest rather than a colliding one, so it is not a soundness
+problem; rejecting it would invent a rule §5.5.1 does not state. It is reported as a skipped
+advisory instead.
+
+**F-18.4 — where a verifier learns the signer's identity. CHOSE: `domain.json`.** §5.5.1 puts
+`signer` inside the preimage, so the signature commits to the claimed signer — but **a
+self-declared signer is not an identity.** Anyone can mint a `RefusalRecord` naming their own
+key, sign it, and satisfy every check §5.5.1 describes: correct digest, correct recovery,
+correct bindings. What makes it a *Sentinel* refusal is that the key is Sentinel's, and §5.5.1
+never says where a third party learns which key that is. The verifier reads `domain.json`'s
+`signerAddress`, exactly as the receipt path does. This is the same gap as F-9, and it is
+sharper here: a receipt at least carries no self-declared authority, while a refusal invites
+one. Without this single check the entire feature is forgeable by anyone.
+
+**F-18.5 — a refusal with no action payload. CHOSE: failure, not skip.** The receipt path
+reports SKIP when `action.json` is absent. This one fails. §5.5.1's normative sentence is "A
+refusal is attributable or it is not issued", and the record names neither `mandateHash` nor
+`policyHash` — `actionHash` is the *only* route to either, since the §5.3 ActionPayload carries
+both as members. That transitive binding, which is the refusal's counterpart to §5.8's
+"transitively, through the `mandateHash` and `policyHash` it references", exists only for a
+verifier holding the action payload. Without it the refusal is attributable to the signer but
+not to the bundle in front of the reader.
+
+**F-18.6 — `requestedVerdict` agreement. CHOSE: hard failure.** §5.5.1 does not say
+`requestedVerdict` must agree with anything. The evidence bundle records the evaluator's
+verdict, and the requested verdict is by construction the one the evaluator produced and the
+signer declined to sign, so the verifier requires them to match — the same standard the receipt
+path already applies to `evidence.verdict`. If §5.5.1 intends a refusal to be presentable
+against unrelated evidence, this check is wrong.
+
+**F-18.7 — the signature envelope, again.** §5.5.1 says nothing about 65-byte `r‖s‖v`, `v` in
+{27,28}, or EIP-2 low-`s`. This is F-10 arriving for the third signature in the system. The
+same rule is applied for the same reason: it is a rule about secp256k1 ECDSA, not about
+receipts, and holding two of three signatures to it was already recorded as an omission rather
+than a decision.
+
+**F-18.8 — a bundle presenting both a decision and a refusal. CHOSE: failure.** §5.5.1 does not
+say the two are exclusive. They describe incompatible events — the signer signed, or it
+declined — so a bundle asserting both is certified as neither.
+
+**F-18.9 — the reason-code list must travel. CHOSE: inherited from §5.4.** §5.5.1 says
+`reasonCodesHash` "uses the same encoding as a receipt's (§5.4)". It does not repeat §5.4's
+requirement that the full ordered list travel alongside, nor the grammar re-validation, nor
+`signerFindings ⊆ reasonCodes`. All three are inherited here, on the grounds that they are
+properties of the *commitment* rather than of the receipt. A refusal presenting a
+`reasonCodesHash` with no list therefore fails rather than skipping.
+
+**F-18.10 — a refusal never expires, and nothing says whether it should.** The record carries
+`refusedAt` and no `expiresAt`, where `DecisionReceiptPayload` carries both. There is nothing
+to check freshness against and nothing in §5.5.1 to appeal to, so no check was written. Whether
+a two-year-old signed refusal is still a refusal is undecided by the document.
+
+**F-18.11 — `schemaVersion` is cross-checked against nothing.** The record carries one; the
+other payloads carry one; §5.5.1 does not say they must agree. Not enforced, because inventing
+the rule is worse than recording that it is missing (F-12 applies unchanged).
+
+**F-18.12 — the human-readable reason is unauthenticated.** `refusalReason`/`reason` are
+fixture-harness fields outside the nine, so **a presenter can rewrite the stated reason without
+breaking any signature.** The verifier reports this explicitly beside a passing refusal rather
+than letting an operator read an unsigned sentence as a signed one. The authenticated statement
+of reasons is `reasonCodesHash`.
+
+#### `actionHash` alone does not attribute a refusal, and the corpus proves it
+
+Worth recording because it is the sharpest adversarial pair in the fixture set and it exists by
+accident: **`refusal-vault-paused` and `case-1-allow` name the same `actionHash`.** They are
+the same action — the same chain, vault, nonce, target, value, calldata, mandate and policy —
+decided twice, once into a signed ALLOW receipt and once into a signed refusal, differing only
+in their evidence bundles.
+
+So a verifier that reads §5.5.1's attributability sentence as "check `actionHash`" is
+satisfied by moving the genuine, untouched, validly-signed refusal onto the ALLOW bundle. The
+action binding passes. **Only `evidenceHash` rejects it** — and §5.5.1 lists both fields
+without saying that either must be compared to anything. This is F-13's substitution attack
+surviving into the signed world in a weakened but real form: not "an ALLOW presented as a
+refusal", but "a refusal of one decision presented as the refusal of another decision about the
+same action". Both bindings are checked here, and
+`test_a_refusal_cannot_be_moved_onto_a_same_action_bundle` asserts that the action binding
+*passes* while the bundle *fails*, so the test cannot silently start proving something easier.
+
+#### The injectivity argument holds, and is slightly stronger and slightly weaker than stated
+
+§5.5.1: "The encoding is injective because every field is a fixed charset that cannot contain
+the newline delimiter."
+
+**Stronger than stated, in one direction.** The record has a *fixed arity* of nine, so a
+malformed record with a smuggled `\n` splits into eleven segments where a well-formed one
+splits into ten. A malformed record can therefore never collide with a well-formed one, even
+with the charsets ignored.
+
+**Weaker than stated, in the other.** Two *malformed* records collide with each other happily.
+`requestedVerdict = "BLOCK\nSMUGGLED"` with `reasonCodesHash = H`, and `requestedVerdict =
+"BLOCK"` with `reasonCodesHash = "SMUGGLED\nH"`, join to identical bytes — one digest, one
+signature, two different records, each nine fields long. **So the charsets are load-bearing and
+a verifier that skips them is not merely lax, it can be shown two distinct refusals bearing one
+valid signature.** This is D-022's reason-code collision in a new place, and the fix is the same
+one: `re.fullmatch`, never `^…$`, and reject rather than sanitise. Both halves are pinned in
+`test_verifier.py::TestRefusalCharsets`.
+
+#### What §5.5.1 got right that §5.4 did not
+
+`RefusalRecord` carries `chainId` and `vault` outright. `DecisionReceiptPayload` carries
+neither, which §5.8 records as a "known asymmetry" with the consequence that "a receipt is not
+self-describing". A refusal is. **But the improvement comes with an obligation §5.5.1 does not
+state:** its digest is tagged with a constant string — `"sentinel.refusal.v0.2"` — and no
+domain separator, so unlike the receipt there is *no second mechanism* binding a refusal to a
+deployment. Those two members are the entire binding, and they bind only if a verifier reads
+them and compares them. That is F-14's lesson arriving somewhere new, and it is why
+`refusal.chainId/vault match the presented deployment` is a hard check here.
+
+> **Proposed for §5.5.1.** (a) State the wire form of `SignedRefusalRecord` — which file, which
+> keys, how deeply nested — or state that a verifier must accept any and verify the record it
+> finds. This is the only gap that actually caused a divergence. (b) State how the digest is
+> signed: "the 32-byte digest is signed directly with secp256k1 ECDSA; it is NOT wrapped in
+> EIP-191." (c) State that a verifier learns the signer's address from the deployment's
+> published domain values, and that a record whose recovered signer is not that address is not
+> a Sentinel refusal. (d) State that the charsets MUST be enforced before the join, with the
+> two-malformed-records collision as the reason. (e) Say whether a refusal expires. (f) Say
+> whether a refusal and a receipt may appear in one bundle. (g) Note that `refusalReason` is
+> outside the signature, or bring it inside.
+
 ## 2. What was got wrong, and what corrected it
 
 1. **Uniform `uint256` for the receipt's integer fields** — the conventional choice, and wrong;
@@ -867,11 +1091,21 @@ more dangerous failure, because a recorded finding reads as due diligence.*
   lone surrogate is rejected, and nothing asserts that the evaluator rejects it too. If the
   evaluator substitutes or crashes, this verifier and the evaluator disagree about which
   bundles exist, and no fixture would show it.
-- **No shipped artifact exercises a refusal** (F-13) — `index.json` records
+- ~~**No shipped artifact exercises a refusal** (F-13) — `index.json` records
   `signerRefused: false` on all six samples. The refusal shapes are synthesised in the test
   suite, so what is pinned is this verifier's *behaviour* on them, not any agreement with the
   signer about what a refusal looks like. There is nothing to agree with: §5 defines no
-  refusal record.
+  refusal record.~~ **Superseded 2026-08-16 by §5.5.1 (D-043) and the `refusal-vault-paused`
+  fixture.** There is now something to agree with, and the agreement was measured rather than
+  assumed: everything §5.5.1 states matched on the first run, and the one divergence was the
+  envelope §5.5.1 does not state (F-18.2). The synthesised shapes remain in the suite and now
+  test a *specified* construction rather than a guessed one.
+- **A refusal's freshness is not checked, because there is nothing to check** (F-18.10) — the
+  record has `refusedAt` and no expiry. A signed refusal verifies here forever.
+- **The refusal envelope this verifier accepts is a superset of any one producer's** (F-18.2) —
+  four spellings are accepted because §5.5.1 names none. Nothing about the envelope is
+  verified, so this costs no security, but it means a green run does not establish that the
+  bundle is in *the* canonical shape. There is no canonical shape to establish.
 - **The payload-field JSON encoding this verifier enforces is a convention, not a rule**
   (F-16) — it is the one the six samples use, and §5 states none. A legitimate producer using
   another encoding is rejected here, and would be right to complain.
@@ -909,11 +1143,20 @@ this verifier a day ago. F-16 is cheaper than either and should go in with them,
 one paragraph and it is the only one of the four whose repair currently rests on a convention
 rather than on a sentence in the document.
 
+*Revised again 2026-08-16, after §5.5.1.* F-13 is **closed** by D-043 and F-14 by the F-14
+repair, so the top three are now **F-18.2, F-4, F-16**. F-18.2 leads because it is the only
+gap in this report that has been *observed* to make two implementations disagree rather than
+argued to: §5.5.1 specifies the record exactly and the envelope not at all, and the two
+implementations picked different envelopes on the first attempt. It is also the cheapest to
+fix — one sentence naming the file and the keys. F-4 keeps its place for the reason it always
+had: it is the only error that passes every cryptographic check and still reports the opposite
+answer.
+
 ## 5. Reproduction
 
 ```sh
 python3 verifier/verify.py fixtures/samples/case-1-allow   # one sample, verbose
-python3 verifier/verify.py --all fixtures/samples          # all five
+python3 verifier/verify.py --all fixtures/samples          # every sample
 python3 verifier/verify.py --tamper --all fixtures/samples # negative self-test
 python3 verifier/verify.py --print-types                   # the recovered type strings
 python3 verifier/test_verifier.py                          # test suite
@@ -966,6 +1209,36 @@ claimed. The second kept its "does not crash" purpose — it still checks that a
 missing every optional key is handled rather than raising. Nothing else in the suite was
 weakened, and the 42 tamper cases and 6 passing samples are unchanged counts, not relaxed ones.
 
+**Results after implementing §5.5.1 (2026-08-16, F-18):** **7/7 samples PASS · 55/55 applicable
+tamper cases behave as specified · 146/146 tests OK.** The seventh sample is
+`refusal-vault-paused`, the corpus's first `signerRefused: true` bundle, which arrived on the
+same day as §5.5.1 and closes the standing "no shipped artifact exercises a refusal" gap. It
+runs 25 checks with exactly one skip — it carries no `signerFindings` array. The six receipt
+samples run 23 checks each and the override sample 33, both **unchanged** from the previous
+round, which is the evidence that nothing on the receipt path was moved or dropped while the
+refusal path was added.
+
+**No existing test was changed to make signed refusals pass, and no check was softened.** The
+101 tests from the previous round all still pass, unmodified — including the five in
+`TestRefusedShape` that assert the F-13 fail-closed behaviour, which is *unchanged*: the
+§5.5.1 path was added beside it, not in place of it. Three things did change, none of them a
+relaxation:
+
+1. **`sample_dirs()` was split into `sample_dirs()` and `refusal_sample_dirs()`.** Seven tests
+   walk every sample asserting a §5.4 receipt property (`receipt.json["receipt"]["verdict"]`
+   and similar). §5.5.1 split the corpus into two kinds of bundle — one presents a decision,
+   the other a refusal, never both — so those tests now walk the receipt corpus and a new
+   `TestRefusalSampleInCorpus` walks the other. No assertion inside any of the seven was
+   weakened; only the set they iterate is now correctly named.
+2. **The `receipt` and `signature` tamper modes now raise `NotApplicable` on a bundle with no
+   receipt body**, where before they mutated nothing and reported `PASS`. That was a latent
+   vacuous self-test — a tamper mode that changes nothing and is then "correctly rejected" is
+   reporting on an experiment it did not run. Nothing in the corpus could expose it until a
+   refusal bundle arrived. Two modes went from silently-vacuous to honestly-N/A.
+3. **The check formerly named `a signed receipt is present to verify (§5.4)` is now `a signed
+   receipt is present to verify (§5.4), or a signed refusal record (§5.5.1)`**, with detail
+   quoting §5.5.1's own sentence. Same failure, same trigger conditions, wider citation.
+
 Reproduction for the repaired defects specifically:
 
 ```sh
@@ -973,4 +1246,20 @@ Reproduction for the repaired defects specifically:
 cp -r fixtures/samples/case-1-allow /tmp/c1 && cp fixtures/samples/domain.json /tmp/
 printf '{"refused":true,"refusalReason":"signer unavailable"}' > /tmp/c1/receipt.json
 python3 verifier/verify.py /tmp/c1     # => FAIL, exit 1, and names the ALLOW it suppresses
+```
+
+Reproduction for §5.5.1 (F-18):
+
+```sh
+# A properly signed refusal now VERIFIES, with the digest printed for inspection.
+python3 verifier/verify.py fixtures/samples/refusal-vault-paused
+
+# Twelve ways of getting it wrong, every one rejected. Six of them leave a
+# CRYPTOGRAPHICALLY VALID SignedRefusalRecord behind and change only what it is
+# bound to -- which is the half a signature check cannot see.
+python3 verifier/verify.py --tamper all fixtures/samples/refusal-vault-paused
+
+# The behaviour F-13 installed, unchanged: an unsigned refusal claim is still
+# not a refusal, now citing §5.5.1 rather than a judgement call.
+python3 verifier/verify.py /tmp/c1
 ```

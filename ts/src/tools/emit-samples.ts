@@ -171,6 +171,19 @@ function buildMandate(policy: PolicyPayload, overrides: Partial<MandatePayload> 
     };
 }
 
+/** D-043 — owner pause/unpause, so a sample can be emitted against a paused vault. */
+async function setPaused(next: boolean): Promise<void> {
+    const h = await walletClient.writeContract({
+        address: vault,
+        abi: vaultArt.abi,
+        functionName: "setPaused",
+        args: [next],
+        account: OWNER,
+        chain: anvil,
+    });
+    await publicClient.waitForTransactionReceipt({hash: h});
+}
+
 async function activate(mandate: MandatePayload, policy: PolicyPayload): Promise<void> {
     for (const [fn, arg] of [
         ["activateMandate", hashMandate(mandate)],
@@ -222,6 +235,22 @@ interface SampleSpec {
      * time an unrelated signer finding started firing on it, and nothing would say so.
      */
     expectReasonCodeCount?: number;
+
+    /**
+     * Pause the vault around this sample so the signer REFUSES to attest.
+     *
+     * D-043. §5.5.1 publishes `RefusalRecord`, and until this sample existed no artifact in
+     * the repository carried one — every `receipt.json` had `refused: false`. So the D-010
+     * verifier had nothing real to check its refusal implementation against, and "the signer
+     * refused" was a path the fixtures could not demonstrate.
+     *
+     * `SIGNER_VAULT_PAUSED` is an EXECUTABILITY finding, which refuses both ALLOW and REVIEW.
+     * That is the honest trigger to pick: the action itself is perfectly conforming and the
+     * refusal is about the vault's state, so the sample demonstrates a refusal WITHOUT also
+     * being a bad action — which would confound the two things a reader is trying to tell
+     * apart.
+     */
+    pauseVault?: boolean;
 }
 
 function purchaseCalldata(resource: Hex, duration = DURATION, recurring = false): Hex {
@@ -321,17 +350,71 @@ const SAMPLES: SampleSpec[] = [
         mandateOverrides: {mandateId: keccak256(stringToBytes("mandate:single-reason-code-edge"))},
         expectReasonCodeCount: 1,
     },
+    {
+        /**
+         * D-043 — the first artifact in this repository carrying a §5.5.1 RefusalRecord.
+         *
+         * The action is CONFORMING. What makes the signer refuse is the vault's state, not
+         * the request, so this sample isolates "the signer declined to attest" from "the
+         * action was bad" — two things every other sample would conflate.
+         */
+        id: "refusal-vault-paused",
+        title: "D-012/§5.5.1 — the signer refuses; vault paused",
+        note:
+            "A conforming purchase submitted while the vault is paused. SIGNER_VAULT_PAUSED " +
+            "is EXECUTABILITY, so the signer refuses to attest and emits a signed refusal " +
+            "record instead of a receipt. The only sample whose receipt.json has " +
+            "refused: true, and the only artifact a third party can use to check that a " +
+            "refusal is authentic and attributable rather than merely asserted.",
+        target: demoPay,
+        callData: purchaseCalldata(RESOURCE),
+        valueWei: VALUE,
+        failureMode: 1n,
+        pauseVault: true,
+    },
 ];
 
-rmSync(OUT, {recursive: true, force: true});
+/**
+ * Emit a SUBSET, leaving every other sample directory untouched.
+ *
+ * D-043. Adding the refusal sample must not rewrite the six that already exist: their
+ * evidence embeds a simulation anchor, so a regeneration on a fresh Anvil produces different
+ * block hashes and therefore different receipts — churn indistinguishable, in a diff, from a
+ * real change to what the samples attest. The D-010 verifier's fixtures are those files.
+ *
+ *   SENTINEL_SAMPLES_ONLY=refusal-vault-paused npm --prefix ts run emit-samples
+ *
+ * Unset, every sample is emitted, which is still the right thing after a schema change.
+ */
+const ONLY = (process.env.SENTINEL_SAMPLES_ONLY ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+const SELECTED = ONLY.length ? SAMPLES.filter((s) => ONLY.includes(s.id)) : SAMPLES;
+
+if (ONLY.length && SELECTED.length !== ONLY.length) {
+    const missing = ONLY.filter((id) => !SAMPLES.some((s) => s.id === id));
+    throw new Error(`SENTINEL_SAMPLES_ONLY names unknown sample(s): ${missing.join(", ")}`);
+}
+
+// WIPE ONLY ON A FULL EMIT. The wipe exists so a removed sample cannot linger as a stale
+// directory nobody regenerates — correct when every sample is being rewritten, and destructive
+// when one is. D-043's first subset run deleted the other six sample directories and wrote one;
+// they were committed, so `git checkout` restored them, and the working tree was the only thing
+// at risk. THE SUBSET PATH MUST NOT TOUCH WHAT IT IS NOT REGENERATING.
+if (SELECTED.length === SAMPLES.length) {
+    rmSync(OUT, {recursive: true, force: true});
+}
 mkdirSync(OUT, {recursive: true});
 
 const index: unknown[] = [];
 
-for (const spec of SAMPLES) {
+
+for (const spec of SELECTED) {
     const policy = buildPolicy(spec.failureMode);
     const mandate = buildMandate(policy, spec.mandateOverrides);
     await activate(mandate, policy);
+
 
     const reader = createChainReader(rpcUrl);
     const selector = spec.callData.slice(0, 10) as Hex;
@@ -370,6 +453,21 @@ for (const spec of SAMPLES) {
         vaultState,
         now: BigInt(Math.floor(Date.now() / 1000)),
     });
+
+    // D-043 — pause BETWEEN evaluation and attestation, and the ordering is the whole point.
+    //
+    // A first attempt paused before evaluating, and the sample's own guard caught it: the
+    // EVALUATOR then returns BLOCK (EVAL_VAULT_NOT_PAUSED fails), the signer is asked to
+    // attest a BLOCK, and attesting a block is perfectly legitimate — so no refusal was
+    // produced. EXECUTABILITY refuses ALLOW and REVIEW, not BLOCK.
+    //
+    // Pausing here instead models the real situation the signer's independent recomputation
+    // exists for (§3.1, A-005): the evaluator saw a conforming action against an unpaused
+    // vault, the vault's state CHANGED underneath it, and the signer — which reads chain
+    // state itself rather than trusting the request — refuses to attest an ALLOW that is no
+    // longer executable. That is a better demonstration than a paused-throughout sample
+    // would have been, and it was arrived at by the guard rejecting the easy version.
+    if (spec.pauseVault) await setPaused(true);
 
     const signed = await signerClient.evaluateAndSign({
         action,
@@ -494,6 +592,19 @@ for (const spec of SAMPLES) {
         `${spec.id.padEnd(38)} ${String(evaluation.verdict).padEnd(7)} ` +
             `refused=${String(signed.refused).padEnd(5)} codes=${evaluation.reasonCodes.join(",") || "-"}`,
     );
+
+    // Leave the chain as we found it, so sample order cannot change sample content.
+    if (spec.pauseVault) await setPaused(false);
+
+    // A sample that exists to carry a refusal and does not carry one is worse than no
+    // sample: it would sit in the directory looking like coverage. Fail the run instead.
+    if (spec.pauseVault && !signed.refused) {
+        throw new Error(
+            `${spec.id} was written to demonstrate a signer REFUSAL and the signer attested ` +
+                `instead. Either the refusal trigger has moved or the vault was not paused at ` +
+                `attestation time — fix the sample, not the assertion.`,
+        );
+    }
 }
 
 writeFileSync(
@@ -509,9 +620,27 @@ writeFileSync(
         signerAddress: SIGNER.address,
     }),
 );
-writeFileSync(join(OUT, "index.json"), j(index));
+// On a subset run, MERGE into the existing index rather than replacing it — otherwise the
+// index would claim the repository holds one sample when it holds seven. Entries are keyed by
+// id, so a re-emitted sample updates in place and ordering follows SAMPLES.
+const indexPath = join(OUT, "index.json");
+let merged = index;
+if (SELECTED.length !== SAMPLES.length && existsSync(indexPath)) {
+    const prior = JSON.parse(readFileSync(indexPath, "utf8")) as {id: string}[];
+    const fresh = new Map(index.map((e) => [(e as {id: string}).id, e]));
+    const kept = prior.filter((e) => !fresh.has(e.id));
+    const order = new Map(SAMPLES.map((s, i) => [s.id, i]));
+    merged = [...kept, ...index].sort(
+        (a, b) =>
+            (order.get((a as {id: string}).id) ?? 0) - (order.get((b as {id: string}).id) ?? 0),
+    );
+}
+writeFileSync(indexPath, j(merged));
 
-console.log(`\nwrote ${SAMPLES.length} samples to ./fixtures/samples`);
+console.log(
+    `\nwrote ${SELECTED.length} of ${SAMPLES.length} sample(s) to ./fixtures/samples` +
+        (SELECTED.length === SAMPLES.length ? "" : ` (subset: ${SELECTED.map((s) => s.id).join(", ")})`),
+);
 
 await signerClient.close().catch(() => {});
 signerProc.kill("SIGTERM");

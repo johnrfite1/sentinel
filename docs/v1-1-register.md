@@ -183,10 +183,16 @@ not and is the only one that could be done today.**
 the injectivity argument for the newline-joined preimage. It was a documentation correction, not
 new design: the signer has produced this artifact since D-012.
 
-**What is still owed:** the D-010 verifier does not yet VERIFY refusals — it fails closed on an
-unauthenticated refusal claim, which is correct while it has nothing to check against. Now that
-§5.5.1 exists, a fresh schema-only agent can implement verification from the published document,
-which is how D-010 is meant to work. **That is the natural next piece and it is now unblocked.**
+**DONE the same day (A-042): the verifier now verifies refusals**, built by a schema-only agent
+from §5.5.1 alone and measured against a real signed refusal it had never seen
+(`fixtures/samples/refusal-vault-paused`, the first such artifact in the repository). Everything
+§5.5.1 stated matched first time; the envelope it failed to state did not, and three further
+defects in the section were found and corrected. Tests 101 → 146, 7/7 samples verify.
+
+**What is still owed on refusals**, from that measurement: a refusal has no expiry and is valid
+indefinitely; `schemaVersion` is cross-checked against nothing; and `refusalReason` sits outside
+the signature, so a presenter can rewrite it — §5.5.1 now says it is not evidence, which is
+honest but is a limitation rather than a resolution.
 
 The original entry is kept below because the lesson is worth more than the fix.
 

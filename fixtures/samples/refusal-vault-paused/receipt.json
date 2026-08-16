@@ -1,0 +1,30 @@
+{
+  "refused": true,
+  "blocking": [
+    {
+      "code": "SIGNER_VAULT_PAUSED",
+      "severity": "EXECUTABILITY"
+    }
+  ],
+  "signerFindings": [
+    "SIGNER_VAULT_PAUSED"
+  ],
+  "requestedVerdict": "ALLOW",
+  "refusalRecord": {
+    "record": {
+      "schemaVersion": "1",
+      "chainId": "31337",
+      "vault": "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512",
+      "actionHash": "0x6f6308334b65aec3ed9c0d90e47629d3057e1d82ad23267552e180896f84140d",
+      "evidenceHash": "0x4e183470797382b150779aea4816d9d0c950100bcd1660d80a444a71f9004288",
+      "requestedVerdict": "ALLOW",
+      "reasonCodesHash": "0x70ffaf4f894533b4ba5cf7fa9a909ad242f16ef7d2a4d3d814d7c5e8446ec057",
+      "refusedAt": "1786916613",
+      "signer": "0x70997970c51812dc3a010c7d01b50e0d17dc79c8"
+    },
+    "signature": "0xfe4855e0c526316b70b25f304ca3e54e4971d71f9e9c28d209f2af3cb2c4ec8d2c6f330183dc9c679e017214bbb155c6817cdc43cf306e6f9cb7f3e207700eaf1c",
+    "reasonCodes": [
+      "SIGNER_VAULT_PAUSED"
+    ]
+  }
+}

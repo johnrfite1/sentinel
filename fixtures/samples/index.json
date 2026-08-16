@@ -34,5 +34,11 @@
     "title": "§5.4 edge — a receipt committing to exactly one reason code",
     "verdict": "BLOCK",
     "signerRefused": false
+  },
+  {
+    "id": "refusal-vault-paused",
+    "title": "D-012/§5.5.1 — the signer refuses; vault paused",
+    "verdict": "ALLOW",
+    "signerRefused": true
   }
 ]

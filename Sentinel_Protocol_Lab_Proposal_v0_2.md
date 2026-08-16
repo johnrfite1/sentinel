@@ -428,7 +428,27 @@ D-012 requires that a refusal leave a recorded artifact — otherwise "the signe
     refusedAt
     signer
 
-`SignedRefusalRecord` contains RefusalRecord plus `signerSignature`.
+`SignedRefusalRecord` contains RefusalRecord plus a signature over the digest below.
+
+*Amended 2026-08-16, same day, after an independent implementation built from this section was pointed at a real signed refusal (A-042). **Everything this section STATED matched on the first run — the field list, the order, the domain tag, the preimage bytes, and the signature construction. What it did not state is what diverged**, which is the most useful result this section could have produced and the reason D-010 exists.*
+
+**The envelope, which the first version left entirely unspecified.** A refusal is presented in `receipt.json` in place of a §5.4 receipt — a bundle carries a receipt **or** a refusal, never both — under the key `refusalRecord`, whose value is an object with three members:
+
+    { "refused": true,
+      "refusalRecord": { "record": <RefusalRecord>, "signature": <65-byte hex>,
+                         "reasonCodes": [ <identifier>, ... ] } }
+
+The signature member is named `signature`. **The first version of this section said "plus `signerSignature`" and named no file, key, or nesting depth; an implementer guessed three shapes and none was right.** `reasonCodes` is the ordered set `reasonCodesHash` commits to, and must be present for the same reason §5.4 carries it: without it a third party cannot recompute the hash.
+
+**The signature is raw ECDSA over the 32-byte digest — no EIP-191 prefix, no EIP-712 domain.** Recovery yields the signer's address, and `s` must be canonical (low-s, per EIP-2) as for every other signature in this document.
+
+**`signer` is self-declared and must not be trusted.** Anyone can mint a record naming their own key and satisfy every rule above. **A verifier MUST compare the recovered address against the deployment's known Sentinel signer** — the `signerAddress` a §5.6 bundle's domain carries — or the whole record is forgeable.
+
+**`actionHash` DOES NOT ATTRIBUTE A REFUSAL ON ITS OWN, and this is not theoretical:** the same action can legitimately be decided twice — evaluated to ALLOW on an unpaused vault, then refused when the vault's state changed — and both artifacts then name a byte-identical `actionHash`. The shipped `refusal-vault-paused` and `case-1-allow` samples are exactly that pair. **`evidenceHash` is what binds a refusal to the bundle it accompanies, and a verifier MUST check it**; checking `actionHash` alone lets a genuine signed refusal be moved onto a different bundle.
+
+**Correction to the injectivity argument.** The first version credited injectivity to the charsets alone. Precisely: **fixed arity** — always nine fields — is what prevents a malformed record colliding with a well-formed one, and **the charsets** are what prevent two malformed records colliding with each other. Both are load-bearing. Without the charset rules, `requestedVerdict = "BLOCK\nSMUGGLED"` with `reasonCodesHash = "H"` joins to the same preimage as `requestedVerdict = "BLOCK"` with `reasonCodesHash = "SMUGGLED\nH"`, so one signature attests to two distinct records — the same delimiter-smuggling D-022 closed for reason codes, in a second place. **A verifier MUST validate the charsets before hashing, not merely rely on the join.**
+
+**Known limits, stated rather than left to be discovered:** a refusal carries no expiry, so it is valid indefinitely; `schemaVersion` is cross-checked against nothing; and any human-readable `refusalReason` presented alongside is **outside the signature** — a presenter may rewrite it without invalidating anything, so it is not evidence.
 
 **This record is NOT an EIP-712 typed structure, and the difference is deliberate.** Its digest is a domain-tagged, newline-joined string preimage:
 
