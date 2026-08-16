@@ -338,14 +338,32 @@ describe("the injection wiring can fail (independent review, 2026-08-15)", () =>
         assert.doesNotThrow(() => verifyRationaleFixture(good));
     });
 
-    it("rejects a proposal that will not transcribe", () => {
+    /**
+     * THE FIELDS MATCH ON PURPOSE, and the first version of this test did not do that.
+     *
+     * It passed `{ok: false}` with no call fields, so with the `ok` check disabled the
+     * equality comparison rejected it anyway — the assertion held either way and the mutation
+     * `if (!transcribed.ok)` → `if (false)` SURVIVED. Making every other field agree leaves
+     * the `ok` flag as the only thing that can reject this input, which is what the test
+     * claims to be about. Fourth-order version of the same defect the whole session is about:
+     * a test that passes for a reason other than the one it names.
+     */
+    it("rejects a proposal that will not transcribe, on the ok flag alone", () => {
         assert.throws(
             () =>
                 verifyRationaleFixture({
                     ...good,
-                    transcribed: {ok: false, code: "PROPOSAL_MALFORMED_TARGET", detail: "x"},
+                    transcribed: {
+                        ok: false,
+                        code: "PROPOSAL_MALFORMED_TARGET",
+                        detail: "x",
+                        target: good.encodedTarget,
+                        valueWei: good.encodedValueWei,
+                        callData: good.encodedCallData,
+                    },
                 }),
-            TranscriptionMismatchError,
+            (err: unknown) =>
+                err instanceof TranscriptionMismatchError && /does not transcribe/.test(err.message),
         );
     });
 
