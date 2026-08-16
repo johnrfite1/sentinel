@@ -37,9 +37,27 @@ fail_on_revert = false
 # EVIDENCE. It is the right property for DEVELOPMENT: an unseeded default explores new
 # sequences on every run, which is how a stateful campaign finds what nobody thought of.
 #
-# So the default profile stays unseeded and keeps exploring, and the gate profile pins a seed
-# so that a figure cited at S2 can be reproduced by anyone with the repository. A gate number
-# that cannot be re-derived is a claim, not a measurement.
+# So the default profile stays unseeded and keeps exploring, and the gate profile pins a seed.
+#
+# WHAT THE SEED ACTUALLY BUYS, MEASURED RATHER THAN ASSUMED — because the first version of
+# this comment claimed "a figure cited at S2 can be reproduced by anyone with the repository"
+# and that is not what two runs showed. Running the gate profile twice back to back:
+#
+#   * every test outcome identical (66/66 pass both times)
+#   * every `runs:` and `calls:` figure identical (2048 / 262144 on every invariant)
+#   * revert tallies identical on 8 of 10 invariants, and off by ONE on two of them
+#     (154 vs 153 on nonceEqualsSuccessfulExecutions and tamperedAttemptsNeverExecute)
+#
+# So seeding pins the campaign's SHAPE and its outcomes, and does not make it bit-identical.
+# Something outside the fuzz seed — most likely the runner's scheduling across invariants —
+# still moves. The honest claim is therefore: a gate figure quoted from this profile is
+# reproducible as a PASS/FAIL and as a call count, and a revert tally quoted to the unit is
+# not. Do not cite a revert tally as if it were.
+#
+# It also bounds, without settling, the review hypothesis this was written for. A mutation's
+# caught/survived verdict is a pass/fail outcome, and pass/fail reproduced exactly across the
+# two runs measured — but two runs is two runs, and a mutation killed only by a rare sequence
+# could still flip. "0 survived" is better founded than it was and is not proven deterministic.
 #
 # The seed is arbitrary and has no meaning; it is fixed so that it is fixed.
 [profile.gate.fuzz]
