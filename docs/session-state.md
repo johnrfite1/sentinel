@@ -68,10 +68,17 @@ fork. Routine engineering judgment is yours.
 coverage boundary — read all of it. That block is ONE statement, not a running log; when a
 step lands, rewrite the affected layer rather than appending.
 
-**Six mechanical guards run in the gate:** secrets (A-007), rename (D-016), labelling-prompt
+**Seven mechanical guards run in the gate:** secrets (A-007), rename (D-016), labelling-prompt
 freeze (D-011a), published EIP-712 type strings (D-023), §5.7.1 check coverage (D-031), and
-**vendor honesty (§7.5 Gate 5, D-008)**. A seventh stage — the Gate 7 canary history — prints
-and deliberately cannot fail the gate.
+**vendor honesty (§7.5 Gate 5, D-008)**, and — at the deep profile only — **the §7.1 corpus
+executed with its committed views verified**. A further stage, the Gate 7 canary history,
+prints and deliberately cannot fail the gate.
+
+**`./scripts/test.sh --gate` now runs the corpus.** It was covered by nothing, which is why six
+deliberate defects in `run.ts`'s wiring survived a green suite. It writes to a temp directory
+and compares normalised digests against the committed views, so the tree stays clean and the
+A-029 provenance claim becomes something the gate checks rather than something git history
+implies. Verified to fire on a tampered digest.
 
 Done: §9 steps 1–9.
 

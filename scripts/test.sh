@@ -70,6 +70,46 @@ else
     # and it is louder here than in a file nobody opens.
     step "Gate 7 canary observation (D-007; never fails the gate)"
     npm --prefix ts run --silent canary -- --report || true
+
+    # THE CORPUS, EXECUTED — deep profile only.
+    #
+    # `ts/src/corpus/run.ts` was covered by nothing: the suite never ran the corpus, which is
+    # exactly why six deliberate defects in its wiring survived a fully green run. It is
+    # executed here rather than left to a human remembering to run it.
+    #
+    # It writes to a TEMPORARY directory and the committed artifacts are not touched. What is
+    # compared is `_digests.json` — each labeller view hashed with the run-varying timestamps
+    # normalised out (A-029). So this stage asserts something the project could not assert
+    # before: **the committed labeller views are still the semantic output of the current
+    # code**, which is the provenance claim the corpus rests on and which git history alone
+    # could not establish.
+    #
+    # Deep profile only. It costs ~90s and would double the inner loop; the fast profile says
+    # so out loud rather than silently skipping.
+    if [ "$PROFILE" = "gate" ]; then
+        step "§7.1 corpus executed, and the committed views verified (A-029)"
+        CORPUS_TMP="$(mktemp -d)"
+        if SENTINEL_CORPUS_OUT="$CORPUS_TMP" npm --prefix ts run --silent corpus >/dev/null 2>&1; then
+            if diff -q "$CORPUS_TMP/for-labelling/_digests.json"                        fixtures/corpus/for-labelling/_digests.json >/dev/null 2>&1; then
+                echo "corpus: 50 fixtures executed; committed views semantically current"
+            else
+                echo "corpus: DIGEST MISMATCH — the committed labeller views are NOT what this"
+                echo "  code now produces. Either re-run 'npm --prefix ts run corpus' and commit"
+                echo "  the result, or find out what changed. The labels of record were drawn"
+                echo "  against the COMMITTED views."
+                diff "$CORPUS_TMP/for-labelling/_digests.json"                      fixtures/corpus/for-labelling/_digests.json | head -20
+                fail=1
+            fi
+        else
+            echo "corpus: RUN FAILED. Note the recorded trace: the runner picks a random port"
+            echo "  and occasionally collides, so re-run once before diagnosing."
+            fail=1
+        fi
+        rm -rf "$CORPUS_TMP"
+    else
+        step "§7.1 corpus (SKIPPED — fast profile)"
+        echo "corpus: not executed. Use --gate; ts/src/corpus/run.ts is covered by nothing else."
+    fi
 fi
 
 printf '\n'
@@ -221,8 +261,12 @@ WHAT IS NOT COVERED:
     reported UNCERTIFIED on every run, and no agent may clear them.
   - The evidence dashboard (outside S2 unless John adds it at the gate, D-009).
   - Gate 8 (five-minute comprehension), which D-032 makes PRE-PUBLICATION rather than S2.
-  - Reproducible labelling views: re-running the corpus rewrites 32 of 50 view files
-    purely because entitlement expiry follows chain time (A-029).
+  - BYTE-reproducible labelling views: a corpus re-run rewrites 32 of 50 view files
+    purely because entitlement expiry follows chain time (A-029). What IS covered, at
+    the deep profile, is that the committed views are SEMANTICALLY current — the corpus
+    runs to a temp directory and its normalised digests are compared to the committed
+    ones. "These are the views the labellers saw" is now checkable modulo two declared
+    timestamp fields, rather than resting on git history alone.
   - Labeller independence from PRIOR FINDINGS about specific fixtures (A-030). The
     independence from the IMPLEMENTATION is real and enforced. The specification the
     protocol grants has carried a walkthrough of F049 since before any labelling round,

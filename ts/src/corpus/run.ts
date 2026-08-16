@@ -55,7 +55,22 @@ import {verifyRationaleFixture} from "./rationale.ts";
  */
 
 const REPO = join(import.meta.dirname, "..", "..", "..");
-const OUT = join(REPO, "fixtures", "corpus");
+
+/**
+ * Where the run writes. Overridable so the GATE can execute this file without touching the
+ * committed artifacts.
+ *
+ * `scripts/test.sh` never ran the corpus, which is why `run.ts` was covered by nothing and why
+ * six mutations against its wiring survived a green suite. Wiring it in naively would have the
+ * gate rewrite 32 view files on every invocation — a gate that dirties the tree is a gate
+ * people stop running, and it would break the mutation harness's clean-tree requirement.
+ *
+ * So the gate runs the corpus to a temporary directory and compares `_digests.json` against
+ * the committed one. That covers this file end to end, leaves the tree clean, AND turns the
+ * A-029 provenance claim into something the gate checks: the committed views are still the
+ * semantic output of the current code.
+ */
+const OUT = process.env.SENTINEL_CORPUS_OUT ?? join(REPO, "fixtures", "corpus");
 const OWNER = privateKeyToAccount("0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80");
 const SIGNER = privateKeyToAccount("0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d");
 const OTHER_SIGNER = privateKeyToAccount("0x5de4111afa1a4b94908f83103eb1f1706367c2e68ca870fc3fb9a804cdab365a");
