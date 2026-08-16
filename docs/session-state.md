@@ -188,6 +188,13 @@ capable of changing the verdict was raised after the signing.
 **The next instance's job is NOT to find the next gate.** There isn't one until pre-publication.
 What is owed is v1.1 work, §5 below, and it is bounded by the re-label decision.
 
+**D-044 closed the session and the consolidation D-043 ordered is COMPLETE.** Both capability
+deferrals were re-put to John and both were confirmed — the token cap and receipt epoch binding
+stay at v1.1, each pinned by a test that fails the moment the capability lands. **Pre-publication
+was put to him and declined: it is the only remaining direction, and starting it fires the
+re-label trigger.** The next instance is not picking up half-finished work; it is starting a
+programme, and that start is John's to authorise.
+
 **D-043 set the direction: CONSOLIDATE.** Work the v1.1 register down; open no new front. §14.8's
 ladder is available — rung 2 (executed vendor comparisons) and the 14.3 attestation stretch are
 both eligible now — **and both were declined.** Rung 2 in particular reverses D-001 and would
@@ -294,6 +301,7 @@ means only that no NEW class went vacuous. Read their output, not their exit sta
 | D-042 | **S2 stands, annotated.** §7.1's containment claim corrected (cap → v1.1); the campaign gets its two missing arms; the verifier is repaired by an agent that has not read the implementation |
 | A-041 | Verifier repaired, 70 → 101 tests, both exploits now fail closed. **Its best output is a spec finding: §5 defined no refusal record at all**, so D-012's requirement was unbuildable from the published document |
 | D-043 | **CONSOLIDATE — no new front, no ladder rung.** Re-label bound to pre-publication with a named trigger; §5.5.1 RefusalRecord published; override event added; Anvil keys re-baselined |
+| D-044 | **Session close.** Pushed; one last review of §9 step 3 (A-016's 6 unadjudicated skeptics); both capability deferrals CONFIRMED; **pre-publication NOT started** |
 | A-042 | **The D-010 experiment run properly:** a schema-only build met a real signed refusal it had never seen. Everything §5.5.1 STATED matched first time; the envelope it omitted diverged, plus three defects in the section — all mine, all corrected. 101 → 146 tests |
 
 ## 5. Traces — what worked, and what was a dead end
