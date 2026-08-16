@@ -10,8 +10,17 @@ The repository is PRIVATE and D-016 still blocks all publication.
 
 ## 0. If you read nothing else, read this
 
-**Gate S1 is SIGNED — PASS, John, 2026-07-28.** **Gate S2 is NOT signed**, is signed by John
-alone in a facilitated session, and never by an agent (D-002, non-delegable).
+**Gate S1 is SIGNED — PASS, John, 2026-07-28. GATE S2 IS SIGNED — PASS, John, 2026-08-16
+(D-041).** Both by John alone at facilitated sessions, never by an agent (D-002, non-delegable).
+**D-002's two mid-build gates are now both behind the project.**
+
+**What S2 does NOT authorise, stated first because a signed gate is the moment scope creeps.**
+D-016 still blocks all publication and the repository is PRIVATE. Gate 8 (five-minute
+comprehension) is PRE-PUBLICATION under D-032 — it needs the dashboard D-009 deferred and John's
+five held questions, which the build loop must never see. Certification of public claims is
+still autonomy NONE. **S2 was signed on the state in `docs/gate-s2-evidence.md` §11 INCLUDING
+its limits, not despite them** — 14 of 20 classes exercising the class they name, no live agent
+in CI, steps 1–3's review still cut short by an un-retired spend limit.
 
 **All six items A-028 left owed are built.** Then four independent adversarial reviews and six
 independent labellers were pointed at that work, and they found **two blockers and roughly
@@ -164,14 +173,18 @@ version has to match the layout John rules for, so it is sequenced behind him.
 
 </details>
 
-### 4. Run Gate S2 as a facilitated session — **NOW UNBLOCKED**
+### 4. ~~Run Gate S2 as a facilitated session~~ — **SIGNED, PASS, John, 2026-08-16 (D-041)**
 
-Pack: `docs/gate-s2-evidence.md`. Read §11 (what is NOT in evidence) and §12 (the questions)
-first. **Gate 5 was the blocker and is now MET (D-038)** — it was unsatisfied rather than merely
-uncertified, because 0 of 9 rows were dated or linked. That is now 11 of 11.
+Pack: `docs/gate-s2-evidence.md`, now marked SIGNED with the four rulings recorded in §12. Gate 5
+was the blocker and was certified the same day (D-038): 0 of 9 rows dated became 11 of 11.
 
-**S2 evidence needs re-reading against this session before the session runs:** it was written
-when Gate 5 was open and when the class table read as 20-of-20 covered. Both changed.
+**Three decision points were put BEFORE the signature, in that order deliberately** — steps 1–3's
+un-retired spend limit (recorded as a limit, not retired), the evidence dashboard (stays outside
+S2), and whether 14-of-20 class coverage flips a gate (it does not; traced gate by gate). Nothing
+capable of changing the verdict was raised after the signing.
+
+**The next instance's job is NOT to find the next gate.** There isn't one until pre-publication.
+What is owed is v1.1 work, §5 below, and it is bounded by the re-label decision.
 
 ### 5. Deferred to v1.1, riding on the re-label decision (D-035)
 
@@ -258,6 +271,7 @@ means only that no NEW class went vacuous. Read their output, not their exit sta
 | D-039 | The two A-038 classes ruled apart: override is an accepted **delegation**, conflicting-block-state is a **GAP owing a fixture** |
 | A-039 | **Two adversarial reviews, 25 findings.** Both new guards were defeatable; several claims exceeded their evidence. 11 of 12 exploits now caught, 1 documented residual |
 | D-040 | Closes A-039: **F002 stays** (it earns its place by blocking), the class map widens to §7.1's four hard caps, condition (2)'s residual accepted as documented |
+| D-041 | **GATE S2 SIGNED — PASS, John, 2026-08-16.** Signed on §11's limits, not despite them. Steps 1–3's limit recorded not retired; dashboard stays outside S2; 14/20 does not flip a gate |
 
 ## 5. Traces — what worked, and what was a dead end
 

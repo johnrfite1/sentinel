@@ -1,9 +1,18 @@
 # Gate S2 — §7.5 Evidence Pack
 
-**Status: UNSIGNED.** Gate S2 is signed by John, in a facilitated session, and by nobody else
-(D-002, non-delegable; the D-007…D-011 delegation covered design forks only). This document
-assembles evidence, states each piece's boundary, and asks questions. **It does not record
-answers, and no agent may add them.**
+**Status: SIGNED — PASS. John, 2026-08-16**, at a facilitated session (D-002, non-delegable; the
+D-007…D-011 delegation covered design forks only). Recorded as **D-041**. The agent facilitated,
+presented the evidence and the limits, and recorded the ruling; it did not make it.
+
+**Signed on the state described below, including §11.** Four decision points were put to John
+before the signature, in an order chosen so that anything capable of changing the verdict came
+first: §9 steps 1–3's un-retired spend limit (recorded as a limit, not a blocker), the evidence
+dashboard (stays outside S2 per D-009), and whether the 14-of-20 class-coverage finding changes
+any gate's status (it does not — see §12). **§11 is not a caveat attached after the fact; it is
+part of what was signed.**
+
+This document assembles evidence, states each piece's boundary, and asks questions. **The
+answers below D-041 are John's, recorded verbatim in `decisions.md`; no agent may add to them.**
 
 Prepared 2026-08-15, revised the same day after three independent adversarial reviews, and
 **revised again 2026-08-16 against the decision session that certified Gate 5** (corrections are
@@ -512,12 +521,28 @@ an accepted delegation, one a GAP owing a fixture at v1.1.
 
 **RULED — D-037:** one agent session at a time on this working tree.
 
-**STILL OPEN, and it is John's alone:**
+**RULED AT THE SIGNING SESSION — 2026-08-16, D-041. All four, in the order put:**
 
-1. **The S2 signature itself** (D-002, non-delegable). **All seven S2 pass conditions now read
-   MET.** Before signing, §11 is the section to read, not this one — three of its entries
-   changed materially since the pack was written, and one is new and unfavourable: **14 of 20
-   fixture classes exercise the class they name.**
+1. **§9 steps 1–3's adversarial review, cut short by a spend limit that was never retired.**
+   **RULED: sign S2 with it recorded as a limit.** It is not an S2 pass condition, and inventing
+   a blocker at the gate is its own kind of dishonesty. Those steps carry the most independent
+   non-review evidence in the repository — 66/66 Foundry including the deep-profile invariants,
+   plus the D-010 verifier written from the spec by an agent that never read the TypeScript.
+   **The limit stays in §11 and is not retired by this ruling.**
+2. **The evidence dashboard.** **RULED: stays outside S2**, as D-009 wrote it. All four
+   deliverables D-009 names are in and green; the dashboard is presentation over evidence that
+   already exists and is already readable. D-009's own priority order always had it first to
+   drop.
+3. **Whether 14-of-20 class coverage changes any gate's status.** **RULED: no — MET stands, and
+   §11 carries the finding.** Traced gate by gate: 1, 2 and 6 rest on Foundry and the signer;
+   3 on F045/F046/F047, which do exercise their class; 4 on the ablation, whose class is
+   exercised by five fixtures; 7 on the injection demonstration and canary, and the pack already
+   says those fixtures' verdicts must not be read as detections. The false-allow figures are
+   per-fixture, not per-class. **What the finding damages is the BREADTH claim, which §11's first
+   line already disclaims.** Rejected: downgrading Gate 7 to PART MET, which the pack corrected
+   away from once already after a review called it grading its own homework; and holding S2 until
+   the GAP class has a fixture, which would hold the gate behind a full re-label of all 50.
+4. **The signature.** **PASS. John, 2026-08-16.**
 
 The original list follows, retained because the reasoning behind each is still the reasoning.
 
