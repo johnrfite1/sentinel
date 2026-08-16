@@ -32,7 +32,9 @@ In order:
 ## Gates
 
 - **Gate S1 — riskiest mechanism proven (D-002).** Vault + isolated signer + exact-action binding + Case 1 end-to-end + replay/tamper invariants green. (Agent note on sequencing: reaching Case 1 end-to-end requires §9 steps 1–4 plus minimal slices of steps 5–6 — the demo contracts, a decoder, and enough of the Anvil pipeline and conformance evaluator to produce the allow receipt.)
-- **Gate S2 — proof artifact (D-002, amended by D-009).** Full 30–50 fixture corpus, §7.5 hard-gate evidence, the §7.3 ablation report, and the receipt-verifier CLI (D-010). Under time pressure the priority order is corpus > ablation > CLI. The evidence dashboard stays outside S2 unless John adds it at the gate.
+- **Gate S2 — proof artifact (D-002, amended by D-009 and D-032).** Full 30–50 fixture corpus, §7.5 gate evidence, the §7.3 ablation report, and the receipt-verifier CLI (D-010). Under time pressure the priority order is corpus > ablation > CLI. The evidence dashboard stays outside S2 unless John adds it at the gate.
+  - *Amended 2026-08-15 (D-032):* of §7.5's eight gates, **six are S2 pass conditions plus Gate 5 (vendor honesty), which is mechanically checkable and still owed its check**. **Gate 8 (five-minute comprehension) is a PRE-PUBLICATION condition**, not an S2 one — D-008 requires it be run against a dashboard D-009 holds outside S2, and it asks whether a stranger understands a finished artifact rather than whether the mechanism is proven.
+  - *Status at 2026-08-15:* the corpus, the ablation and the CLI are all COMPLETE. Gates 1, 2, 3, 4, 6 and 7 have evidence. Gate 5 is open pending its check and a §2 capability-table audit. Gate 7's live canary is not built.
 
 Resolved since the first draft of this brief (see `docs/decisions.md` D-007…D-011):
 

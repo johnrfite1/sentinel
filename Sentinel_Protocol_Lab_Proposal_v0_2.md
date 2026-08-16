@@ -659,7 +659,12 @@ Evaluate the optional explanation layer on:
 
 If AI does not improve comprehension or evidence review enough to justify cost and attack surface, remove it from the public demo.
 
-### 7.5 Hard Gates
+### 7.5 Gates
+
+*Amended 2026-08-15 (D-032). This heading previously read "Hard Gates" and covered all eight bullets, which conflicted with D-008 — titled "§7.5 soft-gate definitions" — and with D-009, which makes Gate S2 pass on "§7.5 hard-gate evidence". The three documents used one vocabulary three ways, and whether two of these gates were S2 conditions turned on it.*
+
+**Six of the eight below are Gate S2 pass conditions**, together with the ones D-009 adds. **Two are not.** The last bullet — a viewer understanding the mechanism in five minutes — is a **PRE-PUBLICATION** condition alongside D-016's rename gate, because D-008 requires it be run against a dashboard that D-009 explicitly holds outside S2, and because it asks whether a stranger understands a finished artifact rather than whether the mechanism is proven. Vendor-comparison honesty **remains an S2 condition**: it is mechanically checkable against artifacts that exist today.
+
 
 - No agent action executes without a valid allow receipt or matching review receipt plus owner override.
 - Every replay, tamper, wrong-chain, expiry, and approval invariant passes.

@@ -1,4 +1,11 @@
-# §7.5 Hard-Gate Evidence — DRAFT (unsigned)
+# §7.5 Gate Evidence — DRAFT (unsigned)
+
+> **⚠ SUPERSEDED IN PART. This draft predates D-032 and still treats Gate 8 as an S2 pass
+> condition.** D-032 ruled that six of the eight §7.5 gates are S2 conditions; **Gate 5
+> (vendor honesty) REMAINS one**, and **Gate 8 (five-minute comprehension) is now a
+> PRE-PUBLICATION condition** alongside D-016's rename gate. The "hard versus soft" question
+> flagged under Gate 5 below is therefore SETTLED — read D-032 rather than the open question
+> as written there. Everything else in this draft stands.
 
 Drafted at commit `9059346` while four adversarial reviews run against a frozen tree. **Not
 yet committed to the repository, and not signed.** Gate S2 is signed by John in a facilitated

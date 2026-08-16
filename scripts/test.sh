@@ -177,8 +177,11 @@ WHAT IS NOT COVERED:
   - A LIVE agent. §9 step 7 connected the proposal to the pipeline, so the D-018 gap is
     closed for the recorded case, but every agent proposal exercised here comes from a
     pinned D-007 transcript. Nothing in this suite calls a model.
-  - The evidence dashboard (outside S2 unless John adds it at the gate, D-009), and the
-    §7.5 hard-gate evidence pack.
+  - The §7.5 evidence pack. Per D-032 six of the eight gates are S2 pass conditions,
+    Gate 5 (vendor honesty) remains one and still needs its mechanical check, and Gate 8
+    (five-minute comprehension) is now a PRE-PUBLICATION condition, not an S2 one.
+  - Gate 7's live D-007 canary. Nothing in this suite calls a model.
+  - The evidence dashboard (outside S2 unless John adds it at the gate, D-009).
   - An independent review of steps 7-8, which have had NONE, and of steps 1-3 that
     completed. Steps 4-6 HAVE now had a full
     independent adversarial pass under D-017 (see A-022): fixed commit, 12 findings, all 12
