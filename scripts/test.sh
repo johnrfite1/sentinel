@@ -246,7 +246,7 @@ fi
 # nothing reconciling them. That is precisely the defect A-045 was written to close, reproduced
 # inside A-045's own remediation. These three numbers are the assertion. Raise a floor when the
 # suite genuinely grows; NEVER lower one to make a run pass.
-VERIFIER_MIN_TESTS=154
+VERIFIER_MIN_TESTS=158
 VERIFIER_MIN_SAMPLES=7
 VERIFIER_MIN_TAMPER=62
 # A MODE FLOOR, because a pair count alone rewards padding (A-049): `tamper cases` counts

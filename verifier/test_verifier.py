@@ -2186,5 +2186,87 @@ class TestUnassertedValidation(unittest.TestCase):
                     parse_signature(good + suffix)
 
 
+class TestCharsetsByComplement(unittest.TestCase):
+    """A-054. Charsets pinned by their COMPLEMENT rather than by a bad list.
+
+    The mutation sweep (A-051) found both of these charsets widenable without any
+    test noticing: adding tab, CR, backslash or `+` to the reason-code class was
+    accepted, and §5.5.1's width bounds were pinned on the SHORT side only, so
+    over-length hashes and addresses passed. The existing tests enumerate a handful
+    of bad inputs -- which pins those spellings and nothing else. These walk the
+    character space and assert the accept/reject PARTITION, so any widening of the
+    class fails regardless of which character was added.
+
+    §5.5.1's charsets are the whole of its injectivity argument, which is why the
+    complement is the thing worth asserting rather than a sample of it.
+    """
+
+    # The declared classes, transcribed from the modules' own patterns. Transcribed
+    # deliberately rather than imported: a test that reuses the pattern under test
+    # cannot detect the pattern changing. That is the ERC-191 defect this sweep also
+    # found, and it is avoided here on purpose.
+    REASON_CODE_CHARS = set(
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_.:-")
+    LOWER_HEX = set("0123456789abcdef")
+
+    def _probe_space(self):
+        # ASCII in full, plus a few non-ASCII that have bitten this project before.
+        return [chr(c) for c in range(0x00, 0x80)] + ["É", " ", " ", "😀"]
+
+    def test_reason_code_charset_is_exactly_the_declared_class(self):
+        accepted, rejected = set(), set()
+        for ch in self._probe_space():
+            identifier = "EVAL" + ch + "OK"
+            try:
+                reasoncodes.validate(identifier)
+                accepted.add(ch)
+            except Exception:
+                rejected.add(ch)
+        expected = {ch for ch in self._probe_space() if ch in self.REASON_CODE_CHARS}
+        self.assertEqual(
+            accepted, expected,
+            "the accepted character set drifted from [A-Za-z0-9_.:-]; "
+            "unexpectedly accepted: %r; unexpectedly rejected: %r"
+            % (sorted(accepted - expected), sorted(expected - accepted)))
+        # Non-vacuity: the probe must actually exercise both sides.
+        self.assertTrue(accepted and rejected)
+
+    def test_reason_code_length_bound_is_pinned_on_BOTH_sides(self):
+        reasoncodes.validate("A")
+        reasoncodes.validate("A" * 64)
+        for bad in ("", "A" * 65, "A" * 200):
+            with self.subTest(length=len(bad)):
+                with self.assertRaises(Exception):
+                    reasoncodes.validate(bad)
+
+    def test_refusal_hash_and_address_widths_are_pinned_on_BOTH_sides(self):
+        # The sweep widened {64} to {64,} and {40} to {40,} and nothing failed:
+        # over-length values were accepted. Short values were already covered.
+        good32 = "0x" + "ab" * 32
+        good20 = "0x" + "ab" * 20
+        cases = (
+            ("hash32", refusal.HASH32, good32, 64),
+            ("address", refusal.ADDRESS, good20, 40),
+        )
+        for name, kind, good, width in cases:
+            with self.subTest(kind=name):
+                refusal.validate_field(name, kind, good)     # exact width must pass
+                for bad in ("0x" + "a" * (width - 2),        # short
+                            "0x" + "a" * (width + 2),        # LONG -- the unpinned side
+                            "0x" + "a" * (width * 2),
+                            good + " ",                      # trailing space
+                            good.upper().replace("0X", "0x")):  # uppercase hex
+                    with self.assertRaises(Exception, msg="accepted %r" % bad):
+                        refusal.validate_field(name, kind, bad)
+
+    def test_refusal_verdict_names_admit_no_padding_or_case_variation(self):
+        for good in refusal.VERDICT_NAMES:
+            refusal.validate_field("requestedVerdict", refusal.VERDICT, good)
+        for bad in ("BLOCK ", " BLOCK", "block", "Block", "BLOCK\n", "BLOCKED", ""):
+            with self.subTest(value=repr(bad)):
+                with self.assertRaises(Exception):
+                    refusal.validate_field("requestedVerdict", refusal.VERDICT, bad)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

@@ -411,11 +411,20 @@ survivors live in that asymmetry**, in `eip712.py` (11/27 caught) and `secp256k1
   right-pad and collide (`bytes4 "0xc1" == bytes4 "0xc1000000"`; `bytes32 "0x"` == all-zero), and
   a `uint8` of `"300"` or a `uint16` of `"65537"` hashes cleanly — producing a digest no conformant
   Solidity signer could produce, which §5.8 warns is indistinguishable from an invalid signature.
-- **Complement-based charset tests, replacing enumerated bad lists**, in `reasoncodes.py`
-  (tab, CR, backslash and `+` are all accepted when added to the charset; space and newline are
-  the only spellings pinned), `refusal.py` (§5.5.1's width bounds are pinned on the SHORT side
-  only, so over-length `actionHash`/`signer` values and a trailing-space verdict name pass), and
-  `_HEX_BODY` (now partly closed). §5.5.1's charsets are the whole of its injectivity argument.
+- ~~**Complement-based charset tests, replacing enumerated bad lists**~~ — **DONE 2026-08-17
+  (A-054) for `reasoncodes.py` and `refusal.py`.** `TestCharsetsByComplement` walks the character
+  space (all of ASCII plus four non-ASCII that have bitten this project) and asserts the
+  accept/reject PARTITION rather than a sample of bad spellings, so ANY widening fails regardless
+  of which character was added. Width bounds are now pinned on BOTH sides — the sweep's finding
+  was that `{64}` → `{64,}` and `{40}` → `{40,}` passed, because only the short side was covered.
+  Verified against six mutations: `+` added to the reason-code class, a tab added, the upper
+  length bound dropped, HASH32 widened, ADDRESS widened, and a trailing-space verdict name — all
+  six now fail the suite, and the clean tree stays green. **The tests transcribe the declared
+  classes rather than importing the patterns under test**, because a test that reuses the pattern
+  it checks cannot detect that pattern changing — which is the ERC-191 defect below, avoided
+  deliberately. **Still open: `_HEX_BODY`'s complement** (its whitespace case is closed, its
+  full character class is not), and §5.5.1's charsets remain the whole of its injectivity
+  argument, so this is the argument being asserted rather than sampled — not a proof of it.
 - **A witness pair for the UTF-16 sort that distinguishes BE from LE.**
   `test_key_sorting_is_utf16_code_units` names RFC 8785 §3.2.3 correctly and then picks
   `{U+FFFD, U+1F600}`, which orders IDENTICALLY under both — and every key in every fixture is
