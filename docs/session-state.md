@@ -15,7 +15,8 @@ do not read the push as any relaxation of D-016.**
 
 **READING ORDER FOR A FRESH INSTANCE.** §0 for where the project stands and how it fails; §1 for
 what to do, which is probably nothing without an instruction from John; then `docs/decisions.md`
-for D-041 through D-044 and A-039 through A-044, which is everything from the last session.
+for D-041 through D-044 and A-039 through A-047 — A-045, A-046 and A-047 are this session, and
+A-047 corrects A-046's headline and annotates A-045.
 `docs/v1-1-register.md` is the list of known outstanding work, with each item's blocker stated.
 `docs/gate-s2-evidence.md` §11 is what is NOT in evidence — read it before repeating any claim
 about what this project has proven.
@@ -111,7 +112,8 @@ All of the following move together:
 
 ### If John directs V1.1 WORK
 
-`docs/v1-1-register.md` is the list — seven sections, each with its blocker stated. Two items do
+`docs/v1-1-register.md` is the list — eight sections, each with its blocker stated. §8 is the
+adversarial-review findings deliberately left unfixed (A-047). Two items do
 NOT ride on the re-label and could be done alone: the **vault token cap** and **receipt epoch
 binding**. Both are deferred by explicit ruling (D-042(b), D-044(c), D-044(d)) and **both were
 re-put to John on 2026-08-16 and both deferrals were confirmed.** Do not reopen them without him;
