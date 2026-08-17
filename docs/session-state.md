@@ -4,8 +4,12 @@ Rewritten at the end of each working session. **This file, not the conversation,
 memory.** If it disagrees with anything an agent remembers, this file wins.
 
 Last updated: **2026-08-16**, end of session. Branch `step-3/isolated-signer`, **pushed**
-(`f3308ea`, verified against the remote rather than trusting the push output). Working tree
-clean. The repository is PRIVATE — `check-rename-gate.sh` checks this on every gate run — and
+(`cc3375d`, verified against the remote rather than trusting the push output). Working tree
+clean. **This pointer names the last commit this file DESCRIBES, and the commit that updates
+it necessarily comes after — so expect it to trail by one doc-only commit, and check
+`git log` rather than treating a mismatch as a finding.** It read `f3308ea` while HEAD was two
+commits further on, which is the same stale-pointer defect A-045 and A-046 spent the session
+correcting elsewhere, sitting in the file that opens by declaring itself the memory. The repository is PRIVATE — `check-rename-gate.sh` checks this on every gate run — and
 D-016 still blocks all publication. **Pushing to the private remote is backup, not publication;
 do not read the push as any relaxation of D-016.**
 
