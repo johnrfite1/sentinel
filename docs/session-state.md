@@ -235,7 +235,7 @@ design forks. Never sign a gate, never certify a public claim.
 
 ## 3. Where the build is
 
-**73/73 Foundry · 384/384 TypeScript · 146/146 verifier · 50 corpus fixtures · 7 samples ·
+**73/73 Foundry · 405/405 TypeScript · 146/146 verifier · 50 corpus fixtures · 7 samples ·
 gate green at the deep profile · workspace guards OK.** *(This line read 66/66 and 70/70 for
 most of 2026-08-16 while all three numbers moved underneath it — in the file that opens by
 declaring itself the memory. Update it in the same edit that changes a suite, not later.)*
@@ -301,6 +301,7 @@ means only that no NEW class went vacuous. Read their output, not their exit sta
 | D-042 | **S2 stands, annotated.** §7.1's containment claim corrected (cap → v1.1); the campaign gets its two missing arms; the verifier is repaired by an agent that has not read the implementation |
 | A-041 | Verifier repaired, 70 → 101 tests, both exploits now fail closed. **Its best output is a spec finding: §5 defined no refusal record at all**, so D-012's requirement was unbuildable from the published document |
 | D-043 | **CONSOLIDATE — no new front, no ladder rung.** Re-label bound to pre-publication with a named trigger; §5.5.1 RefusalRecord published; override event added; Anvil keys re-baselined |
+| A-044 | The six remaining step-3 findings, ruled and fixed: backpressure bounded nothing, the signer's namespace was caller-writable, `evidenceHash` non-injective, two refusal paths left no artifact. Anchor recency **recorded as a limit** |
 | A-043 | **CRITICAL, fixed.** A signed ALLOW was obtainable for calldata nobody decoded, and executed onchain twice in reproduction. A-028's repair covered one of two branches; **11 tests were passing through the hole** |
 | D-044 | **Session close.** Pushed; one last review of §9 step 3 (A-016's 6 unadjudicated skeptics); both capability deferrals CONFIRMED; **pre-publication NOT started** |
 | A-042 | **The D-010 experiment run properly:** a schema-only build met a real signed refusal it had never seen. Everything §5.5.1 STATED matched first time; the envelope it omitted diverged, plus three defects in the section — all mine, all corrected. 101 → 146 tests |
@@ -309,6 +310,11 @@ means only that no NEW class went vacuous. Read their output, not their exit sta
 
 **Dead ends and traps — do not repeat:**
 
+- **A REGRESSION TEST CAN PASS AGAINST THE DEFECT IT NAMES.** A-044: the first backpressure
+  test I wrote pinned the deadlock my own repair could introduce, not the unbounded dispatch it
+  was written for — it passed against the unfixed server. **Always run a new regression test
+  against the PRE-FIX code and confirm it fails.** If it does not, it is testing your fix, not
+  the defect.
 - **A REPAIR CAN GENERALISE THE DEMONSTRATION INSTEAD OF THE ARGUMENT.** A-028 F1 fixed the
   branch its reviewer exploited and left the identical hole in the sibling branch two lines
   down, though the justification it wrote covered both. A second reviewer walked through the

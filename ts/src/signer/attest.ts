@@ -283,7 +283,26 @@ export function createAttestor(config: AttestorConfig): Attestor {
             if (hashCallData(callData) !== action.dataHash) findings.push("SIGNER_DATAHASH_MISMATCH");
             if (action.vault !== vault) findings.push("SIGNER_WRONG_VAULT");
             if (action.chainId !== chainId) findings.push("SIGNER_WRONG_CHAIN");
-            if (findings.length > 0) return refuse(false);
+            // ATTRIBUTABILITY IS ABOUT WHETHER AN ACTION CAN BE NAMED, NOT ABOUT SEVERITY
+            // (A-044). This used to be an unconditional `refuse(false)`, which suppressed the
+            // D-012 record for all four findings — but the carve-out's own rationale, three
+            // lines above, describes exactly one of them: "a payload contradicting its own
+            // calldata describes no action the signer could say it refused." That is
+            // SIGNER_DATAHASH_MISMATCH.
+            //
+            // For a wrong vault, a wrong chain, or calldata too short to carry a selector,
+            // `hashAction(action)` succeeds and the action is perfectly nameable — the signer
+            // can say precisely what it was asked about and precisely why it declined. An
+            // adversarial reviewer showed the consequence: Gate S2 could not prove by signed
+            // artifact that the signer refuses a wrong-vault request. Only the process's own
+            // stderr recorded it, which is the state D-012 exists to end.
+            //
+            // `actionHash` is over the payload AS SUBMITTED, so a record for a wrong-vault
+            // request attests "I was asked about this and declined", not "this action is
+            // mine". That distinction is what makes naming it honest.
+            if (findings.length > 0) {
+                return refuse(!findings.includes("SIGNER_DATAHASH_MISMATCH"));
+            }
 
             // Lowercased: `callData` reaches the attestor already normalised through the RPC
             // parser, but an in-process caller can bypass that, and a case-sensitive selector

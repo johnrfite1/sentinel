@@ -33,8 +33,19 @@ import {
  *
  * FRAMING. Newline-delimited JSON. No HTTP: the signer needs neither routing, content
  * negotiation, nor headers, and every one of those is surface that has to be reasoned about.
- * Oversized lines are dropped with the connection rather than buffered, so a local caller
- * cannot grow the signer's memory without bound.
+ *
+ * MEMORY BOUNDS, STATED AS WHAT IS ENFORCED RATHER THAN AS A PROPERTY (A-044). Three caps
+ * apply: one line may not exceed `MAX_LINE_LENGTH` (the connection is dropped, not buffered);
+ * one connection may not have more than `MAX_IN_FLIGHT` requests dispatched at once; and the
+ * process accepts at most `MAX_CONNECTIONS` sockets.
+ *
+ * **This sentence used to read "a local caller cannot grow the signer's memory without bound",
+ * and that was false when written and cited as evidence in A-016.** The in-flight cap was
+ * tested after dispatch rather than before, so a single write of many newline-delimited lines
+ * drained past it entirely; and both caps were per-connection with nothing limiting
+ * connections. A reviewer reached 803 MB from one socket and 1.8 GB from forty. Both are
+ * fixed and both now have tests. The honest form of the claim is the product of the three
+ * caps above — a bound, not an absence of one.
  */
 
 /**
@@ -56,6 +67,16 @@ const MAX_LINE_LENGTH = 8 * 1024 * 1024;
  * attempt to exhaust the process, and neither deserves to be served faster.
  */
 const MAX_IN_FLIGHT = 16;
+
+/**
+ * Concurrent connections. Beyond this, new sockets are destroyed rather than queued.
+ *
+ * A-044. `MAX_IN_FLIGHT` and `MAX_LINE_LENGTH` are both PER CONNECTION, so before this
+ * constant existed neither bounded the process: 40 individually-compliant connections reached
+ * 1.8 GB RSS. The signer's whole design assumption is one local evaluator over a 0600 socket,
+ * so this is generous by an order of magnitude relative to legitimate use.
+ */
+const MAX_CONNECTIONS = 32;
 
 export interface SignerServerConfig {
     socketPath: string;
@@ -137,6 +158,19 @@ export async function startSignerServer(config: SignerServerConfig): Promise<Sig
     const connections = new Set<Socket>();
 
     const server: Server = createServer((socket: Socket) => {
+        // BOTH CAPS WERE PER-CONNECTION, SO NEITHER BOUNDED ANYTHING (A-044). MAX_IN_FLIGHT
+        // and the per-line cap are both scoped to one socket; nothing limited how many sockets
+        // existed. An adversarial reviewer reached 1.8 GB RSS with 40 connections holding
+        // 3 MiB each, every one of them individually compliant.
+        //
+        // Refused rather than queued: the signer serves one local evaluator over a 0600 socket
+        // in its own directory, so more than a handful of concurrent connections is a defect
+        // or an attack, and neither is served by waiting.
+        if (connections.size >= MAX_CONNECTIONS) {
+            log({event: "connectionRefused", open: connections.size});
+            socket.destroy();
+            return;
+        }
         connections.add(socket);
         socket.setEncoding("utf8");
         let buffer = "";
@@ -151,7 +185,13 @@ export async function startSignerServer(config: SignerServerConfig): Promise<Sig
         let inFlight = 0;
         const settle = () => {
             inFlight -= 1;
-            if (inFlight < MAX_IN_FLIGHT && socket.isPaused()) socket.resume();
+            if (inFlight < MAX_IN_FLIGHT && socket.isPaused()) {
+                socket.resume();
+                // Resuming does not re-emit what is already buffered, so a paused connection
+                // whose peer sent everything in one write would stall with lines in hand.
+                // Nudge the drain loop with an empty chunk. (A-044)
+                socket.emit("data", "");
+            }
         };
 
         socket.on("data", (chunk: string) => {
@@ -162,17 +202,29 @@ export async function startSignerServer(config: SignerServerConfig): Promise<Sig
                 return;
             }
 
+            // THE CAP IS TESTED BEFORE EACH DISPATCH, NOT AFTER — and the first version tested
+            // after, which is why it bounded nothing (A-044).
+            //
+            // `socket.pause()` stops future READS. It does not stop this loop from draining
+            // lines already sitting in `buffer`. One write carrying tens of thousands of
+            // newline-delimited requests therefore dispatched every one of them, in a loop
+            // whose only exit was running out of buffer — exactly the scenario the comment
+            // above says this code closed. An adversarial reviewer measured 803 MB RSS from a
+            // single connection and a single sub-MiB write.
+            //
+            // Breaking out leaves the remainder in `buffer`; the socket is paused, and
+            // `settle` resumes it once capacity frees, at which point the next 'data' event —
+            // or the resume itself — re-enters this loop with the buffer intact.
             let newline: number;
-            while ((newline = buffer.indexOf("\n")) !== -1) {
+            while (inFlight < MAX_IN_FLIGHT && (newline = buffer.indexOf("\n")) !== -1) {
                 const line = buffer.slice(0, newline);
                 buffer = buffer.slice(newline + 1);
                 if (line.trim() === "") continue;
 
                 inFlight += 1;
                 void respond(socket, line).finally(settle);
-
-                if (inFlight >= MAX_IN_FLIGHT && !socket.isPaused()) socket.pause();
             }
+            if (inFlight >= MAX_IN_FLIGHT && !socket.isPaused()) socket.pause();
         });
 
         socket.on("close", () => connections.delete(socket));

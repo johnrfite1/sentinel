@@ -486,6 +486,32 @@ function uint(v: unknown, path: string): bigint {
     return BigInt(v);
 }
 
+/**
+ * Reject strings containing an unpaired UTF-16 surrogate.
+ *
+ * A-044. `evidenceHash` is `keccak256(stringToBytes(evidenceCanonical))`, and viem's
+ * `stringToBytes` is `TextEncoder.encode`, which replaces EVERY unpaired surrogate with
+ * U+FFFD. So `"x\ud800y"` and `"x\udbffy"` encode to the same bytes and hash identically —
+ * verified directly. All 2,048 lone surrogates collapse to one sequence, so k of them give
+ * 2048^k distinct bundles sharing an `evidenceHash`, and the receipt's commitment to its
+ * evidence stops being injective.
+ *
+ * Symmetry with the independent verifier is the second reason and arguably the better one:
+ * the D-010 CLI now rejects lone surrogates under RFC 8785 §3.2.2.2, where such data "MUST
+ * cause a compliant JCS implementation to terminate with an appropriate error". Before this
+ * check the signer would sign evidence that verifier structurally could not reproduce — a
+ * genuine receipt reading as FAILED. Both sides now agree on what is signable.
+ *
+ * This does NOT establish that the string is canonical JSON; §5.6 requires that and the
+ * signer still takes the caller's word for it. Stated so the check is not over-read.
+ */
+function wellFormed(s: string, path: string): string {
+    if (/[\uD800-\uDFFF]/.test(s.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]/g, ""))) {
+        fail(path, "well-formed UTF-16 with no unpaired surrogate (RFC 8785 §3.2.2.2)");
+    }
+    return s;
+}
+
 function bounded(v: unknown, path: string, bits: number): bigint {
     const n = uint(v, path);
     if (n >= 1n << BigInt(bits)) fail(path, `a uint${bits}`);
@@ -546,11 +572,11 @@ export function parseMandate(v: unknown, path = "mandate"): MandatePayload {
         mandateId: hex(o.mandateId, `${path}.mandateId`, 32),
         principal: address(o.principal, `${path}.principal`),
         vault: address(o.vault, `${path}.vault`),
-        chainId: uint(o.chainId, `${path}.chainId`),
+        chainId: bounded(o.chainId, `${path}.chainId`, 256),
         target: address(o.target, `${path}.target`),
         targetCodeHash: hex(o.targetCodeHash, `${path}.targetCodeHash`, 32),
         selector: hex(o.selector, `${path}.selector`, 4),
-        maxNativeValueWei: uint(o.maxNativeValueWei, `${path}.maxNativeValueWei`),
+        maxNativeValueWei: bounded(o.maxNativeValueWei, `${path}.maxNativeValueWei`, 256),
         purposeKind: hex(o.purposeKind, `${path}.purposeKind`, 32),
         resourceId: hex(o.resourceId, `${path}.resourceId`, 32),
         beneficiary: address(o.beneficiary, `${path}.beneficiary`),
@@ -575,11 +601,11 @@ export function parsePolicy(v: unknown, path = "policy"): PolicyPayload {
         schemaVersion: bounded(o.schemaVersion, `${path}.schemaVersion`, 16),
         policyVersion: bounded(o.policyVersion, `${path}.policyVersion`, 32),
         vault: address(o.vault, `${path}.vault`),
-        chainId: uint(o.chainId, `${path}.chainId`),
+        chainId: bounded(o.chainId, `${path}.chainId`, 256),
         allowedOperation: bounded(o.allowedOperation, `${path}.allowedOperation`, 8),
         allowedTargetsHash: hex(o.allowedTargetsHash, `${path}.allowedTargetsHash`, 32),
         allowedSelectorsHash: hex(o.allowedSelectorsHash, `${path}.allowedSelectorsHash`, 32),
-        maxNativeValueWei: uint(o.maxNativeValueWei, `${path}.maxNativeValueWei`),
+        maxNativeValueWei: bounded(o.maxNativeValueWei, `${path}.maxNativeValueWei`, 256),
         maxAllowanceIncreaseBaseUnits: uint(
             o.maxAllowanceIncreaseBaseUnits, `${path}.maxAllowanceIncreaseBaseUnits`),
         allowedCallGraphHash: hex(o.allowedCallGraphHash, `${path}.allowedCallGraphHash`, 32),
@@ -599,11 +625,11 @@ export function parseAction(v: unknown, path = "action"): ActionPayload {
     noExtras(o, ACTION_FIELDS, path);
     return {
         schemaVersion: bounded(o.schemaVersion, `${path}.schemaVersion`, 16),
-        chainId: uint(o.chainId, `${path}.chainId`),
+        chainId: bounded(o.chainId, `${path}.chainId`, 256),
         vault: address(o.vault, `${path}.vault`),
-        actionNonce: uint(o.actionNonce, `${path}.actionNonce`),
+        actionNonce: bounded(o.actionNonce, `${path}.actionNonce`, 256),
         target: address(o.target, `${path}.target`),
-        valueWei: uint(o.valueWei, `${path}.valueWei`),
+        valueWei: bounded(o.valueWei, `${path}.valueWei`, 256),
         dataHash: hex(o.dataHash, `${path}.dataHash`, 32),
         operation: bounded(o.operation, `${path}.operation`, 8),
         mandateHash: hex(o.mandateHash, `${path}.mandateHash`, 32),
@@ -636,6 +662,26 @@ export function parseEvaluateAndSignRequest(v: unknown): EvaluateAndSignRequest 
         if (!REASON_CODE_PATTERN.test(code)) {
             fail(`params.evaluation.reasonCodes[${i}]`, `to match ${REASON_CODE_PATTERN.source}`);
         }
+        // THE SIGNER'S NAMESPACE IS THE SIGNER'S (A-044).
+        //
+        // `reasonCodesHash` commits to the UNION of the caller's codes and the signer's own
+        // findings, and `signerFindings` is returned over the RPC but is NOT a field of the
+        // signed §5.4 payload — so a third party reading a receipt cannot tell which side
+        // contributed a code. Nothing rejected a caller-supplied `SIGNER_` prefix, and
+        // `REASON_CODE_PATTERN` happily accepts one.
+        //
+        // An adversarial reviewer signed an ALLOW whose committed codes read
+        // SIGNER_VAULT_PAUSED, SIGNER_MANDATE_NOT_ACTIVE and SIGNER_NOT_ACTIVE_SIGNER while
+        // the signer had found nothing — an authenticated receipt asserting the signer said
+        // three things it never said, and allowed anyway. Verdicts are unaffected
+        // (`refusesVerdict` consults the signer's own findings only), which is exactly why
+        // this is an integrity defect in the RECORD rather than a bypass.
+        if (code.startsWith("SIGNER_")) {
+            fail(
+                `params.evaluation.reasonCodes[${i}]`,
+                "not to use the SIGNER_ prefix, which is reserved for the signer's own findings",
+            );
+        }
         return code;
     });
 
@@ -647,7 +693,10 @@ export function parseEvaluateAndSignRequest(v: unknown): EvaluateAndSignRequest 
         evaluation: {
             verdict: verdict as VerdictName,
             reasonCodes,
-            evidenceCanonical: str(ev.evidenceCanonical, "params.evaluation.evidenceCanonical"),
+            evidenceCanonical: wellFormed(
+                str(ev.evidenceCanonical, "params.evaluation.evidenceCanonical"),
+                "params.evaluation.evidenceCanonical",
+            ),
             simulationBlockNumber: uint(
                 ev.simulationBlockNumber, "params.evaluation.simulationBlockNumber"),
             simulationBlockHash: hex(
