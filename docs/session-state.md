@@ -3,10 +3,21 @@
 Rewritten at the end of each working session. **This file, not the conversation, is the
 memory.** If it disagrees with anything an agent remembers, this file wins.
 
-Last updated: **2026-08-16**, branch `step-3/isolated-signer`, **pushed** (`1a27a36`, verified
-against the remote rather than trusting the push output). The repository is PRIVATE — the rename
-gate checks this on every run — and D-016 still blocks all publication. **Pushing to the private
-remote is backup, not publication; do not read the push as any relaxation of D-016.**
+Last updated: **2026-08-16**, end of session. Branch `step-3/isolated-signer`, **pushed**
+(`f3308ea`, verified against the remote rather than trusting the push output). Working tree
+clean. The repository is PRIVATE — `check-rename-gate.sh` checks this on every gate run — and
+D-016 still blocks all publication. **Pushing to the private remote is backup, not publication;
+do not read the push as any relaxation of D-016.**
+
+**READING ORDER FOR A FRESH INSTANCE.** §0 for where the project stands and how it fails; §1 for
+what to do, which is probably nothing without an instruction from John; then `docs/decisions.md`
+for D-041 through D-044 and A-039 through A-044, which is everything from the last session.
+`docs/v1-1-register.md` is the list of known outstanding work, with each item's blocker stated.
+`docs/gate-s2-evidence.md` §11 is what is NOT in evidence — read it before repeating any claim
+about what this project has proven.
+
+**The suite counts in §3 are verified as of this commit. Verify them again before quoting them:
+that line was wrong for most of 2026-08-16.**
 
 ---
 
@@ -21,20 +32,32 @@ D-016 still blocks all publication and the repository is PRIVATE. Gate 8 (five-m
 comprehension) is PRE-PUBLICATION under D-032 — it needs the dashboard D-009 deferred and John's
 five held questions, which the build loop must never see. Certification of public claims is
 still autonomy NONE. **S2 was signed on the state in `docs/gate-s2-evidence.md` §11 INCLUDING
-its limits, not despite them** — 14 of 20 classes exercising the class they name, no live agent
-in CI, steps 1–3's review still cut short by an un-retired spend limit.
+its limits, not despite them** — 14 of 20 classes exercising the class they name, and no live
+agent in CI. D-041 carries an annotation naming what became known after it was signed.
 
-**All six items A-028 left owed are built.** Then four independent adversarial reviews and six
-independent labellers were pointed at that work, and they found **two blockers and roughly
-twenty further defects — most in work done the same day, several in the remediations
-themselves.** All are remediated or recorded. Read A-032 and A-033 before trusting anything
-here.
+**The steps 1–3 review S2 was signed WITHOUT has since been run (D-044(b)), and §11 is now
+empty.** It found A-043: **a CRITICAL, exploitable bypass — a signed ALLOW obtainable for
+calldata nobody decoded, reproduced twice onchain.** Fixed, with regression tests. Read A-043
+and A-044 before trusting anything about the signer.
 
-**The pattern, now observed often enough to be the operating assumption:** the defects are
-*honesty* defects — a claim stronger than its evidence — and the build loop does not find them.
-It found none of them. Reviewers, labellers and the mutation harness did. **Three separate
-times this session a guard, a test or a mutation existed and was pointed at the wrong thing.**
-The instrument existing is not the instrument working.
+**THE PATTERN, now the operating assumption rather than an observation.** The defects are
+*honesty* defects — a claim stronger than its evidence — and **the build loop does not find
+them.** Across 2026-08-15 and 2026-08-16, roughly ninety findings came from adversarial
+reviewers, independent labellers, the mutation harness and an independent reimplementation.
+The build loop found essentially none of its own. Specifically and repeatedly:
+
+- **An instrument can exist and point at the wrong thing.** Guards, tests and mutations have
+  shipped aimed at something other than what they name — five or more times now.
+- **A repair can generalise the DEMONSTRATION rather than the ARGUMENT.** A-028 fixed the branch
+  its reviewer exploited and left the identical hole two lines down. A-043 is the cost.
+- **A comment can describe a vulnerability and file it as an inconvenience.** A-028's test file
+  named the exact bypass state in prose and routed around it.
+- **A regression test can pass against the defect it names** (A-044).
+- **A published number can be true once.** This file's own headline suite counts were stale for
+  most of a day while the numbers moved underneath them.
+
+**None of that is a reason to distrust the work; it is the reason to keep pointing independent
+eyes at it.** Everything above was found, fixed or recorded — and found by the process working.
 
 **John has delegated design forks to the build loop.** Two things stay outside that
 permanently, and were restated to him: **gate signing** (D-002) and **certification of public
@@ -43,183 +66,68 @@ autonomy *none*).
 
 ---
 
-## 1. What the next instance should do, in order
+## 1. What the next instance should do
 
-### 1. ~~Collect the D-035 measurement~~ — DONE, 2026-08-15. Result below.
+### FIRST: probably nothing. Read this before starting anything.
 
-**Labeller L: 5 of 5 agree with the labels of record. ZERO movements, against a declared
-threshold of two.** D-035 part (c) stands; no escalation is owed and no re-freeze happens.
-Recorded in `fixtures/corpus/labels/labeller-L-control.json` and its provenance file.
+**Both of D-002's mid-build gates are signed. There is no next gate until pre-publication, and
+`HANDOFF.md` records that "authorized through Gate S2" has been SPENT.** D-044(e) ruled the
+session closed at a clean point with pre-publication explicitly declined.
 
-**The programme as a whole: E and F are the labels of record; SIX targeted measurement arms
-(G, H, J, K, L, M) were compared against them, across two specification versions, two models and
-fourteen fixtures — ONE label moved (F051), and it was the one labeller E had itself flagged.**
-That is the bound D-035 asked for, and it holds.
+**The next move is a PROGRAMME START, and it is John's to authorise.** If you have arrived with
+no instruction from him, the correct action is to say so and stop — not to find work. The
+v1.1 register exists so that "there is nothing to do" is checkable rather than a guess.
 
-**"Six independent labellers" was the wrong count and is corrected.** Twelve label files touch
-those fourteen fixtures: **A–D are the FIRST labelling round, E and F are the labels of record,
-and G, H, J, K, L, M are the six targeted measurement arms.**
+**Three things are specifically NOT authorised, and each was declined with reasons on 2026-08-16
+(D-043, D-044). "S2 is signed" is not permission for any of them:**
 
-**A–D are not unexplained — an earlier draft of this entry said they were, and that was my error
-rather than a gap in the record.** `decisions.md` documents them: A and B produced the project's
-sole inter-labeller disagreement (A read F002 REVIEW, B read it BLOCK), which is what put D-021
-to John; C and D drove D-026 and D-027. **D-021 then owed a re-label of A's four wrong REVIEW
-labels by fresh labellers — and E and F are that re-label**, verified: E labels F002 BLOCK,
-citing D-021 by name. The owed work was done. Say A–D are superseded, not that nobody knows what
-they are; **the lesson is that "the record does not establish this" is a claim needing the same
-verification as any other, and I published it without grepping the decision log.**
+- **§14.8 ladder rung 2** (executed vendor comparisons). Reverses D-001 and would require
+  unwinding D-008(2) and the vendor-honesty guard — putting executed-comparison claims into a
+  project whose entire honesty apparatus was built on their absence.
+- **The 14.3 attestation stretch**, now eligible because the §7.5 gates are green.
+- **The evidence dashboard as "groundwork."** It needs no ruling from John and is a Gate 8
+  prerequisite, which is exactly what makes it the tempting one. Building it reverses D-043's
+  "open no new front."
 
-**REPLICATED, BY ACCIDENT — labeller M, a second control arm over the same five fixtures.** Two
-Claude Code sessions were open on this repository at once and both ran D-035's control. The
-arms were blind to each other and agree completely: **E, L and M give the same label on all
-five, and L and M even match on confidence — both `medium` on F025 and `high` on the other
-four, both marking F025's governing rule as inferred rather than stated.** Ten control
-observations, zero movements. The result is stronger than D-035 required, and **it was not
-designed — do not write it up as planned replication.** See A-037 for the incident, which is a
-finding in its own right and the more important half.
+### If John directs PRE-PUBLICATION
 
-L raised a new finding, recorded as **A-036: F056 does not exercise reentrancy at all** —
-`internalCallCount` 0, target with empty bytecode, exact-target failing long before the call
-graph is reached. With F051 inert for the neighbouring class, §7.1's `reentrancy-attempt` and
-`unexpected-internal-call` classes are covered at the corpus layer by two fixtures that between
-them exercise neither. Deferred with D-035 (repairing them changes the labelled views), and it
-is the THIRD instance of this defect class after A-028 F-5. **A mechanical check is possible —
-assert each class's fixtures produce at least one failing check the class is about — and is not
-built. That is the highest-value corpus work outstanding.**
+This is the only remaining direction, and starting it **fires the re-label trigger** (D-043(b)).
+All of the following move together:
 
-### 1b. If the measurement ever needs re-running (it should not)
+- **Re-label all 50 fixtures** under the SAME frozen prompt — D-035 ruled the prompt is not at
+  fault, so `check-label-prompt.sh` stays green and no re-freeze is involved. The cost is fresh
+  labeller runs, replacing E and F as the labels of record, and re-running the §7.3 ablation.
+  **Every figure in `docs/gate-s2-evidence.md` then needs re-verifying.**
+- **The five corpus defects that ride with it** — see §5 below and `docs/v1-1-register.md`.
+- **Gate 8** (five-minute comprehension). Needs the dashboard D-009 deferred AND John's five
+  held questions. **The build loop must never see those questions; do not ask for them, guess
+  them, or write substitutes** (D-008, D-032).
+- **D-016's rename gate and publication lift.** The repository is PRIVATE and
+  `check-rename-gate.sh` verifies that on every gate run.
 
-D-035 ruled: run the control labeller over **F001, F009, F025, F049, F056** and compare with
-the labels of record. If no result is recorded in `fixtures/corpus/labels/`, run it:
+### If John directs V1.1 WORK
 
-- Control specification: `git show 052b3af:Sentinel_Protocol_Lab_Proposal_v0_2.md` written to a
-  scratch path — the spec BEFORE the §4.2 walkthrough and before every 2026-08-15 amendment.
-- Model: `claude-opus-5` (same as E and F, so the spec text is the only variable).
-- Brief: copy labeller K's. `fixtures/corpus/labels/labeller-K.provenance.json` records the
-  exact denials. **Require the provenance attestation** — eight labellers for eight have produced
-  a first-order finding in it, unprompted.
-- Record as `labeller-<letter>-control.json` + `.provenance.json`. These are AUDIT TRAIL:
-  `report.ts` reads only `labeller-E.json` and `labeller-F.json`, so adding files moves no
-  published number.
+`docs/v1-1-register.md` is the list — seven sections, each with its blocker stated. Two items do
+NOT ride on the re-label and could be done alone: the **vault token cap** and **receipt epoch
+binding**. Both are deferred by explicit ruling (D-042(b), D-044(c), D-044(d)) and **both were
+re-put to John on 2026-08-16 and both deferrals were confirmed.** Do not reopen them without him;
+"the work is available" is not new information.
 
-**THE THRESHOLD IS DECLARED IN ADVANCE (D-035): two or more of the five moved means the channel
-is systematic, the sample has stopped being a bound, and a full re-freeze plus re-label of all
-50 escalates to John.** One movement is consistent with F051 being the known case. **Do not
-soften this after seeing the result.**
+### The operating rules that bind whatever you do
 
-### 2. ~~Then part (c) of D-035~~ — DONE, 2026-08-15. `docs/v1-1-register.md`
-
-The offending passages are a **v1.1** correction, not a v1 re-freeze. **Do NOT edit §4.2 or
-§5.7.1 to remove the worked examples** — that edits the specification to serve the measurement,
-and D-035 explicitly does not authorise it. Recorded, not changed.
-
-Three things in that register a reader should not have to find for themselves:
-
-- **D-035's "§5.7.1 publishes eleven reason-code identifiers" is wrong — it publishes 41.** The
-  eleven is §5.7.1's count of checks missing from §5.7's prose. The ruling is unaffected; the
-  entry is annotated in place, not rewritten, because it is John's.
-- **Closing that leak fights `check-eval-codes.sh`**, which fails the gate if a check exists in
-  the engine and not in §5.7.1. Deleting the list to protect labellers breaks the guard that
-  proves the prose is complete. That tension is a design fork, not an edit.
-- ~~One item does NOT ride on the re-label and could be built now~~ — **BUILT 2026-08-16,
-  `scripts/check-class-coverage.sh`, in the gate. It found two more vacuous classes (A-038),
-  both awaiting John.** See §3 and A-038.
-
-### 3. ~~Prepare Gate 5's certification for John~~ — **CERTIFIED 2026-08-16 (D-038)**
-
-**Gate 5 is MET.** John ruled all seven forks at a facilitated session; §2 is rewritten to match.
-`check-vendor-honesty.sh` reports **11 of 11 rows cited** and D-008(3) **certified by record**,
-naming D-038 — it checks that a named certification exists and says on every run that it cannot
-check the certification is right. Rows 2 and 8 split; Circle and Hypernative marked
-`(inference)`; Safe re-cited rather than narrowed; §13 gained #25–#28.
-
-**The certification goes stale on ANY edit to the §2 table** — the guard prints that where the
-certification prints. **Owed at v1.1:** Coinbase was left at two documented criteria without the
-re-cite lookup that rescued Safe, and Tenderly stays on a marketing page the audit called thin.
-Both would improve accuracy in the direction that does not flatter Sentinel.
-
-<details><summary>The original preparation note (superseded)</summary>
-
-`docs/gate-5-vendor-audit.md` holds a completed source-verification pass — all nine cited pages
-fetched and read 2026-08-15 — and, appended to the same file, **the certification packet: every
-proposed change as literal replacement text, ready for a ruling session.** It is in that file
-and not its own because a new vendor-naming file would fail `check-vendor-honesty.sh` on
-D-008(4), and excluding it would be a claim about the file the script warns against.
-
-**The earlier count in this file was wrong and is corrected.** It read "five rows hold, four do
-not". Row 8 is two products in one sentence: Blockaid holds, **Tenderly does not**. Four rows
-hold as written (1, 4, 6, 9), one holds by half (8), and **five need a ruling:**
-
-| Row | Status after the packet's lookups | What John rules |
-|---|---|---|
-| 7 Hypernative | **UNRESOLVED.** "intent verification" is on no cited page, and the re-cite lookup returned a self-contradicting read — not evidence | strike / mark `(inference)` / re-cite after a verified read |
-| 2 Coinbase; Privy | holds for Privy only; "signer" for neither | split the row (text drafted) |
-| 5 Safe | **recoverable** — all four missing claims documented on two Safe pages §13 does not yet cite | re-cite (text drafted; adds §13 #25, #26) |
-| 8 Tenderly half | "known-threat detection" unsupported on the landing page AND the alert docs | split the row (text drafted) |
-| 3 Circle | "agent-native execution" is a characterisation | mark `(inference)` (text drafted) |
-
-Plus two policy questions the packet states: the marker format, and whether inference is marked
-per-cell or by one declaration over the "Consequence for Sentinel" column (recommended).
-
-**Every discrepancy overstates a COMPETITOR, never Sentinel** — and note that the cheap fix for
-Safe (narrow the row to Guards) would have made a competitor look weaker on a citation error of
-ours. The packet takes the other road. Once John rules, the marker `[§13#N read YYYY-MM-DD]` on
-each capability cell makes D-008(1) mechanical — `check-vendor-honesty.sh` counts it and reports
-`0 of 9` today, `10 of 11` after application, with Row 7 the honest shortfall.
-
-**A guard defect recorded in the packet, to fix AFTER the rulings:** the script says the marker
-is counted "appended to the capability cell" but its awk tests the whole row line. The tightened
-version has to match the layout John rules for, so it is sequenced behind him.
-
-**An agent may not write those cells.** The diff is prepared; put it in front of him.
-
-</details>
-
-### 4. ~~Run Gate S2 as a facilitated session~~ — **SIGNED, PASS, John, 2026-08-16 (D-041)**
-
-Pack: `docs/gate-s2-evidence.md`, now marked SIGNED with the four rulings recorded in §12. Gate 5
-was the blocker and was certified the same day (D-038): 0 of 9 rows dated became 11 of 11.
-
-**Three decision points were put BEFORE the signature, in that order deliberately** — steps 1–3's
-un-retired spend limit (recorded as a limit, not retired), the evidence dashboard (stays outside
-S2), and whether 14-of-20 class coverage flips a gate (it does not; traced gate by gate). Nothing
-capable of changing the verdict was raised after the signing.
-
-**The next instance's job is NOT to find the next gate.** There isn't one until pre-publication.
-What is owed is v1.1 work, §5 below, and it is bounded by the re-label decision.
-
-**D-044 closed the session and the consolidation D-043 ordered is COMPLETE.** Both capability
-deferrals were re-put to John and both were confirmed — the token cap and receipt epoch binding
-stay at v1.1, each pinned by a test that fails the moment the capability lands. **Pre-publication
-was put to him and declined: it is the only remaining direction, and starting it fires the
-re-label trigger.** The next instance is not picking up half-finished work; it is starting a
-programme, and that start is John's to authorise.
-
-**D-043 set the direction: CONSOLIDATE.** Work the v1.1 register down; open no new front. §14.8's
-ladder is available — rung 2 (executed vendor comparisons) and the 14.3 attestation stretch are
-both eligible now — **and both were declined.** Rung 2 in particular reverses D-001 and would
-require unwinding D-008(2) and the vendor-honesty guard, putting executed-comparison claims into
-a project whose whole honesty apparatus was built on their absence. **Do not start either without
-John saying so; "S2 is signed" is not that permission.**
-
-**The one unblocked piece of real work outstanding:** now that §5.5.1 publishes `RefusalRecord`,
-a fresh **schema-only** agent can implement refusal VERIFICATION in the D-010 verifier, which
-currently fails closed. Brief it exactly as A-041's was — allowlist `verifier/**` and the
-proposal, deny `ts/**` and `contracts/**` — or the independence that makes the verifier evidence
-is spent for nothing.
-
-### 5. Deferred to v1.1, riding on the re-label decision (D-035)
-
-- **F032 does not isolate policy expiry.** Its action deadline expires one second before the
-  policy window, so it fails on two checks in different D-026 remedy classes.
-- **F026 and F051 pin different `allowedCallGraphHash` values over an IDENTICAL observed call
-  graph.** At most one can describe what F051's intent claims. Found by labeller K with no
-  implementation access.
-
-Fixing either changes the view the labels of record were drawn against. **Do not fix them
-without a re-label.**
-
----
+1. **One agent session at a time on this tree** (D-037). Sub-agents inside one session are fine
+   and are how every review here is run; two sessions with write authority are not.
+2. **Adversarial review is the technique that works.** Four review rounds on 2026-08-16 produced
+   ~65 findings in work that had already passed a build loop, including one CRITICAL exploitable
+   bypass (A-043). Freeze a tree — `git worktree add <scratch> <commit> --detach`, symlink
+   `ts/node_modules` — and tell the reviewer to prove the work fails.
+3. **Verify before you rely on any number or status in these docs**, including this file. It has
+   been wrong repeatedly, most recently in its own headline suite counts.
+4. **Run every new regression test against the PRE-FIX code and confirm it fails.** A-044: a test
+   written for the backpressure defect passed against the unfixed server — it was pinning the
+   author's own fix, not the defect.
+5. **Never sign a gate; never certify a public claim** (D-002, and the HANDOFF verification
+   partition: public claims, autonomy NONE).
 
 ## 2. Authority
 
@@ -274,7 +182,11 @@ means only that no NEW class went vacuous. Read their output, not their exit sta
   re-designated, and its provenance says so. They agree with E and with each other on all five
   labels and on confidence.** Next arm is N.
 
-## 4. Decisions and findings from this session
+## 4. Decisions and findings — 2026-08-15 and 2026-08-16
+
+**The canonical record is `docs/decisions.md`, and it is the one that wins.** This table is an
+index, ordered roughly as things happened. Every entry below has a full entry there with its
+reasoning, its rejected options, and where stated the condition that would reverse it.
 
 | | Subject |
 |---|---|
