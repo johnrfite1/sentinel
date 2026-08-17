@@ -297,8 +297,14 @@ second step** ("Remove it from BASELINE"); doing so yields `15 of 20 classes exe
 they name` and `All carried classes are DELEGATED or RESERVED with a ruling. None owes a fixture.`
 The D-039 GAP — the one class ruled genuinely uncovered and owing a fixture — disappears from the
 report. **The fix is the same one A-047 applied to the labelling views:** compare the committed
-`results/` against the freshly generated ones. It was not applied here because the corpus stage
-deletes that directory and because D-039's ruling is John's.
+`results/` against the freshly generated ones. **THE REASON ORIGINALLY GIVEN HERE WAS FALSE
+(A-048):** it said the fix "was not applied because the corpus stage deletes that directory". It
+does not, at the point that matters — `$CORPUS_TMP/results/` is fully populated when the view
+check runs, and the `rm -rf` comes later in the stage. An independent reviewer measured the real
+obstacle instead: fresh and committed `results/` differ in all 50 files, but after stripping
+`micros` **exactly one** differs (`F033.json`, two `detail` strings embedding a chain timestamp)
+and `_index.json` is byte-identical. **So the fix is two normalisations away, not structurally
+blocked.** What genuinely defers it is that D-039's ruling is John's.
 
 ### 8.5 The D-010 verifier — a named check is asserted by nothing
 
@@ -320,9 +326,14 @@ Also on that stage, not fixed:
 
 ### 8.6 `check-vendor-honesty.sh` — residuals after A-047's case fix
 
-- `circle`, `safe`, `sigil` in lower case still pass, and deliberately so: they are English words,
-  and case-insensitive matching fires on `docs/ablation-report.md` immediately. The other seven
-  names are now caught in any casing.
+- **CORRECTED 2026-08-17 (A-048), and it was wrong twice over.** The residual is not "lower
+  case": `grep -Eq` is exact-case in BOTH directions, so **any casing but the one declared
+  spelling evades** — `SAFE`, `CIRCLE` and `SIGIL` in capitals all pass, verified, and all-caps
+  is this repository's own emphasis idiom. And the justification held for only ONE of the three:
+  measured over the guard's own artifact set with its own `\b` form, **safe 11 files, circle 0,
+  sigil 0.** **OWED, and both are free: add the uppercase spellings, and move `Circle` and
+  `Sigil` to case-insensitive.** They are unfixed only because John scoped that pass to the
+  severe defects and the false claims. The other seven names are caught in any casing.
 - **The binary skip is an extension allowlist** (`*.png|*.pdf|*.zip|…`). A genuine
   `docs/gate-5-comparison.pdf` carrying a vendor table is never scanned.
 - **`CAVEAT` is `head -1` over the whole proposal**, so a shorter sentence containing the key

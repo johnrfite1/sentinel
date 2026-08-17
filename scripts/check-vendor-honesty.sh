@@ -55,21 +55,30 @@ VENDORS='Cobo|Coinbase|Circle|Privy|Safe|MetaMask|Sigil|Hypernative|Blockaid|Ten
 # data, so this was not even an adversarial spelling — it is how somebody would naturally type
 # it (A-047).
 #
-# THE FIX IS NOT `-i` ON THE WHOLE LIST, AND THAT IS THE WHOLE DESIGN PROBLEM. Two of the ten
-# spellings are ordinary English words: `Safe` and `Circle`. Case-insensitively, "safe" already
-# occurs in `docs/ablation-report.md`, which is IN scope — so a blanket `-i` fires on the
+# THE FIX IS NOT `-i` ON THE WHOLE LIST. `Safe` is an ordinary English word: case-insensitively
+# it occurs in ELEVEN in-scope files, including `docs/ablation-report.md` ("costly-but-safe"),
+# `contracts/src/SentinelVault.sol` and four `ts/src/**` files — so a blanket `-i` fires on the
 # flagship measurement artifact on the first run, and this file's own header says a guard that
-# cries wolf gets reverted rather than obeyed. So the list is split by whether the token means
-# anything but a vendor:
+# cries wolf gets reverted rather than obeyed. So the list is split:
 VENDORS_ANYCASE='Cobo|Coinbase|Privy|MetaMask|Hypernative|Blockaid|Tenderly'
 VENDORS_EXACTCASE='Circle|Safe|Sigil'
 #
-# RESIDUAL, STATED RATHER THAN LEFT TO BE REDISCOVERED: `circle`, `safe` and `sigil` in lower
-# case still pass. That is a deliberate trade — those three cannot be matched case-insensitively
-# without false positives on English prose, and a false positive here costs the guard's
-# existence. The other seven are now caught in any casing. A vendor written in lower case as a
-# common word remains a thing a human has to notice, which is the same residual the header
-# already declares for unlisted vendors.
+# THE JUSTIFICATION ABOVE WAS OVERSTATED AND IS CORRECTED HERE (A-048). It originally read "two
+# of the ten spellings are ordinary English words: `Safe` and `Circle`" — and then put THREE in
+# the exact-case list, `Sigil` entering with no argument at all and being retroactively covered
+# by "those three". Measured over this guard's own artifact set with the same `\b` form it uses:
+# **safe 11 files, circle 0, sigil 0.** Only `Safe` supports the trade. `Circle` and `Sigil`
+# could move to ANYCASE at zero measured cost, and an independent review demonstrated that with
+# the guard still exiting 0 on the clean tree.
+#
+# RESIDUAL, STATED CORRECTLY THIS TIME AND IT IS WIDER THAN LOWER CASE. The first version said
+# "`circle`, `safe` and `sigil` in lower case still pass". Wrong: `grep -Eq` is exact-case in
+# BOTH directions, so **ANY casing but the one declared spelling evades** — `SAFE`, `CIRCLE` and
+# `SIGIL` in capitals all pass, verified. All-caps is this repository's own idiom for emphasis,
+# which makes those the *more* likely accidental spellings rather than adversarial ones. The
+# other seven names are caught in any casing. Closing the uppercase half costs nothing measured
+# and is recorded as owed in `docs/v1-1-register.md` §8.6 rather than done here, because John
+# scoped this pass to the severe defects and the false claims.
 
 # MEASUREMENT ARTIFACTS are the files that carry numbers, evidence, or published claims. The
 # rule below is that no NAMED vendor may appear in one of them.

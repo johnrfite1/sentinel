@@ -179,8 +179,23 @@ all, so tampering one passed while the gate printed "committed views semanticall
 provenance claim the corpus rests on; and the vendor scan was case-sensitive while the label scan
 beside it was not, so `| coinbase |` passed and `| Coinbase |` failed. **Recorded, not fixed:** the
 unscoped spec greps, three secrets-guard holes, the rename gate's second-remote and trailing-slash
-gaps, and the class-coverage laundering route through committed `results/`. See
-`docs/v1-1-register.md`.
+gaps, the class-coverage laundering route through committed `results/`, and — **omitted from this
+list until 2026-08-17, though A-047's own entry calls it "A GENUINE HOLE THAT REMAINS" — that A
+GREEN SUITE IS NOT A CORRECT VERIFIER:** neutering the `evidenceHash` check by hand leaves all
+146 tests passing and all 7 samples verifying, because no tamper mode corrupts `evidence.hash`.
+An `evidence.hash` tamper mode is owed. See `docs/v1-1-register.md` §8.
+
+**A-048 (2026-08-17) then broke A-047's own headline.** A second review round — thinner briefs,
+three reviewers — found the verifier floor counted tests that never ran (`@unittest.skip`,
+`@unittest.expectedFailure` over a real RFC 8785 violation, and a `setUp` monkeypatch giving
+`OK (skipped=146)`: every assertion disabled, floor satisfied), and that the new committed-view
+check exempted `expiryAfter`/`expiryBefore` — a CONFORMANCE INPUT feeding
+`EVAL_ENTITLEMENT_ADVANCED` in 36 of 50 views, not the "timestamp fields" three documents called
+them. **Both fixed and falsified against clean baselines.** Worst item: A-047's annotation to the
+signed S2 pack claimed §11 had made the overclaim, when §11 said the opposite and was RIGHT
+("git history, not re-execution"); that misdescription reached a facilitated ratification
+(D-045). Corrected in place under John's ruling that repairing a false statement inside an
+annotation is not itself a new annotation.
 
 **Eight mechanical guards run in the gate:** secrets (A-007), rename (D-016), labelling-prompt
 freeze (D-011a), EIP-712 type strings (D-023), §5.7.1 check coverage (D-031), **corpus class

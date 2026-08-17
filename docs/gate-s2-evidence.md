@@ -493,20 +493,39 @@ prevent.
   `schemaVersion` is cross-checked against nothing, and `refusalReason` sits outside the
   signature, so a presenter can rewrite it — §5.5.1 now says it is not evidence, which is
   honest but is a limitation rather than a resolution.
-  **A SECOND ANNOTATION, 2026-08-16 (A-047), and this one bears on §11's CORPUS claims rather
-  than D-010's.** §11 and the gate's coverage boundary both recorded that the deep profile
-  verifies the committed labelling views as semantically current — "these are the views the
-  labellers saw", offered as the provenance claim git history alone could not establish.
-  **That check did not exist.** The stage compared a fresh run's digests against a committed
-  *summary* of the same digests; both sides described the code, and the committed view FILES
-  were never hashed. An adversarial reviewer rewrote F001's `declaredIntent` and its mandate
-  ceiling, changed nothing else, and the gate printed `committed views semantically current`.
-  **Every false-allow, exact-match and disagreement figure in this pack is drawn against the
-  committed views, so that provenance rested on git history after all — exactly what §11 had
-  said it no longer did.** The check is now built and falsified: the same tamper fails the deep
-  gate and names the file. **NO FIGURE IN THIS PACK IS KNOWN TO BE WRONG** — the corpus
-  reproduced its committed digests exactly on a clean rebuild, before and after the fix. What
-  changed is that the provenance is checkable rather than asserted.
+  **A SECOND ANNOTATION, 2026-08-16 (A-047), CORRECTED 2026-08-17 (A-048). The correction is
+  recorded before the content, because the first version of this paragraph made a false claim
+  about THIS SECTION and John ratified it (D-045) on the strength of that description.**
+  **What §11 actually said, and it was RIGHT:** *"The audit trail that the labellers saw these
+  views is git history, not re-execution. Recorded as A-029."* The strings "semantically
+  current" and "digest" appear nowhere in the pre-annotation pack. **§11 stated the limitation
+  correctly; the overclaim lived only in `scripts/test.sh`'s coverage boundary**, which said the
+  provenance no longer rested "on git history alone". The first version of this annotation
+  attributed the overclaim to §11 and cast the one place that got it right as the source of the
+  error — the exact failure mode of damaging a true limitation while correcting a false one, and
+  it survived a facilitated ratification. Found by an independent reviewer.
+  **THE UNDERLYING FINDING STANDS, restated accurately.** The gate's coverage boundary claimed
+  the deep profile established that the committed views are what the code produces. **That check
+  did not exist.** The stage compared a fresh run's digests against a committed *summary* of the
+  same digests; both sides described the code, and the committed view FILES were never hashed.
+  An adversarial reviewer rewrote F001's `declaredIntent` and its mandate ceiling, changed
+  nothing else, and the gate reported the views current. Every false-allow, exact-match and
+  disagreement figure in this pack is drawn against the committed views, so their provenance was
+  git history — which is what §11 said, and is weaker than what the gate advertised. The check
+  is now built and falsified: the same tamper fails the deep gate and names the file.
+  **A SECOND DEFECT IN THE FIRST VERSION OF THAT CHECK, also corrected (A-048):** it exempted
+  `expiryBefore`/`expiryAfter` as "two declared timestamp fields". They are not timestamps in
+  any inert sense — `ts/src/evaluate/checks.ts` derives `EVAL_ENTITLEMENT_ADVANCED` from
+  `expiryAfter > expiryBefore`, making the pair a conformance input present in 36 of the 50
+  views. A reviewer set F001's `expiryAfter` to `0`, flipping the check that view would fail,
+  and the deep gate passed. The absolute values do vary with chain time and cannot be compared;
+  the RELATION does not, and is now compared instead of discarded. The exemption list is also
+  pinned, because it is read from an artifact the corpus run regenerates.
+  **NO FIGURE IN THIS PACK IS KNOWN TO BE WRONG, and the warrant is the file-by-file pass** — 50
+  committed views match the current code, entitlement relation included. *The first version cited
+  digest reproduction for this, which is the evidence the same paragraph had just declared
+  insufficient; the conclusion was right and the reason given was wrong.* What changed is that
+  the provenance is checkable rather than asserted.
   **THIS DOES NOT DISTURB THE SIGNATURE.** D-009's four deliverables were in and green when S2
   was signed and the verifier was one of them; A-042 improved a deliverable, and A-047 repaired
   an instrument, both after the fact. Neither is a pass condition that failed.
