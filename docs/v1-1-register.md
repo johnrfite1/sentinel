@@ -482,7 +482,20 @@ artifact that the clean verifier rejects and the mutated one certifies — not m
 the trust-root search order (O-2), the silently-skipped `signerFindings` subset (O-1), and the
 missing `receipt-wrongkey` tamper mode.
 
-**STILL OPEN — 13 latent survivors. Each needs a regression to be introduced first, so none is
+**CLOSED 2026-08-17 (A-056), at John's scoping: the six override-stage survivors, the anchor,
+and the corpus-vs-verifier category error.** Four RE-SIGNING tamper modes were added —
+`override-repoint`, `override-nonce-resigned`, `override-signer-mints`, `receipt-anchor-split` —
+because re-signing is what makes a binding the witness: `override-nonce` mutates a signed field
+WITHOUT re-signing, so the signature check fires first and §3.3(9)'s nonce binding never bites,
+and `override-wrongkey` leaves `ownerAddress` declaring the owner, so §3.3(7) never bites. **Each
+of the four was falsified by neutering the check it targets and confirming the mode stops catching
+it.** §5.5's BLOCK-override got a constructed-artifact test rather than a mode, since no fixture
+contains one — which is precisely why the corpus-property test could not see it. Tamper 68 → 77
+over 29 modes; suite 158 → 160. **Two survivors remain deliberately open** (receipt malleability's
+`(r, N−s, v^1)` boundary and the contrived `verdict: 7` case), judged not worth the independence
+cost of further tests inside the D-010 artifact.
+
+**PREVIOUSLY OPEN — 13 latent survivors. Each needs a regression to be introduced first, so none is
 exploitable against the code as shipped; each is a named check that nothing asserts.** They
 cluster in two places, and the cluster is the finding:
 

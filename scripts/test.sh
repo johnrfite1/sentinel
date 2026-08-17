@@ -246,9 +246,9 @@ fi
 # nothing reconciling them. That is precisely the defect A-045 was written to close, reproduced
 # inside A-045's own remediation. These three numbers are the assertion. Raise a floor when the
 # suite genuinely grows; NEVER lower one to make a run pass.
-VERIFIER_MIN_TESTS=158
+VERIFIER_MIN_TESTS=160
 VERIFIER_MIN_SAMPLES=7
-VERIFIER_MIN_TAMPER=68
+VERIFIER_MIN_TAMPER=77
 # A MODE FLOOR, because a pair count alone rewards padding (A-049): `tamper cases` counts
 # (sample x mode) pairs, so ADDING a sample raises it whether or not modes were deleted.
 #
@@ -261,7 +261,7 @@ VERIFIER_MIN_TAMPER=68
 # to mutate at all. **Both floors are ratchets against accident, not against intent.** What
 # actually defends a specific mode is a structural test naming it — `test_the_mode_is_declared`
 # does that for `evidence-hash`, and no other mode has one.
-VERIFIER_MIN_TAMPER_MODES=25
+VERIFIER_MIN_TAMPER_MODES=29
 
 step "D-010 receipt verifier (independent Python; §14.2, D-010)"
 if command -v python3 >/dev/null 2>&1; then

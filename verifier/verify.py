@@ -138,6 +138,8 @@ TAMPER_MODES = (
     "evidence", "evidence-hash", "receipt", "receipt-wrongkey", "signature",
     "reasons-substitute", "reasons-add", "reasons-remove", "reasons-reorder",
     "override-reviewreceipt", "override-nonce", "override-wrongkey",
+    "override-repoint", "override-nonce-resigned", "override-signer-mints",
+    "receipt-anchor-split",
     "override-otherchain",
     # §5.5.1. Every one of these leaves a *validly signed* SignedRefusalRecord
     # behind except `refusal-signature` and `refusal-strip-signature`: the
@@ -225,6 +227,20 @@ def verify_sample(sample_dir, domain_path=None, tamper=None):
         body["signer"] = outsider_addr
         receipt_doc["signature"] = sign_digest(
             eip712.receipt_digest(domain, body), _OUTSIDER_TEST_KEY)
+    elif tamper == "receipt-anchor-split":
+        # The receipt's anchor is `simulationBlockNumber` + `simulationBlockHash`, and the
+        # SUITE HAS NO ANCHOR TEST AT ALL (A-056). Splitting the pair inside the signed body
+        # and RE-SIGNING with the deployment key leaves a valid, correctly-attributed receipt
+        # whose anchor names a block that is not the one the evidence was gathered at.
+        receipt_doc = copy.deepcopy(receipt_doc)
+        body = receipt_doc.get("receipt")
+        if not body:
+            raise NotApplicable(
+                "receipt-anchor-split needs a §5.4 receipt body; this sample has none")
+        h = body["simulationBlockHash"]
+        body["simulationBlockHash"] = "0x" + ("%02x" % (int(h[2:4], 16) ^ 0xFF)) + h[4:]
+        receipt_doc["signature"] = sign_digest(
+            eip712.receipt_digest(domain, body), _SENTINEL_SIGNER_TEST_KEY)
     elif tamper == "evidence-hash":
         # Corrupt the PUBLISHED hash instead of the bytes, so that exactly one check
         # can catch it: "keccak256(canonical bytes) matches evidence.hash".
@@ -1494,6 +1510,32 @@ def _tamper_override(doc, domain, mode):
         # wrong. A byte-flip cannot test this.
         digest = eip712.override_digest(domain, override)
         doc["ownerSignature"] = sign_digest(digest, _SENTINEL_SIGNER_TEST_KEY)
+    elif mode == "override-repoint":
+        # Repoint all three cross-artifact bindings and RE-SIGN as the owner, so the
+        # authorization is genuine and only `override.X == receipt.X` can reject it. No
+        # pre-existing mode touched these fields at all (A-056).
+        for field in ("actionHash", "mandateHash", "policyHash"):
+            h = override[field]
+            override[field] = "0x" + ("%02x" % (int(h[2:4], 16) ^ 0xFF)) + h[4:]
+        doc["ownerSignature"] = sign_digest(
+            eip712.override_digest(domain, override), _OWNER_TEST_KEY)
+    elif mode == "override-nonce-resigned":
+        # `override-nonce` above bumps the nonce and leaves the old signature, so the
+        # signature check fires and §3.3(9)'s nonce binding is never the witness. This
+        # re-signs, isolating the binding.
+        override["actionNonce"] = str(int(override["actionNonce"]) + 1)
+        doc["ownerSignature"] = sign_digest(
+            eip712.override_digest(domain, override), _OWNER_TEST_KEY)
+    elif mode == "override-signer-mints":
+        # §3.3(7) IN ITS EXACT FORM: the isolated signer mints the owner's credential.
+        # `override-wrongkey` signs as the Sentinel signer but leaves `ownerAddress`
+        # declaring the owner, so the recovery check catches it and §3.3(7) never bites.
+        # Here the declared owner IS the Sentinel signer, so the bundle is self-consistent
+        # and only §3.3(7) can reject it.
+        doc["ownerAddress"] = public_key_to_address(
+            point_mul(_SENTINEL_SIGNER_TEST_KEY, G))
+        doc["ownerSignature"] = sign_digest(
+            eip712.override_digest(domain, override), _SENTINEL_SIGNER_TEST_KEY)
     elif mode == "override-otherchain":
         # Lift the untouched, genuinely-signed override to another deployment.
         domain = dict(domain)
@@ -1507,6 +1549,17 @@ def _tamper_override(doc, domain, mode):
 # refusal-wrongkey to mint a refusal that is entirely self-consistent -- valid
 # signature, matching declared signer, correct bindings -- and simply not
 # Sentinel's. Nothing internal to the record can catch it, which is the point.
+# The OWNER's key -- Anvil account #0, the publicly documented dev account whose address
+# `fixtures/samples/.../override.json` declares as `ownerAddress`. Used by the modes below to
+# produce overrides that are VALIDLY OWNER-SIGNED and wrong in exactly one binding, which is
+# the only way those bindings can be the witness: `override-nonce` mutates a signed field
+# WITHOUT re-signing, so the signature check catches it first and the nonce binding never bites
+# (A-056). This key ships in Anvil's own startup banner; it is a fixture, not a credential.
+_OWNER_TEST_KEY = (
+    0xAC0974BEC39A17E36BA4A6B4D238FF944BACB478CBED5EFCAE784D7BF4F2FF80
+)
+
+
 _OUTSIDER_TEST_KEY = (
     0x00000000000000000000000000000000000000000000000000000000000f00d1
 )

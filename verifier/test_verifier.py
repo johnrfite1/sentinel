@@ -450,7 +450,12 @@ class TestTamper(unittest.TestCase):
         # had neither, which is the single reason the receipt's binding to the DEPLOYMENT's
         # signer was asserted by nothing until a directed sweep neutered it and all 154 tests
         # still passed.
-        self.assertEqual(exercised, 54, "expected 54 applicable tamper cases")
+        # 54 -> 63 (A-056): four RE-SIGNING modes added, each isolating a binding that no
+        # existing mode could witness. `override-nonce` mutates a signed field without
+        # re-signing, so the signature check fires first and §3.3(9)'s nonce binding never
+        # bites; `override-wrongkey` leaves `ownerAddress` declaring the owner, so §3.3(7)
+        # never bites. Re-signing is what makes the binding the witness.
+        self.assertEqual(exercised, 63, "expected 63 applicable tamper cases")
 
     def test_evidence_tamper_breaks_the_receipt_binding(self):
         # Specifically: it must fail the receipt.evidenceHash check, not merely
@@ -2271,6 +2276,97 @@ class TestCharsetsByComplement(unittest.TestCase):
             with self.subTest(value=repr(bad)):
                 with self.assertRaises(Exception):
                     refusal.validate_field("requestedVerdict", refusal.VERDICT, bad)
+
+
+class TestVerifierPropertiesNotCorpusProperties(unittest.TestCase):
+    """A-056. THE CATEGORY ERROR THIS CLASS EXISTS TO NAME.
+
+    A directed sweep of `verify.py` found 14 named checks that nothing asserted, and
+    three of them survived on one confusion: **a test that asserts a property of the
+    CORPUS cannot catch a verifier that accepts what the corpus happens not to
+    contain.** `test_only_review_receipts_carry_an_override` asserts that no fixture
+    overrides a BLOCK receipt -- true, and worth knowing, and completely silent on
+    whether the verifier would accept one. The sweep changed §5.5's check to
+    `verdict in ("REVIEW", "BLOCK")` and every test still passed.
+
+    The distinction is not pedantic and it is easy to get wrong in either direction:
+    a fixture property says what the repository CONTAINS, a verifier property says
+    what the code ACCEPTS. Only the second is a check on the verifier. Where a
+    fixture property is worth asserting, assert it -- and do not let it stand in for
+    the other one.
+    """
+
+    def _owner_key(self):
+        return verify._OWNER_TEST_KEY
+
+    def test_a_block_receipt_cannot_be_overridden_even_with_a_valid_owner_signature(self):
+        # §5.5. Built rather than found: no fixture contains this, which is exactly why
+        # the corpus-property test could not see it.
+        block = None
+        for path in sample_dirs():
+            doc = read_json(path, "receipt.json")
+            body = doc.get("receipt") or {}
+            if str(body.get("verdict")) in ("0", "BLOCK"):
+                block = (path, doc, body)
+                break
+        self.assertIsNotNone(block, "no BLOCK sample; this test would assert nothing")
+        path, doc, body = block
+
+        domain = read_json(os.path.dirname(path.rstrip("/")), "domain.json")
+        # DERIVED from the genuine override rather than hand-built. A hand-built payload
+        # can fail to hash for reasons that have nothing to do with §5.5, and a test that
+        # errors for the wrong reason is the defect this class is about.
+        template = None
+        for other in sample_dirs():
+            if os.path.isfile(os.path.join(other, "override.json")):
+                template = read_json(other, "override.json")["override"]
+                break
+        self.assertIsNotNone(template, "no override template; this test would assert nothing")
+        override = dict(template)
+        override["reviewReceiptHash"] = "0x" + eip712.receipt_struct_hash(body).hex()
+        for field in ("actionHash", "mandateHash", "policyHash"):
+            override[field] = body[field]
+        override["actionNonce"] = str(read_json(path, "action.json")["actionNonce"])
+        sig = sign_digest(eip712.override_digest(domain, override), self._owner_key())
+        owner = public_key_to_address(point_mul(self._owner_key(), G))
+
+        with tempfile.TemporaryDirectory() as tmp:
+            dest = os.path.join(tmp, "bundle")
+            shutil.copytree(path, dest)
+            with open(os.path.join(dest, "override.json"), "w") as fh:
+                json.dump({"override": override, "ownerSignature": sig,
+                           "ownerAddress": owner}, fh, indent=2)
+            ok, checks = verify.verify_sample(
+                dest, domain_path=os.path.join(os.path.dirname(path.rstrip("/")),
+                                               "domain.json"))
+
+        self.assertFalse(ok, "a BLOCK receipt must not be overridable")
+        named = [c for c in checks if "REVIEW receipt" in c.name]
+        self.assertTrue(named, "§5.5's REVIEW-receipt check must be among those run")
+        self.assertFalse(
+            named[0].ok,
+            "the rejection must come from §5.5's own check, not from some other "
+            "check noticing the constructed bundle")
+
+    def test_the_override_signature_itself_was_valid(self):
+        # Without this, the test above could pass because the override was malformed
+        # rather than because §5.5 rejected it -- which would make it another test
+        # that cannot fail for the reason it names.
+        for path in sample_dirs():
+            override_path = os.path.join(path, "override.json")
+            if not os.path.isfile(override_path):
+                continue
+            doc = read_json(path, "override.json")
+            domain = read_json(os.path.dirname(path.rstrip("/")), "domain.json")
+            recovered = recover_address(
+                eip712.override_digest(domain, doc["override"]), doc["ownerSignature"])
+            self.assertEqual(_norm(recovered), _norm(doc["ownerAddress"]))
+            return
+        self.fail("no override sample found; this test would assert nothing")
+
+
+def _norm(a):
+    return a.lower().replace("0x", "")
 
 
 if __name__ == "__main__":
