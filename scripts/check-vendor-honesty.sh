@@ -64,14 +64,19 @@ fail=0
 # it (A-047).
 #
 # THE FIX IS NOT `-i` ON THE WHOLE LIST. `Safe` is an ordinary English word: case-insensitively
-# it occurs in ELEVEN in-scope files, including `docs/ablation-report.md` ("costly-but-safe"),
-# `contracts/src/SentinelVault.sol` and four `ts/src/**` files — so a blanket `-i` fires on the
-# flagship measurement artifact on the first run, and this file's own header says a guard that
-# cries wolf gets reverted rather than obeyed. So the list is split:
+# it occurs in ELEVEN in-scope files, `docs/ablation-report.md` ("costly-but-safe") among them —
+# so a blanket `-i` fires on the flagship measurement artifact on the first run, and this file's
+# own header says a guard that cries wolf gets reverted rather than obeyed. The full enumeration
+# is below and is stated ONCE, deliberately: this paragraph carried a second copy of it until
+# 2026-08-17, the second copy was the one that was wrong, and correcting only the other was the
+# "one site of two" defect for the third time in two days. So the list is split:
 # NINE of the ten are matched in ANY casing. Only `Safe` is not, and the exception is measured
 # rather than assumed: over this guard's own artifact set, with the same `\b` form it uses,
-# case-insensitive matching hits **safe 11 files** (`docs/ablation-report.md`'s "costly-but-safe",
-# `contracts/src/SentinelVault.sol`, four `ts/src/**`) versus **circle 0 and sigil 0**.
+# case-insensitive matching hits **safe 11 files** — `docs/ablation-report.md`'s "costly-but-safe",
+# `contracts/src/SentinelVault.sol`, **five** `ts/src/**`, two `ts/test/**`, `verifier/REPORT.md`
+# and `verifier/refusal.py` — versus **circle 0 and sigil 0**. (This enumeration said "four
+# `ts/src`" until 2026-08-17; two reviewers caught it independently, inside a claim labelled
+# "measured rather than assumed". The totals and the conclusion were right; the list was not.)
 VENDORS_ANYCASE='Cobo|Coinbase|Circle|Privy|MetaMask|Sigil|Hypernative|Blockaid|Tenderly'
 VENDORS_EXACTCASE='Safe|SAFE'
 #

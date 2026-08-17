@@ -369,3 +369,79 @@ strong as its claim. But D-011(a)'s stated purpose is that nobody can quietly re
 instructions, and `fixtures/corpus/labels/labeller-*.provenance.json` carry substantial per-labeller
 `assignment` briefs that **nothing pins**. The project's own record (A-028 F-1) is an instance of
 that unpinned channel contaminating a round. Structural, not a mechanical bypass.
+
+## 9. The directed mutation sweep of the verifier, 2026-08-17 (A-051) — 41 survivors, 3 closed
+
+A directed sweep applied **142 behaviour-changing mutations** across the six `verifier/` modules
+that are not `verify.py`. **84 were caught; 41 survived a fully green gate** (17 further green
+results were proven no-ops and are not counted). Six survivors were run through
+`./scripts/test.sh` end to end — all exit 0, the D-010 stage line byte-identical to baseline.
+
+**CLOSED under John's scoping (the three that flip a VERDICT rather than degrade a diagnostic):**
+pair-aligned whitespace in `_HEX_BODY`; `strict=` unasserted at four of five `struct_hash` call
+sites; over-length signatures accepted by `parse_signature`. See `TestUnassertedValidation` in
+`verifier/test_verifier.py` — each test was run against its mutation and confirmed to fail, and
+the `strict=` test covers all four uncovered sites rather than the one the reviewer exploited.
+
+**THE SHAPE OF WHAT REMAINS, which matters more than the count: construction is pinned, value-level
+validation is not.** Type strings, golden typehashes, domain separators, field order and `\x19\x01`
+are all caught. But `encode_value` is never called with a `bytesN` type at all, the `uintN` range
+check has no test, and the signature parser only ever sees exactly 65 bytes. **24 of the 41
+survivors live in that asymmetry**, in `eip712.py` (11/27 caught) and `secp256k1.py` (11/26).
+
+**Owed, grouped by what one fix would close:**
+
+- **`encode_value` coverage for `bytesN` and out-of-range `uintN`.** Short `bytesN` values
+  right-pad and collide (`bytes4 "0xc1" == bytes4 "0xc1000000"`; `bytes32 "0x"` == all-zero), and
+  a `uint8` of `"300"` or a `uint16` of `"65537"` hashes cleanly — producing a digest no conformant
+  Solidity signer could produce, which §5.8 warns is indistinguishable from an invalid signature.
+- **Complement-based charset tests, replacing enumerated bad lists**, in `reasoncodes.py`
+  (tab, CR, backslash and `+` are all accepted when added to the charset; space and newline are
+  the only spellings pinned), `refusal.py` (§5.5.1's width bounds are pinned on the SHORT side
+  only, so over-length `actionHash`/`signer` values and a trailing-space verdict name pass), and
+  `_HEX_BODY` (now partly closed). §5.5.1's charsets are the whole of its injectivity argument.
+- **A witness pair for the UTF-16 sort that distinguishes BE from LE.**
+  `test_key_sorting_is_utf16_code_units` names RFC 8785 §3.2.3 correctly and then picks
+  `{U+FFFD, U+1F600}`, which orders IDENTICALLY under both — and every key in every fixture is
+  ASCII, for which the two are provably the same. So `utf-16-le` survives while `utf-32-be` and
+  `utf-8` are caught. Direction is fail-closed, but a wrong canonical form and a tampered bundle
+  are indistinguishable at the output.
+- **String-escape complement tests.** `test_escapes` pins the seven required short escapes and
+  nothing about what must be emitted LITERALLY, so escaping `/` or `U+00A0` survives. No fixture
+  contains a single `/` or a non-ASCII byte, so the sample walk cannot see it either.
+- **An ERC-191 constant pinned independently.** `test_an_eip191_signature_fails_and_says_so`
+  builds its test input using `refusal.eth_signed_message_digest` — the function under test — so
+  any mutation of the wrapping is applied to both sides and the test passes regardless. With a
+  drifted tag the verifier reports a genuine `personal_sign` receipt as a forgery, which is the
+  exact misdiagnosis the function exists to prevent.
+- **The EIP-2 low-s boundary**, unasserted in both directions (`N//2 + 1` is exactly the
+  reflection of `N//2`, so a malleable pair passes the named low-s check). ~2⁻²⁵⁶ to hit by
+  accident — a correctness item, not an attack.
+- **`reasoncodes.reason_codes_hash()` without `validate_all`** will hash a delimiter-injected set,
+  reviving D-022's collision at the module API. `verify.py` validates separately so the CLI still
+  fails closed; this is a defence-in-depth loss.
+
+**Two things about the sweep's own limits, recorded because they bound the result.**
+`keccak.py` came back **17/17 caught, zero survivors**, with its four green results proven no-ops
+over 609 inputs — it is genuinely well covered, and `jcs.py` caught 23/33 including the `1e-6`
+threshold in both directions. And **`verify.py` — 1681 lines, the file that actually decides PASS
+or FAIL — was not swept.** That is now the largest measured gap in the verifier.
+
+**A HARNESS TRAP worth more than several of the findings.** A same-SIZE mutation landing in the
+same filesystem-mtime second makes CPython reuse the stale `__pycache__` bytecode, so the
+"mutated" run executes clean code and the mutation reads as a no-op. Same-size mutations are the
+interesting ones. Any Python mutation harness here must run with `-B` and clear `__pycache__`.
+
+## 10. Corrections owed to §8 and elsewhere (A-051)
+
+- **§8.6's residual, restated once more.** `safe` in lower case AND in mixed case (`SaFe`,
+  `sAfE`) still evades. `A-049` claimed "every casing of every listed name is caught except
+  lower-case safe" on the strength of seventeen probes, none of which was mixed-case — a bound
+  generalised past its own sample, which §5's traces warn about by name.
+- **The committed-view relation check is TYPE-BLIND.** `int()` normalises `"9"` and `9`, so a
+  view can change its JSON schema undetected. And `expiryBefore` is the constant `"0"` in 35 of
+  36 views, so the "chain-time-varying" justification never applied to it.
+- **Both verifier floors are ratchets against accident, not intent.** A mode is a NAME: replacing
+  a real mode with a registered no-op raised the pair count to 63 while the mode proving a
+  corrupted receipt signature is rejected no longer existed, and both floors stayed green. Only
+  `evidence-hash` has a structural test naming it; no other mode does.

@@ -185,8 +185,11 @@ GREEN SUITE IS NOT A CORRECT VERIFIER:** neutering the `evidenceHash` check by h
 146 tests passing and all 7 samples verifying, because no tamper mode corrupted `evidence.hash`.
 **CLOSED 2026-08-17 (A-049): the `evidence-hash` mode mutates the PUBLISHED hash rather than the
 canonical bytes, so it isolates that one check, and the same neutering now produces 12 failures.**
-The generalisation is NOT closed — no mutation sweep has run over the verifier's other five
-modules, so this was the only such hole anybody looked for, not the only one there is.
+The generalisation is NOT closed — **A DIRECTED SWEEP HAS NOW RUN (A-051)** over the SIX other modules — the count in this
+sentence read *five* and omitted `jcs.py`, an error that reached three documents and the sweep's
+own brief. 142 mutations applied, **41 survived a green gate**; three verdict-flippers are closed
+and the rest are in the register. `verify.py` — 1681 lines, the file that decides the verdict —
+remains unswept, and that is now the largest MEASURED gap rather than an assumed one.
 See `docs/v1-1-register.md` §8.
 
 **A-048 (2026-08-17) then broke A-047's own headline.** A second review round — thinner briefs,

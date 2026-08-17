@@ -145,8 +145,16 @@ if norm != EXPECTED_NORM:
 # field: a reviewer set F001's `expiryAfter` to "0", flipping the check the labelling view would
 # fail, and the deep gate printed "committed views verified FILE BY FILE" and passed.
 #
-# The absolute values genuinely vary with chain time (A-029) and cannot be compared. The RELATION
-# does not vary and is the thing the evaluator reads, so it is compared instead of discarded.
+# The RELATION does not vary and is the thing the evaluator reads, so it is compared instead of
+# discarded.
+#
+# **THE STATED JUSTIFICATION WAS FALSE FOR HALF OF IT (A-051).** "Absolute values genuinely vary
+# with chain time" holds for `expiryAfter`; `expiryBefore` is measured to be the constant `"0"` in
+# 35 of the 36 views that carry the pair. It does not vary at all, so exempting it has no
+# chain-time justification — and `"0"` versus nonzero is the difference between a first purchase
+# and a renewal, a distinct fact for the labeller. **Also unclosed: the relation comparison is
+# TYPE-BLIND** — `int()` normalises `"9"` and `9`, so a committed view can change its JSON schema
+# undetected. Both are recorded in `docs/v1-1-register.md` §8 rather than fixed here.
 def strip(o):
     if isinstance(o, dict):
         if "expiryAfter" in o and "expiryBefore" in o:
@@ -177,7 +185,8 @@ if bad:
         print("    ...and %d more" % (len(bad) - 10))
     sys.exit(1)
 print("  %d committed view files match the current code — %s compared by RELATION "
-      "(expiryAfter > expiryBefore), absolute values excluded as chain-time-varying"
+      "(expiryAfter > expiryBefore, the EVAL_ENTITLEMENT_ADVANCED input); their absolute "
+      "values are NOT compared, and only expiryAfter's variance justifies that"
       % (len(fresh & committed), "/".join(sorted(norm))))
 VIEWCHECK
                 then
@@ -237,13 +246,21 @@ fi
 # nothing reconciling them. That is precisely the defect A-045 was written to close, reproduced
 # inside A-045's own remediation. These three numbers are the assertion. Raise a floor when the
 # suite genuinely grows; NEVER lower one to make a run pass.
-VERIFIER_MIN_TESTS=149
+VERIFIER_MIN_TESTS=154
 VERIFIER_MIN_SAMPLES=7
 VERIFIER_MIN_TAMPER=62
-# A MODE FLOOR, because a pair count alone rewards padding (A-049). `tamper cases` counts
-# (sample x mode) pairs, so ADDING a sample raises it whether or not modes were deleted —
-# an independent review pointed out the metric could be satisfied while the tamper surface
-# shrank. Distinct modes cannot be padded that way: it only moves when the surface itself does.
+# A MODE FLOOR, because a pair count alone rewards padding (A-049): `tamper cases` counts
+# (sample x mode) pairs, so ADDING a sample raises it whether or not modes were deleted.
+#
+# **"DISTINCT MODES CANNOT BE PADDED THAT WAY" WAS FALSE AND IS WITHDRAWN (A-051).** A reviewer
+# replaced the real `signature` mode with a registered no-op — added to `TAMPER_MODES`, added to
+# `TAMPER_MUST_STILL_VERIFY` so it need not mutate anything, and given an empty branch — and the
+# gate reported `tamper 63 cases / 24 modes (floors 62/24)`: the pair count went UP while the mode
+# proving a corrupted receipt signature is rejected no longer existed. Verified. A mode is a NAME,
+# and a name costs nothing. `TAMPER_MUST_STILL_VERIFY` is an author-writable exemption from having
+# to mutate at all. **Both floors are ratchets against accident, not against intent.** What
+# actually defends a specific mode is a structural test naming it — `test_the_mode_is_declared`
+# does that for `evidence-hash`, and no other mode has one.
 VERIFIER_MIN_TAMPER_MODES=24
 
 step "D-010 receipt verifier (independent Python; §14.2, D-010)"
@@ -256,35 +273,59 @@ if command -v python3 >/dev/null 2>&1; then
     #
     # 2>&1 is load-bearing on the first arm: unittest writes to stderr, so redirecting only
     # stdout silently drops this arm's whole output — including the count the floor reads.
-    v_out="$(python3 verifier/test_verifier.py 2>&1)" || v_fail=1
-    v_tests="$(printf '%s\n' "$v_out" | sed -n 's/^Ran \([0-9][0-9]*\) tests.*/\1/p' | tail -1)"
+    # THE SUITE'S OWN TEXT REPORT IS NOT EVIDENCE ABOUT THE SUITE (A-051). THREE VERSIONS OF
+    # THIS CHECK WERE DEFEATED BEFORE THIS ONE, AND EACH FIX ADDRESSED THE DEMONSTRATION.
+    #
+    #   v1 (A-045) asserted the exit status only. Beaten by `@unittest.skip`.
+    #   v2 (A-047) asserted `Ran N >= 146`. Beaten again: unittest COUNTS skipped and
+    #      expected-failure tests inside `Ran N`, so a `setUp` monkeypatched to `skipTest` gave
+    #      `Ran 146 / OK (skipped=146)` — every assertion disabled, 15s to 0.003s — and passed.
+    #   v3 (A-048) asserted a bare `OK` verdict line, parsed from `2>&1`. Beaten by TWO LINES:
+    #      the skip, plus `print("OK")`. unittest writes its verdict to line-buffered STDERR
+    #      while a test file's stdout is block-buffered to the pipe and flushed at interpreter
+    #      exit — i.e. AFTER the verdict — so `tail -1` took the injected line and the gate
+    #      printed `verdict OK` with all 149 assertions disabled. Found independently by two
+    #      reviewers in the same round.
+    #
+    # THE ARGUMENT, which v1-v3 all missed: the file under test also writes the report the gate
+    # reads. Parsing that report is asking the suspect for its own alibi, and moving to stderr
+    # would not help — a test can write there too. So this reads the RESULT OBJECT instead.
+    # `skipped`, `expectedFailures` and `unexpectedSuccesses` are structural properties of the
+    # run that no amount of printing can alter, and the counts are written to a temp file rather
+    # than to a stream the suite shares.
+    v_res="$(mktemp)"
+    python3 - "$v_res" <<'VERIFIERRUN' >/dev/null 2>&1
+import io, os, sys, unittest
+sys.path.insert(0, os.path.join(os.getcwd(), "verifier"))
+res = unittest.TextTestRunner(stream=io.StringIO(), verbosity=0).run(
+    unittest.defaultTestLoader.loadTestsFromName("test_verifier"))
+with open(sys.argv[1], "w") as fh:
+    fh.write("%d %d %d %d %d %d\n" % (
+        res.testsRun, len(res.skipped), len(res.expectedFailures),
+        len(res.unexpectedSuccesses), len(res.failures), len(res.errors)))
+VERIFIERRUN
+    v_tests=""; v_skip=""; v_xfail=""; v_xpass=""; v_vfail=""; v_verr=""
+    read -r v_tests v_skip v_xfail v_xpass v_vfail v_verr < "$v_res" 2>/dev/null || true
+    rm -f "$v_res"
 
-    # THE COUNT IS NOT THE ASSERTION, AND ASSUMING IT WAS COST A WHOLE ROUND (A-048).
-    #
-    # `unittest` counts SKIPPED and EXPECTED-FAILURE tests inside `Ran N tests`. The first
-    # version of this floor asserted N >= 146 and was therefore defeated by a one-line
-    # decorator: `@unittest.skip` on a class gave `Ran 146 / OK (skipped=9)` and passed; a
-    # `setUp` monkeypatched to `skipTest` gave `OK (skipped=146)` — every assertion in the
-    # D-010 suite disabled, runtime 15s to 0.003s — and passed; and `@unittest.expectedFailure`
-    # over a real RFC 8785 violation converted red to green with the count UNCHANGED.
-    #
-    # So the verdict line is now the assertion and the count is a secondary ratchet. unittest
-    # prints a bare `OK` only when nothing was skipped, nothing was an expected failure, and
-    # nothing succeeded unexpectedly; any parenthetical at all — `OK (skipped=1)` — means some
-    # test did not assert what it claims to. A legitimate skip must therefore be argued for in
-    # this file, in the open, rather than landing silently in a decorator.
-    # `grep -E`, not `sed`: BSD sed's basic regex has no `\|` alternation, so the first version
-    # of this line never matched and the check failed on EVERY run including a clean one. Caught
-    # by running the baseline first and seeing `verdict NONE` — a check that always fails is as
-    # useless as one that never does, and it would have been "verified" by three green defeats.
-    v_verdict="$(printf '%s\n' "$v_out" | grep -E '^(OK|OK \(.*\)|FAILED.*)$' | tail -1)"
-    if [ "${v_verdict:-missing}" != "OK" ]; then
-        echo "  SUITE VERDICT NOT CLEAN — '${v_verdict:-no verdict line found}'"
-        echo "    A bare 'OK' is the assertion. Any parenthetical means a test was skipped, was"
-        echo "    an expected failure, or unexpectedly succeeded — it ran without asserting what"
-        echo "    it names. Do not silence this by lowering the count floor."
-        v_fail=1
+    # FAIL CLOSED on an unreadable report: a crashed or hung runner must not read as clean.
+    if [ -z "${v_tests:-}" ]; then
+        echo "  VERIFIER SUITE PRODUCED NO REPORT — treating as failure, not as clean."
+        v_fail=1; v_tests=0; v_skip=0; v_xfail=0; v_xpass=0; v_vfail=0; v_verr=0
     fi
+
+    v_verdict="clean"
+    for probe in "skipped:$v_skip" "expected-failures:$v_xfail" \
+                 "unexpected-successes:$v_xpass" "failures:$v_vfail" "errors:$v_verr"; do
+        p_name="${probe%%:*}"; p_n="${probe##*:}"
+        if [ "${p_n:-0}" -ne 0 ] 2>/dev/null; then
+            echo "  SUITE NOT CLEAN — $p_name: $p_n"
+            echo "    A test that is skipped, expected to fail, or unexpectedly succeeds RAN"
+            echo "    without asserting what it names. Argue for it here, in the open."
+            v_verdict="$p_name=$p_n"
+            v_fail=1
+        fi
+    done
 
     s_out="$(python3 verifier/verify.py --all fixtures/samples 2>&1)" || v_fail=1
     v_samples="$(printf '%s\n' "$s_out" | sed -n 's#^\([0-9][0-9]*\)/[0-9][0-9]* sample(s) verified.*#\1#p' | tail -1)"
@@ -313,10 +354,18 @@ if command -v python3 >/dev/null 2>&1; then
     done
 
     # Quiet on success — this stage emits ~450 lines, and it sits immediately before the block
-    # whose own header says "read this, not the pass count". On any failure the full output of
-    # all three arms prints, because that is when it is worth reading.
+    # whose own header says "read this, not the pass count". On any failure everything prints,
+    # because that is when it is worth reading.
+    #
+    # The suite is RE-RUN here for its text, rather than the text being captured up front. That
+    # text is DIAGNOSTIC ONLY and is never the assertion — the assertion is the result object
+    # above, for the reasons in the comment there. Note also that `$v_out` used to be referenced
+    # on this line and no longer exists; under `set -u` that would have errored, but only on runs
+    # where something had ALREADY failed, which is the worst place to hide a defect (A-051).
     if [ "$v_fail" -ne 0 ]; then
-        printf '%s\n' "$v_out" "$s_out" "$t_out"
+        echo "  --- verifier suite detail (re-run; diagnostic only) ---"
+        python3 verifier/test_verifier.py 2>&1 | tail -40 || true
+        printf '%s\n' "$s_out" "$t_out"
         fail=1
     fi
 else
@@ -505,9 +554,14 @@ WHAT IS COVERED, by layer, each with the limit that layer cannot exceed:
            pass it, so the test cannot succeed by the check always failing.
            LIMIT THAT REMAINS: the floors catch a verifier that SHRINKS and this mode catches
            one named check that stops checking. Neither generalises. No mutation sweep has been
-           run over `keccak.py`, `secp256k1.py`, `eip712.py`, `refusal.py` or `reasoncodes.py`,
-           so this is not known to have been the only such hole — it is the only one anybody
-           has looked for.
+           run over `verify.py` itself, which is 1681 lines and DECIDES the verdict. A directed
+           sweep of the SIX other modules (A-051) applied 142 behaviour-changing mutations
+           and 41 survived a green gate — `keccak.py` was clean at 17/17, `jcs.py` caught
+           23/33, and `eip712.py` and `secp256k1.py` were thin: construction pinned,
+           value-level validation almost unexercised. Three verdict-flippers from that sweep
+           are now closed; the rest are in the register. THE COUNT WAS ALSO WRONG HERE — it
+           read 'five modules' and omitted `jcs.py`, the RFC 8785 canonicalizer, which is
+           where two of the sweep's best findings turned out to be.
            LIMIT: it verifies that a bundle is the one a receipt commits to and that the
            receipt is correctly signed. It CANNOT confirm the bundle's factual content
            against a chain — that needs an archive node at the anchored block. Verifying a

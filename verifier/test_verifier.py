@@ -2089,5 +2089,102 @@ class TestEvidenceHashTamper(unittest.TestCase):
                 self.assertTrue(named[0].ok)
 
 
+class TestUnassertedValidation(unittest.TestCase):
+    """A-051. Three named properties whose only witness could not fail.
+
+    A directed mutation sweep over the verifier's six non-`verify.py` modules applied
+    142 behaviour-changing mutations and 41 survived a fully green gate. These three
+    are the ones that flip a VERDICT rather than degrade a diagnostic: with each
+    mutation in place the verifier CERTIFIES something it should reject, and every
+    existing test still passed. The tests below are the missing witnesses.
+    """
+
+    # ---- S-1: pair-aligned whitespace in a hex value -------------------------
+    #
+    # `hex_to_bytes`'s own comment says why this matters: "bytes.fromhex accepts
+    # them, so '0xde ad' and '0xdead' used to produce the same word." The guard test
+    # inserted ONE space mid-string -- which breaks hex-pair alignment and is
+    # therefore rejected by any pair-quantified pattern, including a widened one. So
+    # widening `_HEX_BODY` to `[0-9a-fA-F ]{2}` survived, and two byte-distinct
+    # MandatePayloads then shared one mandateHash while the gate stayed green.
+    def test_hex_rejects_whitespace_on_an_EVEN_boundary(self):
+        good = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+        for label, bad in (
+                ("two trailing spaces", good + "  "),
+                ("two leading spaces", "0x  " + good[2:]),
+                ("a space pair at an even offset", good[:12] + "  " + good[12:]),
+        ):
+            with self.subTest(case=label):
+                with self.assertRaises(eip712.EncodingError):
+                    eip712.hex_to_bytes(bad, 20)
+
+    def test_pair_aligned_whitespace_cannot_collide_an_encoded_word(self):
+        # The property the test above protects, asserted at the encoder rather than the
+        # parser. Written the second time: the first version nested assertNotEqual
+        # INSIDE assertRaises, where it can never execute — a test shaped so that its
+        # own assertion is unreachable, which is the defect this whole class is about.
+        good = "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"
+        word = eip712.encode_value("address", good)
+        self.assertEqual(len(word), 32)
+        for bad in (good + "  ", good[:12] + "  " + good[12:]):
+            with self.subTest(bad=bad):
+                try:
+                    other = eip712.encode_value("address", bad)
+                except eip712.EncodingError:
+                    continue          # rejected outright: the property holds
+                self.assertNotEqual(
+                    other, word,
+                    "an accepted alternate spelling encoded to the same word")
+
+    # ---- S-2: strict= is asserted at one of five call sites ------------------
+    #
+    # `struct_hash`'s error text is "refusing to hash an under-determined struct",
+    # and `refusal.canonical_fields` cites it as the rule it copies. Only the RECEIPT
+    # site had a test. `strict=False` on any of the other four left an unauthenticated
+    # field riding inside a document the verifier stamps PASS -- "approvedBy",
+    # "note": "cleared by legal" -- with the gate green.
+    def test_every_payload_struct_refuses_an_extra_field(self):
+        d = sample_dirs()[0]
+        cases = (
+            ("mandate", eip712.mandate_hash, read_json(d, "mandate.json")),
+            ("policy", eip712.policy_hash, read_json(d, "policy.json")),
+            ("action", eip712.action_hash, read_json(d, "action.json")),
+            ("receipt", eip712.receipt_struct_hash,
+             read_json(d, "receipt.json")["receipt"]),
+        )
+        for name, fn, doc in cases:
+            with self.subTest(struct=name):
+                fn(doc)  # the unmutated document must still hash, or this proves nothing
+                with self.assertRaises(eip712.EncodingError):
+                    fn({**doc, "approvedBy": "0x00"})
+
+    def test_the_override_struct_refuses_an_extra_field(self):
+        for path in sample_dirs():
+            override = os.path.join(path, "override.json")
+            if not os.path.isfile(override):
+                continue
+            doc = read_json(path, "override.json")
+            doc = doc.get("override", doc)
+            eip712.override_hash(doc)
+            with self.assertRaises(eip712.EncodingError):
+                eip712.override_hash({**doc, "grantedBy": "0x00"})
+            return
+        self.fail("no override sample found; this test would assert nothing")
+
+    # ---- S-3: signature length ----------------------------------------------
+    #
+    # `parse_signature` was only ever handed exactly 65 bytes. Relaxing `!= 65` to
+    # `< 65` let arbitrary trailing bytes ride on a signature, so unboundedly many
+    # byte-distinct signatures certify one receipt -- defeating anything downstream
+    # that dedups or replay-protects on signature bytes.
+    def test_an_over_length_signature_is_rejected(self):
+        good = "0x" + "11" * 32 + "22" * 32 + "1b"
+        parse_signature(good)  # 65 bytes must still parse
+        for suffix in ("deadbeef", "00", "11" * 40):
+            with self.subTest(extra=suffix[:8]):
+                with self.assertRaises(Exception):
+                    parse_signature(good + suffix)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
