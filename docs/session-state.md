@@ -159,6 +159,15 @@ green gate covered them; it did not, and a verifier regression could not have fa
 It is now a stage in `scripts/test.sh`, in both profiles, and both of its arms were falsified
 against the real script before that was claimed.
 
+**All eight guards were falsified for the first time on 2026-08-16 (A-046) and ALL EIGHT FIRE —
+8/8 caught, 0 defeated**, each violated on a frozen worktree and required to turn the gate red.
+The rename gate was exercised against a public remote in a throwaway repository; nothing here was
+made public. **The defects that pass found were in the DOCUMENTATION of the guards, not the
+guards:** two claims in the coverage boundary's Gate 5 bullet were false, both understating the
+instrument — §13#N *is* resolved, and an edit to the certified §2 table *is* detected. Both
+corrected. **8/8 means each guard fires on the violation it was pointed at; it says nothing about
+violations nobody imagined** — that class is found by adversarial review, not by falsification.
+
 **Eight mechanical guards run in the gate:** secrets (A-007), rename (D-016), labelling-prompt
 freeze (D-011a), EIP-712 type strings (D-023), §5.7.1 check coverage (D-031), **corpus class
 coverage (A-036, new 2026-08-16)**, vendor honesty (§7.5 Gate 5, D-008), and — deep profile
@@ -241,6 +250,13 @@ reasoning, its rejected options, and where stated the condition that would rever
   obvious, the stage would have shipped with its wiring unproven either way. **Check that the
   probe MOVED SOMETHING — the count, the output — before you believe what its result implies.**
   Injected before the `__main__` block it ran (147 tests) and the gate went red correctly.
+  **A-046 then measured the rate: FOUR of about twelve probes across the eight-guard
+  falsification were vacuous, and every single time the GUARD was right and the PROBE was
+  wrong** — a `sed` anchor absent from the file, a code injected outside the array the guard
+  actually reads, prose where the guard searches for two literal labels, and a caveat probed
+  against text the guard normalises for line-wrapping before comparing. **Each one produced a
+  green guard that reads exactly like "this guard does not fire."** Assert that the edit
+  applied and read the diff, every time; in this technique the probe is the unreliable half.
 - **A REGRESSION TEST CAN PASS AGAINST THE DEFECT IT NAMES.** A-044: the first backpressure
   test I wrote pinned the deadlock my own repair could introduce, not the unbounded dispatch it
   was written for — it passed against the unfixed server. **Always run a new regression test

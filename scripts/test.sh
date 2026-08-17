@@ -340,13 +340,20 @@ WHAT IS NOT COVERED:
     both of those mutations are now killed — but the honest reading of Gate 6's line is
     that the deterministic tests carry it and the campaign corroborates. A campaign's
     coverage is bounded by what its handler can BUILD, not by its call count.
-  - THAT GATE 5's CITATIONS POINT ANYWHERE. Certified by John 2026-08-16 (D-038), and
-    the check now reports 11 of 11 rows and "certified by record" rather than
-    UNCERTIFIED. What it verifies is the SHAPE of a marker in the capability cell:
-    [§13#N read YYYY-MM-DD]. It does not resolve N against §13, so a citation to a
-    source number that does not exist passes. "Dated" is checked; "linked" is not.
-    Nor does anything detect an edit to the §2 table, which D-038 declares makes the
-    certification stale — that expiry is a convention, not an instrument.
+  - THAT GATE 5's CITATIONS SAY WHAT §2 CLAIMS THEY SAY. Certified by John 2026-08-16
+    (D-038); the check reports 11 of 11 rows and "certified by record" rather than
+    UNCERTIFIED. TWO CLAIMS THAT STOOD HERE UNTIL 2026-08-16 WERE FALSE, both understating
+    the instrument, and both were corrected only when someone finally violated the guard
+    instead of reading it (A-046). It DOES resolve §13#N against §13's actual entry
+    numbers — a probe citing §13#997 fails with "§2 cites §13 entries that do not exist" —
+    so "dated but not linked" is no longer the gap; two reviews found that defect on
+    2026-08-16 and it was fixed. And an edit to the §2 table IS detected: the certified
+    table is pinned by hash, and a probe inserting one row reports the certification STALE
+    and Gate 5 NOT MET. That expiry is an instrument, not a convention.
+    WHAT REMAINS GENUINELY UNCOVERED is the thing no hash can reach: that a resolvable,
+    dated citation ACTUALLY SUPPORTS the capability claim in its row. The guard says so
+    itself on every run. A source-verification pass found five of nine rows unsupported by
+    their cited pages before D-038; only John's reading catches the sixth.
   - The evidence dashboard (outside S2 unless John adds it at the gate, D-009).
   - Gate 8 (five-minute comprehension), which D-032 makes PRE-PUBLICATION rather than S2.
   - BYTE-reproducible labelling views: a corpus re-run rewrites 32 of 50 view files
