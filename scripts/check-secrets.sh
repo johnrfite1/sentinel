@@ -9,6 +9,20 @@
 #   ./scripts/check-secrets.sh          scan tracked files (suite / CI)
 #   ./scripts/check-secrets.sh --staged scan staged content (pre-commit hook)
 #
+# THE PLACEHOLDER SUPPRESSOR WAS AN EVASION PATH UNTIL 2026-08-17 (A-052), AND THE FIX IS THE
+# LINE BELOW BEGINNING `| grep -vE`. It suppressed any line matching
+# `(YOUR_|REPLACE_|EXAMPLE|PLACEHOLDER|xxx|\.\.\.)` ANYWHERE ON THE LINE. Two of those are
+# catastrophic in this repository: `\.\.\.` matches `...`, the TypeScript spread operator, in a
+# codebase written in TypeScript; and `EXAMPLE` matches a trailing comment. So a REAL 64-hex
+# private key bound to `privateKey:` passed the guard — and the pre-commit hook with it — if the
+# line happened to contain a spread or the word EXAMPLE. Reproduced with a control: the identical
+# key without the spread is BLOCKED.
+#
+# The markers are now anchored to the VALUE (`[:=][[:space:]]*["']?(0x)?MARKER`) rather than
+# matched anywhere on the line, and `\.\.\.` is gone entirely — spread is syntax, never a
+# placeholder. Verified both ways: four real-key spellings blocked, four genuine placeholders
+# (`YOUR_…`, `PLACEHOLDER`, `xxx`, empty) still suppressed, clean tree still green.
+#
 # DESIGN NOTE — why this does not grep for bare 64-hex strings.
 # A private key and a keccak256 hash are the same shape. This repository is full
 # of legitimate bytes32 literals: type hashes, domain separators, mandate and
@@ -95,7 +109,7 @@ scan_content() {
   hits=$(printf '%s' "$content" \
     | grep -nE "$CRED_RE|$ASSIGN_RE|$KEYLIT_RE" 2>/dev/null \
     | grep -vE "$ANVIL_ALLOW" \
-    | grep -vE '=[[:space:]]*$|=[[:space:]]*["'"'"']{2}|(YOUR_|REPLACE_|EXAMPLE|PLACEHOLDER|xxx|\.\.\.)' \
+    | grep -vE '=[[:space:]]*$|=[[:space:]]*["'"'"']{2}|[:=][[:space:]]*["'"'"']?(0x)?(YOUR_|REPLACE_|EXAMPLE|PLACEHOLDER|xxx)' \
     || true)
   if [ -n "$hits" ]; then
     echo "${RED}BLOCKED${RST} $label — credential-shaped content:"

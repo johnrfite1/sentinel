@@ -263,11 +263,27 @@ SAYS it protects and what it mechanically does.
 
 ### 8.2 `check-secrets.sh` — three independent evasions
 
-- **The placeholder suppressor eats the language's own syntax.** Lines matching
-  `(YOUR_|REPLACE_|EXAMPLE|PLACEHOLDER|xxx|\.\.\.)` are dropped, and `\.\.\.` matches `...` — the
-  TypeScript spread operator, in a TypeScript repository. A real private key on a line containing
-  `{...defaults, privateKey: "0x7c85…"}` passes; the identical line with the spread replaced by an
-  explicit field is BLOCKED. The literal word `EXAMPLE` anywhere on the line does the same.
+> **SEVERITY NOTE, added 2026-08-17 (A-052) at John's direction. THIS SUBSECTION IS NOT LIKE ITS
+> NEIGHBOURS AND THE FLAT LIST WAS HIDING THAT.** Everything else in §8 is an instrument that
+> reports a property it does not check. The first item below was different in kind: its failure
+> mode is **a real private key reaching a remote**, through the guard that exists to prevent
+> exactly that and through the pre-commit hook that depends on it. It sat between a `head -1`
+> scoping nit and a binary-extension note, in a register with no severity ordering, in a
+> repository under a publication plan. **That item is now FIXED.** The other two remain open and
+> are genuinely lower severity — both require an author to write something odd on purpose, rather
+> than to use ordinary language syntax. Read this subsection in that order, not in list order.
+
+- ~~**The placeholder suppressor eats the language's own syntax.**~~ **FIXED 2026-08-17 (A-052) —
+  the highest-severity item in §8 and the only one whose failure mode is a credential leaving the
+  repository.** As found: lines matching `(YOUR_|REPLACE_|EXAMPLE|PLACEHOLDER|xxx|\.\.\.)` were
+  dropped, and `\.\.\.` matches `...` — the TypeScript spread operator, in a TypeScript
+  repository. A real 64-hex private key bound to `privateKey:` passed whenever the line contained
+  a spread or the word `EXAMPLE`; the identical key without it was BLOCKED. **The markers are now
+  anchored to the VALUE rather than matched anywhere on the line, and `\.\.\.` is removed
+  entirely** — spread is syntax, never a placeholder. Verified in both directions against controls:
+  four real-key spellings (plain, spread, `// EXAMPLE`, trailing `...`) all blocked; four genuine
+  placeholders (`YOUR_…`, `PLACEHOLDER`, `xxx`, empty) all still suppressed; clean tree green.
+  **No key was ever committed** — the tracked tree was checked.
 - **`ANVIL_ALLOW` is applied line-wise, not value-wise.** The whole line is discarded if a known
   Anvil key appears anywhere on it, so `KEY = "0x7c85…"; // rotated away from ac0974be…` passes —
   while the header promises "any OTHER 64-hex value bound to a key-shaped name is a finding".
