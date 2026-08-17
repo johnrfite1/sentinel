@@ -163,14 +163,22 @@ green gate covered them; it did not, and a verifier regression could not have fa
 It is now a stage in `scripts/test.sh`, in both profiles, and both of its arms were falsified
 against the real script before that was claimed.
 
-**All eight guards were falsified for the first time on 2026-08-16 (A-046) and ALL EIGHT FIRE —
-8/8 caught, 0 defeated**, each violated on a frozen worktree and required to turn the gate red.
-The rename gate was exercised against a public remote in a throwaway repository; nothing here was
-made public. **The defects that pass found were in the DOCUMENTATION of the guards, not the
-guards:** two claims in the coverage boundary's Gate 5 bullet were false, both understating the
-instrument — §13#N *is* resolved, and an edit to the certified §2 table *is* detected. Both
-corrected. **8/8 means each guard fires on the violation it was pointed at; it says nothing about
-violations nobody imagined** — that class is found by adversarial review, not by falsification.
+**A-046 falsified all eight guards and reported "8/8 caught, 0 defeated". THAT HEADLINE WAS
+WORTHLESS AND A-047 IS THE CORRECTION.** An independent reviewer, told to defeat a guard rather
+than to confirm one, produced **seven confirmed defeats within hours** — every one a violation of
+a guard's own stated purpose that the guard does not catch. A-046 stated the bound ("each guard
+fires on the violation it was pointed at; it says nothing about violations nobody imagined") and
+that bound turned out to be the entire story, not a footnote. **Falsifying an instrument against
+the violation you designed it for measures your imagination, not the instrument.** The technique
+is still worth running — it is cheap and it caught real things — but its output is a floor, and
+reporting a floor as a headline is the honesty defect this project exists to study.
+**Fixed under A-047 (John scoped it):** the corpus stage never hashed the committed view files at
+all, so tampering one passed while the gate printed "committed views semantically current" — the
+provenance claim the corpus rests on; and the vendor scan was case-sensitive while the label scan
+beside it was not, so `| coinbase |` passed and `| Coinbase |` failed. **Recorded, not fixed:** the
+unscoped spec greps, three secrets-guard holes, the rename gate's second-remote and trailing-slash
+gaps, and the class-coverage laundering route through committed `results/`. See
+`docs/v1-1-register.md`.
 
 **Eight mechanical guards run in the gate:** secrets (A-007), rename (D-016), labelling-prompt
 freeze (D-011a), EIP-712 type strings (D-023), §5.7.1 check coverage (D-031), **corpus class
@@ -193,7 +201,13 @@ means only that no NEW class went vacuous. Read their output, not their exit sta
   criterion** (L3-only = compares the call or its effects to the mandate's PURPOSE fields) and
   the figure fell from 17 to 8. The 8 are exactly the wrong-purpose class. The report emits the
   split as a CHECK — its second row must be empty.
-- **D-010 verifier:** 6/6 samples, 42/42 tamper cases, 70/70 tests.
+- **D-010 verifier:** 7/7 samples, 55/55 applicable tamper cases, 146/146 tests — **and all three
+  are now FLOORS the gate asserts (A-047), not prose.** *This line read `6/6, 42/42, 70/70` until
+  2026-08-16, forty-six lines below the headline in §3 that already said 146/146 and 7 samples —
+  i.e. this file contradicted itself, in the file that opens by declaring itself the memory. It
+  was **not** fixed by A-045, whose decision entry and commit message both claim "both layers are
+  corrected"; exactly one was. Found by an independent reviewer, not by the author who edited this
+  file twice in the same session.*
 - **Gate 7 canary:** built, run live once, agrees with the pinned recording. D-036 sets the
   cadence at **monthly**; a DRIFT row is a finding about the model, never a build failure.
 - **Labellers:** E and F are the labels of record. G, H, J, K, **L and M** are targeted

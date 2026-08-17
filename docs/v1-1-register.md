@@ -234,3 +234,109 @@ reason, which is the second time it has fired on this session's own work.
 
 **Any edit to the §2 table makes D-038's certification stale**, so these ride together with
 whatever else touches that table rather than being applied one at a time.
+
+## 8. Guard and gate defects found by adversarial review, 2026-08-16 (A-047) — RECORDED, NOT FIXED
+
+Three independent reviewers were pointed at commits `fac9140..f65b745` and told to prove the work
+fails. **John scoped the remediation:** the three severe defects were fixed (the corpus stage's
+missing committed-view check, the verifier stage's missing floors, the case-sensitive vendor
+scan). **Everything below is real, reproduced, and deliberately NOT fixed** — each reopens a guard
+design question, and several touch rulings (D-038, D-039) that are John's.
+
+**Read this before trusting any guard's output line.** Every item is a gap between what a guard
+SAYS it protects and what it mechanically does.
+
+### 8.1 Spec greps that are not scoped to the section they name
+
+- **`check-type-strings.sh`** greps the whole 71 KB proposal for `^ {4}Name\(...\)$` and takes
+  `head -1`. It is **not scoped to §5.8**. A decoy 4-space-indented type string earlier in the
+  document satisfies the guard while §5.8 — declared "normative and byte-exact" — publishes a
+  drifted one. Demonstrated with `MandatePayload`, `durationSeconds` `uint64`→`uint256`: guard
+  green, and the two type hashes differ (`0xc4b5766f…` vs `0x003da56d…`). The same `head -1`
+  weakness exists on the source side, so a comment above a drifted constant works too.
+- **`check-eval-codes.sh`** is `grep -q "$code" "$SPEC"` — anywhere in the file, no section
+  scoping, no description required, despite the output line and the failure message both naming
+  §5.7.1. Demonstrated: three checks' documentation deleted from §5.7.1 and the bare identifiers
+  left in an HTML comment at EOF — `41/41 engine checks documented in §5.7.1`, exit 0. The three
+  included the mandate and policy validity windows. Today no eval code appears outside §5.7.1, so
+  the guard is currently correct **by accident**.
+
+### 8.2 `check-secrets.sh` — three independent evasions
+
+- **The placeholder suppressor eats the language's own syntax.** Lines matching
+  `(YOUR_|REPLACE_|EXAMPLE|PLACEHOLDER|xxx|\.\.\.)` are dropped, and `\.\.\.` matches `...` — the
+  TypeScript spread operator, in a TypeScript repository. A real private key on a line containing
+  `{...defaults, privateKey: "0x7c85…"}` passes; the identical line with the spread replaced by an
+  explicit field is BLOCKED. The literal word `EXAMPLE` anywhere on the line does the same.
+- **`ANVIL_ALLOW` is applied line-wise, not value-wise.** The whole line is discarded if a known
+  Anvil key appears anywhere on it, so `KEY = "0x7c85…"; // rotated away from ac0974be…` passes —
+  while the header promises "any OTHER 64-hex value bound to a key-shaped name is a finding".
+- **The absolute-path scan is case-sensitive** — `(/Users/[a-z]|/home/[a-z])`. `/Users/Johnfite/…`
+  passes; lowercasing the one letter fails the guard. macOS home directories derived from a full
+  name are routinely capitalised.
+
+### 8.3 `check-rename-gate.sh` — publication is reachable without tripping it
+
+- **It reads `remote.origin.url` only.** `git remote add public … && git push public main` is the
+  literal one-click publication D-016 describes, and the guard reports "publication block intact".
+- **A trailing slash on the origin URL degrades to UNVERIFIED, which exits 0.**
+  `https://github.com/owner/repo/` — what `git clone` with a trailing slash leaves behind — yields
+  `rename gate: UNVERIFIED`, exit 0, while the identical URL without the slash correctly reports
+  `RENAME GATE VIOLATED`. The guard is honest that UNVERIFIED is not a pass, but the gate is green
+  and the line is indistinguishable from the "no `gh` CLI" case a reader skims past.
+- **Consequence for A-046's "all eight fire":** in an environment without `gh`, or without auth,
+  this guard fires on nothing and the gate is green. A-046 did not disclose that precondition.
+
+### 8.4 `check-class-coverage.sh` — the ruled GAP can be laundered green
+
+The guard's entire evidence base is `fixtures/corpus/results/*.json`, a **committed** artifact
+that nothing regenerates-and-compares — `grep -c results scripts/test.sh` → 0. The `--gate` corpus
+stage does regenerate `results/` into its temp directory and then deletes it unread. Editing
+F048's committed result so it fails an on-class check makes the guard fire and **prescribe the
+second step** ("Remove it from BASELINE"); doing so yields `15 of 20 classes exercise the class
+they name` and `All carried classes are DELEGATED or RESERVED with a ruling. None owes a fixture.`
+The D-039 GAP — the one class ruled genuinely uncovered and owing a fixture — disappears from the
+report. **The fix is the same one A-047 applied to the labelling views:** compare the committed
+`results/` against the freshly generated ones. It was not applied here because the corpus stage
+deletes that directory and because D-039's ruling is John's.
+
+### 8.5 The D-010 verifier — a named check is asserted by nothing
+
+`ok = True or evidence_hash == expected_hash` in `verify.py` leaves **all 146 tests passing and
+all 7 samples verifying**. No `TAMPER_MODE` corrupts `evidence.hash`; the field is only ever read.
+Proven non-vacuous against a bundle with a one-nibble-corrupted hash, which the unmutated code
+FAILs and the mutated code PASSes. **Owed: an `evidence.hash` tamper mode.** Three control
+mutations were caught, so this is a specific hole, not a general one. A-047's floors catch a
+verifier that SHRINKS; nothing catches one that silently stops checking.
+
+Also on that stage, not fixed:
+- **Arm B is subsumed by arm A.** `test_verifier.py:399` already runs
+  `verify.main(["--all", SAMPLES])` and asserts exit 0, so the CLI arm detects nothing the suite
+  does not. A-045 justified it as catching "a verifier that passes its own tests while rejecting
+  the corpus" — a state the suite makes unreachable. It is 0.6s and it produces the sample count
+  the new floor reads, so it stays; the justification was wrong, not the line.
+- **`verify.py`'s module docstring documents `--tamper fixtures/samples/case-1-allow`, which
+  argparse rejects** (`--tamper` takes `nargs="?"` and swallows the path as the mode).
+
+### 8.6 `check-vendor-honesty.sh` — residuals after A-047's case fix
+
+- `circle`, `safe`, `sigil` in lower case still pass, and deliberately so: they are English words,
+  and case-insensitive matching fires on `docs/ablation-report.md` immediately. The other seven
+  names are now caught in any casing.
+- **The binary skip is an extension allowlist** (`*.png|*.pdf|*.zip|…`). A genuine
+  `docs/gate-5-comparison.pdf` carrying a vendor table is never scanned.
+- **`CAVEAT` is `head -1` over the whole proposal**, so a shorter sentence containing the key
+  phrase, inserted earlier, becomes the enforced caveat. The check is also hard-coded to
+  `docs/ablation-report.md`: numbers moved to a new file carry no caveat requirement.
+- **The `rows`/`cited`/`badrefs` awk is not scoped to §2** (unlike `table_sha`, which is). A decoy
+  capability-table header earlier in the document hijacks the D-008(1) count. Not turned into a
+  violation, because `CERTIFIED_TABLE_SHA` independently pins §2's lines — the hash is doing the
+  real work, not the counter.
+
+### 8.7 The labelling-prompt freeze covers one of two channels
+
+`check-label-prompt.sh` could not be defeated — it is the one guard whose mechanism is exactly as
+strong as its claim. But D-011(a)'s stated purpose is that nobody can quietly retune the labelling
+instructions, and `fixtures/corpus/labels/labeller-*.provenance.json` carry substantial per-labeller
+`assignment` briefs that **nothing pins**. The project's own record (A-028 F-1) is an instance of
+that unpinned channel contaminating a round. Structural, not a mechanical bypass.

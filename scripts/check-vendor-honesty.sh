@@ -48,6 +48,29 @@ fail=0
 # vendor entering an artifact is a thing a human has to notice.
 VENDORS='Cobo|Coinbase|Circle|Privy|Safe|MetaMask|Sigil|Hypernative|Blockaid|Tenderly'
 
+# CASE. Until 2026-08-16 the scan below was `grep -Eq` — case-SENSITIVE — while the §10.1 label
+# scan forty lines above is `grep -Eiq`. An adversarial review defeated it with one token: a
+# markdown table row reading `| coinbase | 34 | no |` passed, and capitalising that single word
+# and nothing else failed the guard. Lowercase names are idiomatic in table cells and CSV-ish
+# data, so this was not even an adversarial spelling — it is how somebody would naturally type
+# it (A-047).
+#
+# THE FIX IS NOT `-i` ON THE WHOLE LIST, AND THAT IS THE WHOLE DESIGN PROBLEM. Two of the ten
+# spellings are ordinary English words: `Safe` and `Circle`. Case-insensitively, "safe" already
+# occurs in `docs/ablation-report.md`, which is IN scope — so a blanket `-i` fires on the
+# flagship measurement artifact on the first run, and this file's own header says a guard that
+# cries wolf gets reverted rather than obeyed. So the list is split by whether the token means
+# anything but a vendor:
+VENDORS_ANYCASE='Cobo|Coinbase|Privy|MetaMask|Hypernative|Blockaid|Tenderly'
+VENDORS_EXACTCASE='Circle|Safe|Sigil'
+#
+# RESIDUAL, STATED RATHER THAN LEFT TO BE REDISCOVERED: `circle`, `safe` and `sigil` in lower
+# case still pass. That is a deliberate trade — those three cannot be matched case-insensitively
+# without false positives on English prose, and a false positive here costs the guard's
+# existence. The other seven are now caught in any casing. A vendor written in lower case as a
+# common word remains a thing a human has to notice, which is the same residual the header
+# already declares for unlisted vendors.
+
 # MEASUREMENT ARTIFACTS are the files that carry numbers, evidence, or published claims. The
 # rule below is that no NAMED vendor may appear in one of them.
 #
@@ -185,9 +208,10 @@ fi
 # product.
 vendor_hits=0
 while IFS= read -r file; do
-    if grep -Eq "\b($VENDORS)\b" "$file"; then
+    if grep -Eiq "\b($VENDORS_ANYCASE)\b" "$file" || grep -Eq "\b($VENDORS_EXACTCASE)\b" "$file"; then
         echo "  FAIL  $file names a vendor in a measurement artifact:"
-        grep -Enm3 "\b($VENDORS)\b" "$file" | sed 's/^/          /'
+        { grep -Einm3 "\b($VENDORS_ANYCASE)\b" "$file"
+          grep -Enm3  "\b($VENDORS_EXACTCASE)\b" "$file"; } | sort -t: -k1,1n | head -3 | sed 's/^/          /'
         vendor_hits=$((vendor_hits + 1))
     fi
 done < <(artifacts)
