@@ -237,9 +237,14 @@ fi
 # nothing reconciling them. That is precisely the defect A-045 was written to close, reproduced
 # inside A-045's own remediation. These three numbers are the assertion. Raise a floor when the
 # suite genuinely grows; NEVER lower one to make a run pass.
-VERIFIER_MIN_TESTS=146
+VERIFIER_MIN_TESTS=149
 VERIFIER_MIN_SAMPLES=7
-VERIFIER_MIN_TAMPER=55
+VERIFIER_MIN_TAMPER=62
+# A MODE FLOOR, because a pair count alone rewards padding (A-049). `tamper cases` counts
+# (sample x mode) pairs, so ADDING a sample raises it whether or not modes were deleted —
+# an independent review pointed out the metric could be satisfied while the tamper surface
+# shrank. Distinct modes cannot be padded that way: it only moves when the surface itself does.
+VERIFIER_MIN_TAMPER_MODES=24
 
 step "D-010 receipt verifier (independent Python; §14.2, D-010)"
 if command -v python3 >/dev/null 2>&1; then
@@ -286,17 +291,19 @@ if command -v python3 >/dev/null 2>&1; then
 
     t_out="$(python3 verifier/verify.py --all fixtures/samples --tamper all 2>&1)" || v_fail=1
     v_tamper="$(printf '%s\n' "$t_out" | grep -c 'tamper self-test PASS' || true)"
+    v_modes="$(printf '%s\n' "$t_out" | grep -oE 'the mutated [a-z-]+' | sed 's/the mutated //' | sort -u | wc -l | tr -d ' ')"
 
     # The verdict is printed even on success, deliberately. Making this stage quiet was itself a
     # finding: at fac9140 the suite ran unredirected, so `OK (skipped=N)` would have reached the
     # gate log, and capturing the output DELETED the one channel that would have exposed the
     # defeat above. Foundry and TypeScript both print their skip counts on every run; this stage
     # now says the same thing in one line.
-    echo "  suite ${v_tests:-0} (floor $VERIFIER_MIN_TESTS) · verdict ${v_verdict:-NONE} · samples ${v_samples:-0} (floor $VERIFIER_MIN_SAMPLES) · tamper cases ${v_tamper:-0} (floor $VERIFIER_MIN_TAMPER)"
+    echo "  suite ${v_tests:-0} (floor $VERIFIER_MIN_TESTS) · verdict ${v_verdict:-NONE} · samples ${v_samples:-0} (floor $VERIFIER_MIN_SAMPLES) · tamper ${v_tamper:-0} cases / ${v_modes:-0} modes (floors $VERIFIER_MIN_TAMPER/$VERIFIER_MIN_TAMPER_MODES)"
 
     for probe in "tests:${v_tests:-0}:$VERIFIER_MIN_TESTS" \
                  "samples:${v_samples:-0}:$VERIFIER_MIN_SAMPLES" \
-                 "tamper cases:${v_tamper:-0}:$VERIFIER_MIN_TAMPER"; do
+                 "tamper cases:${v_tamper:-0}:$VERIFIER_MIN_TAMPER" \
+                 "tamper modes:${v_modes:-0}:$VERIFIER_MIN_TAMPER_MODES"; do
         p_name="${probe%%:*}"; p_rest="${probe#*:}"; p_got="${p_rest%%:*}"; p_want="${p_rest##*:}"
         if ! [ "$p_got" -ge "$p_want" ] 2>/dev/null; then
             echo "  FLOOR BREACHED — $p_name: $p_got, floor $p_want. THE VERIFIER SHRANK."
@@ -464,8 +471,9 @@ WHAT IS COVERED, by layer, each with the limit that layer cannot exceed:
 
   D-010    The independent Python receipt verifier, in `verifier/`. Zero third-party
            dependencies; its own RFC 8785, Keccak-f[1600] and secp256k1 recovery, built by
-           an agent that never read this repository's TypeScript. 7/7 samples verify, 55/55
-           applicable tamper cases behave as specified, 146/146 of its own tests pass.
+           an agent that never read this repository's TypeScript. 7/7 samples verify, 62/62
+           applicable tamper cases across 24 distinct modes behave as specified, and 149/149
+           of its own tests pass.
            It verifies REFUSALS as well as decisions as of 2026-08-16: §5.5.1's
            RefusalRecord was implemented by a schema-only agent and met a real signed
            refusal it had never seen, which is where the envelope gap and three further
@@ -485,15 +493,21 @@ WHAT IS COVERED, by layer, each with the limit that layer cannot exceed:
            green run. The tamper figure was worse — no arm ran `--tamper`, so 55 was
            produced by nothing at all. Both closed by the floors above, falsified against
            the real script.
-           LIMIT, and it is the one that matters most here: A GREEN SUITE IS NOT A CORRECT
-           VERIFIER. `ok = True or evidence_hash == expected_hash` — neutering the
-           evidenceHash check by hand — leaves all 146 tests passing and all 7 samples
-           verifying, because no tamper mode corrupts `evidence.hash` and no test asserts
-           that check fires. The floors catch a verifier that SHRINKS; they say nothing
-           about one that silently stops checking. An `evidence.hash` tamper mode is owed
-           (v1.1 register). Three control mutations — a forced `ok`, a `main()` that always
-           returns 0, and every check marked skipped — WERE caught, so this is a specific
-           hole rather than a rubber-stamp suite.
+           THAT HOLE IS NOW CLOSED, and the shape of it is worth keeping. Until 2026-08-17
+           `ok = True or evidence_hash == expected_hash` — neutering the evidenceHash check by
+           hand — left all 146 tests passing and all 7 samples verifying, because no tamper
+           mode mutated `evidence.hash`: the field was only ever READ. A named check that no
+           mode targets is a check nothing asserts. The `evidence-hash` mode (A-049) corrupts
+           the PUBLISHED hash rather than the canonical bytes, so it isolates that one check;
+           the same neutering now produces 12 failures. Its three tests are written the hard
+           way — the mode's presence in TAMPER_MODES asserted structurally, the mutated bundle
+           required to fail ON THAT CHECK specifically, and the UNMUTATED bundle required to
+           pass it, so the test cannot succeed by the check always failing.
+           LIMIT THAT REMAINS: the floors catch a verifier that SHRINKS and this mode catches
+           one named check that stops checking. Neither generalises. No mutation sweep has been
+           run over `keccak.py`, `secp256k1.py`, `eip712.py`, `refusal.py` or `reasoncodes.py`,
+           so this is not known to have been the only such hole — it is the only one anybody
+           has looked for.
            LIMIT: it verifies that a bundle is the one a receipt commits to and that the
            receipt is correctly signed. It CANNOT confirm the bundle's factual content
            against a chain — that needs an archive node at the anchored block. Verifying a

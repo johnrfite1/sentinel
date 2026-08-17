@@ -149,7 +149,7 @@ design forks. Never sign a gate, never certify a public claim.
 
 ## 3. Where the build is
 
-**73/73 Foundry · 405/405 TypeScript · 146/146 verifier · 50 corpus fixtures · 7 samples ·
+**73/73 Foundry · 405/405 TypeScript · 149/149 verifier · 50 corpus fixtures · 7 samples ·
 gate green at the deep profile · workspace guards OK.** *(This line read 66/66 and 70/70 for
 most of 2026-08-16 while all three numbers moved underneath it — in the file that opens by
 declaring itself the memory. Update it in the same edit that changes a suite, not later.)*
@@ -181,9 +181,13 @@ beside it was not, so `| coinbase |` passed and `| Coinbase |` failed. **Recorde
 unscoped spec greps, three secrets-guard holes, the rename gate's second-remote and trailing-slash
 gaps, the class-coverage laundering route through committed `results/`, and — **omitted from this
 list until 2026-08-17, though A-047's own entry calls it "A GENUINE HOLE THAT REMAINS" — that A
-GREEN SUITE IS NOT A CORRECT VERIFIER:** neutering the `evidenceHash` check by hand leaves all
-146 tests passing and all 7 samples verifying, because no tamper mode corrupts `evidence.hash`.
-An `evidence.hash` tamper mode is owed. See `docs/v1-1-register.md` §8.
+GREEN SUITE IS NOT A CORRECT VERIFIER:** neutering the `evidenceHash` check by hand left all
+146 tests passing and all 7 samples verifying, because no tamper mode corrupted `evidence.hash`.
+**CLOSED 2026-08-17 (A-049): the `evidence-hash` mode mutates the PUBLISHED hash rather than the
+canonical bytes, so it isolates that one check, and the same neutering now produces 12 failures.**
+The generalisation is NOT closed — no mutation sweep has run over the verifier's other five
+modules, so this was the only such hole anybody looked for, not the only one there is.
+See `docs/v1-1-register.md` §8.
 
 **A-048 (2026-08-17) then broke A-047's own headline.** A second review round — thinner briefs,
 three reviewers — found the verifier floor counted tests that never ran (`@unittest.skip`,
@@ -218,7 +222,7 @@ means only that no NEW class went vacuous. Read their output, not their exit sta
   criterion** (L3-only = compares the call or its effects to the mandate's PURPOSE fields) and
   the figure fell from 17 to 8. The 8 are exactly the wrong-purpose class. The report emits the
   split as a CHECK — its second row must be empty.
-- **D-010 verifier:** 7/7 samples, 55/55 applicable tamper cases, 146/146 tests — **and all three
+- **D-010 verifier:** 7/7 samples, 62/62 applicable tamper cases over 24 distinct modes, 149/149 tests — **and all four
   are now FLOORS the gate asserts (A-047), not prose.** *This line read `6/6, 42/42, 70/70` until
   2026-08-16, forty-six lines below the headline in §3 that already said 146/146 and 7 samples —
   i.e. this file contradicted itself, in the file that opens by declaring itself the memory. It

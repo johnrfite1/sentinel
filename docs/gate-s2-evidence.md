@@ -485,7 +485,7 @@ prevent.
   verifier not comparing the recovered address against the deployment's known signer certifies
   a record anyone can mint. §5.5.1 is amended for all four.
   **THE FIGURES IN THE PARAGRAPH ABOVE ARE A RECORD OF A-041 AND ARE NOT THE CURRENT STATE.**
-  The verifier is now **146 tests, 7/7 samples, 55/55 applicable tamper cases**, and it verifies
+  As of that date the verifier was **146 tests, 7/7 samples, 55/55 applicable tamper cases**, and it verifies
   refusals as well as decisions. Two `--tamper` modes were VACUOUS on a refusal bundle — they
   mutated a receipt body that does not exist and reported "correctly rejected" — and now raise
   `NotApplicable`; nothing in the corpus could have exposed that until a refusal artifact

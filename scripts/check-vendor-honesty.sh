@@ -46,7 +46,15 @@ fail=0
 # stronger against an unlisted name. The honest reading: this catches the vendors the project
 # has actually written about, which is the population D-008's artifacts draw from, and a new
 # vendor entering an artifact is a thing a human has to notice.
-VENDORS='Cobo|Coinbase|Circle|Privy|Safe|MetaMask|Sigil|Hypernative|Blockaid|Tenderly'
+#
+# THE ROSTER IS THE TWO VARIABLES BELOW, AND THERE IS DELIBERATELY NO THIRD ONE (A-049). A single
+# `VENDORS=` list used to live on this line, directly under the paragraph above. When the case
+# split landed (A-047) it became dead — expanded nowhere — while remaining the only thing a
+# reader would take to be the roster, so a maintainer adding an eleventh vendor here would have
+# changed nothing and got a green gate. An independent review demonstrated exactly that with
+# `Fireblocks`. It is deleted rather than kept in sync, because two lists that must agree is the
+# defect this file already carries a warning about. **Add new vendors to ONE of the two lists
+# below, choosing by whether the token means anything but a vendor.**
 
 # CASE. Until 2026-08-16 the scan below was `grep -Eq` — case-SENSITIVE — while the §10.1 label
 # scan forty lines above is `grep -Eiq`. An adversarial review defeated it with one token: a
@@ -60,25 +68,28 @@ VENDORS='Cobo|Coinbase|Circle|Privy|Safe|MetaMask|Sigil|Hypernative|Blockaid|Ten
 # `contracts/src/SentinelVault.sol` and four `ts/src/**` files — so a blanket `-i` fires on the
 # flagship measurement artifact on the first run, and this file's own header says a guard that
 # cries wolf gets reverted rather than obeyed. So the list is split:
-VENDORS_ANYCASE='Cobo|Coinbase|Privy|MetaMask|Hypernative|Blockaid|Tenderly'
-VENDORS_EXACTCASE='Circle|Safe|Sigil'
+# NINE of the ten are matched in ANY casing. Only `Safe` is not, and the exception is measured
+# rather than assumed: over this guard's own artifact set, with the same `\b` form it uses,
+# case-insensitive matching hits **safe 11 files** (`docs/ablation-report.md`'s "costly-but-safe",
+# `contracts/src/SentinelVault.sol`, four `ts/src/**`) versus **circle 0 and sigil 0**.
+VENDORS_ANYCASE='Cobo|Coinbase|Circle|Privy|MetaMask|Sigil|Hypernative|Blockaid|Tenderly'
+VENDORS_EXACTCASE='Safe|SAFE'
 #
-# THE JUSTIFICATION ABOVE WAS OVERSTATED AND IS CORRECTED HERE (A-048). It originally read "two
-# of the ten spellings are ordinary English words: `Safe` and `Circle`" — and then put THREE in
-# the exact-case list, `Sigil` entering with no argument at all and being retroactively covered
-# by "those three". Measured over this guard's own artifact set with the same `\b` form it uses:
-# **safe 11 files, circle 0, sigil 0.** Only `Safe` supports the trade. `Circle` and `Sigil`
-# could move to ANYCASE at zero measured cost, and an independent review demonstrated that with
-# the guard still exiting 0 on the clean tree.
+# HOW THIS LIST GOT HERE, because the reasoning was wrong twice and the corrections are the
+# useful part. A-047 split the roster and put THREE names in the exact-case list while its own
+# comment said "two of the ten spellings are ordinary English words" — `Sigil` entered with no
+# argument at all. A-048 corrected the prose but left the code, and stated the residual as
+# "lower case", which was also wrong: `grep -Eq` is exact-case in BOTH directions, so `SAFE`,
+# `CIRCLE` and `SIGIL` in capitals evaded too, and all-caps is this repository's own emphasis
+# idiom. A-049 fixes the code: `Circle` and `Sigil` move to any-case at zero measured cost, and
+# `Safe` carries its uppercase spelling explicitly.
 #
-# RESIDUAL, STATED CORRECTLY THIS TIME AND IT IS WIDER THAN LOWER CASE. The first version said
-# "`circle`, `safe` and `sigil` in lower case still pass". Wrong: `grep -Eq` is exact-case in
-# BOTH directions, so **ANY casing but the one declared spelling evades** — `SAFE`, `CIRCLE` and
-# `SIGIL` in capitals all pass, verified. All-caps is this repository's own idiom for emphasis,
-# which makes those the *more* likely accidental spellings rather than adversarial ones. The
-# other seven names are caught in any casing. Closing the uppercase half costs nothing measured
-# and is recorded as owed in `docs/v1-1-register.md` §8.6 rather than done here, because John
-# scoped this pass to the severe defects and the false claims.
+# RESIDUAL, NARROWED AND STATED PRECISELY: `safe` and mixed-case oddities of it (`sAfE`) still
+# pass, because "safe" is an ordinary English word that occurs eleven times in scope and a guard
+# that cries wolf gets reverted rather than obeyed. That is one word in one casing family, down
+# from three words in every casing but one. A vendor named in an artifact as the lower-case word
+# "safe" remains something a human has to notice — the same residual this file already declares
+# for the unlisted vendors above.
 
 # MEASUREMENT ARTIFACTS are the files that carry numbers, evidence, or published claims. The
 # rule below is that no NAMED vendor may appear in one of them.

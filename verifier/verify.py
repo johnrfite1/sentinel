@@ -101,7 +101,7 @@ def _find_domain(sample_dir, override):
 
 
 TAMPER_MODES = (
-    "evidence", "receipt", "signature",
+    "evidence", "evidence-hash", "receipt", "signature",
     "reasons-substitute", "reasons-add", "reasons-remove", "reasons-reorder",
     "override-reviewreceipt", "override-nonce", "override-wrongkey",
     "override-otherchain",
@@ -152,6 +152,21 @@ def verify_sample(sample_dir, domain_path=None, tamper=None):
     evidence = jcs.parse_bytes(evidence_raw)
     if tamper == "evidence":
         evidence = _tamper_json(evidence)
+    elif tamper == "evidence-hash":
+        # Corrupt the PUBLISHED hash instead of the bytes, so that exactly one check
+        # can catch it: "keccak256(canonical bytes) matches evidence.hash".
+        #
+        # WHY THIS MODE EXISTS (A-049). An adversarial review neutered that check by
+        # hand -- `ok = True or evidence_hash == expected_hash` -- and all 146 tests
+        # passed and all 7 samples verified. No mode mutated `evidence.hash`; the
+        # field was only ever READ. The `evidence` mode above changes the canonical
+        # BYTES, which other checks also notice, so it never isolated this one.
+        # A named check that no mode targets is a check nothing asserts.
+        _h = _norm_hex(hash_expected)
+        _h = _h[2:] if _h.startswith("0x") else _h
+        # Flip the leading nibble to a value it cannot already hold, so the mutation
+        # is guaranteed to change the string rather than depending on its content.
+        hash_expected = "0x" + ("1" if _h[:1] == "0" else "0") + _h[1:]
     elif tamper == "receipt":
         receipt_doc = copy.deepcopy(receipt_doc)
         if not receipt_doc.get("receipt"):

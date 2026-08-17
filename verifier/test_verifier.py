@@ -439,7 +439,13 @@ class TestTamper(unittest.TestCase):
         # A-027. The six new cases are the point of that sample: the reason-code
         # tamper modes now run against a set of size ONE, which is the size the
         # published hash construction is most easily got wrong at.
-        self.assertEqual(exercised, 42, "expected 42 applicable tamper cases")
+        # 42 -> 48 (A-049): `evidence-hash` was added, applicable to all six receipt
+        # samples. It corrupts the PUBLISHED hash rather than the canonical bytes, so
+        # it is the only mode that isolates "keccak256(canonical bytes) matches
+        # evidence.hash" -- a named check that, until this mode existed, no mode
+        # targeted. An adversarial review neutered that check and the whole suite
+        # stayed green (A-048).
+        self.assertEqual(exercised, 48, "expected 48 applicable tamper cases")
 
     def test_evidence_tamper_breaks_the_receipt_binding(self):
         # Specifically: it must fail the receipt.evidenceHash check, not merely
@@ -2043,6 +2049,44 @@ class TestRefusalSampleInCorpus(unittest.TestCase):
             with self.subTest(sample=os.path.basename(path)):
                 with self.assertRaises(verify.NotApplicable):
                     verify.verify_sample(path, tamper="refusal-actionhash")
+
+
+class TestEvidenceHashTamper(unittest.TestCase):
+    """A-049. `evidence-hash` exists because a check nothing targets is a check
+    nothing asserts: the review that found this neutered
+    `keccak256(canonical bytes) matches evidence.hash` by hand and every one of the
+    then-146 tests still passed, because no tamper mode mutated the published hash.
+    """
+
+    def test_the_mode_is_declared(self):
+        # Structural, not behavioural. A mode can be implemented and never
+        # registered -- this repository's most-repeated defect (D-042) -- and the
+        # loop-driven tests below would then simply not run it.
+        self.assertIn("evidence-hash", verify.TAMPER_MODES)
+
+    def test_it_is_applicable_to_every_receipt_sample_and_is_rejected(self):
+        for path in sample_dirs():
+            with self.subTest(sample=os.path.basename(path)):
+                ok, checks = verify.verify_sample(path, tamper="evidence-hash")
+                self.assertFalse(
+                    ok, "a corrupted evidence.hash must not verify")
+                named = [c for c in checks
+                         if "matches evidence.hash" in c.name]
+                self.assertTrue(
+                    named, "the evidence.hash check must be among the checks run")
+                self.assertFalse(
+                    named[0].ok,
+                    "the failure must come from the evidence.hash check itself, "
+                    "not from some other check noticing the mutation")
+
+    def test_the_unmutated_sample_passes_that_same_check(self):
+        # Without this the test above could pass because the check ALWAYS fails.
+        for path in sample_dirs():
+            with self.subTest(sample=os.path.basename(path)):
+                _, checks = verify.verify_sample(path)
+                named = [c for c in checks if "matches evidence.hash" in c.name]
+                self.assertTrue(named)
+                self.assertTrue(named[0].ok)
 
 
 if __name__ == "__main__":

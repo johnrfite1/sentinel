@@ -308,12 +308,26 @@ blocked.** What genuinely defers it is that D-039's ruling is John's.
 
 ### 8.5 The D-010 verifier — a named check is asserted by nothing
 
-`ok = True or evidence_hash == expected_hash` in `verify.py` leaves **all 146 tests passing and
+**DONE 2026-08-17 (A-049) — see the closing note at the end of this subsection.** As found:
+`ok = True or evidence_hash == expected_hash` in `verify.py` left **all 146 tests passing and
 all 7 samples verifying**. No `TAMPER_MODE` corrupts `evidence.hash`; the field is only ever read.
 Proven non-vacuous against a bundle with a one-nibble-corrupted hash, which the unmutated code
 FAILs and the mutated code PASSes. **Owed: an `evidence.hash` tamper mode.** Three control
 mutations were caught, so this is a specific hole, not a general one. A-047's floors catch a
 verifier that SHRINKS; nothing catches one that silently stops checking.
+
+**CLOSED 2026-08-17 (A-049).** The `evidence-hash` tamper mode corrupts the PUBLISHED hash
+rather than the canonical bytes, which is what isolates this one check — the pre-existing
+`evidence` mode changes the bytes, and other checks notice that, so it never isolated it. Three
+tests, written so none can pass for the wrong reason: the mode's presence in `TAMPER_MODES` is
+asserted STRUCTURALLY (a mode can be implemented and never registered — D-042), the mutated
+bundle must fail ON THAT CHECK specifically rather than on any check, and the UNMUTATED bundle
+must PASS that same check so the test cannot succeed by the check always failing. Verified against
+the pre-fix state: the neutering that was invisible now produces 12 failures. Suite 146 → 149,
+tamper cases 55 → 62, and a distinct-MODE floor (24) was added because a pair count alone can be
+padded by adding samples. **What is NOT closed is the generalisation** — no mutation sweep has run
+over `keccak.py`, `secp256k1.py`, `eip712.py`, `refusal.py` or `reasoncodes.py`, so this is the
+only hole of its kind anybody has looked for.
 
 Also on that stage, not fixed:
 - **Arm B is subsumed by arm A.** `test_verifier.py:399` already runs
@@ -331,9 +345,13 @@ Also on that stage, not fixed:
   spelling evades** — `SAFE`, `CIRCLE` and `SIGIL` in capitals all pass, verified, and all-caps
   is this repository's own emphasis idiom. And the justification held for only ONE of the three:
   measured over the guard's own artifact set with its own `\b` form, **safe 11 files, circle 0,
-  sigil 0.** **OWED, and both are free: add the uppercase spellings, and move `Circle` and
-  `Sigil` to case-insensitive.** They are unfixed only because John scoped that pass to the
-  severe defects and the false claims. The other seven names are caught in any casing.
+  sigil 0.** **DONE 2026-08-17 (A-049): `Circle` and `Sigil` moved to any-case, and `Safe` now
+  carries its uppercase spelling explicitly.** Verified across seventeen probes — every casing of
+  every listed name is caught except the one declared residual. **The dead `VENDORS` variable is
+  also deleted** rather than kept in sync, since two lists that must agree is the defect this file
+  already warns about. **Residual, narrowed:** `safe` and mixed-case oddities of it still pass,
+  because "safe" occurs eleven times in scope as an English word and a guard that cries wolf gets
+  reverted. One word in one casing family, down from three words in every casing but one.
 - **The binary skip is an extension allowlist** (`*.png|*.pdf|*.zip|…`). A genuine
   `docs/gate-5-comparison.pdf` carrying a vendor table is never scanned.
 - **`CAVEAT` is `head -1` over the whole proposal**, so a shorter sentence containing the key
