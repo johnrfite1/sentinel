@@ -4,7 +4,7 @@ Rewritten at the end of each working session. **This file, not the conversation,
 memory.** If it disagrees with anything an agent remembers, this file wins.
 
 Last updated: **2026-08-16**, end of session. Branch `step-3/isolated-signer`, **pushed**
-(`75375b3`, verified against the remote rather than trusting the push output). Working tree
+(`3bb4b21`, verified against the remote rather than trusting the push output). Working tree
 clean. **This pointer names the last commit this file DESCRIBES, and the commit that updates
 it necessarily comes after — so expect it to trail by one doc-only commit, and check
 `git log` rather than treating a mismatch as a finding.** It read `f3308ea` while HEAD was two
