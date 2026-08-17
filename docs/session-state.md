@@ -151,6 +151,14 @@ declaring itself the memory. Update it in the same edit that changes a suite, no
 Run `./scripts/test.sh`; use `--gate` for evidence. Read the coverage boundary it prints — it is
 ONE statement, not a log; rewrite the affected layer when a step lands, never append.
 
+**All four counts above were re-measured 2026-08-16 (late session) and all four held.** The
+verifier's 146 was measured by running it — which until that moment was the ONLY way it could be
+measured, because **no profile of the gate ran the verifier and nothing in `scripts/` invoked
+it** (A-045). Its numbers were quoted on this line beside Foundry's and TypeScript's as though a
+green gate covered them; it did not, and a verifier regression could not have failed the gate.
+It is now a stage in `scripts/test.sh`, in both profiles, and both of its arms were falsified
+against the real script before that was claimed.
+
 **Eight mechanical guards run in the gate:** secrets (A-007), rename (D-016), labelling-prompt
 freeze (D-011a), EIP-712 type strings (D-023), §5.7.1 check coverage (D-031), **corpus class
 coverage (A-036, new 2026-08-16)**, vendor honesty (§7.5 Gate 5, D-008), and — deep profile
@@ -222,6 +230,17 @@ reasoning, its rejected options, and where stated the condition that would rever
 
 **Dead ends and traps — do not repeat:**
 
+- **A FALSIFICATION PROBE CAN ITSELF BE THE DEAD INSTRUMENT, AND ITS SILENCE READS AS A PASS.**
+  A-045: to prove the new verifier stage could turn the gate red, I appended a deliberately
+  failing test to `verifier/test_verifier.py` and ran the gate. **It printed GATE PASSED.** The
+  correct reading was not "the wiring is broken" — it was that `unittest.main(verbosity=2)` is
+  the last statement in that file, so a class appended *after* it is defined only after
+  `sys.exit()` has already fired and **never runs at all**. The probe tested nothing; the test
+  count stayed at 146 and I had not looked. Had I injected the probe and seen GATE FAILED for
+  some unrelated reason, or skipped the probe entirely on the grounds that `|| fail=1` is
+  obvious, the stage would have shipped with its wiring unproven either way. **Check that the
+  probe MOVED SOMETHING — the count, the output — before you believe what its result implies.**
+  Injected before the `__main__` block it ran (147 tests) and the gate went red correctly.
 - **A REGRESSION TEST CAN PASS AGAINST THE DEFECT IT NAMES.** A-044: the first backpressure
   test I wrote pinned the deadlock my own repair could introduce, not the unbounded dispatch it
   was written for — it passed against the unfixed server. **Always run a new regression test

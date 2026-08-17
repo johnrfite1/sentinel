@@ -120,6 +120,35 @@ else
     fi
 fi
 
+# THE D-010 VERIFIER, EXECUTED.
+#
+# Added 2026-08-16 (A-045). Until then this stage did not exist: the verifier's own suite was
+# invoked by NO profile of this script and by nothing else in `scripts/`, so its 146 tests
+# passed only when a human remembered to run them by hand. Its counts were nonetheless quoted
+# in `docs/session-state.md` §3 alongside the Foundry and TypeScript ones, as though a green
+# gate covered them. It did not. A regression in the verifier could not have failed this gate.
+#
+# That is this project's most-repeated defect — an instrument that exists and is wired to
+# nothing (D-042's invariant arms, A-036's class claims) — sitting in an S2 DELIVERABLE.
+#
+# Deliberately OUTSIDE the node_modules/anvil block above: D-010 requires the verifier share no
+# code and no language with the evaluator, and a stage that inherits the TypeScript stage's
+# preconditions would quietly couple them. It needs python3 and nothing else — the suite is
+# stdlib `unittest` and the CLI has zero third-party imports, so wiring it in adds no
+# dependency the repository did not already have.
+#
+# BOTH arms run, because they fail differently: the suite proves the verifier's internals,
+# and the sample walk proves it still certifies the COMMITTED artifacts. A verifier that
+# passes its own tests while rejecting the corpus is the failure this second arm catches.
+step "D-010 receipt verifier (independent Python; §14.2, D-010)"
+if command -v python3 >/dev/null 2>&1; then
+    python3 verifier/test_verifier.py || fail=1
+    python3 verifier/verify.py --all fixtures/samples || fail=1
+else
+    echo "python3 not found; the D-010 verifier is the independent check on every receipt."
+    fail=1
+fi
+
 printf '\n'
 if [ "$fail" -ne 0 ]; then
     echo -e "\033[31mGATE FAILED\033[0m"
@@ -267,13 +296,23 @@ WHAT IS COVERED, by layer, each with the limit that layer cannot exceed:
 
   D-010    The independent Python receipt verifier, in `verifier/`. Zero third-party
            dependencies; its own RFC 8785, Keccak-f[1600] and secp256k1 recovery, built by
-           an agent that never read this repository's TypeScript. 6/6 samples verify, 42/42
-           applicable tamper cases behave as specified, 70/70 of its own tests pass. The
-           sixth sample commits to exactly ONE reason code — until 2026-08-15 nothing
-           pinned that edge, and a producer appending the delimiter after a one-element
-           set would have verified here (A-027). Its keccak is pinned to
-           published vectors and its JCS to RFC 8785's appendix-B vectors, so green means
-           agreement with the STANDARD, not with itself.
+           an agent that never read this repository's TypeScript. 7/7 samples verify, 55/55
+           applicable tamper cases behave as specified, 146/146 of its own tests pass.
+           It verifies REFUSALS as well as decisions as of 2026-08-16: §5.5.1's
+           RefusalRecord was implemented by a schema-only agent and met a real signed
+           refusal it had never seen, which is where the envelope gap and three further
+           defects in that section came from (A-042). One sample commits to exactly ONE
+           reason code — until 2026-08-15 nothing pinned that edge, and a producer
+           appending the delimiter after a one-element set would have verified here
+           (A-027). Its keccak is pinned to published vectors and its JCS to RFC 8785's
+           appendix-B vectors, so green means agreement with the STANDARD, not with itself.
+           THESE FIGURES ARE NOW PRODUCED BY THIS SCRIPT RATHER THAN QUOTED IN IT. Until
+           2026-08-16 no profile of this gate ran the verifier at all: the three numbers
+           above read 6/6, 42/42 and 70/70 — true when written, stale through A-041
+           (70 → 101) and A-042 (101 → 146, and the seventh sample), in the block whose own
+           maintenance note exists because it had rotted once before. A regression in an S2
+           deliverable could not have failed this gate. Wired in as a stage under A-045,
+           both arms falsified against the real script before the claim was made.
            LIMIT: it verifies that a bundle is the one a receipt commits to and that the
            receipt is correctly signed. It CANNOT confirm the bundle's factual content
            against a chain — that needs an archive node at the anchored block. Verifying a
