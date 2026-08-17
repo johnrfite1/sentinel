@@ -465,6 +465,57 @@ prevent.
   promoted into v1 to surface, and it took an agent denied the implementation to find it. The
   verifier now refuses to certify an unauthenticated refusal rather than inventing an envelope;
   a §5 payload is owed at v1.1.
+  **ANNOTATED AGAIN 2026-08-16 (A-042), later the same day: the §5 refusal gap above was
+  closed, and closing it ran the D-010 experiment properly for the first time.** §5.5.1 was
+  published (D-043), and a schema-only agent — allowlisted to `verifier/**` and the proposal,
+  denied `ts/**` and `contracts/**` — built refusal verification from that section alone and
+  was pointed at a real signed refusal it had never seen (`fixtures/samples/refusal-vault-paused`,
+  the first such artifact in the repository). **The interpretation was declared before either
+  half finished:** agreement would mean §5.5.1 is precise enough to build from, divergence
+  would be a specification gap found the way D-010 exists to find one. **It resolved as
+  divergence, and named the clause.** What matched on the first run: the field list, the field
+  order, the domain tag, the preimage bytes, the charset rules, and the signature construction.
+  **What diverged was the ENVELOPE, which §5.5.1 left unspecified** — it named no file, no key
+  and no nesting depth, and the corpus uses a shape none of the agent's three guesses took.
+  **Three further defects in §5.5.1, all authored by the build loop, all found by the
+  independent side:** `actionHash` does not attribute a refusal — `refusal-vault-paused` and
+  `case-1-allow` carry a byte-identical `actionHash`, because the same action was legitimately
+  decided twice; the injectivity argument was wrong in both directions, reintroducing D-022's
+  reason-code delimiter smuggling in a second place; and `signer` is self-declared, so a
+  verifier not comparing the recovered address against the deployment's known signer certifies
+  a record anyone can mint. §5.5.1 is amended for all four.
+  **THE FIGURES IN THE PARAGRAPH ABOVE ARE A RECORD OF A-041 AND ARE NOT THE CURRENT STATE.**
+  The verifier is now **146 tests, 7/7 samples, 55/55 applicable tamper cases**, and it verifies
+  refusals as well as decisions. Two `--tamper` modes were VACUOUS on a refusal bundle — they
+  mutated a receipt body that does not exist and reported "correctly rejected" — and now raise
+  `NotApplicable`; nothing in the corpus could have exposed that until a refusal artifact
+  existed. **Still owed:** a refusal carries no expiry and is valid indefinitely,
+  `schemaVersion` is cross-checked against nothing, and `refusalReason` sits outside the
+  signature, so a presenter can rewrite it — §5.5.1 now says it is not evidence, which is
+  honest but is a limitation rather than a resolution.
+  **A SECOND ANNOTATION, 2026-08-16 (A-047), and this one bears on §11's CORPUS claims rather
+  than D-010's.** §11 and the gate's coverage boundary both recorded that the deep profile
+  verifies the committed labelling views as semantically current — "these are the views the
+  labellers saw", offered as the provenance claim git history alone could not establish.
+  **That check did not exist.** The stage compared a fresh run's digests against a committed
+  *summary* of the same digests; both sides described the code, and the committed view FILES
+  were never hashed. An adversarial reviewer rewrote F001's `declaredIntent` and its mandate
+  ceiling, changed nothing else, and the gate printed `committed views semantically current`.
+  **Every false-allow, exact-match and disagreement figure in this pack is drawn against the
+  committed views, so that provenance rested on git history after all — exactly what §11 had
+  said it no longer did.** The check is now built and falsified: the same tamper fails the deep
+  gate and names the file. **NO FIGURE IN THIS PACK IS KNOWN TO BE WRONG** — the corpus
+  reproduced its committed digests exactly on a clean rebuild, before and after the fix. What
+  changed is that the provenance is checkable rather than asserted.
+  **THIS DOES NOT DISTURB THE SIGNATURE.** D-009's four deliverables were in and green when S2
+  was signed and the verifier was one of them; A-042 improved a deliverable, and A-047 repaired
+  an instrument, both after the fact. Neither is a pass condition that failed.
+  **STOPPING RULE (D-045, John, 2026-08-16).** These are the LAST annotations to this pack
+  absent a new MATERIAL finding — material meaning it changes what a deliverable does or what a
+  figure rests on, not that it is merely new. **A third annotation in this phase is the signal
+  to RE-ISSUE the pack as a new version rather than keep appending.** The rule exists because an
+  append-only evidence document becomes a running log, and a running log is how the gate's
+  coverage boundary rotted twice in a single day (A-045, A-046).
   **The verifier's independence is DENTED, and both dents are recorded:** the symptoms it was
   given were implementation-derived, and a workspace guard it ran printed one-line excerpts from
   two `ts/` files (published Anvil key constants only — nothing about canonicalisation, hashing
