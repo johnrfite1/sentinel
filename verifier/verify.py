@@ -86,14 +86,48 @@ def _norm_hex(value):
 
 
 def _find_domain(sample_dir, override):
+    """Locate domain.json — the TRUST ROOT — preferring the deployment's copy.
+
+    THE PRESENTER OF A BUNDLE MUST NOT CHOOSE THE TRUST ROOT, AND UNTIL 2026-08-17 IT COULD
+    (A-055). This function searched the BUNDLE directory first and the parent second. Since
+    `domain.json` carries `signerAddress` — the one thing binding a receipt to the deployment's
+    signer rather than to whoever signed it — a bundle that shipped its own `domain.json` chose
+    what "the signer" means for itself. Demonstrated against the UNMUTATED verifier: a receipt
+    re-signed with an arbitrary outsider key, with `receipt.signer` set to that key's address and
+    a `domain.json` naming it, verified `=> PASS`, exit 0. Under `--all`, one hostile directory
+    inside a corpus overrode the signer identity for itself and the run still printed
+    `N/N verified`. No mutation was required; this was shipped behaviour.
+
+    Now: `--domain` wins if given, then the DEPLOYMENT's copy in the parent directory, and a
+    bundle-supplied copy is used only when there is no deployment copy at all — in which case
+    the caller marks the trust root as presenter-supplied and FAILS the sample, because a bundle
+    plus its own idea of the signer is not something that can be certified. A bundle that ships
+    a copy CONTRADICTING the deployment's is an error rather than a preference.
+
+    Returns (path, provenance, presenter_supplied).
+    """
     if override:
-        return override
-    for candidate in (
-        os.path.join(sample_dir, "domain.json"),
-        os.path.join(os.path.dirname(os.path.abspath(sample_dir)), "domain.json"),
-    ):
-        if os.path.isfile(candidate):
-            return candidate
+        return override, "supplied explicitly via --domain", False
+    inside = os.path.join(sample_dir, "domain.json")
+    parent = os.path.join(os.path.dirname(os.path.abspath(sample_dir)), "domain.json")
+    have_inside, have_parent = os.path.isfile(inside), os.path.isfile(parent)
+    if have_parent and have_inside:
+        try:
+            identical = _read_json(parent) == _read_json(inside)
+        except Exception:
+            identical = False
+        if not identical:
+            raise ValueError(
+                "the bundle ships its own domain.json and it CONTRADICTS the deployment's "
+                "copy in the parent directory. The trust root is not the presenter's to "
+                "choose: `signerAddress` is what binds a receipt to the deployment's signer. "
+                "Remove the bundle's copy, or pass --domain to state which root you mean."
+            )
+        return parent, "deployment copy (parent directory); the bundle's copy is identical", False
+    if have_parent:
+        return parent, "deployment copy (parent directory)", False
+    if have_inside:
+        return inside, "PRESENTER-SUPPLIED (the bundle's own domain.json; no deployment copy found)", True
     raise FileNotFoundError(
         "domain.json not found in the sample directory or its parent; "
         "pass --domain"
@@ -101,7 +135,7 @@ def _find_domain(sample_dir, override):
 
 
 TAMPER_MODES = (
-    "evidence", "evidence-hash", "receipt", "signature",
+    "evidence", "evidence-hash", "receipt", "receipt-wrongkey", "signature",
     "reasons-substitute", "reasons-add", "reasons-remove", "reasons-reorder",
     "override-reviewreceipt", "override-nonce", "override-wrongkey",
     "override-otherchain",
@@ -145,13 +179,52 @@ def verify_sample(sample_dir, domain_path=None, tamper=None):
         receipt_doc = _read_json(receipt_path)
     else:
         receipt_doc = {}
-    domain = _read_json(_find_domain(sample_dir, domain_path))
+    domain_file, domain_provenance, domain_presenter_supplied = _find_domain(
+        sample_dir, domain_path)
+    domain = _read_json(domain_file)
+
+    # THE TRUST ROOT IS NOW A NAMED CHECK RATHER THAN AN IMPLICIT ASSUMPTION (A-055).
+    #
+    # Every signer binding downstream is relative to `domain.signerAddress`, so where that file
+    # came from is the precondition for all of them. It was previously invisible — and invisible
+    # is how a presenter-supplied root certified an outsider-minted receipt with `=> PASS`. A
+    # bundle whose only trust root is its own copy now FAILS: "here is a bundle and here is who
+    # I say signed it" is not a certifiable claim, and answering it with PASS was the defect.
+    checks.append(Check(
+        "the trust root is the deployment's, not the presenter's",
+        not domain_presenter_supplied,
+        domain_provenance if not domain_presenter_supplied else (
+            domain_provenance + " — pass --domain with the deployment's domain.json, or place "
+            "it beside the bundle. A receipt can only be certified against a signer identity "
+            "the presenter did not supply."),
+    ))
 
     override_tamper = None
     refusal_tamper = None
     evidence = jcs.parse_bytes(evidence_raw)
     if tamper == "evidence":
         evidence = _tamper_json(evidence)
+    elif tamper == "receipt-wrongkey":
+        # THE MODE THE PRIMARY §5.4 ARTIFACT DID NOT HAVE (A-055). `override-wrongkey` and
+        # `refusal-wrongkey` both existed; the RECEIPT — the artifact the whole verifier is
+        # about — had neither, and that absence is the single reason the check binding a receipt
+        # to the DEPLOYMENT's signer was asserted by nothing. A directed sweep neutered
+        # `recovered == domain_signer` to `True` and every one of the then-154 tests passed.
+        #
+        # This is not a byte-flip. The receipt is re-signed by an OUTSIDER key and
+        # `receipt.signer` is rewritten to that key's own address, so the bundle is entirely
+        # SELF-CONSISTENT: `recovered == receipt.signer` passes, the signature is valid, nothing
+        # is malformed. The only thing that can reject it is the binding to the deployment's
+        # signer identity. That is the check this mode exists to make fail.
+        receipt_doc = copy.deepcopy(receipt_doc)
+        body = receipt_doc.get("receipt")
+        if not body:
+            raise NotApplicable(
+                "receipt-wrongkey needs a §5.4 receipt body; this sample has none")
+        outsider_addr = public_key_to_address(point_mul(_OUTSIDER_TEST_KEY, G))
+        body["signer"] = outsider_addr
+        receipt_doc["signature"] = sign_digest(
+            eip712.receipt_digest(domain, body), _OUTSIDER_TEST_KEY)
     elif tamper == "evidence-hash":
         # Corrupt the PUBLISHED hash instead of the bytes, so that exactly one check
         # can catch it: "keccak256(canonical bytes) matches evidence.hash".
@@ -162,6 +235,16 @@ def verify_sample(sample_dir, domain_path=None, tamper=None):
         # field was only ever READ. The `evidence` mode above changes the canonical
         # BYTES, which other checks also notice, so it never isolated this one.
         # A named check that no mode targets is a check nothing asserts.
+        #
+        # THAT SENTENCE IS FALSE AS A GENERAL RULE AND IS RETIRED (A-055). It held for THIS
+        # check and became load-bearing across three entries on that strength. A directed sweep
+        # measured it in both directions and refuted it: of 33 checks no tamper mode ever makes
+        # fail, 18 were probed and 10 were CAUGHT by the unit suite — not being targeted by a
+        # mode says nothing. And of checks that DO fail under some mode, 10 were neutered and 5
+        # SURVIVED, because their mode is caught by a different check failing alongside, so the
+        # tamper matrix scores them covered while nothing asserts them. **That direction is the
+        # dangerous one, and it means the tamper matrix is not a coverage measure. Mutation is.**
+        # The mode below is still worth having; the general inference that motivated it is not.
         _h = _norm_hex(hash_expected)
         _h = _h[2:] if _h.startswith("0x") else _h
         # Flip the leading nibble to a value it cannot already hold, so the mutation
@@ -879,9 +962,21 @@ def _refusal_reason_code_checks(located, receipt_doc, fields):
     out = []
     source = located.get("doc") or {}
     published = source.get("reasonCodes")
-    findings = source.get("signerFindings")
     if published is None:
         published = receipt_doc.get("reasonCodes")
+
+    # RESOLVED INDEPENDENTLY OF `published`, WHICH IS THE FIX (A-055). These two keys do not
+    # have to live in the same object, and IN THE SHIPPED CORPUS THEY DO NOT:
+    # `refusal-vault-paused/receipt.json` puts `reasonCodes` inside `refusalRecord` and
+    # `signerFindings` at the TOP LEVEL. The old code only consulted `receipt_doc` for findings
+    # when `published` was missing — so on the one refusal artifact in the repository `findings`
+    # resolved to None, the subset invariant was SKIPPED, and the verifier printed "the bundle
+    # carries no `signerFindings` array" about a bundle that carries one. Adding an uncommitted
+    # reason code to that array verified `=> PASS`, exit 0, against the unmutated verifier.
+    # `test_signer_findings_must_be_a_subset` co-locates both keys in one envelope, so it never
+    # exercised the corpus's own shape while its docstring claimed both were covered.
+    findings = source.get("signerFindings")
+    if findings is None:
         findings = receipt_doc.get("signerFindings")
 
     if published is None:
@@ -923,7 +1018,8 @@ def _refusal_reason_code_checks(located, receipt_doc, fields):
 
     if findings is None:
         out.append(Check("signerFindings ⊆ reasonCodes", True,
-                         "the bundle carries no `signerFindings` array",
+                         "no `signerFindings` array in the refusal record or at the top "
+                         "level of receipt.json — checked both (A-055)",
                          skipped=True))
     else:
         missing = sorted(set(findings) - set(published))

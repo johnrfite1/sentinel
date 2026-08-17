@@ -470,3 +470,55 @@ interesting ones. Any Python mutation harness here must run with `-B` and clear 
   a real mode with a registered no-op raised the pair count to 63 while the mode proving a
   corrupted receipt signature is rejected no longer existed, and both floors stayed green. Only
   `evidence-hash` has a structural test naming it; no other mode does.
+
+## 11. The `verify.py` sweep, 2026-08-17 (A-055) — 14 survivors, 2 LIVE defects, 3 closed
+
+The file that decides PASS or FAIL, swept for the first time. 40 mutations designed, 40 applied,
+**23 caught, 14 confirmed verdict-flippers, 1 degrade-only, 2 of the reviewer's own no-ops.** Four
+survivors additionally cleared the full `./scripts/test.sh`. A survivor here required a crafted
+artifact that the clean verifier rejects and the mutated one certifies — not merely a green suite.
+
+**CLOSED (A-055), the two that needed NO mutation plus the mode that covers the worst latent one:**
+the trust-root search order (O-2), the silently-skipped `signerFindings` subset (O-1), and the
+missing `receipt-wrongkey` tamper mode.
+
+**STILL OPEN — 13 latent survivors. Each needs a regression to be introduced first, so none is
+exploitable against the code as shipped; each is a named check that nothing asserts.** They
+cluster in two places, and the cluster is the finding:
+
+**(a) The override stage — §5.5 and §3.3(7).** `override targets a REVIEW receipt, not a BLOCK`;
+`recovered != signer` (the credential the isolated signer must not be able to mint); the three
+`override.{actionHash,mandateHash,policyHash} == receipt.{…}` bindings; `override.actionNonce ==
+action.actionNonce`. **No tamper mode touches the repoint fields at all**, and `override-nonce`
+mutates a SIGNED field so the signature check catches it first and this one is never the witness.
+
+**(b) Cross-artifact agreement.** `evidence.verdict` vs the receipt's verdict enum; mandate/policy
+and action/mandate splits; the same split on the refusal path; the anchor (`blockNumber` and
+`blockHash` — **the suite has no anchor test at all**); receipt malleability `(r, N−s, v^1)`, which
+is asserted to EXIST on a clean sample but never asserted to bite; `evidence.canonical.json`
+replaceable with junk because the hash is taken over recomputed bytes.
+
+**THE RECURRING SHAPE, and it is worth more than the list: a test that asserts a property of the
+CORPUS rather than of the VERIFIER.** `test_only_review_receipts_carry_an_override` asserts that no
+fixture overrides a BLOCK — which cannot catch a verifier that accepts one.
+`test_owner_is_not_the_sentinel_signer` and `test_review_receipt_hash_is_the_receipt_hashstruct`
+have the same shape. **A fixture property is not a verifier property**, and three of the 13 survive
+purely on that confusion.
+
+**WHAT PROVED WELL COVERED, since it bounds the result.** All 23 catches came from the unit suite,
+several from tests written for A-049/A-051. `_chain_checks`'s payload loading and `_binding_checks`
+are solidly pinned; so are the decision-OR-refusal mutual exclusion, `_locate_refusal`, the
+reason-code grammar on the receipt path, `_norm_hex` case folding, both evidenceHash bindings, and
+the low-s rule for the override and refusal signatures.
+
+## 12. Retired: "a check no tamper mode targets is a check nothing asserts" (A-055)
+
+That inference motivated A-049's `evidence-hash` mode and then became load-bearing across three
+entries. **Measured in both directions and refuted.** Of 33 checks no mode ever makes fail, 18
+were probed: **8 survived, 10 were CAUGHT** by the unit suite — so being un-targeted says nothing.
+Of checks that DO fail under some mode, 10 were neutered: **5 survived**, because the mode is
+caught by a *different* check failing alongside, so the matrix scores them covered while nothing
+asserts them. **That second direction is the dangerous one. The tamper matrix is not a coverage
+measure; mutation is.** The corrected figure: 79 named `Check(...)` sites, 46 ever constructed,
+**24 ever made to fail** — and 33 sites never constructed at all, which the "32" headline silently
+excluded.

@@ -248,7 +248,7 @@ fi
 # suite genuinely grows; NEVER lower one to make a run pass.
 VERIFIER_MIN_TESTS=158
 VERIFIER_MIN_SAMPLES=7
-VERIFIER_MIN_TAMPER=62
+VERIFIER_MIN_TAMPER=68
 # A MODE FLOOR, because a pair count alone rewards padding (A-049): `tamper cases` counts
 # (sample x mode) pairs, so ADDING a sample raises it whether or not modes were deleted.
 #
@@ -261,7 +261,7 @@ VERIFIER_MIN_TAMPER=62
 # to mutate at all. **Both floors are ratchets against accident, not against intent.** What
 # actually defends a specific mode is a structural test naming it — `test_the_mode_is_declared`
 # does that for `evidence-hash`, and no other mode has one.
-VERIFIER_MIN_TAMPER_MODES=24
+VERIFIER_MIN_TAMPER_MODES=25
 
 step "D-010 receipt verifier (independent Python; §14.2, D-010)"
 if command -v python3 >/dev/null 2>&1; then

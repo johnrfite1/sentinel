@@ -445,7 +445,12 @@ class TestTamper(unittest.TestCase):
         # evidence.hash" -- a named check that, until this mode existed, no mode
         # targeted. An adversarial review neutered that check and the whole suite
         # stayed green (A-048).
-        self.assertEqual(exercised, 48, "expected 48 applicable tamper cases")
+        # 48 -> 54 (A-055): `receipt-wrongkey` added, applicable to all six receipt samples.
+        # `override-wrongkey` and `refusal-wrongkey` already existed; the PRIMARY §5.4 artifact
+        # had neither, which is the single reason the receipt's binding to the DEPLOYMENT's
+        # signer was asserted by nothing until a directed sweep neutered it and all 154 tests
+        # still passed.
+        self.assertEqual(exercised, 54, "expected 54 applicable tamper cases")
 
     def test_evidence_tamper_breaks_the_receipt_binding(self):
         # Specifically: it must fail the receipt.evidenceHash check, not merely
