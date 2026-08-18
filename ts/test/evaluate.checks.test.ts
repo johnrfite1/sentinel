@@ -267,6 +267,37 @@ const CASES: {code: string; expect: CheckOutcome; overrides: Overrides; note?: s
      overrides: {state: {maxNativeValueWei: VALUE}}, note: "value EXACTLY at the vault cap"},
     {code: "EVAL_ACTION_DEADLINE", expect: "PASS",
      overrides: {action: {deadline: NOW}}, note: "now EXACTLY at the deadline"},
+
+    // A-072: THE OTHER SIX EDGES. A-068's comment above says "`<=` could become `<` on all
+    // five" and then pins FOUR — `EVAL_APPROVAL_CEILING`, the fifth `D-06` named by line, got
+    // no row. A mechanical sweep of every comparison in `checks.ts` (8 sites, 10 edges) found
+    // that four more were unpinned as well: A-064 split the two window checks by BOUND but gave
+    // each bound only a VIOLATION row, which pins the DIRECTION and not the EDGE.
+    //
+    // Measured before these rows existed, each with the pinned deadline edge as a control that
+    // correctly failed: all six mutations below left this file at `pass 96 / fail 0`.
+    //
+    // The harm is the same one A-068 states for itself, and it is not hypothetical: a value or
+    // a timestamp EXACTLY at a declared limit is the commonest real case and the one a mandate
+    // author would believe they had authorised. Every one of these flips it to a refusal.
+    {code: "EVAL_MANDATE_WINDOW", expect: "PASS", overrides: {mandate: {validAfter: NOW}},
+     note: "LOWER edge: now EXACTLY at validAfter — the first instant of force"},
+    {code: "EVAL_MANDATE_WINDOW", expect: "PASS", overrides: {mandate: {validUntil: NOW}},
+     note: "UPPER edge: now EXACTLY at validUntil — the last instant of force"},
+    {code: "EVAL_POLICY_WINDOW", expect: "PASS", overrides: {policy: {validAfter: NOW}},
+     note: "LOWER edge: now EXACTLY at validAfter"},
+    {code: "EVAL_POLICY_WINDOW", expect: "PASS", overrides: {policy: {validUntil: NOW}},
+     note: "UPPER edge: now EXACTLY at validUntil"},
+    {code: "EVAL_APPROVAL_CEILING", expect: "PASS",
+     overrides: {target: DEMO_ERC20, callData: approveCalldata(OWNER, 5n),
+                 mandate: {target: DEMO_ERC20, selector: "0x095ea7b3"},
+                 policy: {maxAllowanceIncreaseBaseUnits: 5n}},
+     note: "D-06's FIFTH comparison, named by line and left unpinned by A-068"},
+    {code: "EVAL_ALLOWANCE_EFFECT_WITHIN_CEILING", expect: "PASS",
+     overrides: {policy: {maxAllowanceIncreaseBaseUnits: 5n},
+                 simulation: {allowanceDeltas: [{token: DEMO_ERC20, owner: VAULT,
+                     spender: OTHER, before: 0n, after: 5n, delta: 5n}]}},
+     note: "resulting allowance EXACTLY at the ceiling"},
     {code: "EVAL_CALLDATA_UNDECODABLE", expect: "UNRESOLVED",
      overrides: {callData: "0xdeadbeef" as Hex}},
     {code: "EVAL_SELECTOR_BOUND", expect: "VIOLATION", overrides: {mandate: {selector: "0x095ea7b3"}}},

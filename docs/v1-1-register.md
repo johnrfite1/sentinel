@@ -791,3 +791,44 @@ spec finding a case the corpus does not exercise — and it is the second time t
 **Owed at v1.1:** a fixture whose mandate and policy native ceilings differ, so the intersection
 rule is exercised by the corpus rather than only by the verifier's own tests. Small, and it adds
 a fixture rather than moving a label — so it does NOT fire D-043(b)'s re-label trigger.
+
+## 14. Round six residuals — stated by the repairs that did NOT close them (D-052(b), A-070/A-071/A-072)
+
+Every item here was surfaced by a repair made under `docs/repair-protocol.md`, whose step 6
+requires a repair to state what it does not reach. **A repair with no stated residual is
+asserting completeness, and that assertion has been wrong four times running.** These are
+recorded rather than fixed, and the reason is given for each.
+
+- **NO GATE FLOOR EXISTS ON THE FOUNDRY OR TYPESCRIPT SUITE COUNTS** (round six `L8-14`).
+  `grep -n 'MIN_\|FLOOR' scripts/*.sh` finds floors only for the verifier: the Solidity stage is
+  `forge test -vv` and the TypeScript stage is `npm test`, and **neither count is read, compared
+  or asserted.** A SHRINKING TypeScript suite is invisible to the gate. This is the same defect
+  A-047 closed for the verifier and did not generalise. **Not fixed here:** it is outside
+  D-052(b)'s Critical/High scope, and adding a floor changes what the gate asserts.
+- **The `<=` edges are pinned; the CEILINGS themselves are not adjudicated** (A-072). The six new
+  at-boundary rows say a value exactly at a limit is allowed. They say nothing about whether the
+  limit is the right one — §5.2's intersection question, recorded separately in §13.5.
+- **`EVAL_CALL_GRAPH_EXPECTED` is asserted by no CORPUS fixture and no SAMPLE** (A-072). `D-025`
+  reserves that class deliberately, so the pipeline is now pinned by unit tests only and **the
+  gate remains blind to it at every profile.** Stated so a green gate is not read as coverage.
+- **The credential guard matches a key-shaped name only where it binds the value DIRECTLY**
+  (A-070). `{apiKey3: {"v": "<64hex>"}}` still passes: the hex binds to `v`, which is not
+  key-shaped. One bracket level is covered, arbitrary nesting is not, and chasing it with a regex
+  would trade a real false-negative for a worse false-positive rate across a repository full of
+  `bytes32` literals.
+- **`decodedSelectorAndParameters` is still compared to nothing** (A-070). The §5.6 projections
+  now run on both paths and fail on absence, but the field D-014's justification actually rests on
+  is checked by neither the signer nor the verifier. **This is the larger finding, it sits inside
+  the SIGNED Gate S1 pack, and it is not an agent's to close** — it changes what the product
+  guarantees.
+- **The repair protocol has no mechanical half** (A-070). `check-label-prompt.sh`'s header states
+  the project's own standard: *"a durable project rule gets a mechanical guard rather than
+  prose."* By that standard `docs/repair-protocol.md` is incomplete. A gate stage asserting that
+  a decision entry claiming a repair carries a recorded sibling list and a stated residual is
+  **unbuilt, unscoped, and John's to rule on.**
+- **A divergent SAMPLE is owed, not a divergent fixture** (A-070). See §13.5 as corrected: F006
+  already gives the corpus a 500× ceiling divergence; what nothing exercises is the D-010
+  verifier's intersection reading, and that reads samples.
+- **Round six is not retroactively valid** (A-071). The apparatus is repaired and the deep gate
+  now passes from a symlinked worktree, but a round run on a broken apparatus does not become
+  sound afterwards. **Whether to re-take that coverage is John's call under D-052(b).**

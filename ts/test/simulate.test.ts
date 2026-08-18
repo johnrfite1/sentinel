@@ -14,7 +14,7 @@ import {
 import {anvil} from "viem/chains";
 import {buildRegistry, decodeCall, type TargetRegistry} from "../src/decode/index.ts";
 import {simulateAction} from "../src/simulate/index.ts";
-import {internalCalls} from "../src/simulate/anvil.ts";
+import {createAnvilControl, internalCalls} from "../src/simulate/anvil.ts";
 import type {Hex} from "../src/signer/protocol.ts";
 import {OWNER, SIGNER, artifact, startAnvil, type AnvilHandle} from "./harness.ts";
 
@@ -198,9 +198,31 @@ describe("the pipeline leaves no trace", () => {
         const first = await simulateAction(args);
         const second = await simulateAction(args);
 
-        assert.deepEqual(
-            first.entitlements[0]!.expiryAfter - first.entitlements[0]!.expiryBefore,
-            second.entitlements[0]!.expiryAfter - second.entitlements[0]!.expiryBefore,
+        // A-072: THIS ASSERTION USED TO COMPARE THE WALL CLOCK AND FAILED ~1 RUN IN 11.
+        //
+        // It compared `expiryAfter - expiryBefore` across the two runs. Both are snapshot-
+        // isolated, so `expiryBefore` is 0 in both and the quantity actually compared was
+        // `block.timestamp + duration`. Anvil keeps block timestamps strictly increasing, so
+        // the test failed whenever the two simulations straddled a second boundary — measured
+        // at 2 failures in 22 runs by one round-six lens and hit again by another. **A test
+        // that fails ~9% of the time for a reason unrelated to what it names is worse than no
+        // test: its failure is indistinguishable from the leak it exists to detect**, and it
+        // was the sole reason one lens's baseline was not green.
+        //
+        // THE PROPERTY IS ABOUT THE PRE-STATE, NOT THE POST-STATE. "The first run left nothing
+        // behind" means the second simulation must OBSERVE the same starting chain as the
+        // first. That is `expiryBefore`, and it is clock-independent. A leaked first run makes
+        // the second's `expiryBefore` non-zero, which this still catches — falsified by
+        // no-op'ing the snapshot revert, which fails this assertion.
+        assert.equal(
+            first.entitlements[0]!.expiryBefore,
+            second.entitlements[0]!.expiryBefore,
+            "the second simulation observed a different pre-state: the first run leaked",
+        );
+        // The granted duration is still pinned, without the absolute clock riding along.
+        assert.equal(
+            first.entitlements[0]!.expiryAfter - first.entitlements[0]!.expiryBefore > 0n,
+            second.entitlements[0]!.expiryAfter - second.entitlements[0]!.expiryBefore > 0n,
         );
         assert.equal(first.anchor.blockNumber, second.anchor.blockNumber);
         assert.equal(first.anchor.blockHash, second.anchor.blockHash);
@@ -507,5 +529,86 @@ describe("internalCalls walks the whole trace, not just the top level (A-068)", 
         // The paired positive. Without it, a function that always returned a non-empty array
         // would satisfy both assertions above while breaking every conforming purchase.
         assert.deepEqual(internalCalls(node("0xaaa")), []);
+    });
+});
+
+describe("the call graph PIPELINE is asserted end to end, not just its pure walk (A-072)", () => {
+    /**
+     * A-068 closed round five's `C-3` by pinning `internalCalls` — the pure walk — with three
+     * unit tests. Round six then deleted the walk's INPUT and its OUTPUT with the whole suite
+     * still green, because the walk was the only part anybody had pinned:
+     *
+     *   * `subcalls = internalCalls(callTrace).map(...)` -> `subcalls = []`   survived 481/481
+     *   * `{tracer: "callTracer"}` -> `{tracer: "prestateTracer"}`            survived 481/481
+     *
+     * The second is the worse of the two. `prestateTracer` returns an account map with no
+     * `calls` key at any depth AND DOES NOT ERROR, so `internalCalls` returns `[]` for every
+     * transaction there can ever be and `SIM_CALL_TRACE_UNAVAILABLE` never fires. Silence
+     * reads exactly like "this call made no internal calls" — failure mode 6, in the product
+     * rather than in a probe.
+     *
+     * Neither is caught by any profile of the gate: `internalCallCount` is 0 in 46 of the 50
+     * committed views and null in the other 4, and `internalCallTrace` is `[]` in all seven
+     * sample bundles, so NO committed artifact carries a non-empty call graph to compare
+     * against. `EVAL_CALL_GRAPH_EXPECTED` is a hard `require_(internalCalls.length === 0, ...)`,
+     * so a producer that is always empty makes §3.3(11)'s defence pass unconditionally.
+     *
+     * These two tests pin the two ends. Both fail against the mutations above.
+     */
+
+    it("maps every descendant of the fetched trace into the result, not just the top level", async () => {
+        // The control delegates everything to the real Anvil control except the trace, which is
+        // replaced by a synthetic nested one. That isolates the MAPPING: the chain still runs
+        // the transaction, and only the trace's shape is ours.
+        const callData = purchaseCalldata(OWNER.address.toLowerCase() as Hex);
+        const real = createAnvilControl(publicClient);
+        const nested = {
+            type: "CALL", from: "0x1111111111111111111111111111111111111111",
+            to: "0x2222222222222222222222222222222222222222",
+            calls: [
+                {type: "STATICCALL", from: "0x2222222222222222222222222222222222222222",
+                 to: "0x3333333333333333333333333333333333333333",
+                 calls: [{type: "DELEGATECALL",
+                          from: "0x3333333333333333333333333333333333333333",
+                          to: "0x4444444444444444444444444444444444444444"}]},
+            ],
+        };
+        const result = await simulateAction({
+            client: publicClient,
+            vault: VAULT,
+            target: demoPay,
+            valueWei: 1_000n,
+            callData,
+            decoded: decodeFor(demoPay, callData),
+            control: {...real, traceTransaction: async () => nested as never},
+        });
+
+        // Depth-first, excluding the root, lower-cased, `to` preserved.
+        assert.deepEqual(result.internalCalls, [
+            {from: "0x2222222222222222222222222222222222222222",
+             to: "0x3333333333333333333333333333333333333333", type: "STATICCALL"},
+            {from: "0x3333333333333333333333333333333333333333",
+             to: "0x4444444444444444444444444444444444444444", type: "DELEGATECALL"},
+        ]);
+        assert.deepEqual(result.unresolvedChecks, []);
+    });
+
+    it("asks the node for a callTracer trace, which is the only tracer that reports calls", async () => {
+        // Pins the walk's INPUT. A tracer that returns no `calls` key produces an empty graph
+        // for every transaction without erroring, so this cannot be left to the trace's shape.
+        const seen: {method: string; params: unknown[]}[] = [];
+        const stub = {
+            request: async (a: {method: string; params: unknown[]}) => {
+                seen.push(a);
+                return {type: "CALL", from: "0x00", to: "0x00"};
+            },
+        } as unknown as PublicClient;
+
+        await createAnvilControl(stub).traceTransaction("0xdeadbeef" as Hex);
+
+        assert.equal(seen.length, 1);
+        const call = seen[0]!;
+        assert.equal(call.method, "debug_traceTransaction");
+        assert.deepEqual(call.params[1], {tracer: "callTracer"});
     });
 });
