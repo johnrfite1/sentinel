@@ -82,8 +82,30 @@ TRIGGERED IT AND IT RAN — ROUND FIVE, 2026-08-17 (A-057 commissioned it, A-058
 IT IS NOT CLEAN, so under D-047 the loop continues and under D-048 pre-publication is still
 blocked.**
 
-**~~THE NEXT MOVE IS TWO RULINGS FROM JOHN~~ — BOTH TAKEN 2026-08-17 AT A FACILITATED
-WALKTHROUGH (D-050), ALONG WITH FOUR MORE. THE NEXT MOVE IS ROUND SIX, AND JOHN TRIGGERS IT.**
+**OVERNIGHT SESSION, 2026-08-17 → 18. John authorised the agent to decide and execute while he
+slept. What that produced is A-062 through A-067; what it deliberately did NOT do is below.**
+
+**ONE THING WAITS ON JOHN AND NOTHING ELSE DOES: certify or reject the §7.1 containment
+correction (A-063).** D-042's correction of an overstatement was itself an overstatement — the
+native ceiling is PER ACTION and nothing bounds cumulative authority, measured by draining a
+capped vault to zero with 100 valid receipts. The corrected text is in the proposal, the gate's
+coverage boundary and the S2 pack, **marked UNCERTIFIED in all three**. Certification of public
+claims is autonomy NONE and an overnight authorisation does not move a rule that exists for
+exactly the case of an agent working unsupervised.
+
+**THE NEXT MOVE IS ROUND SIX, AND JOHN TRIGGERS IT.** It is now DEFINED before it is briefed,
+which round five was not: D-050(1) ratified A-060's nine surfaces, and `docs/round-six-brief.md`
+is the drafted brief. **Both of A-060's conditions are now meetable** — the deep profile can be
+run from a worktree as of A-066, which it could not be when the condition was ratified.
+
+**WHY NOT MORE REPAIRS FIRST: 19 CONFIRMED FINDINGS ARE RECORDED AND DELIBERATELY UNFIXED**
+(register §13.4). Nineteen fixes authored by the same hands would be nineteen more things for an
+independent lens to find wrong, and this loop exists precisely because the build loop does not
+find its own defects. **The known set is now small enough and verified enough that round six's
+result will mean something in either direction** — which was the whole argument for
+fix-then-measure, and it has been served.
+
+*The six walkthrough rulings that got here (D-050), kept because they are the reasoning:*
 
 **ROUND SIX IS DEFINED NOW, WHICH ROUND FIVE WAS NOT.** D-050(1) ratified A-060: a round is
 FULL BREADTH when every one of NINE named surfaces is covered by a reviewer that ran its own
