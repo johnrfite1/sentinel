@@ -219,10 +219,11 @@ design forks. Never sign a gate, never certify a public claim.
 
 ## 3. Where the build is
 
-**75/75 Foundry · 409/409 TypeScript · 173/173 verifier · 78 tamper cases over 30 modes ·
+**75/75 Foundry · 426/426 TypeScript · 176/176 verifier · 78 tamper cases over 30 modes ·
 50 corpus fixtures · 7 samples · gate green at the deep profile · workspace guards OK.**
 *(A-059 moved 160→170 / 77→78 / 29→30; A-061 moved 405→407 TypeScript and 170→173 verifier;
-A-063 moved 73→74 Foundry; A-064 moved 74→75 Foundry and 407→409 TypeScript.
+A-063 moved 73→74 Foundry; A-064 moved 74→75 Foundry and 407→409 TypeScript;
+A-067 moved 409→426 TypeScript and 173→176 verifier.
 Every gate FLOOR was ratcheted in the SAME edit as the suite it bounds, which is the rule this
 line exists to enforce and the rule it has broken three times.)*
 *(Read `149/149` and omitted the tamper figures entirely until 2026-08-17 — stale for the third
@@ -384,6 +385,9 @@ reasoning, its rejected options, and where stated the condition that would rever
 | A-062 | The coverage boundary audited WHOLE — four false statements, two reported by nobody; G-2 closed with a provenance gate stage |
 | A-063 | **F-VAULT-1: D-042's correction was itself false.** Four sites repaired, a limit test added, **claim UNCERTIFIED — awaits John** |
 | A-064 | **Cluster B closed:** labels pinned (9th guard), corpus VERDICTS compared, both window lower bounds exercised, the invariant arm's registration asserted |
+| A-065 | Two verified leads: the env template that never shipped, and a suite figure counted twice |
+| A-066 | **The deep profile can now be run from a worktree** — D-050(1)'s condition was unmeetable when it was ratified |
+| A-067 | **21 of 24 leads CONFIRMED** by four independent adjudicators. `D-08` raised to HIGH and fixed; `H-4` fixed; 19 recorded |
 | A-042 | **The D-010 experiment run properly:** a schema-only build met a real signed refusal it had never seen. Everything §5.5.1 STATED matched first time; the envelope it omitted diverged, plus three defects in the section — all mine, all corrected. 101 → 146 tests |
 
 ## 5. Traces — what worked, and what was a dead end
