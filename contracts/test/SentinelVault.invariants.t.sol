@@ -705,6 +705,64 @@ contract SentinelVaultInvariantTest is Test {
         targetSelector(FuzzSelector({addr: address(handler), selectors: sel}));
     }
 
+    /// @notice EVERY HANDLER ACTION IS ACTUALLY REGISTERED WITH THE FUZZER (A-064).
+    ///
+    /// @dev The block above already WARNS that registering an action is a separate step from
+    ///      writing one and that forgetting it is silent. A comment describing a hazard is not
+    ///      a check — this project's own trace file records a test file that named a bypass in
+    ///      prose and routed around it, and D-042's arms shipped unregistered with the whole
+    ///      suite green and their invariants pointing at nothing.
+    ///
+    ///      Round five demonstrated that nothing had changed: re-pointing ONE line —
+    ///      `sel[12] = VaultHandler.executeFutureNonce.selector` — to an already-registered
+    ///      action left Foundry at 73/73 and silently restored the exact pre-D-042 blind spot,
+    ///      because the only test touching that arm CALLS IT DIRECTLY rather than asserting it
+    ///      is reachable by the fuzzer.
+    ///
+    ///      So this reads what was REGISTERED — `targetSelectors()` is forge-std's own record,
+    ///      not our copy of it — and requires every action to be in it. Asserting the STRUCTURE
+    ///      that produces behaviour is the project's documented answer where the behaviour
+    ///      itself cannot be reached from a test.
+    function test_everyHandlerActionIsRegisteredWithTheFuzzer() public view {
+        FuzzSelector[] memory registered = targetSelectors();
+        assertEq(registered.length, 1, "the handler is the only fuzz target");
+        assertEq(registered[0].addr, address(handler), "registered against the wrong contract");
+
+        bytes4[] memory expected = new bytes4[](14);
+        expected[0] = VaultHandler.executeValid.selector;
+        expected[1] = VaultHandler.executeReplay.selector;
+        expected[2] = VaultHandler.executeNonAllow.selector;
+        expected[3] = VaultHandler.executeTamperedCalldata.selector;
+        expected[4] = VaultHandler.executeForgedSignature.selector;
+        expected[5] = VaultHandler.togglePause.selector;
+        expected[6] = VaultHandler.rotateSigner.selector;
+        expected[7] = VaultHandler.warp.selector;
+        expected[8] = VaultHandler.executeValidOverride.selector;
+        expected[9] = VaultHandler.executeOverrideOnNonReview.selector;
+        expected[10] = VaultHandler.executeOverrideWithForgedOwnerSig.selector;
+        expected[11] = VaultHandler.executeOverrideForAnotherAction.selector;
+        expected[12] = VaultHandler.executeFutureNonce.selector;
+        expected[13] = VaultHandler.executeFailingCall.selector;
+
+        // Length first: a DUPLICATE registration would otherwise satisfy the membership loop
+        // below while an action went missing, which is exactly how the defect presented.
+        assertEq(
+            registered[0].selectors.length,
+            expected.length,
+            "the registered selector count moved - an action was added or dropped"
+        );
+        for (uint256 i = 0; i < expected.length; i++) {
+            bool found = false;
+            for (uint256 j = 0; j < registered[0].selectors.length; j++) {
+                if (registered[0].selectors[j] == expected[i]) {
+                    found = true;
+                    break;
+                }
+            }
+            assertTrue(found, "a handler action is not registered with the fuzzer");
+        }
+    }
+
     function handlerMandate() internal pure returns (bytes32) {
         return keccak256("mandate-1");
     }

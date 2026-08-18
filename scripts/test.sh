@@ -29,6 +29,13 @@ step "rename gate (D-016)"
 step "labelling-prompt freeze (D-011a)"
 ./scripts/check-label-prompt.sh || fail=1
 
+# The PROMPT was guarded and the MEASUREMENTS TAKEN UNDER IT were not (A-064). `labeller-E.json`
+# is the corpus's ground truth and every §7.3 figure is computed from it; changing one word in
+# it moved the ablation report to a perfect score while this gate printed PASS with byte-identical
+# stage lines. D-003's kill criterion 3 names ground-truth labels as evaluator-tamper territory.
+step "labelling artifacts pinned (A-064)"
+./scripts/check-label-integrity.sh || fail=1
+
 step "published EIP-712 type strings (D-023)"
 ./scripts/check-type-strings.sh || fail=1
 
@@ -191,6 +198,75 @@ print("  %d committed view files match the current code — %s compared by RELAT
 VIEWCHECK
                 then
                     echo "corpus: 50 fixtures executed; committed views verified FILE BY FILE"
+
+                    # AND NOW THE VERDICTS, WHICH NO PROFILE COMPARED UNTIL A-064.
+                    #
+                    # The check above compares the labeller VIEWS, and the views are
+                    # verdict-free BY CONSTRUCTION — `assertNoLeakage` forbids `verdict`,
+                    # `checks`, `reasonCodes`, `failing`, `outcome`, `label`, `expected` and
+                    # `layers` by substring, which is the whole point of a view. So the deep
+                    # stage re-executed the corpus and then compared the one output stream
+                    # designed to carry no verdict. `grep -c results scripts/test.sh` returned
+                    # 0: `$CORPUS_TMP/results/` was written and deleted unread, and the engine's
+                    # verdicts on all 50 fixtures were pinned by nothing. An edit to
+                    # `ts/src/evaluate/**` that flipped a fixture from BLOCK to ALLOW left both
+                    # committed artifacts byte-identical and this gate green (A-058, D-03).
+                    #
+                    # TWO FIELDS VARY BETWEEN RUNS AND ONLY TWO — measured by running the corpus
+                    # twice and walking every key, not assumed: `layers[].micros` (timing) and
+                    # `layers[].checks[].detail`, which varies only where a message embeds the
+                    # wall clock. So `micros` is dropped and `detail` is normalised on that one
+                    # pattern rather than discarded, because discarding a whole field to make a
+                    # comparison pass is how `expiryBefore`/`expiryAfter` escaped for 36 of 50
+                    # views (A-048).
+                    if python3 - "$CORPUS_TMP/results" fixtures/corpus/results <<'VERDICTCHECK'
+import json, os, re, sys
+fresh_dir, committed_dir = sys.argv[1], sys.argv[2]
+
+def names(d):
+    return {f for f in os.listdir(d) if f.endswith(".json")}
+
+fresh, committed = names(fresh_dir), names(committed_dir)
+if fresh != committed:
+    only_f, only_c = sorted(fresh - committed), sorted(committed - fresh)
+    print("  result FILES differ before any content is compared.")
+    if only_f: print("    produced but not committed:", ", ".join(only_f))
+    if only_c: print("    committed but not produced:", ", ".join(only_c))
+    sys.exit(1)
+
+NOW = re.compile(r"\bnow \d+\b")
+
+def strip(node):
+    """Drop only `micros`; normalise only the embedded wall clock."""
+    if isinstance(node, dict):
+        return {k: (NOW.sub("now <T>", v) if k == "detail" and isinstance(v, str) else strip(v))
+                for k, v in node.items() if k != "micros"}
+    if isinstance(node, list):
+        return [strip(x) for x in node]
+    return node
+
+moved = []
+for name in sorted(committed):
+    a = strip(json.load(open(os.path.join(fresh_dir, name))))
+    b = strip(json.load(open(os.path.join(committed_dir, name))))
+    if a != b:
+        moved.append(name)
+
+if moved:
+    print(f"  {len(moved)} result file(s) MOVED: {', '.join(moved[:8])}"
+          + (" …" if len(moved) > 8 else ""))
+    sys.exit(1)
+print(f"  corpus verdicts: {len(committed)} result files identical to the committed set")
+VERDICTCHECK
+                    then
+                        :
+                    else
+                        echo "corpus: ENGINE VERDICTS MOVED — the committed results are not what"
+                        echo "  this code now produces. Every §7.3 figure and the class-coverage"
+                        echo "  ratchet are computed from these files. Re-run the corpus and"
+                        echo "  commit deliberately, or find out what changed in the evaluator."
+                        fail=1
+                    fi
                 else
                     echo "corpus: COMMITTED VIEWS TAMPERED OR STALE — the digests match the code,"
                     echo "  but a committed view file is not what the code produces. The labels of"

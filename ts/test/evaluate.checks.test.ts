@@ -203,8 +203,14 @@ function outcomeOf(o: Overrides, code: string): CheckOutcome | "ABSENT" {
     return results.find((r) => r.code === code)?.outcome ?? "ABSENT";
 }
 
-/** Perturbations, one per declared code. Each changes exactly one dimension. */
-const CASES: {code: string; expect: CheckOutcome; overrides: Overrides}[] = [
+/**
+ * Perturbations, at least one per declared code. Each changes exactly one dimension.
+ *
+ * `note` distinguishes rows that share a code. Added for the window checks (A-064): each of
+ * those compares TWO bounds and only the upper one was ever perturbed, so `now >= validAfter`
+ * could be deleted from either check with the whole suite green. A row per BOUND, not per code.
+ */
+const CASES: {code: string; expect: CheckOutcome; overrides: Overrides; note?: string}[] = [
     {code: "EVAL_MANDATE_ACTIVE", expect: "VIOLATION",
      overrides: {state: {activeMandateHash: keccak256(stringToBytes("other"))}}},
     {code: "EVAL_POLICY_ACTIVE", expect: "VIOLATION",
@@ -224,8 +230,14 @@ const CASES: {code: string; expect: CheckOutcome; overrides: Overrides}[] = [
      overrides: {mandate: {policyHash: keccak256(stringToBytes("unlinked"))}}},
     {code: "EVAL_TARGET_CODE_IDENTITY", expect: "UNRESOLVED",
      overrides: {state: {targetCodeHash: keccak256(stringToBytes("changed"))}}},
-    {code: "EVAL_MANDATE_WINDOW", expect: "VIOLATION", overrides: {mandate: {validUntil: NOW - 1n}}},
-    {code: "EVAL_POLICY_WINDOW", expect: "VIOLATION", overrides: {policy: {validUntil: NOW - 1n}}},
+    {code: "EVAL_MANDATE_WINDOW", expect: "VIOLATION", overrides: {mandate: {validUntil: NOW - 1n}},
+     note: "upper bound: validUntil in the past"},
+    {code: "EVAL_MANDATE_WINDOW", expect: "VIOLATION", overrides: {mandate: {validAfter: NOW + 1n}},
+     note: "LOWER bound: validAfter in the future — a mandate signed but not yet in force"},
+    {code: "EVAL_POLICY_WINDOW", expect: "VIOLATION", overrides: {policy: {validUntil: NOW - 1n}},
+     note: "upper bound: validUntil in the past"},
+    {code: "EVAL_POLICY_WINDOW", expect: "VIOLATION", overrides: {policy: {validAfter: NOW + 1n}},
+     note: "LOWER bound: validAfter in the future — no coverage anywhere before A-064"},
     {code: "EVAL_ACTION_DEADLINE", expect: "VIOLATION", overrides: {action: {deadline: NOW - 1n}}},
     {code: "EVAL_VALUE_WITHIN_MANDATE", expect: "VIOLATION",
      overrides: {mandate: {maxNativeValueWei: VALUE - 1n}}},
@@ -302,7 +314,7 @@ describe("the conforming baseline", () => {
 
 describe("every conformance check fires on its own trigger", () => {
     for (const c of CASES) {
-        it(`${c.code} → ${c.expect}`, () => {
+        it(`${c.code} → ${c.expect}${c.note ? ` (${c.note})` : ""}`, () => {
             assert.equal(
                 outcomeOf(c.overrides, c.code),
                 c.expect,

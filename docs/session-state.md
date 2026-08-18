@@ -219,10 +219,10 @@ design forks. Never sign a gate, never certify a public claim.
 
 ## 3. Where the build is
 
-**74/74 Foundry · 407/407 TypeScript · 173/173 verifier · 78 tamper cases over 30 modes ·
+**75/75 Foundry · 409/409 TypeScript · 173/173 verifier · 78 tamper cases over 30 modes ·
 50 corpus fixtures · 7 samples · gate green at the deep profile · workspace guards OK.**
 *(A-059 moved 160→170 / 77→78 / 29→30; A-061 moved 405→407 TypeScript and 170→173 verifier;
-A-063 moved 73→74 Foundry.
+A-063 moved 73→74 Foundry; A-064 moved 74→75 Foundry and 407→409 TypeScript.
 Every gate FLOOR was ratcheted in the SAME edit as the suite it bounds, which is the rule this
 line exists to enforce and the rule it has broken three times.)*
 *(Read `149/149` and omitted the tamper figures entirely until 2026-08-17 — stale for the third
@@ -281,7 +281,7 @@ signed S2 pack claimed §11 had made the overclaim, when §11 said the opposite 
 (D-045). Corrected in place under John's ruling that repairing a false statement inside an
 annotation is not itself a new annotation.
 
-**Eight mechanical guards run in the gate:** secrets (A-007), rename (D-016), labelling-prompt
+**NINE mechanical guards run in the gate** *(was eight until A-064 added labelling-artifact pinning — the labels of record were guarded by nothing while the prompt that produced them was hash-frozen)***:** secrets (A-007), rename (D-016), labelling-prompt
 freeze (D-011a), EIP-712 type strings (D-023), §5.7.1 check coverage (D-031), **corpus class
 coverage (A-036, new 2026-08-16)**, vendor honesty (§7.5 Gate 5, D-008), and — deep profile
 only — **the §7.1 corpus executed with its committed views verified**. The Gate 7 canary history
@@ -383,6 +383,7 @@ reasoning, its rejected options, and where stated the condition that would rever
 | A-061 | Cluster C built: the signer's prototype-chain verdict check and the verifier's array-precedence hole |
 | A-062 | The coverage boundary audited WHOLE — four false statements, two reported by nobody; G-2 closed with a provenance gate stage |
 | A-063 | **F-VAULT-1: D-042's correction was itself false.** Four sites repaired, a limit test added, **claim UNCERTIFIED — awaits John** |
+| A-064 | **Cluster B closed:** labels pinned (9th guard), corpus VERDICTS compared, both window lower bounds exercised, the invariant arm's registration asserted |
 | A-042 | **The D-010 experiment run properly:** a schema-only build met a real signed refusal it had never seen. Everything §5.5.1 STATED matched first time; the envelope it omitted diverged, plus three defects in the section — all mine, all corrected. 101 → 146 tests |
 
 ## 5. Traces — what worked, and what was a dead end
