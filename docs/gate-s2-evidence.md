@@ -351,7 +351,7 @@ calldata length, and the named signer. All twelve mutations survive all eleven i
 handler builds well-formed bundles and varies WHICH path they take, not whether they are within
 bounds.
 
-**So Gate 6 is carried by the deterministic tests, and the campaign corroborates** — which is
+~~**So Gate 6 is carried by the deterministic tests, and the campaign corroborates**~~ — the first half stands and the second is WITHDRAWN below (A-073); this sentence is left visible rather than deleted so the correction has something to correct. It is
 what `scripts/test.sh`'s own coverage boundary has said since 2026-08-16, and what this
 paragraph did not. If the campaign is ever meant to carry more than corroboration, the work is
 handler arms that build OUT-OF-BOUND bundles: a `valueWei` drawn above the cap, a foreign target
@@ -576,10 +576,29 @@ prevent.
   (D-053(a)), relabelled from "v1.1 work" to an optional future extension.** Separately and still
   true: one valid ALLOW receipt for `approve(spender, max)` transfers authority over the entire
   token balance, and `maxAllowanceIncreaseBaseUnits` has no onchain counterpart. **Both claims
-  are corrected; both caps are v1.1, and both limits are now asserted by tests
+  are corrected, and both limits are asserted by tests
   (`test_LIMIT_vaultCapsNativeValueOnlyAndNotTokenAuthority`,
   `test_LIMIT_nativeCeilingIsPerActionAndBoundsNoAggregate`) so neither can regress into an
-  assumption. BOTH CORRECTIONS CERTIFIED BY JOHN 2026-08-18 (D-051(a)), on the drain and its control in `contracts/test/SentinelVault.backstops.t.sol` rather than on a summary of them.** The flagship Case 2 attack is refused by the evaluator with
+  assumption.**
+
+  ~~both caps are v1.1~~ **CORRECTED 2026-08-18 (D-053(a)): THE TWO CAPS NO LONGER HAVE THE SAME
+  STATUS, and saying they do promises a feature that has been withdrawn.**
+  * **A per-action TOKEN-ALLOWANCE ceiling remains declared v1.1 work** (`docs/v1-1-register.md`).
+  * **Aggregate native-value rate/cumulative bounding is NOT v1.1 work and is not promised.** It
+    is an OPTIONAL FUTURE EXTENSION. Adding one would change what a mandate means onchain and
+    would change the deployed bytecode and therefore `targetCodeHash`, which every mandate binds
+    and all 50 committed corpus views carry. The unbounded aggregate is an **explicitly accepted
+    v1 boundary of a testnet lab.**
+
+  **CERTIFICATION STATUS, stated precisely because two corrections of different standing sit in
+  this bullet.** The A-063 correction — that the vault does not bound native value in aggregate
+  either — **WAS CERTIFIED BY JOHN 2026-08-18 (D-051(a))**, on the drain and its control in
+  `contracts/test/SentinelVault.backstops.t.sol` rather than on a summary of them. The later
+  D-053(a) correction — that the drain is **ATOMIC**, so pause protects only before execution
+  begins or between transactions — **IS OFFERED FOR RATIFICATION AND IS NOT YET CERTIFIED.** No
+  agent may record it as certified.
+
+  The flagship Case 2 attack is refused by the evaluator with
   nothing behind it, and that is now said plainly rather than implied away.
   **The D-010 verifier certified a forged refusal and a cross-domain receipt as PASS. REPAIRED
   (A-041), 70 tests → 101, by an agent that never read the implementation.** Both exploits

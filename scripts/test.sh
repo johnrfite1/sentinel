@@ -742,12 +742,22 @@ WHAT IS NOT COVERED:
     compromised signer, and pause is an owner REACTION rather than a cap: nonce prevents
     replay but not a fresh receipt at N+1, and deadline and expiresAt are the attacker's
     own fields. test_LIMIT_nativeCeilingIsPerActionAndBoundsNoAggregate asserts it.
-    CORRECTED AGAIN 2026-08-18 (D-053(a)): the drain is ATOMIC. A relayer calls
+    CERTIFICATION STATUS OF THE TWO CORRECTIONS ABOVE AND BELOW, because they do not have
+    the same standing and a reader must not take the second for the first:
+      * CERTIFIED (D-051(a), John, 2026-08-18): the per-action wording -- maxNativeValueWei
+        is compared PER ACTION, no cumulative bound exists, only PAUSE bounds a compromised
+        signer. Certified on the drain and its control, not on a summary.
+      * OFFERED, NOT CERTIFIED (D-053(a), 2026-08-18): the ATOMICITY correction below. It is
+        recorded and asserted by a test; it has NOT been ratified, and no agent may record
+        it as certified.
+    THE ATOMICITY CORRECTION, offered: the drain is ATOMIC. A relayer calls
     executeWithReceipt repeatedly inside ONE transaction -- nonReentrant stops nesting, not
     repetition -- so all 100 executions land with block.number and block.timestamp UNCHANGED,
     which that test now asserts. Pause therefore protects only BEFORE execution begins or
     BETWEEN transactions; there is no in-flight window and nothing to notice. No cumulative
-    or rate-limited bound is added or promised: accepted v1 boundary of a testnet lab.
+    or rate-limited bound is added or promised: an accepted v1 boundary of a testnet lab, and
+    an OPTIONAL FUTURE EXTENSION rather than v1.1 work. The token-allowance cap is separate
+    and DOES remain v1.1.
     Certified by John 2026-08-18 (D-051(a)).
   - THAT THE VAULT CONSTRAINS TOKEN AUTHORITY. It does not, and §7.1 said otherwise until
     2026-08-16 (D-042). One valid ALLOW receipt for approve(spender, max) passes
@@ -760,9 +770,24 @@ WHAT IS NOT COVERED:
     the answer was NOTHING: 31 mutations, 31/31 caught by the 56 deterministic tests, and
     31/31 still caught with the whole campaign disabled. Five survived all invariants,
     including a vault accepting arbitrary FUTURE nonces. Two arms were added (D-042) and
-    both of those mutations are now killed — but the honest reading of Gate 6's line is
-    that the deterministic tests carry it and the campaign corroborates. A campaign's
-    coverage is bounded by what its handler can BUILD, not by its call count.
+    both of those mutations are now killed. A campaign's coverage is bounded by what its
+    handler can BUILD, not by its call count.
+    ~~the deterministic tests carry it and the campaign corroborates~~ CORRECTED 2026-08-18
+    (A-073, OFFERED FOR RATIFICATION, NOT CERTIFIED). "CORROBORATES" OVERSTATES IT AND IS
+    WITHDRAWN. Re-measured independently: nine validation checks deleted one at a time, each
+    mutant run through both arms separately -- the campaign caught 1, the deterministic tests
+    caught 9, and the ONE the campaign caught was also caught without it. Marginal
+    contribution: ZERO. Worse, the campaign cannot tell a WORKING vault from a DEAD one:
+    inverting the chain check so that NO action can ever execute leaves the campaign at
+    11 passed / 0 failed while the deterministic suite produces 42 failures, because all ten
+    live invariants are assertFalse(ghost) predicates and zero executions satisfies every
+    one. The test_nonVacuity_* tests are real but run as SEPARATE instances, so nothing
+    asserts that the campaign's OWN run executed anything.
+    SO: GATE 6 IS CARRIED ENTIRELY BY THE DETERMINISTIC TESTS. The campaign supplies no
+    independently measurable assurance. Section 7's enumeration of twelve unreachable checks
+    is also incomplete -- ReceiptActionMismatch and OverrideExpired also survive, so at least
+    fourteen. Gate 6's STATUS is unchanged and still MET; what is withdrawn is any reading in
+    which the campaign adds assurance.
   - THAT GATE 5's CITATIONS SAY WHAT §2 CLAIMS THEY SAY. Certified by John 2026-08-16
     (D-038); the check reports 11 of 11 rows and "certified by record" rather than
     UNCERTIFIED. Two claims that stood here until 2026-08-16 were false, both understating
