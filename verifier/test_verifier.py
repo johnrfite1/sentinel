@@ -1178,6 +1178,79 @@ class TestOverrideChainBinding(unittest.TestCase):
 # §3.3(4)/§3.3(5) chain and vault binding, established from the bundle
 # ---------------------------------------------------------------------------
 
+class TestEvidenceDescribesTheBundle(unittest.TestCase):
+    """A-069 (from round five's E4). §5.6's `normalizedAction` and `expectedEffects` were
+    checked by NOBODY — not the signer (D-014 keeps conformance out of it) and not this
+    verifier. `evidenceHash` made them tamper-evident, so nothing could change them unnoticed;
+    nothing compared them to the documents they claim to describe.
+
+    The bundles below are re-canonicalised, re-hashed, re-bound and RE-SIGNED, so every hash
+    and signature check passes and only these checks can reject them. A mutation caught by a
+    different check than the one it targets is worth nothing (A-055/A-056), and the first
+    attempt at this test was exactly that — the un-resealed bundle failed on the canonical
+    bytes.
+    """
+
+    SIGNER = 0x59C6995E998F97A5A0044966F0945389DC9E86DAE88C7A8412F4603B6B78690D
+
+    def resealed(self, mutate):
+        """A bundle mutated by `mutate(evidence)` and then made wholly self-consistent."""
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp)
+        target = stage(os.path.join(SAMPLES, "case-1-allow"), tmp)
+        ev = read_json(target, "evidence.json")
+        mutate(ev)
+        with open(os.path.join(target, "evidence.json"), "w") as h:
+            json.dump(ev, h)
+        canon = jcs.canonicalize(ev)
+        with open(os.path.join(target, "evidence.canonical.json"), "wb") as h:
+            h.write(canon)
+        digest = "0x" + keccak256(canon).hex()
+        with open(os.path.join(target, "evidence.hash"), "w") as h:
+            h.write(digest + "\n")
+        doc = read_json(target, "receipt.json")
+        doc["receipt"]["evidenceHash"] = digest
+        domain = read_json(SAMPLES, "domain.json")
+        doc["signature"] = sign_digest(
+            eip712.receipt_digest(domain, doc["receipt"]), self.SIGNER)
+        write_json(os.path.join(target, "receipt.json"), doc)
+        return target
+
+    def test_the_reseal_itself_produces_a_verifying_bundle(self):
+        # THE CONTROL, and without it every test below could be passing because `resealed`
+        # produces malformed bundles rather than because the new checks work.
+        target = self.resealed(lambda ev: None)
+        ok, checks = _verify(target)
+        self.assertTrue(ok, [c.name for c in checks if not c.ok])
+
+    def test_expectedEffects_may_not_state_what_the_mandate_does_not(self):
+        target = self.resealed(
+            lambda ev: ev["expectedEffects"].__setitem__("beneficiary", "0x" + "44" * 20))
+        ok, checks = _verify(target)
+        self.assertFalse(ok, "a bundle stated a beneficiary its own mandate does not authorise")
+        self.assertEqual(
+            [c.name for c in checks if not c.ok],
+            ["evidence.expectedEffects projects the §5.1/§5.2 documents (ceiling intersected)"],
+            "only THIS check may reject it — anything else means the bundle is malformed and "
+            "the test is measuring something other than what it names")
+
+    def test_normalizedAction_may_not_restate_a_different_action(self):
+        target = self.resealed(
+            lambda ev: ev["normalizedAction"].__setitem__("valueWei", "999999999999999999"))
+        ok, checks = _verify(target)
+        self.assertFalse(ok)
+        self.assertIn("evidence.normalizedAction restates the §5.3 action it was computed for",
+                      [c.name for c in checks if not c.ok])
+
+    def test_the_bundles_callData_must_be_the_action_it_commits_to(self):
+        target = self.resealed(
+            lambda ev: ev["normalizedAction"].__setitem__("callData", "0xdeadbeef"))
+        ok, checks = _verify(target)
+        self.assertFalse(ok)
+        self.assertIn("keccak256(evidence.normalizedAction.callData) == action.dataHash",
+                      [c.name for c in checks if not c.ok])
+
+
 class TestAbsenceIsNotAgreement(unittest.TestCase):
     """A-067 (from round five's H-4). A payload-hash MISMATCH became a PASS when the
     contradicting file was DELETED.

@@ -1255,6 +1255,82 @@ def _calldata_check(action):
                  f"computed {computed}\naction   {action.get('dataHash')}")
 
 
+def _evidence_describes_the_bundle(evidence, action, mandate, policy):
+    """§5.6's `normalizedAction` and `expectedEffects` must describe the presented documents.
+
+    A-069. Both are projections, so this is derivation and not judgement — see the note at the
+    call site for why that distinction decided where the check lives.
+    """
+    out = []
+    if not isinstance(evidence, dict):
+        return out
+
+    normalized = evidence.get("normalizedAction")
+    if isinstance(normalized, dict) and action is not None:
+        mismatched = []
+        for _type, name in eip712.ACTION_FIELDS:
+            if name not in normalized:
+                mismatched.append(f"{name}: absent from normalizedAction")
+            elif _norm_hex(normalized[name]) != _norm_hex(action.get(name)):
+                mismatched.append(
+                    f"{name}: evidence {normalized[name]!r} vs action {action.get(name)!r}")
+        out.append(Check(
+            "evidence.normalizedAction restates the §5.3 action it was computed for",
+            not mismatched,
+            "; ".join(mismatched) if mismatched
+            else f"{len(eip712.ACTION_FIELDS)} field(s) agree"))
+
+        # Without this, `normalizedAction` could agree field by field while the BYTES the
+        # evidence was actually computed over were something else entirely.
+        declared = normalized.get("callData")
+        if declared is not None:
+            try:
+                digest = "0x" + keccak256(eip712.hex_to_bytes(declared, "callData")).hex()
+                ok = digest == _norm_hex(action.get("dataHash", ""))
+            except (eip712.EncodingError, ValueError) as exc:
+                digest, ok = str(exc), False
+            out.append(Check(
+                "keccak256(evidence.normalizedAction.callData) == action.dataHash", ok,
+                "" if ok else f"computed {digest}\naction   {action.get('dataHash')}"))
+
+    expected = evidence.get("expectedEffects")
+    if isinstance(expected, dict) and mandate is not None:
+        wrong = []
+        for name in ("target", "selector", "resourceId", "beneficiary",
+                     "durationSeconds", "recurringAllowed"):
+            if name in expected and _norm_hex(expected[name]) != _norm_hex(mandate.get(name)):
+                wrong.append(
+                    f"{name}: evidence {expected[name]!r} vs mandate {mandate.get(name)!r}")
+        if policy is not None and "maxAllowanceIncreaseBaseUnits" in expected:
+            if _norm_hex(expected["maxAllowanceIncreaseBaseUnits"]) != _norm_hex(
+                    policy.get("maxAllowanceIncreaseBaseUnits")):
+                wrong.append(
+                    "maxAllowanceIncreaseBaseUnits: evidence "
+                    f"{expected['maxAllowanceIncreaseBaseUnits']!r} vs policy "
+                    f"{policy.get('maxAllowanceIncreaseBaseUnits')!r}")
+        # §5.2, published: "Mandate and policy constraints are intersected." The binding native
+        # ceiling is therefore the LOWER of the two, not the mandate's. Compared against the
+        # mandate alone this check would be wrong the first time they diverge — AND NO CORPUS
+        # FIXTURE HAS THEM DIVERGE, so the corpus cannot say which reading is right. The gap is
+        # recorded rather than papered over (v1.1 register).
+        if policy is not None and "maxNativeValueWei" in expected:
+            try:
+                bound = min(int(mandate.get("maxNativeValueWei")),
+                            int(policy.get("maxNativeValueWei")))
+                ok = int(expected["maxNativeValueWei"]) == bound
+            except (TypeError, ValueError):
+                bound, ok = None, False
+            if not ok:
+                wrong.append(
+                    f"maxNativeValueWei: evidence {expected['maxNativeValueWei']!r} vs the "
+                    f"§5.2 intersection {bound!r}")
+        out.append(Check(
+            "evidence.expectedEffects projects the §5.1/§5.2 documents (ceiling intersected)",
+            not wrong,
+            "; ".join(wrong) if wrong else "mandate and policy fields agree"))
+    return out
+
+
 def _chain_checks(sample_dir, receipt, evidence, domain):
     """Recompute every other hash the receipt commits to.
 
@@ -1292,6 +1368,22 @@ def _chain_checks(sample_dir, receipt, evidence, domain):
     calldata = _calldata_check(action)
     if calldata is not None:
         out.append(calldata)
+
+    # THE HALF OF THE EVIDENCE BUNDLE NOBODY CHECKED (A-069, from round five's E4).
+    #
+    # `receipt.evidenceHash` commits to the §5.6 bundle, so `normalizedAction` and
+    # `expectedEffects` are TAMPER-EVIDENT — but nothing compared them to the action and the
+    # mandate they purport to describe. Neither the signer (D-014 deliberately keeps conformance
+    # out of it) nor this verifier looked, so a bundle could state expected effects its own
+    # action does not imply and still verify.
+    #
+    # THIS DOES NOT MAKE THE VERIFIER A SECOND EVALUATOR, which is the objection that decided
+    # where the check belongs. Both fields are pure PROJECTIONS, measured rather than assumed:
+    # `normalizedAction` is the ActionPayload restated verbatim plus `callData`, and
+    # `expectedEffects` is seven fields copied from the mandate, one from the policy, and the
+    # native ceiling. No judgement is imported; the question asked is only "does this bundle
+    # describe the documents it claims to describe".
+    out.extend(_evidence_describes_the_bundle(evidence, action, mandate, policy))
 
     # Cross-references that §5 lists as fields but never requires to agree.
     if mandate and policy:

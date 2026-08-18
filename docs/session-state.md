@@ -241,7 +241,7 @@ design forks. Never sign a gate, never certify a public claim.
 
 ## 3. Where the build is
 
-**75/75 Foundry · 426/426 TypeScript · 176/176 verifier · 78 tamper cases over 30 modes ·
+**75/75 Foundry · 481/481 TypeScript · 180/180 verifier · 78 tamper cases over 30 modes ·
 50 corpus fixtures · 7 samples · gate green at the deep profile · workspace guards OK.**
 *(A-059 moved 160→170 / 77→78 / 29→30; A-061 moved 405→407 TypeScript and 170→173 verifier;
 A-063 moved 73→74 Foundry; A-064 moved 74→75 Foundry and 407→409 TypeScript;
@@ -410,6 +410,9 @@ reasoning, its rejected options, and where stated the condition that would rever
 | A-065 | Two verified leads: the env template that never shipped, and a suite figure counted twice |
 | A-066 | **The deep profile can now be run from a worktree** — D-050(1)'s condition was unmeetable when it was ratified |
 | A-067 | **21 of 24 leads CONFIRMED** by four independent adjudicators. `D-08` raised to HIGH and fixed; `H-4` fixed; 19 recorded |
+| D-051 | John's four walkthrough rulings: **§7.1 CERTIFIED**, fix MEDIUM / accept LOW, round six after the fixes, probes preserved |
+| A-068 | Seven MEDIUMs fixed; **`E3` and `E4` returned to John as design forks** |
+| A-069 | E4's verifier half built — and the fixture gap it found matters more than the check |
 | A-042 | **The D-010 experiment run properly:** a schema-only build met a real signed refusal it had never seen. Everything §5.5.1 STATED matched first time; the envelope it omitted diverged, plus three defects in the section — all mine, all corrected. 101 → 146 tests |
 
 ## 5. Traces — what worked, and what was a dead end

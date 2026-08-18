@@ -733,3 +733,23 @@ verdict as CONFIRMED and to assume each claim wrong until they had made its fail
 | `A-3` | UNPROVEN | unchanged | open |
 | `C-5` | REFUTED | unchanged | open |
 | `H-6` | ALREADY-CLOSED | unchanged | open |
+
+### 13.5 A fixture gap named by A-069, and worth more than the check that found it
+
+`evidence.expectedEffects.maxNativeValueWei` is now compared against the **§5.2 intersection** —
+the lower of the mandate's and the policy's ceilings — because §5.2 says in the published text
+that "mandate and policy constraints are intersected". Compared against the mandate alone, the
+check would be wrong the first time the two diverge.
+
+**No corpus fixture has them diverge.** All 50 carry equal ceilings, so the corpus cannot say
+which reading is right, and a verifier written against the other reading would pass every test
+in this repository. **The check is asserted by unit tests that construct the divergence; the
+CORPUS asserts nothing about it.**
+
+This is the D-010 experiment behaving as designed — an implementation derived from the published
+spec finding a case the corpus does not exercise — and it is the second time that has happened
+(the first was §5.5.1's refusal record, which the specification did not define at all, A-042).
+
+**Owed at v1.1:** a fixture whose mandate and policy native ceilings differ, so the intersection
+rule is exercised by the corpus rather than only by the verifier's own tests. Small, and it adds
+a fixture rather than moving a label — so it does NOT fire D-043(b)'s re-label trigger.
