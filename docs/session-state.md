@@ -3,10 +3,10 @@
 Rewritten at the end of each working session. **This file, not the conversation, is the
 memory.** If it disagrees with anything an agent remembers, this file wins.
 
-Last updated: **2026-08-17**, end of session — the header read `2026-08-16` while every entry
-it summarised was 2026-08-17 (round five, `B-6`). Branch `step-3/isolated-signer`, **pushed**
-(`4166ff0`, verified against the remote rather than trusting the push output). Working tree
-clean. **This pointer names the last commit this file DESCRIBES, and the commit that updates
+Last updated: **2026-08-18**. Branch `step-3/isolated-signer`, **pushed and verified against
+the remote** (`78ac9cb` at the time of writing; the commit that updates this file necessarily
+comes after, so expect the pointer to trail by one doc-only commit and check `git log` rather
+than treating a mismatch as a finding). Working tree clean. **This pointer names the last commit this file DESCRIBES, and the commit that updates
 it necessarily comes after — so expect it to trail by one doc-only commit, and check
 `git log` rather than treating a mismatch as a finding.** It read `f3308ea` while HEAD was two
 commits further on, which is the same stale-pointer defect A-045 and A-046 spent the session
@@ -14,10 +14,16 @@ correcting elsewhere, sitting in the file that opens by declaring itself the mem
 D-016 still blocks all publication. **Pushing to the private remote is backup, not publication;
 do not read the push as any relaxation of D-016.**
 
-**READING ORDER FOR A FRESH INSTANCE.** §0 for where the project stands and how it fails; §1 for
-what to do, which is probably nothing without an instruction from John; then `docs/decisions.md`
-for **D-045 through D-048 and A-045 through A-056**, which is the 2026-08-16/17 hardening arc.
-**Read D-047 and D-048 FIRST — they bind an agent and cannot be amended by one.**
+**READING ORDER FOR A FRESH INSTANCE, AND YOUR JOB IS ROUND SIX.** Read §1 first — it tells you
+what to run and hands you the brief. Then §0 for how this project fails, which is what a reviewer
+brief has to encode. Then, in `docs/decisions.md`: **D-047 and D-048 FIRST — they bind you and you
+may not amend them** — then **D-050 and D-051**, which are John's rulings that define round six
+and set what was fixed before it. `A-057` through `A-069` are the round-five arc and its
+remediation; you do not need all of them to start, but `A-058` (what round five found) and
+`A-068`/`A-069` (what was fixed, and the two forks that were NOT) are the ones that change what
+you brief.
+
+**`docs/round-six-brief.md` IS THE BRIEF. It is written and ratified; you are not designing it.**
 `docs/v1-1-register.md` is the list of known outstanding work, with each item's blocker stated.
 `docs/gate-s2-evidence.md` §11 is what is NOT in evidence — read it before repeating any claim
 about what this project has proven.
@@ -41,17 +47,20 @@ still autonomy NONE. **S2 was signed on the state in `docs/gate-s2-evidence.md` 
 its limits, not despite them** — 14 of 20 classes exercising the class they name, and no live
 agent in CI. D-041 carries an annotation naming what became known after it was signed.
 
-**The steps 1–3 review S2 was signed WITHOUT has since been run (D-044(b)), and §11 — CORRECTION 2026-08-17 (`B-7`): §11 is **NOT** empty and this file said so
-twenty-two lines after telling a fresh instance to read it. It carries six entries, five of them
-live; ONE of them, the steps 1–3 review, is struck through as run.** It found A-043: **a CRITICAL, exploitable bypass — a signed ALLOW obtainable for
-calldata nobody decoded, reproduced twice onchain.** Fixed, with regression tests. Read A-043
-and A-044 before trusting anything about the signer.
+**The steps 1–3 review S2 was signed WITHOUT has since been run (D-044(b)).** It found A-043:
+**a CRITICAL, exploitable bypass — a signed ALLOW obtainable for calldata nobody decoded,
+reproduced twice onchain.** Fixed, with regression tests. Read A-043 and A-044 before trusting
+anything about the signer. **`gate-s2-evidence.md` §11 is NOT empty** — this file once claimed it
+was, twenty-two lines after telling a fresh instance to read it (`B-7`). It carries the pack's
+stated limits plus, as of D-051(b), **§11.0: ten confirmed findings John has ACCEPTED as limits
+rather than fixed.**
 
-**THE PATTERN, now the operating assumption rather than an observation.** The defects are
-*honesty* defects — a claim stronger than its evidence — and **the build loop does not find
-them.** Across 2026-08-15 and 2026-08-16, roughly ninety findings came from adversarial
-reviewers, independent labellers, the mutation harness and an independent reimplementation.
-The build loop found essentially none of its own. Specifically and repeatedly:
+**THE PATTERN, now the operating assumption rather than an observation. THIS IS THE PARAGRAPH A
+REVIEWER BRIEF HAS TO ENCODE.** The defects are *honesty* defects — a claim stronger than its
+evidence — and **the build loop does not find them.** Across 2026-08-15 to 2026-08-18, roughly
+one hundred and forty findings came from adversarial reviewers, independent adjudicators,
+independent labellers, the mutation harness and an independent reimplementation. The build loop
+found essentially none of its own. Specifically and repeatedly:
 
 - **An instrument can exist and point at the wrong thing.** Guards, tests and mutations have
   shipped aimed at something other than what they name — five or more times now.
@@ -61,10 +70,25 @@ The build loop found essentially none of its own. Specifically and repeatedly:
   named the exact bypass state in prose and routed around it.
 - **A regression test can pass against the defect it names** (A-044).
 - **A published number can be true once.** This file's own headline suite counts were stale for
-  most of a day while the numbers moved underneath them.
+  most of a day; its guard count has been wrong three times; and a suite figure was counted twice
+  across two consecutive decision entries (`B-5`).
+- **A FALSIFICATION PROBE CAN BE DEAD, AND ITS SILENCE READS EXACTLY LIKE A PASS.** Five were, on
+  2026-08-17/18 alone: a mutation of a value already at the maximum so no percentile moved; a
+  Solidity probe that did not compile and printed no PASS/FAIL line; two corpus runs that died on
+  a missing build artifact long before reaching the code under test; and a grep pattern that
+  matched nothing. **Ask what your probe MOVED before believing what its result implies.**
+- **A CHECK CAN BE CAUGHT BY THE WRONG CHECK.** A tamper that fails on the canonical bytes tells
+  you nothing about the check you were testing. Make the bundle wholly self-consistent — re-hash,
+  re-bind, RE-SIGN — so only the check under test can reject it.
 
 **None of that is a reason to distrust the work; it is the reason to keep pointing independent
 eyes at it.** Everything above was found, fixed or recorded — and found by the process working.
+
+**WHERE THE PROJECT STANDS, 2026-08-18.** Round five (51 findings, 2 CRITICAL) is fully
+adjudicated and remediated: three live security defects fixed, nine MEDIUMs fixed, ten accepted
+as documented limits, two design forks with John. §7.1's containment claim — wrong twice — is
+corrected, measured, asserted by a test, and **certified by John** (D-051(a)). **The next move is
+round six, and §1 tells you how to run it.**
 
 **John has delegated design forks to the build loop.** Two things stay outside that
 permanently, and were restated to him: **gate signing** (D-002) and **certification of public
@@ -75,157 +99,102 @@ autonomy *none*).
 
 ## 1. What the next instance should do
 
-### FIRST: read D-047 and D-048. They govern everything below and an agent may not amend them.
+### YOUR JOB IS ROUND SIX. John triggers it; if he has, run it. Read D-047, D-048, D-050 and D-051 before you do.
 
-**~~THE NEXT MOVE IS A FULL-BREADTH ADVERSARIAL REVIEW ROUND, and John triggers it.~~ HE
-TRIGGERED IT AND IT RAN — ROUND FIVE, 2026-08-17 (A-057 commissioned it, A-058 is the result).
-IT IS NOT CLEAN, so under D-047 the loop continues and under D-048 pre-publication is still
-blocked.**
+**RUN IT FROM `docs/round-six-brief.md`.** That brief is ratified, not a draft: D-050(1) adopted
+A-060's definition of "full breadth" as **nine named surfaces**, and a round is full breadth when
+every one is covered by a reviewer that ran its own baseline and returned a coverage statement.
+**You are not designing the round. You are running the one that is already defined** — and the
+reason it is defined in advance is that the last three rounds each had a defective brief, twice
+in ways that cost coverage.
 
-**OVERNIGHT SESSION, 2026-08-17 → 18. John authorised the agent to decide and execute while he
-slept. What that produced is A-062 through A-067; what it deliberately did NOT do is below.**
+**HOW TO RUN IT, mechanically.**
 
-**ONE THING WAITS ON JOHN AND NOTHING ELSE DOES: certify or reject the §7.1 containment
-correction (A-063).** D-042's correction of an overstatement was itself an overstatement — the
-native ceiling is PER ACTION and nothing bounds cumulative authority, measured by draining a
-capped vault to zero with 100 valid receipts. The corrected text is in the proposal, the gate's
-coverage boundary and the S2 pack, **marked UNCERTIFIED in all three**. Certification of public
-claims is autonomy NONE and an overnight authorisation does not move a rule that exists for
-exactly the case of an agent working unsupervised.
+1. **Freeze a commit.** `git worktree add <scratch>/w<N> <HEAD> --detach` per reviewer, then
+   symlink `ts/node_modules` and both `contracts/lib/*` submodule directories into each. Nine
+   worktrees, nine reviewers.
+2. **Give each reviewer its own evidence directory.** This is one of A-060's two conditions and
+   it exists because four of round five's eight lenses independently chose the same baseline
+   filename and clobbered each other.
+3. **At least one reviewer must run the DEEP profile.** The other condition. It is now possible —
+   A-066 made the corpus socket path fall back to a private `mkdtemp` dir when the repo path
+   would exceed macOS's 104-byte `sun_path` — but **verify it in a worktree before you claim the
+   condition is met**, because it was ratified while unmeetable and nobody noticed for a day.
+   A worktree also needs `forge build --root contracts` before the corpus will run at all.
+4. **Brief each lens to prove the work fails**, invite it to report that its own brief is wrong,
+   and require a provenance attestation and a coverage statement. Carry forward round five's
+   warnings — they are in the brief.
+5. **Tell reviewers that re-reporting a recorded item is not a new finding — but showing a
+   recorded item is WORSE than recorded IS one.** `docs/v1-1-register.md` §13 is the list, and
+   §11.0 of the S2 pack is the ten findings John ACCEPTED as limits.
 
-**THE NEXT MOVE IS ROUND SIX, AND JOHN TRIGGERS IT.** It is now DEFINED before it is briefed,
-which round five was not: D-050(1) ratified A-060's nine surfaces, and `docs/round-six-brief.md`
-is the drafted brief. **Both of A-060's conditions are now meetable** — the deep profile can be
-run from a worktree as of A-066, which it could not be when the condition was ratified.
+**THEN STOP AT ADJUDICATION. D-051(c) is explicit: verify the findings, reproduce them yourself,
+and bring John the adjudicated list WITHOUT acting on it.** Whether the round is clean is the
+judgement D-047 reserves, and it must not be made by the hands that were editing the tree.
 
-**WHY NOT MORE REPAIRS FIRST: 19 CONFIRMED FINDINGS ARE RECORDED AND DELIBERATELY UNFIXED**
-(register §13.4). Nineteen fixes authored by the same hands would be nineteen more things for an
-independent lens to find wrong, and this loop exists precisely because the build loop does not
-find its own defects. **The known set is now small enough and verified enough that round six's
-result will mean something in either direction** — which was the whole argument for
-fix-then-measure, and it has been served.
+### What round six is measuring, and why its result finally means something
 
-*The six walkthrough rulings that got here (D-050), kept because they are the reasoning:*
+Round five ran against a tree with 44 known-open findings, so its result could not distinguish
+"the artifact is sound" from "the reviewers found our own backlog". **That is no longer true.**
+Of round five's 51 findings: **the three live security defects are fixed, the nine MEDIUMs are
+fixed, ten are ACCEPTED as documented limits by John, and two are open design forks he holds.**
+Twenty-one of twenty-four leads were confirmed by independent adjudicators before any of that
+was decided, so the list was verified rather than assumed.
 
-**ROUND SIX IS DEFINED NOW, WHICH ROUND FIVE WAS NOT.** D-050(1) ratified A-060: a round is
-FULL BREADTH when every one of NINE named surfaces is covered by a reviewer that ran its own
-baseline and returned a coverage statement — guards and gate; signer; evaluator and decoders;
-vault; corpus/labels/ablation; the D-010 verifier; **the simulation and effect pipeline
-(`ts/src/simulate|propose|tools`, which round five assigned to nobody)**; the claims; and one
-wholly free lens. Two conditions ride with it: **at least one reviewer must be able to run the
-DEEP profile** (all eight of round five's were confined to the fast one by a socket-path limit
-and did not know it), and **each reviewer gets its own evidence directory** (four of eight
-clobbered each other's baseline logs). `docs/review-2026-08-17/` is round five's evidence, and
-its README says what that round could not reach.
+**So round six is the first round in this loop whose outcome means something in either
+direction** — and that, not tidiness, is why the repairs came first.
 
-**Carry forward into the brief:** the 32 unconfirmed leads in register §13 fold into round six
-(D-050(3)), and reviewers are told that re-reporting a recorded item is not a new finding — but
-that showing a recorded item is WORSE than recorded IS one.
+### The one thing still open that is JOHN'S, not yours
 
-*The two forks as they were put to him, kept because they are the reasoning behind the rulings:*
+**`E3` — anchor recency.** The signer will attest an ALLOW anchored to ANY historical block,
+including one at which the vault had no code, and the vault executes it. Nothing bounds recency
+here or downstream. **The fork is whether the receipt should bind to the signer's own
+observation, and it changes what the product guarantees, so it is not an agent's to close.** The
+comment at `attest.ts` states the limit rather than implying it away; do not "fix" it.
 
-1. ~~**D-048(b) HAS FIRED and the decision is back with him.**~~ **RULED (D-049(a)): the loop
-   CONTINUES, and John will rule on what "full breadth" means as a named surface list — because
-   D-047's cleanliness test has no fixed denominator and any round can be defeated by widening
-   the next one. THE DRAFT IS A-060 AND IT IS NOT IN FORCE.** The original fork, kept because
-   it is the reasoning behind the ruling: Its condition — severe INSTRUMENT
-   defects at round one's rate — is met. **The confound belongs with the number:** rounds two
-   through four NARROWED (round four was one file) and the yield fell, which read as
-   convergence; round five WIDENED and the yield returned, with the same defect classes on four
-   surfaces that had never been swept. *"The loop is not converging"* and *"the loop had been
-   converging because it was looking at one file"* are different diagnoses with opposite
-   implications. **Do not pick between them on his behalf.**
-2. ~~**Remediation scoping for 51 findings.**~~ **RULED (D-049(b)): the three LIVE security
-   defects only, and they are FIXED (A-059).** **47 stay open** in `docs/v1-1-register.md`
-   §13 — **12 re-verified by me (8 HIGH, 4 MEDIUM), 35 unconfirmed reviewer leads** — and are
-   NOT to be worked without him. *(This line first read "48 … 13 of them"; both were wrong and
-   are counted from the round's data now.)*
-   **D-047 makes DECLINING to fix a finding a change to a claim**, so they are recorded rather
-   than quietly dropped, and this session's round is not clean on any reading.
+`E4`'s verifier half is built (A-069). Its signer half is deliberately NOT built — D-014 keeps
+conformance out of the signer, and building it would weaken the independence that makes the
+D-010 artifact worth having.
 
-**WHAT ROUND FIVE FOUND, in one line each, because the next instance must not restart the
-project on a stale picture.** Two CRITICALs, both LIVE and both in the D-010 verifier: the
-**presenter still chooses the trust root** one directory up (A-055 closed the demonstration,
-not the argument), and the **§5.5 override stage has no deployment-anchored owner identity at
-all** — an outsider-minted override verifies `=> PASS` against the GENUINE domain.json, though
-the vault itself would reject it. The **secret guard is holed a third time** and §8.2 recorded
-it FIXED. **THE PATTERN: three of the round's worst findings are the same defect — a repair
-that generalised its DEMONSTRATION and not its ARGUMENT — and all three are repairs of findings
-in that same class.** Two of the round's instruments were MINE and defective (`D-11`, `D-12`);
-see §13.1 for what the round could not reach.
+### What is NOT authorised, and none of it has changed
 
-- **D-047** — adversarial review continues **until one full round returns no finding that would
-  change code or a claim.** A *round* is at least one independent reviewer at a frozen commit
-  briefed to prove the work fails. *Clean* means no commits beyond the round's own record; **a
-  round that finds only things you decline to fix is NOT clean** — declining is a change to a
-  claim. **Scope may not shrink round-over-round**, and a deliberately narrow round coming back
-  clean does not close the loop. **AN AGENT MAY NOT RE-AUTHOR, NARROW, REINTERPRET OR ATTACH
-  EXCEPTIONS TO THIS RULE. Only John changes it.** It exists because the previous agent wrote a
-  stopping rule three times and each time the exception fired and it ran another round.
-- **D-048** — **pre-publication does not start until a clean round.** A clean round is a
-  PRECONDITION, not a trigger: the programme still needs John's separate authorisation.
+- **Pre-publication has not started** and D-048 makes a clean round a PRECONDITION, never a
+  trigger — the programme still needs John's separate authorisation.
+- **D-016 blocks all publication**; the repository is PRIVATE and the rename gate verifies it on
+  every run. Pushing to the private remote is backup, not publication.
+- **Never sign a gate** (D-002) and **never certify a public claim** — John certified §7.1
+  himself at a walkthrough (D-051(a)); an agent may not, and no overnight authorisation changes
+  that.
+- **The five D-008 comprehension questions stay unseen.** Do not ask for them, guess them, or
+  write substitutes.
+- §14.8 ladder rung 2, the 14.3 attestation stretch, and the evidence dashboard remain declined
+  (D-043, D-044).
 
-**BASE RATE, and it is the reason the loop exists: FOUR rounds, four times the previous round's
-fixes were broken** — including both rounds where the author had falsified everything itself
-first. Round three found a live path for a real private key to reach a remote. Round four found
-**two LIVE certification defects in shipped code**, needing no mutation at all. **"I falsified it
-myself" has a track record here of zero for four.**
+### If you arrived with no instruction from John
 
-**If you have arrived with no instruction from John, say so and stop.** The correct action is
-still not to find work — the loop is John's to trigger, and the v1.1 register exists so that
-"there is nothing to do" is checkable rather than a guess.
-
-**Three things are specifically NOT authorised, and each was declined with reasons on 2026-08-16
-(D-043, D-044). "S2 is signed" is not permission for any of them:**
-
-- **§14.8 ladder rung 2** (executed vendor comparisons). Reverses D-001 and would require
-  unwinding D-008(2) and the vendor-honesty guard — putting executed-comparison claims into a
-  project whose entire honesty apparatus was built on their absence.
-- **The 14.3 attestation stretch**, now eligible because the §7.5 gates are green.
-- **The evidence dashboard as "groundwork."** It needs no ruling from John and is a Gate 8
-  prerequisite, which is exactly what makes it the tempting one. Building it reverses D-043's
-  "open no new front."
-
-### If John directs PRE-PUBLICATION
-
-This is the only remaining direction, and starting it **fires the re-label trigger** (D-043(b)).
-All of the following move together:
-
-- **Re-label all 50 fixtures** under the SAME frozen prompt — D-035 ruled the prompt is not at
-  fault, so `check-label-prompt.sh` stays green and no re-freeze is involved. The cost is fresh
-  labeller runs, replacing E and F as the labels of record, and re-running the §7.3 ablation.
-  **Every figure in `docs/gate-s2-evidence.md` then needs re-verifying.**
-- **The five corpus defects that ride with it** — see §5 below and `docs/v1-1-register.md`.
-- **Gate 8** (five-minute comprehension). Needs the dashboard D-009 deferred AND John's five
-  held questions. **The build loop must never see those questions; do not ask for them, guess
-  them, or write substitutes** (D-008, D-032).
-- **D-016's rename gate and publication lift.** The repository is PRIVATE and
-  `check-rename-gate.sh` verifies that on every gate run.
-
-### If John directs V1.1 WORK
-
-`docs/v1-1-register.md` is the list — eight sections, each with its blocker stated. §8 is the
-adversarial-review findings deliberately left unfixed (A-047). Two items do
-NOT ride on the re-label and could be done alone: the **vault token cap** and **receipt epoch
-binding**. Both are deferred by explicit ruling (D-042(b), D-044(c), D-044(d)) and **both were
-re-put to John on 2026-08-16 and both deferrals were confirmed.** Do not reopen them without him;
-"the work is available" is not new information.
+Say so and stop. Round six is his to trigger, and `docs/v1-1-register.md` exists so that "there
+is nothing to do" is checkable rather than a guess.
 
 ### The operating rules that bind whatever you do
 
 1. **One agent session at a time on this tree** (D-037). Sub-agents inside one session are fine
    and are how every review here is run; two sessions with write authority are not.
-2. **Adversarial review is the technique that works.** Four review rounds on 2026-08-16 produced
-   ~65 findings in work that had already passed a build loop, including one CRITICAL exploitable
-   bypass (A-043). Freeze a tree — `git worktree add <scratch> <commit> --detach`, symlink
-   `ts/node_modules` — and tell the reviewer to prove the work fails.
-3. **Verify before you rely on any number or status in these docs**, including this file. It has
-   been wrong repeatedly, most recently in its own headline suite counts.
-4. **Run every new regression test against the PRE-FIX code and confirm it fails.** A-044: a test
-   written for the backpressure defect passed against the unfixed server — it was pinning the
-   author's own fix, not the defect.
-5. **Never sign a gate; never certify a public claim** (D-002, and the HANDOFF verification
-   partition: public claims, autonomy NONE).
+2. **Adversarial review is the technique that works**, and its yield does not decay when the
+   scope widens — round five went wider than any round before it and returned 51 findings, two
+   CRITICAL.
+3. **Verify before you rely on any number or status in these docs, including this file.** It has
+   been wrong repeatedly — its own headline counts, its guard count three times, and a suite
+   figure counted twice across two consecutive decision entries.
+4. **Run every new regression test against the PRE-FIX code and confirm it fails**, and **check
+   that your probe MOVED SOMETHING before believing what its silence implies.** Five probes
+   across 2026-08-17/18 were dead on the first attempt — a mutation of a value already at the
+   maximum, a Solidity probe that did not compile, two corpus runs that died before reaching the
+   code under test, and a grep pattern that matched nothing. **Every one of them looked exactly
+   like a passing check.**
+5. **A fix must generalise the ARGUMENT, not the demonstration.** The trust-root repair's first
+   draft closed the single-bundle path and left `--all` certifying the identical hostile tree;
+   it was caught only by re-running the exploit through both invocation shapes.
+6. **Never sign a gate; never certify a public claim.**
 
 ## 2. Authority
 
@@ -304,7 +273,7 @@ signed S2 pack claimed §11 had made the overclaim, when §11 said the opposite 
 (D-045). Corrected in place under John's ruling that repairing a false statement inside an
 annotation is not itself a new annotation.
 
-**NINE mechanical guards run in the gate** *(was eight until A-064 added labelling-artifact pinning — the labels of record were guarded by nothing while the prompt that produced them was hash-frozen)***:** secrets (A-007), rename (D-016), labelling-prompt
+**TEN mechanical stages guard the gate** *(eight until A-064 added labelling-artifact pinning — the labels of record were guarded by nothing while the prompt that produced them was hash-frozen — and A-062 then added the §7.3 ablation-report provenance stage; COUNT THEM IN `scripts/test.sh` before quoting this number, because this line has been wrong three times)***:** secrets (A-007), rename (D-016), labelling-prompt
 freeze (D-011a), EIP-712 type strings (D-023), §5.7.1 check coverage (D-031), **corpus class
 coverage (A-036, new 2026-08-16)**, vendor honesty (§7.5 Gate 5, D-008), and — deep profile
 only — **the §7.1 corpus executed with its committed views verified**. The Gate 7 canary history
