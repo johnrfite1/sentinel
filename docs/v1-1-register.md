@@ -642,9 +642,29 @@ rating and are **not yet independently confirmed**; treat them as leads until th
   evaluating a fixture. **Every reviewer's baseline was therefore the FAST profile.** The deep
   profile was run only by me, in the live tree, before the round started. Any finding that would
   only show up under the deep gate was out of reach for all eight lenses.
-- **A second obstacle behind the first:** once the socket is repointed, a corpus run in a
+- ~~**A second obstacle behind the first:** once the socket is repointed, a corpus run in a
   worktree differs from all 50 committed views on `targetCodeHash`, so the committed-view
-  comparison cannot be exercised from a worktree either.
+  comparison cannot be exercised from a worktree either.~~
+  **MISDIAGNOSED, AND CORRECTED 2026-08-18 (D-052(b), round six lens 9 refuting it, reproduced
+  by me in both directions). IT IS NOT A PROPERTY OF WORKTREES.** The cause was the
+  SYMLINKING that `session-state.md` §1 step 1 prescribed: through a symlink forge's remapping
+  auto-detection does not find OpenZeppelin's own nested `remappings.txt`, so it resolved FOUR
+  entries instead of five and omitted `@openzeppelin/contracts/`. That list goes into solc's
+  `settings.remappings`, into the metadata, into the CBOR trailer, and therefore into
+  `targetCodeHash`. Measured: symlinked libs → 4 remappings and a differing DemoPay bytecode;
+  real directories → 5 and byte-identical to the live tree, with the two builds agreeing for
+  their first 617 bytes and differing only in the metadata digest.
+  **Why the misdiagnosis mattered:** it wrote off a class of reviewer coverage as inherent when
+  it was a one-line configuration defect, and round six then inherited the same broken
+  provisioning and lost the same coverage again. A wrong cause is worse than an open question,
+  because nobody re-opens it.
+  **FIXED at the argument level, not by prescribing a procedure:** `contracts/foundry.toml` now
+  sets `auto_detect_remappings = false` and declares all five explicitly, so the bytecode is a
+  function of committed configuration rather than of how the libraries happen to be mounted.
+  Note a `remappings.txt` does NOT achieve this — forge merges auto-detected entries on top of
+  it regardless, which round six measured. Verified both ways: the live tree's bytecode is
+  unchanged by the pin (so every committed view digest is untouched), and a SYMLINKED worktree
+  now produces byte-identical output.
 - **The round's own instrument was defective** (`D-11`), and it is mine. All eight lenses were
   given the same scratchpad directory, four of them independently chose
   `scratchpad/baseline.log` for the mandated baseline run, and they clobbered each other. One

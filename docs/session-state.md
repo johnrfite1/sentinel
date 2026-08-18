@@ -113,6 +113,24 @@ in ways that cost coverage.
 1. **Freeze a commit.** `git worktree add <scratch>/w<N> <HEAD> --detach` per reviewer, then
    symlink `ts/node_modules` and both `contracts/lib/*` submodule directories into each. Nine
    worktrees, nine reviewers.
+   - **`ln -sfn <target> <dir>` NESTS the link inside an existing directory instead of replacing
+     it**, and `git worktree add` creates the submodule mount points, so the naive command
+     silently produces `contracts/lib/forge-std/forge-std` and `forge build` fails with
+     `Source "lib/forge-std/src/Test.sol" not found`. This broke most of round six's trees.
+     **Remove the directory first, then link.** Verify with `ls -l contracts/lib` — you want two
+     symlinks, not two directories.
+   - **The remapping hazard behind that one is FIXED and no longer a reason to avoid symlinks**
+     (A-070): `contracts/foundry.toml` pins all five remappings with
+     `auto_detect_remappings = false`, so the compiled bytecode no longer depends on how the
+     libraries are mounted. Before that, symlinked libs resolved four remappings instead of five
+     and every one of the 50 committed view digests mismatched — which is why round six could not
+     run the deep profile it was required to run.
+   - **`git status` with no pathspec EXITS 128 in a symlinked worktree** ("expected submodule path
+     … not to be a symbolic link"), which silently truncates `&&` chains and `set -e` scripts. Use
+     `git diff HEAD --stat` plus recorded hashes to verify a revert.
+   - **`git checkout -- .` DESTROYS the symlinks** and then reports a clean tree, and a cached
+     `forge build` still exits 0 — a revert that verifies clean while the toolchain is gone. Tell
+     reviewers to revert from a pre-mutation copy and `cmp`, not with git.
 2. **Give each reviewer its own evidence directory.** This is one of A-060's two conditions and
    it exists because four of round five's eight lenses independently chose the same baseline
    filename and clobbered each other.

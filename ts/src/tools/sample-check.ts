@@ -17,6 +17,7 @@ import {buildRegistry, decodeCall} from "../decode/index.ts";
 import {evaluate} from "../evaluate/index.ts";
 import {hashMandate, hashPolicy} from "../evaluate/hashes.ts";
 import {simulateAction} from "../simulate/index.ts";
+import {signerSocketPath} from "../signer/socket-path.ts";
 import {createChainReader} from "../signer/vault.ts";
 import {connectSigner} from "../signer/client.ts";
 import type {ActionPayload, Hex, MandatePayload, PolicyPayload} from "../signer/protocol.ts";
@@ -156,6 +157,7 @@ for (const [fn, arg] of [
     await publicClient.waitForTransactionReceipt({hash: h});
 }
 
+const socketPath = signerSocketPath(REPO, `sample-${port}`, process.env.SENTINEL_SAMPLE_SOCKET_DIR);
 const signerProc = spawn(process.execPath, [join(REPO, "ts", "src", "signer", "main.ts")], {
     cwd: join(REPO, "ts"),
     stdio: ["ignore", "ignore", "ignore"],
@@ -163,11 +165,10 @@ const signerProc = spawn(process.execPath, [join(REPO, "ts", "src", "signer", "m
         ...process.env,
         SENTINEL_RPC_URL: rpcUrl,
         SENTINEL_VAULT_ADDRESS: vault,
-        SENTINEL_SIGNER_SOCKET: join(REPO, ".sentinel", `sample-${port}.sock`),
+        SENTINEL_SIGNER_SOCKET: socketPath,
         SENTINEL_SIGNER_KEY: "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d",
     },
 });
-const socketPath = join(REPO, ".sentinel", `sample-${port}.sock`);
 for (let i = 0; i < 200 && !existsSync(socketPath); i++) await new Promise((r) => setTimeout(r, 25));
 const signer = await connectSigner(socketPath);
 

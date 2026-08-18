@@ -20,6 +20,7 @@ import {buildRegistry, decodeCall} from "../decode/index.ts";
 import {simulateAction, type SimulationResult} from "../simulate/index.ts";
 import {hashMandate, hashPolicy} from "../evaluate/hashes.ts";
 import {createChainReader} from "../signer/vault.ts";
+import {signerSocketPath} from "../signer/socket-path.ts";
 import {connectSigner} from "../signer/client.ts";
 import {evaluate} from "../evaluate/index.ts";
 import type {ActionPayload, Hex, MandatePayload, PolicyPayload} from "../signer/protocol.ts";
@@ -215,13 +216,13 @@ const baselineConfig: BaselineConfig = {
 // socket was created (itself an adversarial-review finding). Pointing the signer at a shared
 // system directory asks it to lock down a directory it does not own. `mkdtempSync` gives it a
 // fresh private one, so the hardening still applies to a directory that is ours.
-const preferredSocket = join(REPO, ".sentinel", `corpus-${port}.sock`);
-const socketDirOverride = process.env.SENTINEL_CORPUS_SOCKET_DIR;
-const socketPath = socketDirOverride
-    ? join(socketDirOverride, `corpus-${port}.sock`)
-    : Buffer.byteLength(preferredSocket) < 100
-      ? preferredSocket
-      : join(mkdtempSync(join(tmpdir(), "sentinel-corpus-")), `corpus-${port}.sock`);
+// MOVED TO A SHARED HELPER 2026-08-18 (D-052(b), round six L7-3). The logic above was correct
+// and lived HERE ONLY, while `tools/sample-check.ts` and `tools/emit-samples.ts` carried the
+// identical raw construction and still died `connect EINVAL` from a worktree. One
+// implementation, three callers — see `../signer/socket-path.ts` for the reasoning that used
+// to sit in this comment.
+const socketPath = signerSocketPath(REPO, `corpus-${port}`,
+                                    process.env.SENTINEL_CORPUS_SOCKET_DIR);
 const signerProc = spawn(process.execPath, [join(REPO, "ts", "src", "signer", "main.ts")], {
     cwd: join(REPO, "ts"),
     stdio: ["ignore", "ignore", "ignore"],

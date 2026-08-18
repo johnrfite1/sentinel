@@ -27,6 +27,7 @@ import type {
     PolicyPayload,
 } from "../signer/protocol.ts";
 import {digest, domainSeparator, hashOverride, hashReceipt} from "../signer/eip712.ts";
+import {signerSocketPath} from "../signer/socket-path.ts";
 
 /**
  * Emit signed sample artifacts for the D-010 independent verifier.
@@ -201,7 +202,7 @@ async function activate(mandate: MandatePayload, policy: PolicyPayload): Promise
     }
 }
 
-const socketPath = join(REPO, ".sentinel", `emit-${port}.sock`);
+const socketPath = signerSocketPath(REPO, `emit-${port}`, process.env.SENTINEL_EMIT_SOCKET_DIR);
 const signerProc = spawn(process.execPath, [join(REPO, "ts", "src", "signer", "main.ts")], {
     cwd: join(REPO, "ts"),
     stdio: ["ignore", "ignore", "ignore"],

@@ -2,9 +2,43 @@
 src = "src"
 out = "out"
 libs = ["lib"]
+# REMAPPINGS ARE PINNED AND AUTO-DETECTION IS OFF (D-052(b), round six, five lenses).
+#
+# THE ARGUMENT: the compiled bytecode must not depend on HOW the libraries happen to be mounted.
+# solc records `settings.remappings` in the metadata, whose hash is the CBOR trailer of the
+# deployed bytecode — so the remapping LIST is an input to `targetCodeHash`, which every mandate
+# binds and all 50 committed corpus views carry.
+#
+# WHAT WENT WRONG. Only two of the five were declared here; forge auto-detected the other three
+# by walking `lib/`. `session-state.md` §1 step 1 told every review worktree to SYMLINK
+# `contracts/lib/*` — and through a symlink the walk does not find OpenZeppelin's own nested
+# `remappings.txt`, so it resolved FOUR entries instead of five, omitting
+# `@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/`. Different metadata, different
+# trailer, different code hash, and all 50 view digests mismatched. The deep gate therefore could
+# not pass in a worktree provisioned exactly as the handoff prescribed — while D-050(1) made
+# running the deep profile a CONDITION of a valid review round, and the round-six brief recorded
+# the blocker as "SOLVED". A-066 solved the socket half; this is the other half.
+#
+# Reproduced in both directions on a clean rebuild: symlinked libs -> 4 remappings and a
+# different DemoPay bytecode; real directories -> 5 and byte-identical to the live tree. The two
+# builds agree for their first 617 bytes and differ only in the metadata digest.
+#
+# THE FIX IS TO PIN, NOT TO PRESCRIBE A PROVISIONING METHOD. Telling reviewers to use real
+# checkouts is a procedure, and a procedure that must be remembered is the thing that failed.
+# `auto_detect_remappings = false` plus the full explicit list makes the build a function of
+# committed configuration alone. NOTE that a `remappings.txt` does NOT achieve this — forge
+# merges auto-detected entries on top of it regardless, which round six measured.
+#
+# The list below is byte-for-byte what the live tree auto-detected, in solc's own order, so the
+# committed artifacts and every view digest are unchanged. Verified: bytecode identical before
+# and after this change, and identical from a symlinked worktree.
+auto_detect_remappings = false
 remappings = [
-    "openzeppelin-contracts/=lib/openzeppelin-contracts/",
+    "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/",
+    "erc4626-tests/=lib/openzeppelin-contracts/lib/erc4626-tests/",
     "forge-std/=lib/forge-std/src/",
+    "halmos-cheatcodes/=lib/openzeppelin-contracts/lib/halmos-cheatcodes/src/",
+    "openzeppelin-contracts/=lib/openzeppelin-contracts/",
 ]
 test = "test"
 solc_version = "0.8.28"
