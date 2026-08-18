@@ -661,6 +661,18 @@ contract SentinelVaultBackstopsTest is Test {
 
         // Now 100 actions at EXACTLY the cap. Every one is a valid ALLOW, the ceiling engages
         // on all of them, and it refuses none.
+        //
+        // THE `vm.warp` IS GONE, AND ITS ABSENCE IS THE POINT (D-053(a), round six lens 4).
+        // This loop used to advance the clock by 365 days between executions, so a reader took
+        // away "100 actions spread over a century" and the §7.1 row's "pause bounds damage
+        // AFTER SOMEBODY NOTICES" read as a real window. It is not one. Nothing here needs
+        // time to pass: the block number and timestamp are asserted UNCHANGED across all 100
+        // executions below, so no owner transaction — pause included — can interleave.
+        //
+        // Measured on this fixture: ~75,700 gas per action, so a 30M block holds roughly 396
+        // of them. The drain is bounded by the block gas limit, not by anything the vault does.
+        uint256 blockNumberBefore = block.number;
+        uint256 timestampBefore = block.timestamp;
         for (uint256 i = 0; i < 100; i++) {
             bytes memory data = _purchaseFor(i + 1);
             T.ActionPayload memory a = _actionOn(v, cap, data);
@@ -668,9 +680,18 @@ contract SentinelVaultBackstopsTest is Test {
             bytes memory sig = _signFor(v, SIGNER_PK, T.hashReceipt(r));
             vm.prank(address(0xDEAD)); // no key needed: execution is permissionless
             v.executeWithReceipt(a, data, r, sig);
-            vm.warp(block.timestamp + 365 days); // and no deadline pressure either
         }
 
+        assertEq(
+            block.number,
+            blockNumberBefore,
+            "REGRESSION: the drain now crosses a block boundary, so pause could interleave"
+        );
+        assertEq(
+            block.timestamp,
+            timestampBefore,
+            "REGRESSION: time passes during the drain; 7.1 after-somebody-notices would need revisiting"
+        );
         assertEq(v.actionNonce(), 100, "100 nonces consumed and not one action refused");
         assertEq(
             address(v).balance,

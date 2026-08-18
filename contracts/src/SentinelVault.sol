@@ -10,10 +10,31 @@ import {SentinelTypes as T} from "./types/SentinelTypes.sol";
 ///         human-signed mandate, active policy, exact call, and current action nonce."
 ///
 /// @dev THIS IS AN EXECUTION HARNESS, NOT A PRODUCTION WALLET (§4). Its hard onchain
-///      backstops cap native value, restrict targets and selectors, enforce the active
-///      signer and nonce, and let the owner pause or recover. A compromised evaluator or
-///      signer can still authorize a malicious action within those caps — the lab bounds
-///      worst-case blast radius to testnet funds, it does not eliminate it.
+///      backstops bound the SHAPE of each action — target and selector allowlists, calldata
+///      hash, chain and vault binding, nonce ordering, and a PER-ACTION native-value ceiling —
+///      and let the owner pause, revoke or recover.
+///
+///      WHAT THEY DO NOT BOUND, stated here because this is the first thing a reader auditing
+///      the vault sees, and because the earlier wording ("within those caps") implied a
+///      containment this contract does not provide (D-053(a), round six lens 4):
+///
+///      * AGGREGATE LOSS. `maxNativeValueWei` is compared once PER ACTION. No cumulative,
+///        rate-limited or velocity bound exists anywhere in `contracts/src`.
+///      * EXECUTION RATE, and this is the sharper half. A relayer contract can call
+///        `executeWithReceipt` repeatedly INSIDE ONE TRANSACTION: `nonReentrant` stops
+///        nesting, not repetition. Measured: 100 valid ALLOW receipts at exactly the cap
+///        drain a funded vault to zero in a single transaction, ~75,700 gas each, with
+///        `block.number` and `block.timestamp` unchanged throughout.
+///
+///      So a compromised signer issuing sequential nonces drains the vault atomically. PAUSE
+///      protects only BEFORE execution begins or BETWEEN transactions — there is no interval
+///      during the drain in which an owner transaction could land. **This is an explicitly
+///      accepted v1 boundary of a testnet lab, ruled by John (D-053(a)), not an open defect.**
+///      The lab bounds worst-case blast radius to testnet funds; it does not eliminate it, and
+///      it does not bound how fast those funds leave.
+///
+///      Asserted by `test_LIMIT_nativeCeilingIsPerActionAndBoundsNoAggregate`, which now
+///      executes all 100 actions with the block number and timestamp asserted UNCHANGED.
 ///
 /// @dev WHY `execute` IS PERMISSIONLESS. Authorization rides on the receipt, not on
 ///      `msg.sender`. Anyone may relay a valid allow receipt, and that is safe precisely

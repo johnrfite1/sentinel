@@ -563,7 +563,17 @@ prevent.
   native value in aggregate either: `maxNativeValueWei` is compared PER ACTION, no cumulative or
   rate-limited bound exists anywhere in `contracts/src`, and a capped vault was drained to zero
   by 100 valid ALLOW receipts each at exactly the cap. What the vault bounds is the SHAPE of a
-  single action; cumulative authority is unbounded in every dimension. Separately and still
+  single action; cumulative authority is unbounded in every dimension.
+  **CORRECTED AGAIN 2026-08-18 (D-053(a), round six lens 4): THE DRAIN IS ATOMIC, and the earlier
+  measurement warped a year between actions, which flattered the vault.** A relayer calls
+  `executeWithReceipt` repeatedly inside ONE transaction — `nonReentrant` stops nesting, not
+  repetition — so all 100 executions land with `block.number` and `block.timestamp` UNCHANGED
+  (now asserted by the limit test). **Pause protects only BEFORE execution begins or BETWEEN
+  transactions**, so §7.1's retreat to "it bounds damage after somebody notices" is itself too
+  generous: during the drain there is nothing to notice and no interval in which to act. The
+  ceiling bounds the SHAPE of each action, not aggregate loss and not execution RATE. **No
+  cumulative or rate-limited bound is added or promised — an explicitly accepted v1 boundary
+  (D-053(a)), relabelled from "v1.1 work" to an optional future extension.** Separately and still
   true: one valid ALLOW receipt for `approve(spender, max)` transfers authority over the entire
   token balance, and `maxAllowanceIncreaseBaseUnits` has no onchain counterpart. **Both claims
   are corrected; both caps are v1.1, and both limits are now asserted by tests

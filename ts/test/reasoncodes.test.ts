@@ -345,6 +345,140 @@ describe("the attestation guard is scoped to the authorisation basis", () => {
         assert.ok(findingsOf(second).includes("SIGNER_NONCE_ALREADY_ATTESTED"));
     });
 
+    // ---- D-053(b): THE BASIS CYCLE, AND THE ARGUMENT AROUND IT --------------------------
+    //
+    // The guard used to key reservations by nonce alone, so a basis change OVERWROTE the
+    // earlier reservation instead of superseding it. Round six showed the consequence: rotate
+    // M1 -> M2 -> M1 and the nonce is free again, leaving two live credentials under the SAME
+    // active mandate — where A-012(a)'s "the vault reverts MandateNotActive on the stale one"
+    // escape cannot engage, because neither is stale.
+    //
+    // John's ruling was explicit that the repair must cover the ARGUMENT, not M1 -> M2 -> M1.
+    // Each case below is one of the seven he enumerated.
+
+    const cycleAttestor = (chain: Parameters<typeof createAttestor>[0]["chain"]) =>
+        createAttestor({
+            chainId: CHAIN_ID, vault: VAULT, keystore: fakeKeystore(), chain,
+            now: () => NOW, randomBytes32: () => keccak256(stringToBytes("decision")),
+        });
+
+    it("a MANDATE cycle does not free a nonce the first action still holds", async () => {
+        const f1 = buildFixture({});
+        const {chain, activate} = mutableChain(f1);
+        const attestor = cycleAttestor(chain);
+        assert.equal((await attestor.evaluateAndSign(f1.request)).refused, false);
+
+        const f2 = buildFixture({
+            mandate: {mandateId: keccak256(stringToBytes("mandate:M2"))},
+            callData: decodablePurchaseCallData("cycle-m2"),
+        });
+        activate(f2);
+        // The new mandate is IMMEDIATELY usable — Case 4's remedy must survive the repair.
+        assert.equal((await attestor.evaluateAndSign(f2.request)).refused, false);
+
+        activate(f1); // back to M1
+        const f3 = buildFixture({callData: decodablePurchaseCallData("cycle-m1-again")});
+        const third = await attestor.evaluateAndSign(f3.request);
+        assert.equal(third.refused, true, "the cycle freed a nonce the first action still holds");
+        assert.ok(findingsOf(third).includes("SIGNER_NONCE_ALREADY_ATTESTED"));
+    });
+
+    it("a POLICY cycle behaves the same as a mandate cycle", async () => {
+        // The basis is (mandate, policy). Pinning only the mandate half would be the same
+        // partial repair this project keeps making.
+        const f1 = buildFixture({});
+        const {chain, activate} = mutableChain(f1);
+        const attestor = cycleAttestor(chain);
+        assert.equal((await attestor.evaluateAndSign(f1.request)).refused, false);
+
+        const f2 = buildFixture({
+            policy: {policyVersion: 99n},
+            callData: decodablePurchaseCallData("cycle-p2"),
+        });
+        activate(f2);
+        assert.equal((await attestor.evaluateAndSign(f2.request)).refused, false);
+
+        activate(f1);
+        const f3 = buildFixture({callData: decodablePurchaseCallData("cycle-p1-again")});
+        const third = await attestor.evaluateAndSign(f3.request);
+        assert.equal(third.refused, true, "a policy cycle freed the nonce");
+        assert.ok(findingsOf(third).includes("SIGNER_NONCE_ALREADY_ATTESTED"));
+    });
+
+    it("an idempotent re-sign of the SAME action still succeeds after a cycle", async () => {
+        // Preserving reservations must not deadlock the retry path a lost response needs.
+        const f1 = buildFixture({});
+        const {chain, activate} = mutableChain(f1);
+        const attestor = cycleAttestor(chain);
+        assert.equal((await attestor.evaluateAndSign(f1.request)).refused, false);
+
+        const f2 = buildFixture({
+            mandate: {mandateId: keccak256(stringToBytes("mandate:M2"))},
+            callData: decodablePurchaseCallData("cycle-idem-m2"),
+        });
+        activate(f2);
+        assert.equal((await attestor.evaluateAndSign(f2.request)).refused, false);
+
+        activate(f1);
+        const again = await attestor.evaluateAndSign(f1.request); // the SAME action as before
+        assert.equal(again.refused, false, "an idempotent re-sign must not be refused");
+    });
+
+    it("an EXPIRED superseded reservation no longer holds the nonce after a cycle", async () => {
+        // Expiry, not overwriting, is what releases a reservation now. If that stopped working
+        // a cycle would wedge the nonce for the rest of the TTL.
+        const f1 = buildFixture({});
+        const {chain, activate} = mutableChain(f1);
+        let clock = NOW;
+        const attestor = createAttestor({
+            chainId: CHAIN_ID, vault: VAULT, keystore: fakeKeystore(), chain,
+            now: () => clock, randomBytes32: () => keccak256(stringToBytes("decision")),
+        });
+        assert.equal((await attestor.evaluateAndSign(f1.request)).refused, false);
+
+        const f2 = buildFixture({
+            mandate: {mandateId: keccak256(stringToBytes("mandate:M2"))},
+            callData: decodablePurchaseCallData("cycle-exp-m2"),
+        });
+        activate(f2);
+        assert.equal((await attestor.evaluateAndSign(f2.request)).refused, false);
+
+        clock = NOW + 7200n; // past any TTL the signer will grant
+        activate(f1);
+        const f3 = buildFixture({callData: decodablePurchaseCallData("cycle-exp-m1")});
+        assert.equal((await attestor.evaluateAndSign(f3.request)).refused, false,
+            "an expired reservation must not keep holding the nonce");
+    });
+
+    it("a REVIEW reservation survives a cycle, not just an ALLOW one", async () => {
+        // REVIEW reserves because an owner override makes it executable. If only ALLOW
+        // reservations were preserved, the human-in-the-loop path would carry the hole.
+        const f1 = buildFixture({
+            verdict: "REVIEW",
+            state: {targetCodeHash: keccak256(stringToBytes("stale code"))},
+        });
+        const {chain, activate} = mutableChain(f1);
+        const attestor = cycleAttestor(chain);
+        assert.equal((await attestor.evaluateAndSign(f1.request)).refused, false);
+
+        const f2 = buildFixture({
+            mandate: {mandateId: keccak256(stringToBytes("mandate:M2"))},
+            callData: decodablePurchaseCallData("cycle-review-m2"),
+        });
+        activate(f2);
+        assert.equal((await attestor.evaluateAndSign(f2.request)).refused, false);
+
+        activate(f1);
+        const f3 = buildFixture({
+            verdict: "REVIEW",
+            state: {targetCodeHash: keccak256(stringToBytes("stale code"))},
+            callData: decodablePurchaseCallData("cycle-review-m1"),
+        });
+        const third = await attestor.evaluateAndSign(f3.request);
+        assert.equal(third.refused, true, "a REVIEW reservation was lost across the cycle");
+        assert.ok(findingsOf(third).includes("SIGNER_NONCE_ALREADY_ATTESTED"));
+    });
+
     it("never shortens a live reservation via a smaller caller-supplied TTL", async () => {
         // `ttlSeconds` is a caller field. An idempotent re-sign with a tiny TTL must not move
         // the reservation's expiry earlier than the receipt already issued, or a different

@@ -742,6 +742,12 @@ WHAT IS NOT COVERED:
     compromised signer, and pause is an owner REACTION rather than a cap: nonce prevents
     replay but not a fresh receipt at N+1, and deadline and expiresAt are the attacker's
     own fields. test_LIMIT_nativeCeilingIsPerActionAndBoundsNoAggregate asserts it.
+    CORRECTED AGAIN 2026-08-18 (D-053(a)): the drain is ATOMIC. A relayer calls
+    executeWithReceipt repeatedly inside ONE transaction -- nonReentrant stops nesting, not
+    repetition -- so all 100 executions land with block.number and block.timestamp UNCHANGED,
+    which that test now asserts. Pause therefore protects only BEFORE execution begins or
+    BETWEEN transactions; there is no in-flight window and nothing to notice. No cumulative
+    or rate-limited bound is added or promised: accepted v1 boundary of a testnet lab.
     Certified by John 2026-08-18 (D-051(a)).
   - THAT THE VAULT CONSTRAINS TOKEN AUTHORITY. It does not, and §7.1 said otherwise until
     2026-08-16 (D-042). One valid ALLOW receipt for approve(spender, max) passes

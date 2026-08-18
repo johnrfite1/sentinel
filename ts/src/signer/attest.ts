@@ -106,10 +106,27 @@ export interface Attestor {
  * TTL — and the corrected action taken under a NEW mandate, Case 4's second remedy, was
  * refused until it expired.
  *
- * The reservation therefore records the active mandate and policy hashes it was taken
- * under, and is void once either changes. Two credentials can never be live under two
- * different active mandate hashes — the vault reverts `MandateNotActive` on the stale one —
- * so this is strictly safe rather than a trade.
+ * The reservation therefore records the active mandate and policy hashes it was taken under,
+ * and a request under a DIFFERENT basis does not see it.
+ *
+ * ~~Two credentials can never be live under two different active mandate hashes — the vault
+ * reverts `MandateNotActive` on the stale one — so this is strictly safe rather than a
+ * trade.~~ **CORRECTED 2026-08-18 (D-053(b), round six L2-1). THAT SENTENCE WAS TRUE AND
+ * IRRELEVANT, AND THE WORD "NEVER" IS WHAT MADE IT DANGEROUS.** It answers the case where the
+ * two credentials sit under two DIFFERENT mandates. A rotation CYCLE puts them under the SAME
+ * one: sign A1 under M1, rotate to M2 (which legitimately frees the nonce, Case 4), then
+ * rotate BACK to M1 and sign A3. Both name M1, M1 is active, and the vault's
+ * `MandateNotActive` escape never engages. Reproduced with a control: the guard correctly
+ * refuses a second action under an unchanged M1, and signs one after the cycle.
+ *
+ * The defect was that a basis change ERASED the earlier reservation rather than superseding
+ * it, because the map was keyed by nonce alone. Reservations are now keyed by basis, so every
+ * unexpired one is preserved and a cycle finds the original still holding.
+ *
+ * **The honest formulation, which replaces "strictly safe" and "can never be live":** a second
+ * live executable attestation at one nonce is PREVENTED WITHIN ONE UNINTERRUPTED SIGNER
+ * PROCESS. Restart and shared-key multi-process remain live limits, exactly as below, and the
+ * vault's nonce remains the durable single-use guarantee.
  *
  * WHAT WAS TRIED AND REJECTED: exempting REVIEW from reserving at all. It looks reasonable
  * — a REVIEW receipt cannot execute by itself — and it is wrong. `executeWithOverride`
@@ -138,8 +155,27 @@ interface Reservation {
 class NonceAttestationGuard {
     private readonly live = new Map<string, Reservation>();
 
-    private static key(chainId: bigint, vault: Hex, nonce: bigint): string {
-        return `${chainId}:${vault}:${nonce}`;
+    /**
+     * KEYED BY THE AUTHORISATION BASIS, NOT BY THE NONCE ALONE (D-053(b), round six L2-1).
+     *
+     * The old key was `chain:vault:nonce`, so the map held exactly ONE reservation per nonce
+     * and `record()` OVERWROTE it whenever the basis changed. A basis change therefore ERASED
+     * the earlier reservation instead of superseding it — and a rotation CYCLE
+     * (M1 -> M2 -> M1) walked straight back to a nonce whose reservation no longer existed,
+     * leaving two live credentials at one nonce under the SAME active mandate.
+     *
+     * Including the basis in the key preserves every unexpired reservation. A new mandate is
+     * still immediately usable (§4.2 Case 4's second remedy) because it looks up a different
+     * key; cycling back finds the original reservation still there. Expiry, not overwriting,
+     * is what removes a reservation — and `prune()` is what bounds the map.
+     */
+    private static key(
+        chainId: bigint,
+        vault: Hex,
+        nonce: bigint,
+        basis: {mandateHash: Hex; policyHash: Hex},
+    ): string {
+        return `${chainId}:${vault}:${nonce}:${basis.mandateHash}:${basis.policyHash}`;
     }
 
     /**
@@ -154,14 +190,14 @@ class NonceAttestationGuard {
         now: bigint,
         basis: {mandateHash: Hex; policyHash: Hex},
     ): boolean {
-        const held = this.live.get(NonceAttestationGuard.key(chainId, vault, nonce));
+        // The basis is part of the key, so a reservation taken under a DIFFERENT mandate or
+        // policy is simply not found here — which is §4.2 Case 4's liveness remedy ("or a new
+        // mandate") expressed as a lookup rather than as an early return. The difference from
+        // the old code is that the other reservation still EXISTS and will be found again if
+        // the owner cycles back to that basis.
+        const held = this.live.get(NonceAttestationGuard.key(chainId, vault, nonce, basis));
         if (held === undefined) return false;
         if (now > held.expiresAt) return false;
-        // The owner changed the authorisation basis; the old reservation describes a
-        // decision that no longer applies (§4.2 Case 4, "or a new mandate").
-        if (held.mandateHash !== basis.mandateHash || held.policyHash !== basis.policyHash) {
-            return false;
-        }
         return held.actionHash !== actionHash;
     }
 
@@ -173,7 +209,7 @@ class NonceAttestationGuard {
         expiresAt: bigint,
         basis: {mandateHash: Hex; policyHash: Hex},
     ): void {
-        const k = NonceAttestationGuard.key(chainId, vault, nonce);
+        const k = NonceAttestationGuard.key(chainId, vault, nonce, basis);
         const held = this.live.get(k);
         // NEVER SHORTEN AN EXISTING RESERVATION FOR THE SAME ACTION. `ttlSeconds` is a
         // caller field, and an idempotent re-sign with a smaller TTL would otherwise move
@@ -195,8 +231,19 @@ class NonceAttestationGuard {
      * request's live reservation, turning a signing error into the very double-attestation
      * this guard exists to prevent.
      */
-    release(chainId: bigint, vault: Hex, nonce: bigint, actionHash: Hex): void {
-        const k = NonceAttestationGuard.key(chainId, vault, nonce);
+    release(
+        chainId: bigint,
+        vault: Hex,
+        nonce: bigint,
+        actionHash: Hex,
+        basis: {mandateHash: Hex; policyHash: Hex},
+    ): void {
+        // The basis is part of the key now, so a release can only reach the reservation this
+        // request itself took. Before D-053(b) a release named only the nonce, so with
+        // reservations preserved per basis it could have deleted a SIBLING basis's live
+        // reservation — turning a signing error into the double-attestation this guard exists
+        // to prevent, which is the same hazard the actionHash comparison guards within a basis.
+        const k = NonceAttestationGuard.key(chainId, vault, nonce, basis);
         if (this.live.get(k)?.actionHash === actionHash) this.live.delete(k);
     }
 
@@ -512,7 +559,7 @@ export function createAttestor(config: AttestorConfig): Attestor {
             } catch (err) {
                 // A reservation held by a receipt that was never issued would wedge the nonce
                 // until it expired.
-                if (reserved) guard.release(chainId, vault, action.actionNonce, actionHash);
+                if (reserved) guard.release(chainId, vault, action.actionNonce, actionHash, basis);
                 throw err;
             }
 
