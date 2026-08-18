@@ -322,7 +322,10 @@ fi
 # nothing reconciling them. That is precisely the defect A-045 was written to close, reproduced
 # inside A-045's own remediation. These three numbers are the assertion. Raise a floor when the
 # suite genuinely grows; NEVER lower one to make a run pass.
-VERIFIER_MIN_TESTS=180
+# 180 -> 189 (A-070, the D-052(b) remediation of round six L6-2/L6-3 plus the two siblings the
+# repair protocol's sweep found). Ratcheted in the SAME edit as the suite it bounds, which is the
+# rule this line exists to enforce and the rule it has broken three times.
+VERIFIER_MIN_TESTS=189
 VERIFIER_MIN_SAMPLES=7
 VERIFIER_MIN_TAMPER=78
 # A MODE FLOOR, because a pair count alone rewards padding (A-049): `tamper cases` counts

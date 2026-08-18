@@ -820,6 +820,53 @@ def _refusal_checks(sample_dir, located, receipt_doc, evidence, evidence_hash,
             "presenter may rewrite it without breaking anything above. The "
             "authenticated statement of reasons is reasonCodesHash.",
             skipped=True))
+
+    # ---- 8. THE PATHS THE RECEIPT-SIDE CHECKS NEVER RAN ON ---------------
+    # D-052(b) remediation of round six's L6-2 and the second half of L6-3. Both are one defect
+    # of ORDER, not of logic: `verify_sample` calls `_refusal_checks` and RETURNS immediately,
+    # while `_override_checks` and `_chain_checks` — and therefore the §5.6 projections — sit
+    # below that return. So a §5.5.1 refusal bundle reached none of them.
+    #
+    # THE ARGUMENT, stated so the next repair is checked against it rather than against the
+    # probes: a check that establishes a property of a bundle must run on EVERY path that
+    # certifies a bundle. "Which paths does this check not run on?" is now a required question
+    # (docs/repair-protocol.md step 2), and this is the first answer it produced.
+    #
+    # (a) AN UNEXAMINED §5.5 CREDENTIAL. `override.json` was never opened on this path, so an
+    #     override minted by an arbitrary outsider key — the artifact A-059's owner-identity
+    #     repair exists to reject, and which it DOES reject two functions away — rode along
+    #     inside a bundle this verifier printed `=> PASS` over. The verifier's own tamper arm
+    #     testified against it, printing six consecutive `WRONGLY ACCEPTED` lines for the
+    #     override modes on the same bundle the certifying arm passed.
+    #
+    #     It is rejected rather than checked, and deliberately: §0 above already refuses a bundle
+    #     presenting "a decision OR a refusal, not both", on the stated ground that certifying it
+    #     would certify whichever half the reader happens to look at. An owner override IS an
+    #     authorization. A bundle that refuses and authorizes at once is not a certifiable claim,
+    #     and answering it with PASS was the defect.
+    #
+    # (b) THE §5.6 PROJECTIONS. Absence-is-agreement was fixed at the site; it was still absent
+    #     from this path entirely. The refusal corpus bundle carries action.json, mandate.json
+    #     and policy.json, so the projections are answerable here.
+    #
+    # NOT ADDED HERE, and stated so it reads as a decision rather than an oversight: the anchor
+    # and evidence-verdict checks are receipt-side by construction — both compare against fields
+    # of a §5.4 receipt, which a refusal bundle does not have. Their absence from this path is
+    # correct, not a gap.
+    def _sibling(name):
+        path = os.path.join(sample_dir, name)
+        return _read_json(path) if os.path.isfile(path) else None
+
+    if os.path.isfile(os.path.join(sample_dir, "override.json")):
+        out.append(Check(
+            "a §5.5.1 refusal bundle carries no §5.5 owner override", False,
+            "override.json is present beside a signed refusal record. A refusal and an "
+            "authorization in one bundle is not a certifiable claim — §0 refuses the same "
+            "shape for a receipt. Nothing on this path examines the override, so accepting "
+            "it would certify a §5.5 credential that was never verified."))
+
+    out.extend(_evidence_describes_the_bundle(
+        evidence, _sibling("action.json"), _sibling("mandate.json"), _sibling("policy.json")))
     return out
 
 
@@ -1262,11 +1309,33 @@ def _evidence_describes_the_bundle(evidence, action, mandate, policy):
     call site for why that distinction decided where the check lives.
     """
     out = []
+    # ABSENCE IS NOT AGREEMENT — D-052(b) remediation of round six's L6-3/L2-3.
+    #
+    # A-067 stated this exact rule one day before A-069 shipped the opposite: "A hash commits to
+    # a document. With no document there is nothing to certify, so this FAILS." A-069's
+    # projections were gated on `isinstance(..., dict)` with no else-branch, so an ABSENT or
+    # non-object projection emitted NO Check at all — not a failure, not even a [SKIP] line — and
+    # the run still printed as clean. Reproduced during adjudication with a wholly self-consistent
+    # bundle (re-canonicalised, re-hashed, re-bound, RE-SIGNED, so only these checks could reject
+    # it): deleting `expectedEffects`, deleting `normalizedAction`, or wrapping either in a
+    # one-element list each verified `=> PASS`, exit 0, against controls that pass unmutated and
+    # fail on a rewritten field.
+    #
+    # THE ARGUMENT, not the demonstration: a bundle that does not CARRY a required §5.6 projection
+    # cannot be certified as describing the documents it claims to describe. Omission is the
+    # cheapest possible evasion and it must cost more than a contradiction, not less.
     if not isinstance(evidence, dict):
+        out.append(Check(
+            "evidence is an object the §5.6 projections can be checked against", False,
+            f"got {type(evidence).__name__}"))
         return out
 
     normalized = evidence.get("normalizedAction")
-    if isinstance(normalized, dict) and action is not None:
+    if not isinstance(normalized, dict):
+        out.append(Check(
+            "evidence.normalizedAction is present and is an object (§5.6)", False,
+            "absent" if normalized is None else f"got {type(normalized).__name__}"))
+    elif action is not None:
         mismatched = []
         for _type, name in eip712.ACTION_FIELDS:
             if name not in normalized:
@@ -1294,7 +1363,11 @@ def _evidence_describes_the_bundle(evidence, action, mandate, policy):
                 "" if ok else f"computed {digest}\naction   {action.get('dataHash')}"))
 
     expected = evidence.get("expectedEffects")
-    if isinstance(expected, dict) and mandate is not None:
+    if not isinstance(expected, dict):
+        out.append(Check(
+            "evidence.expectedEffects is present and is an object (§5.6)", False,
+            "absent" if expected is None else f"got {type(expected).__name__}"))
+    elif mandate is not None:
         wrong = []
         for name in ("target", "selector", "resourceId", "beneficiary",
                      "durationSeconds", "recurringAllowed"):
@@ -1310,9 +1383,21 @@ def _evidence_describes_the_bundle(evidence, action, mandate, policy):
                     f"{policy.get('maxAllowanceIncreaseBaseUnits')!r}")
         # §5.2, published: "Mandate and policy constraints are intersected." The binding native
         # ceiling is therefore the LOWER of the two, not the mandate's. Compared against the
-        # mandate alone this check would be wrong the first time they diverge — AND NO CORPUS
-        # FIXTURE HAS THEM DIVERGE, so the corpus cannot say which reading is right. The gap is
-        # recorded rather than papered over (v1.1 register).
+        # mandate alone this check would be wrong the first time they diverge.
+        #
+        # [CORRECTED 2026-08-18, D-052(b), from round six lens 3.] This comment used to end
+        # "AND NO CORPUS FIXTURE HAS THEM DIVERGE, so the corpus cannot say which reading is
+        # right." **THAT IS FALSE AND WAS FALSE WHEN WRITTEN.** `fixtures/corpus/for-labelling/
+        # F006.json` diverges by a factor of 500 — mandate 1e18 against policy 2e15 — and its
+        # own declared intent says so in words: "The mandate's value ceiling is raised above the
+        # policy's, so the policy is the tighter of the two." Its result file records BLOCK on
+        # `EVAL_VALUE_WITHIN_POLICY`. Measured across all 50: exactly one diverges.
+        #
+        # The claim IS true of the seven committed SAMPLE bundles, which is what this verifier
+        # reads — so the sentence attributed the gap to the wrong artifact, and the remedy it
+        # prescribed ("a fixture with divergent ceilings is owed at v1.1", A-069 / register
+        # §13.5) would have added a fixture to a corpus that already had one. The real gap is a
+        # divergent SAMPLE. Recorded in the register rather than silently re-scoped here.
         if policy is not None and "maxNativeValueWei" in expected:
             try:
                 bound = min(int(mandate.get("maxNativeValueWei")),
@@ -1401,8 +1486,18 @@ def _chain_checks(sample_dir, receipt, evidence, domain):
     # Evidence-bundle fields §5.6 does not list, and never requires to agree
     # with the receipt (REPORT.md F-5). Checked anyway: if they can disagree,
     # the dashboard and the receipt can tell an operator different stories.
+    # SIBLING OF L6-3, FOUND BY THE D-052(b) PROTOCOL SWEEP AND REPORTED BY NO REVIEWER.
+    # Same defect class as the §5.6 projections: absent or non-object `anchor` emitted no Check.
+    # A-056 added the `receipt-anchor-split` tamper mode precisely because "THE ANCHOR HAD NO TEST
+    # AT ALL" — and deleting the anchor outright still verified `=> PASS`, which is the cheaper
+    # attack on the same binding. Reproduced and falsified with a re-signed bundle; the control
+    # (a rewritten blockNumber inside a present anchor) fails as it always did.
     anchor = evidence.get("anchor") if isinstance(evidence, dict) else None
-    if isinstance(anchor, dict):
+    if not isinstance(anchor, dict):
+        out.append(Check(
+            "evidence.anchor is present and is an object (§5.6)", False,
+            "absent" if anchor is None else f"got {type(anchor).__name__}"))
+    else:
         ok = (str(anchor.get("blockNumber")) == str(receipt.get("simulationBlockNumber"))
               and _norm_hex(anchor.get("blockHash", "")) == _norm_hex(receipt.get("simulationBlockHash", "")))
         out.append(Check(
@@ -1411,7 +1506,13 @@ def _chain_checks(sample_dir, receipt, evidence, domain):
             "" if ok else f"anchor  {anchor}\nreceipt {receipt.get('simulationBlockNumber')} "
                           f"{receipt.get('simulationBlockHash')}",
         ))
-    if isinstance(evidence, dict) and "verdict" in evidence:
+    # SIBLING, same sweep, same class: `"verdict" in evidence` with no else-branch meant a bundle
+    # that simply OMITS its own verdict was never compared against the receipt's enum.
+    if not (isinstance(evidence, dict) and "verdict" in evidence):
+        out.append(Check(
+            "evidence.verdict is present to compare against the receipt (§5.6)", False,
+            "absent"))
+    else:
         expected = VERDICT_NAMES.get(int(receipt["verdict"]))
         ok = evidence["verdict"] == expected
         out.append(Check(

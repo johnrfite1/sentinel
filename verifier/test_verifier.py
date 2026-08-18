@@ -1250,6 +1250,83 @@ class TestEvidenceDescribesTheBundle(unittest.TestCase):
         self.assertIn("keccak256(evidence.normalizedAction.callData) == action.dataHash",
                       [c.name for c in checks if not c.ok])
 
+    # ---- OMISSION, not contradiction (D-052(b), from round six L6-3/L2-3) --------------
+    #
+    # Every test above mutates a projection into saying something FALSE. A-069 gated both
+    # checks on `isinstance(..., dict)` with no else-branch, so a bundle that simply OMITTED a
+    # projection — or supplied one wrapped in a list — emitted NO Check at all, and the run
+    # printed as clean. Contradiction cost a FAIL; omission cost nothing, which is the wrong
+    # way round. This is A-067's own rule, one file over: "A hash commits to a document. With
+    # no document there is nothing to certify, so this FAILS."
+    #
+    # Each of these was confirmed to PASS against the pre-fix verifier before the fix landed.
+
+    def test_expectedEffects_may_not_simply_be_absent(self):
+        target = self.resealed(lambda ev: ev.pop("expectedEffects"))
+        ok, checks = _verify(target)
+        self.assertFalse(ok, "a bundle omitting expectedEffects was certified")
+        self.assertIn("evidence.expectedEffects is present and is an object (§5.6)",
+                      [c.name for c in checks if not c.ok])
+
+    def test_expectedEffects_may_not_be_a_non_object(self):
+        # The list wrapper is the cheapest type evasion and it defeated the isinstance gate.
+        target = self.resealed(
+            lambda ev: ev.__setitem__("expectedEffects", [ev["expectedEffects"]]))
+        ok, checks = _verify(target)
+        self.assertFalse(ok)
+        self.assertIn("evidence.expectedEffects is present and is an object (§5.6)",
+                      [c.name for c in checks if not c.ok])
+
+    def test_normalizedAction_may_not_simply_be_absent(self):
+        target = self.resealed(lambda ev: ev.pop("normalizedAction"))
+        ok, checks = _verify(target)
+        self.assertFalse(ok, "a bundle omitting normalizedAction was certified")
+        self.assertIn("evidence.normalizedAction is present and is an object (§5.6)",
+                      [c.name for c in checks if not c.ok])
+
+    def test_normalizedAction_may_not_be_a_non_object(self):
+        target = self.resealed(
+            lambda ev: ev.__setitem__("normalizedAction", [ev["normalizedAction"]]))
+        ok, checks = _verify(target)
+        self.assertFalse(ok)
+        self.assertIn("evidence.normalizedAction is present and is an object (§5.6)",
+                      [c.name for c in checks if not c.ok])
+
+    # ---- THE SIBLINGS, which no reviewer reported -------------------------------------
+    #
+    # Found by the docs/repair-protocol.md step-2 sweep of every `isinstance`-gated block in
+    # verify.py, run because the protocol requires it rather than because anyone pointed here.
+    # `reasonCodes is a list` two hundred lines away already had the correct shape — it emits a
+    # FAILING check on the wrong type — so the file disagreed with itself about this.
+
+    def test_the_anchor_may_not_simply_be_absent(self):
+        # A-056 added `receipt-anchor-split` because "THE ANCHOR HAD NO TEST AT ALL". Deleting
+        # the anchor outright is the cheaper attack on the same binding and it verified PASS.
+        target = self.resealed(lambda ev: ev.pop("anchor"))
+        ok, checks = _verify(target)
+        self.assertFalse(ok, "a bundle omitting its anchor was certified")
+        self.assertIn("evidence.anchor is present and is an object (§5.6)",
+                      [c.name for c in checks if not c.ok])
+
+    def test_the_anchor_may_not_be_a_non_object(self):
+        # Protocol step 4 requires BOTH branches of an absence-shaped gate: absent AND
+        # wrong-type. The list wrapper is the cheaper of the two evasions — it needs no field
+        # removed, so a reader diffing the bundle sees the anchor still "there" — and pinning
+        # only the absent case would be this project's own partial-repair defect committed
+        # inside the repair for it.
+        target = self.resealed(lambda ev: ev.__setitem__("anchor", [ev["anchor"]]))
+        ok, checks = _verify(target)
+        self.assertFalse(ok, "a bundle whose anchor is not an object was certified")
+        self.assertIn("evidence.anchor is present and is an object (§5.6)",
+                      [c.name for c in checks if not c.ok])
+
+    def test_the_evidence_verdict_may_not_simply_be_absent(self):
+        target = self.resealed(lambda ev: ev.pop("verdict"))
+        ok, checks = _verify(target)
+        self.assertFalse(ok, "a bundle omitting its own verdict was certified")
+        self.assertIn("evidence.verdict is present to compare against the receipt (§5.6)",
+                      [c.name for c in checks if not c.ok])
+
 
 class TestAbsenceIsNotAgreement(unittest.TestCase):
     """A-067 (from round five's H-4). A payload-hash MISMATCH became a PASS when the
@@ -2333,6 +2410,36 @@ class TestRefusalBundle(unittest.TestCase):
         tmp = tempfile.mkdtemp()
         self.addCleanup(shutil.rmtree, tmp)
         return stage(os.path.join(SAMPLES, "refusal-vault-paused"), tmp)
+
+    def test_the_refusal_corpus_bundle_verifies_as_committed(self):
+        # THE PAIRED CONTROL for the test below. Without it that test could be passing because
+        # `stage_refusal_corpus_shape` produces a broken bundle rather than because the new
+        # check works — the failure mode A-056 named when a constructed override raised inside
+        # `struct_hash` and the test "passed" for an unrelated reason.
+        target = self.stage_refusal_corpus_shape()
+        ok, checks = self.run_sample(target)
+        self.assertTrue(ok, [c.name for c in checks if not c.ok])
+
+    def test_a_refusal_bundle_carrying_an_owner_override_is_refused(self):
+        # D-052(b), from round six L6-2. A defect of ORDER: `verify_sample` calls
+        # `_refusal_checks` and RETURNS, while `_override_checks` sits below that return — so
+        # `override.json` was never opened on this path and an override minted by an arbitrary
+        # outsider key rode along inside a bundle this verifier printed `=> PASS` over. The
+        # SAME artifact is correctly rejected on the receipt path by A-059's owner-identity
+        # check, and the verifier's own `--tamper all` arm printed six consecutive
+        # `WRONGLY ACCEPTED` lines for the override modes on the very bundle the certifying arm
+        # passed.
+        #
+        # It is REFUSED rather than checked: §0 of `_refusal_checks` already rejects a bundle
+        # presenting a decision and a refusal together, on the ground that certifying it would
+        # certify whichever half the reader looked at. An override is an authorization, so a
+        # refusal carrying one is that same shape.
+        target = self.stage_refusal_corpus_shape()
+        shutil.copy(os.path.join(OVERRIDE_SAMPLE, "override.json"),
+                    os.path.join(target, "override.json"))
+        ok, checks = self.run_sample(target)
+        self.assertFalse(ok, "a refusal bundle carrying an unexamined §5.5 override verified")
+        self.assertFailsOn(checks, "refusal bundle carries no")
 
     def test_a_refusal_with_no_action_payload_fails(self):
         # §5.5.1: "A refusal is attributable or it is not issued." The record

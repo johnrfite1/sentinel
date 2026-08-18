@@ -62,10 +62,22 @@ RED=$'\033[31m'; YEL=$'\033[33m'; RST=$'\033[0m'
 
 failures=0
 
+# SCOPE, WIDENED 2026-08-18 (round six, lens 1) — the same argument as the pattern fix
+# below, applied to the file list rather than to the value. `git ls-files` is TRACKED ONLY,
+# so a credential in an untracked file passed this guard entirely while
+# `check-vendor-honesty.sh` beside it already scanned tracked AND untracked, on the stated
+# reasoning that "an untracked file in this tree is one `git add -A` away from being
+# published". That reasoning was applied to the vendor guard and not to the CREDENTIAL
+# guard, which is the asymmetry being closed.
+#
+# `--exclude-standard` is what keeps this honest rather than noisy: ignored paths
+# (`.env`, `contracts/out`, `ts/node_modules`) stay out, because an ignored file is NOT one
+# `git add -A` away. Rule 1 above already blocks tracked `.env*` by name, and the .env
+# discipline covers the ignored copy.
 if [ "$STAGED" -eq 1 ]; then
   files=$(git diff --cached --name-only --diff-filter=ACM)
 else
-  files=$(git ls-files)
+  files=$(printf '%s\n%s\n' "$(git ls-files)" "$(git ls-files --others --exclude-standard)")
 fi
 
 # --- 1. Secret-bearing files must never be tracked -------------------------
@@ -112,8 +124,46 @@ ASSIGN_RE='(PRIVATE_KEY|PRIVKEY|SECRET_KEY|API_KEY|DEPLOYER_KEY|MNEMONIC|SEED_PH
 # `const privateKey = "0x…"` and `{signerKey: "0x…"}` — the idiomatic TypeScript and JSON
 # forms, and the ones this repository actually writes — passed clean while the comment
 # claimed they were caught. Found by adversarial review.
+#
+# WIDENED 2026-08-18 (round six, lens 1) UNDER THE D-052(b) REPAIR PROTOCOL. Three separate
+# evasions, all with assignment context AND a key-shaped name, so none was the residual the
+# design note above declares. THE ARGUMENT, stated so the next repair can be checked against it
+# rather than against the probes: a 64-hex value bound to a key-shaped identifier is a
+# credential HOWEVER IT IS SPELLED. The previous pattern encoded three accidental spellings.
+#
+#   (a) NO `0x`. The pattern required the prefix. `SENTINEL_SIGNER_KEY=<64hex>` — THIS
+#       REPOSITORY'S OWN VARIABLE (ts/src/corpus/run.ts) — passed clean, and coverage of the
+#       no-prefix form depended entirely on whether the name happened to contain one of
+#       ASSIGN_RE's nine hard-coded tokens. `SIGNER_KEY` is not one of them.
+#   (b) A DIGIT IN THE NAME. The identifier class was `[A-Za-z_]*`, so `KEY_1`, `deployerKey2`
+#       and `signer_key_2` all fell out of the pattern.
+#   (c) A COLLECTION VALUE. `{"signerKeys": ["0x<64hex>"]}` — the `[` sat between the assignment
+#       operator and the value.
+#
+# The bare-64-hex residual in the design note is UNCHANGED and still deliberate: this widening
+# only ever fires when a KEY/SECRET/MNEMONIC-shaped name is bound to the value, which no
+# legitimate bytes32 constant here is. Typehashes, domain separators and mandate hashes are
+# named for what they are.
+#
+# WHAT THIS REPAIR DOES NOT REACH — required by the D-052(b) protocol step 6, because a repair
+# with no stated residual is asserting completeness and that assertion has been wrong four times
+# running. **A key-shaped name is matched only where it binds the value DIRECTLY.** Falsified and
+# still passing: `const k = {apiKey3: {"v": "<64hex>"}}` — the 64-hex is bound to `v`, which is
+# not key-shaped, inside a container that is. One level of `[`/`(`/`{` between the operator and
+# the value IS covered; arbitrary nesting is not, and chasing it with a regex would trade a real
+# false-negative for a worse false-positive rate on a repository full of bytes32 literals. Under
+# the argument above this case sits with the DESIGN NOTE's declared bare-literal residual — the
+# value has no key-shaped binding of its own — and it is recorded here rather than left for a
+# reviewer to find. Register §8.2.
+#
+# FALSIFIED BEFORE BEING BELIEVED, in both directions, on the live tree (round six adjudication):
+# the three evasions above now BLOCK; two routes the reviewer never demonstrated — a no-`0x`
+# lowercase TypeScript type annotation with a digit, and a MNEMONIC-family name holding a
+# collection — also BLOCK; the untracked-file scope gap now BLOCKS and did not before; the
+# `--staged` invocation shape blocks the same content; and all four negative controls still pass
+# clean (both Anvil allowlist spellings, a genuine placeholder, and a legitimate non-key bytes32).
 KEY_NAME='([Kk][Ee][Yy]|[Ss][Ee][Cc][Rr][Ee][Tt]|[Mm][Nn][Ee][Mm][Oo][Nn][Ii][Cc])'
-KEYLIT_RE='[A-Za-z_]*'"$KEY_NAME"'[A-Za-z_]*["'"'"']?[[:space:]]*(:[[:space:]]*[A-Za-z_.]+)?[[:space:]]*[:=][[:space:]]*["'"'"']?0x[0-9a-fA-F]{64}'
+KEYLIT_RE='[A-Za-z0-9_]*'"$KEY_NAME"'[A-Za-z0-9_]*["'"'"']?[[:space:]]*(:[[:space:]]*[A-Za-z_.]+)?[[:space:]]*[:=][[:space:]]*[[({]?[[:space:]]*["'"'"']?(0x)?[0-9a-fA-F]{64}'
 
 # Publicly documented Anvil dev accounts 0, 1 and 2 — deliberately allowed. These ship in
 # Anvil itself and appear in its startup banner; they are test fixtures, not credentials
@@ -155,6 +205,23 @@ done <<< "$files"
 
 # --- 4. Machine-specific absolute paths ------------------------------------
 # House rule 6 / A-008: scripts resolve $HOME, they do not hardcode /Users/<name>.
+#
+# CASE-SENSITIVITY FIXED 2026-08-18 (D-052(b); recorded in register §8.2 since round five and
+# not fixed until now). The scan was `(/Users/[a-z]|/home/[a-z])`, so a capitalised home
+# directory passed — and macOS derives exactly that shape from a full name. The workspace
+# machine-state guard, which uses `[A-Za-z0-9._-]`, caught a path this guard did not.
+#
+# THE ARGUMENT: a guard must not depend on the CASE of the thing it is scanning. That is the
+# identical defect A-047 fixed one file over — `check-vendor-honesty.sh`'s vendor scan was
+# case-sensitive while the label scan beside it was not, so a lowercase spelling of the scanned
+# token passed while its capitalised form failed — and the argument was not carried across to
+# this file at the time.
+# Falsified in both directions: a capitalised path now fails and the lowercase form still does.
+#
+# The first draft of THIS comment illustrated that defect with the literal token, and
+# `check-vendor-honesty.sh` blocked the commit for naming a vendor in a measurement artifact
+# (D-008(4)) — the same way it caught the first draft of the rule-4 comment below. Recorded
+# because a guard catching its own documentation is the cheapest possible evidence that it works.
 while IFS= read -r f; do
   [ -z "$f" ] && continue
   [ "$(basename "$f")" = "check-secrets.sh" ] && continue
@@ -181,7 +248,7 @@ while IFS= read -r f; do
   # sed runs line-by-line, so grep -n's line numbers still refer to the original file.
   hits=$(printf '%s' "$body" \
     | sed -E 's#https?://[^[:space:])"'"'"']*##g' \
-    | grep -nE '(/Users/[a-z]|/home/[a-z])' 2>/dev/null || true)
+    | grep -nE '(/Users/[A-Za-z]|/home/[A-Za-z])' 2>/dev/null || true)
   if [ -n "$hits" ]; then
     echo "${YEL}BLOCKED${RST} $f — machine-specific absolute path (use \$HOME):"
     printf '%s\n' "$hits" | sed 's/^/    /'

@@ -299,9 +299,16 @@ SAYS it protects and what it mechanically does.
 - **`ANVIL_ALLOW` is applied line-wise, not value-wise.** The whole line is discarded if a known
   Anvil key appears anywhere on it, so `KEY = "0x7c85…"; // rotated away from ac0974be…` passes —
   while the header promises "any OTHER 64-hex value bound to a key-shaped name is a finding".
-- **The absolute-path scan is case-sensitive** — `(/Users/[a-z]|/home/[a-z])`. `/Users/Johnfite/…`
-  passes; lowercasing the one letter fails the guard. macOS home directories derived from a full
-  name are routinely capitalised.
+- ~~**The absolute-path scan is case-sensitive**~~ — **FIXED 2026-08-18 (D-052(b)).** The scan was
+  `(/Users/[a-z]|/home/[a-z])`, so a capitalised home directory — `/Users/<Name>/…`, the shape
+  macOS derives from a full name — passed while lowercasing the one letter failed the guard. It is
+  now `[A-Za-z]` on both branches, falsified in both directions. **This is the same defect A-047
+  fixed one file over**, where the vendor scan was case-sensitive while the label scan beside it
+  was not; the argument ("a guard must not depend on the case of the thing it is scanning") was
+  not carried across at the time.
+  **The example above is written with a `<Name>` placeholder deliberately: as a literal it tripped
+  the workspace machine-state guard, which is how this line was found.** A register documenting a
+  hole by exhibiting it is a real path in a tracked file.
 
 ### 8.3 `check-rename-gate.sh` — publication is reachable without tripping it
 
@@ -741,10 +748,21 @@ the lower of the mandate's and the policy's ceilings — because §5.2 says in t
 that "mandate and policy constraints are intersected". Compared against the mandate alone, the
 check would be wrong the first time the two diverge.
 
-**No corpus fixture has them diverge.** All 50 carry equal ceilings, so the corpus cannot say
-which reading is right, and a verifier written against the other reading would pass every test
-in this repository. **The check is asserted by unit tests that construct the divergence; the
-CORPUS asserts nothing about it.**
+~~**No corpus fixture has them diverge.** All 50 carry equal ceilings…~~ **CORRECTED 2026-08-18
+(D-052(b), round six lens 3). THAT SENTENCE IS FALSE AND WAS FALSE WHEN WRITTEN THE SAME DAY.**
+`F006` diverges by a factor of 500 — mandate `1e18` against policy `2e15` — and its declared
+intent says so in words: *"The mandate's value ceiling is raised above the policy's, so the
+policy is the tighter of the two."* Its result file records `BLOCK` on `EVAL_VALUE_WITHIN_POLICY`.
+Measured across all 50: **exactly one diverges, 49 do not.**
+
+**The claim is true of the seven committed SAMPLE bundles, which is what the D-010 verifier
+reads — so it attributed the gap to the wrong artifact.** Two consequences, both of which
+outlive the sentence: the remedy it prescribed ("a fixture with divergent ceilings is owed at
+v1.1") would have added a fixture to a corpus that already has one, and **§11.0 of the S2 pack
+used this same premise to downgrade `D-09(c)` to "no fixture distinguishes the two ceilings"**.
+What is actually owed is a divergent SAMPLE. **The check is asserted by unit tests that construct
+the divergence, and by F006 at the corpus level for the ENGINE — but by nothing at the sample
+level for the VERIFIER, which is the artifact this section is about.**
 
 This is the D-010 experiment behaving as designed — an implementation derived from the published
 spec finding a case the corpus does not exercise — and it is the second time that has happened
