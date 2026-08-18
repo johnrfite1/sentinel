@@ -556,17 +556,31 @@ WHAT IS COVERED, by layer, each with the limit that layer cannot exceed:
            THAT HOLE IS NOW CLOSED, and the shape of it is worth keeping. Until 2026-08-17
            `ok = True or evidence_hash == expected_hash` — neutering the evidenceHash check by
            hand — left all 146 tests passing and all 7 samples verifying, because no tamper
-           mode mutated `evidence.hash`: the field was only ever READ. A named check that no
-           mode targets is a check nothing asserts. The `evidence-hash` mode (A-049) corrupts
+           mode mutated `evidence.hash`: the field was only ever READ. **"A named check that no
+           mode targets is a check nothing asserts" WAS THE INFERENCE DRAWN HERE AND IT IS
+           RETIRED — A-055 measured it in both directions and refuted it.** Of 33 checks no mode
+           ever makes fail, 18 were probed and 10 were CAUGHT by the unit suite; of checks that
+           DO fail under some mode, 10 were neutered and 5 SURVIVED, because the mode is caught
+           by a different check failing alongside. It held for THIS check and was let become
+           load-bearing across three entries. The tamper matrix is not a coverage measure;
+           mutation is. The sentence survived here, stated as a general rule, until a full audit
+           of this block on 2026-08-17 — no reviewer reported it, which is why the audit was of
+           every claim in the block rather than of the ones that had been. The `evidence-hash`
+           mode (A-049) corrupts
            the PUBLISHED hash rather than the canonical bytes, so it isolates that one check;
            the same neutering now produces 12 failures. Its three tests are written the hard
            way — the mode's presence in TAMPER_MODES asserted structurally, the mutated bundle
            required to fail ON THAT CHECK specifically, and the UNMUTATED bundle required to
            pass it, so the test cannot succeed by the check always failing.
            LIMIT THAT REMAINS: the floors catch a verifier that SHRINKS and this mode catches
-           one named check that stops checking. Neither generalises. No mutation sweep has been
-           run over `verify.py` itself, which is 1681 lines and DECIDES the verdict. A directed
-           sweep of the SIX other modules (A-051) applied 142 behaviour-changing mutations
+           one named check that stops checking. Neither generalises. `verify.py` — the file that
+           DECIDES the verdict — HAS now been swept (A-055): 14 survivors recorded plus TWO LIVE
+           certification defects that needed no mutation at all, and round five then found two
+           more of that same kind in the repairs (A-058, fixed in A-059). This paragraph said
+           "No mutation sweep has been run over `verify.py` itself, which is 1681 lines" for a
+           day after both of those were false, and five of round five's eight lenses reported it.
+           A directed sweep of the SIX other modules (A-051) applied 142 behaviour-changing
+           mutations
            and 41 survived a green gate — `keccak.py` was clean at 17/17, `jcs.py` caught
            23/33, and `eip712.py` and `secp256k1.py` were thin: construction pinned,
            value-level validation almost unexercised. Three verdict-flippers from that sweep
@@ -578,7 +592,13 @@ WHAT IS COVERED, by layer, each with the limit that layer cannot exceed:
            against a chain — that needs an archive node at the anchored block. Verifying a
            receipt is not verifying the simulation. The corpus exercises no JSON numbers and
            no non-ASCII, so RFC 8785's number and code-unit-ordering paths — its two most
-           error-prone branches — are untested by anything (REPORT.md F-6).
+           error-prone branches — ARE NOT EXERCISED BY ANY FIXTURE. They are covered by UNIT
+           TESTS, and only by unit tests: appendix-B number vectors and UTF-16 code-unit key
+           ordering both run in this gate. This paragraph read "untested by anything (REPORT.md
+           F-6)" until 2026-08-17 — false, and it cited F-6 for the opposite of what F-6 says:
+           "the tests written here are the only coverage this path has". The corpus not
+           exercising a path and nothing testing it are different claims, and collapsing them
+           understated the coverage while pointing at the document that had it right.
 
 WHAT IS NOT COVERED:
 
