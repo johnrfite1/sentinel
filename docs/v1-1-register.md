@@ -701,3 +701,35 @@ these findings overnight. Their results, and what was done about them, follow th
 
 **NOT STARTED — round six.** D-050(1) ratified A-060's nine-surface definition, so it is defined
 before it is briefed, which round five was not. It is John's to trigger.
+### 13.4 The 24 leads, adjudicated (A-067)
+
+Four independent adjudicators on frozen worktrees, told that ALREADY-CLOSED was as valuable a
+verdict as CONFIRMED and to assume each claim wrong until they had made its failure happen.
+**21 of 24 confirmed.** Evidence per finding is in `docs/review-2026-08-17/`.
+
+| | Verdict | Severity after adjudication | Status |
+|---|---|---|---|
+| `C-3` | CONFIRMED | Keep MEDIUM | open |
+| `D-04` | CONFIRMED | Keep MEDIUM, but note the reach is one step wider than the claim states: the deep-profile corpu | open |
+| `D-05` | CONFIRMED | Keep MEDIUM as an instrument defect (the receipt is the product and it would state conformance  | open |
+| `D-06` | CONFIRMED | Keep MEDIUM, and note the claim UNDER-states its own scope in one place: it hedged that only th | open |
+| `D-07` | CONFIRMED | Consider MEDIUM → LOW | open |
+| `D-08` | CONFIRMED | Raise MEDIUM → HIGH | **FIXED (A-067)** |
+| `D-09` | CONFIRMED | LOW stands for (a) and (b) | open |
+| `D-10` | CONFIRMED | LOW is right for (a) and (b) — inert mutants over a corpus that happens to be single-case | open |
+| `E2` | CONFIRMED | Keep MEDIUM | open |
+| `E3` | CONFIRMED | MEDIUM is right, arguably light | open |
+| `E4` | CONFIRMED | Keep MEDIUM, raise confidence from the finding's own 'medium' to high — it is now reproduced wi | open |
+| `E5` | CONFIRMED | LOW is correct | open |
+| `F-VAULT-3` | CONFIRMED | MEDIUM stands, and would be MEDIUM even framed as document-only | open |
+| `F-VAULT-4` | CONFIRMED | LOW stands | open |
+| `F-VAULT-5` | CONFIRMED | LOW stands, but I would raise the confidence above the finding's own 'medium' | open |
+| `G-3` | CONFIRMED | MEDIUM -> LOW | open |
+| `G-4` | CONFIRMED | MEDIUM stands, but for a different reason than the finding gives | open |
+| `G-5` | CONFIRMED | LOW stands | open |
+| `H-4` | CONFIRMED | unchanged | **FIXED (A-067)** |
+| `H-5` | CONFIRMED | unchanged | open |
+| `H-8` | CONFIRMED | unchanged | open |
+| `A-3` | UNPROVEN | unchanged | open |
+| `C-5` | REFUTED | unchanged | open |
+| `H-6` | ALREADY-CLOSED | unchanged | open |

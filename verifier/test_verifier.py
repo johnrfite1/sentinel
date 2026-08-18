@@ -1178,6 +1178,67 @@ class TestOverrideChainBinding(unittest.TestCase):
 # §3.3(4)/§3.3(5) chain and vault binding, established from the bundle
 # ---------------------------------------------------------------------------
 
+class TestAbsenceIsNotAgreement(unittest.TestCase):
+    """A-067 (from round five's H-4). A payload-hash MISMATCH became a PASS when the
+    contradicting file was DELETED.
+
+    `_payload_hash_check` and `_binding_checks` both returned `ok=True, skipped=True` when the
+    payload was absent, so `rm action.json` flipped exit 1 to exit 0 on a bundle whose receipt
+    committed to a different action. **This is the same structural defect A-041 already named
+    in the S2 pack** — "SKIP counted as ok=True in the aggregate, so 'was not checked' summed
+    as 'passed'" — fixed there for the refusal envelope and left standing on the receipt path.
+
+    Both branches are pinned here, because fixing only the one a reviewer exploited is this
+    project's most-repeated defect.
+    """
+
+    def staged(self):
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp)
+        return tmp, stage(os.path.join(SAMPLES, "case-1-allow"), tmp)
+
+    def test_the_intact_bundle_still_verifies(self):
+        # The control. Without it, a rule that fails every bundle satisfies everything below.
+        _, target = self.staged()
+        ok, _ = _verify(target)
+        self.assertTrue(ok)
+
+    def test_deleting_a_contradicting_payload_does_not_turn_FAIL_into_PASS(self):
+        # The finding in its exact shape: swap in another case's action, observe the mismatch,
+        # then delete the file that produced it.
+        _, target = self.staged()
+        shutil.copy(os.path.join(SAMPLES, "case-3-wrong-purpose-block", "action.json"),
+                    os.path.join(target, "action.json"))
+        # The two branches name the check slightly differently — "…ActionPayload matches the
+        # receipt" when the payload is present, "…ActionPayload" when it is absent — so both
+        # are matched by prefix rather than by loosening the assertion to a substring of
+        # something vaguer.
+        def failed_action_hash(checks):
+            return [c.name for c in checks
+                    if not c.ok and c.name.startswith("recomputed actionHash from §5.3")]
+
+        ok, checks = _verify(target)
+        self.assertFalse(ok, "the swapped action must be caught")
+        self.assertTrue(failed_action_hash(checks), [c.name for c in checks if not c.ok])
+
+        os.remove(os.path.join(target, "action.json"))
+        ok, checks = _verify(target)
+        self.assertFalse(
+            ok, "deleting the contradicting payload turned a FAILING bundle into a PASS")
+        self.assertTrue(failed_action_hash(checks), [c.name for c in checks if not c.ok])
+
+    def test_stripping_every_payload_does_not_verify(self):
+        # The sibling branch: with no payloads at all, §3.3(4) asserted nothing and said so
+        # with ok=True, so a receipt bound to no chain and no vault certified.
+        _, target = self.staged()
+        for name in ("action.json", "mandate.json", "policy.json"):
+            os.remove(os.path.join(target, name))
+        ok, checks = _verify(target)
+        self.assertFalse(ok, "a receipt bound to nothing presented was certified")
+        self.assertIn("§3.3(4) chain and vault binding",
+                      [c.name for c in checks if not c.ok])
+
+
 class TestTheTrustRootMustBeAsserted(unittest.TestCase):
     """A-058 (H-1): no path inside the presented material can establish provenance.
 

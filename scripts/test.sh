@@ -322,7 +322,7 @@ fi
 # nothing reconciling them. That is precisely the defect A-045 was written to close, reproduced
 # inside A-045's own remediation. These three numbers are the assertion. Raise a floor when the
 # suite genuinely grows; NEVER lower one to make a run pass.
-VERIFIER_MIN_TESTS=173
+VERIFIER_MIN_TESTS=176
 VERIFIER_MIN_SAMPLES=7
 VERIFIER_MIN_TAMPER=78
 # A MODE FLOOR, because a pair count alone rewards padding (A-049): `tamper cases` counts
@@ -643,7 +643,7 @@ WHAT IS COVERED, by layer, each with the limit that layer cannot exceed:
   D-010    The independent Python receipt verifier, in `verifier/`. Zero third-party
            dependencies; its own RFC 8785, Keccak-f[1600] and secp256k1 recovery, built by
            an agent that never read this repository's TypeScript. 7/7 samples verify, 78/78
-           applicable tamper cases across 30 distinct modes behave as specified, and 173/173
+           applicable tamper cases across 30 distinct modes behave as specified, and 176/176
            of its own tests pass.
            THIS PARAGRAPH'S THREE FIGURES READ 62/24/149 FROM 2026-08-16 UNTIL 2026-08-17,
            while the floors this same run asserts read 160/7/77/29 and printed 142 lines

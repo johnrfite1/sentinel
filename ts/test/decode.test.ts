@@ -218,6 +218,32 @@ const cases: {name: string; code: string; target: Hex; callData: Hex}[] = [
         target: DEMO_PAY,
         callData: withWord(purchaseCalldata(), 3, `${"00".repeat(31)}02`),
     },
+    // A-067: ONE WITNESS PER CODE MEASURES ONE POINT, NOT THE PREDICATE.
+    //
+    // The two rows above put the dirty byte at high-byte index 0 and the non-canonical bool at
+    // 2 — so `slice(0, 24)` could be narrowed to `slice(0, 2)` and `/^0*1$/` widened to
+    // `/^0*[13]$/` with the whole 409-test suite green, while an address differing above byte 1
+    // decoded clean and a bool word of 3 decoded as `true`. The refusal is the decoder's
+    // never-more-permissive-than-the-chain invariant; an enumerated witness pins the spelling
+    // it names and nothing else (A-054's lesson, applied to the decoder).
+    //
+    // So: every high-byte POSITION, and a spread of non-canonical bool words rather than one.
+    ...Array.from({length: 12}, (_, i) => ({
+        name: `beneficiary word with a dirty byte at high position ${i}`,
+        code: "DECODE_DIRTY_ADDRESS_BITS" as const,
+        target: DEMO_PAY,
+        callData: withWord(
+            purchaseCalldata(),
+            1,
+            `${"00".repeat(i)}ff${"00".repeat(11 - i)}${BENEFICIARY.slice(2)}`,
+        ),
+    })),
+    ...["02", "03", "04", "ff", "80"].map((byte) => ({
+        name: `recurring encoded as 0x${byte}`,
+        code: "DECODE_NON_CANONICAL_BOOL" as const,
+        target: DEMO_PAY,
+        callData: withWord(purchaseCalldata(), 3, `${"00".repeat(31)}${byte}`),
+    })),
     {
         name: "duration overflowing uint64",
         code: "DECODE_UINT_OVERFLOW",

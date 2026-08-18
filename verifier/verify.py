@@ -1121,8 +1121,16 @@ def _binding_checks(payloads, domain):
     address", which is the same address §5.1-§5.3 call `vault`.
     """
     if not payloads:
-        return [Check("§3.3(4) chain and vault binding", True,
-                      "no §5.1-§5.3 payload file in this sample", skipped=True)]
+        # THE SIBLING OF A-067's H-4, closed in the same change rather than left for the next
+        # round to report. §3.3(4) is what stops a genuinely-signed bundle being re-presented
+        # under a domain naming another deployment; with no payloads it asserted nothing and
+        # said so with ok=True, so stripping all three payload files verified `=> PASS`.
+        # Fixing the branch a reviewer exploited and leaving the identical one beside it is
+        # this project's most-repeated defect (A-028, and A-043 was its cost).
+        return [Check("§3.3(4) chain and vault binding", False,
+                      "no §5.1-§5.3 payload file in this bundle, so nothing binds this receipt "
+                      "to a chain or a vault. That binding is what stops a valid receipt being "
+                      "re-presented under another deployment's domain.")]
 
     chains, vaults, errors = {}, {}, []
     for label, doc in payloads:
@@ -1194,8 +1202,27 @@ def _payload_hash_check(doc, fn, field, label, declared, against):
     walked one link further out.
     """
     if doc is None:
-        return Check(f"recomputed {field} from {label}", True,
-                     "payload file not present in this sample", skipped=True)
+        # ABSENCE IS NOT AGREEMENT (A-067, from round five's H-4).
+        #
+        # This returned a SKIPPED check with ok=True, so a payload-hash MISMATCH became a PASS
+        # the moment the contradicting file was DELETED. Reproduced against the unmutated
+        # verifier: stage `case-1-allow` with `case-3`'s `action.json` and the run fails on
+        # `recomputed actionHash`; `rm action.json` and the identical receipt verifies
+        # `=> PASS`, exit 0, `1/1 sample(s) verified`. Removing all three payload files
+        # verifies too — a receipt whose committed hashes match nothing in front of the
+        # verifier, certified.
+        #
+        # This is the SAME STRUCTURAL DEFECT A-041 already found and named in the S2 pack:
+        # "SKIP counted as ok=True in the aggregate, so 'was not checked' summed as 'passed'".
+        # It was fixed there for the refusal envelope and left standing here.
+        #
+        # A hash commits to a document. With no document there is nothing to certify, so this
+        # FAILS and says why. `--all` over a corpus of such bundles now reports them rather
+        # than counting them verified.
+        return Check(f"recomputed {field} from {label}", False,
+                     f"no payload file for {field} in this bundle, so the receipt's committed "
+                     f"hash matches nothing that was presented. A receipt is attributable to "
+                     f"the signer; without the payload it is not attributable to THIS bundle.")
     try:
         computed = "0x" + fn(doc).hex()
     except eip712.EncodingError as exc:
