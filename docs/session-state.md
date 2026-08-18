@@ -3,7 +3,8 @@
 Rewritten at the end of each working session. **This file, not the conversation, is the
 memory.** If it disagrees with anything an agent remembers, this file wins.
 
-Last updated: **2026-08-16**, end of session. Branch `step-3/isolated-signer`, **pushed**
+Last updated: **2026-08-17**, end of session — the header read `2026-08-16` while every entry
+it summarised was 2026-08-17 (round five, `B-6`). Branch `step-3/isolated-signer`, **pushed**
 (`4166ff0`, verified against the remote rather than trusting the push output). Working tree
 clean. **This pointer names the last commit this file DESCRIBES, and the commit that updates
 it necessarily comes after — so expect it to trail by one doc-only commit, and check
@@ -40,8 +41,9 @@ still autonomy NONE. **S2 was signed on the state in `docs/gate-s2-evidence.md` 
 its limits, not despite them** — 14 of 20 classes exercising the class they name, and no live
 agent in CI. D-041 carries an annotation naming what became known after it was signed.
 
-**The steps 1–3 review S2 was signed WITHOUT has since been run (D-044(b)), and §11 is now
-empty.** It found A-043: **a CRITICAL, exploitable bypass — a signed ALLOW obtainable for
+**The steps 1–3 review S2 was signed WITHOUT has since been run (D-044(b)), and §11 — CORRECTION 2026-08-17 (`B-7`): §11 is **NOT** empty and this file said so
+twenty-two lines after telling a fresh instance to read it. It carries six entries, five of them
+live; ONE of them, the steps 1–3 review, is struck through as run.** It found A-043: **a CRITICAL, exploitable bypass — a signed ALLOW obtainable for
 calldata nobody decoded, reproduced twice onchain.** Fixed, with regression tests. Read A-043
 and A-044 before trusting anything about the signer.
 
@@ -75,8 +77,34 @@ autonomy *none*).
 
 ### FIRST: read D-047 and D-048. They govern everything below and an agent may not amend them.
 
-**THE NEXT MOVE IS A FULL-BREADTH ADVERSARIAL REVIEW ROUND, and John triggers it.** Not a
-programme start — that is now blocked behind this. Updated 2026-08-17.
+**~~THE NEXT MOVE IS A FULL-BREADTH ADVERSARIAL REVIEW ROUND, and John triggers it.~~ HE
+TRIGGERED IT AND IT RAN — ROUND FIVE, 2026-08-17 (A-057 commissioned it, A-058 is the result).
+IT IS NOT CLEAN, so under D-047 the loop continues and under D-048 pre-publication is still
+blocked.**
+
+**THE NEXT MOVE IS TWO RULINGS FROM JOHN, and neither is an agent's to make.**
+
+1. **D-048(b) HAS FIRED and the decision is back with him.** Its condition — severe INSTRUMENT
+   defects at round one's rate — is met. **The confound belongs with the number:** rounds two
+   through four NARROWED (round four was one file) and the yield fell, which read as
+   convergence; round five WIDENED and the yield returned, with the same defect classes on four
+   surfaces that had never been swept. *"The loop is not converging"* and *"the loop had been
+   converging because it was looking at one file"* are different diagnoses with opposite
+   implications. **Do not pick between them on his behalf.**
+2. **Remediation scoping for 51 findings.** None is fixed. `docs/v1-1-register.md` §13 is the
+   list; 16 are re-verified from scratch and the rest are leads. **D-047 makes DECLINING to fix
+   a finding a change to a claim**, so an agent cannot quietly leave one alone either.
+
+**WHAT ROUND FIVE FOUND, in one line each, because the next instance must not restart the
+project on a stale picture.** Two CRITICALs, both LIVE and both in the D-010 verifier: the
+**presenter still chooses the trust root** one directory up (A-055 closed the demonstration,
+not the argument), and the **§5.5 override stage has no deployment-anchored owner identity at
+all** — an outsider-minted override verifies `=> PASS` against the GENUINE domain.json, though
+the vault itself would reject it. The **secret guard is holed a third time** and §8.2 recorded
+it FIXED. **THE PATTERN: three of the round's worst findings are the same defect — a repair
+that generalised its DEMONSTRATION and not its ARGUMENT — and all three are repairs of findings
+in that same class.** Two of the round's instruments were MINE and defective (`D-11`, `D-12`);
+see §13.1 for what the round could not reach.
 
 - **D-047** — adversarial review continues **until one full round returns no finding that would
   change code or a claim.** A *round* is at least one independent reviewer at a frozen commit
@@ -244,8 +272,14 @@ means only that no NEW class went vacuous. Read their output, not their exit sta
   criterion** (L3-only = compares the call or its effects to the mandate's PURPOSE fields) and
   the figure fell from 17 to 8. The 8 are exactly the wrong-purpose class. The report emits the
   split as a CHECK — its second row must be empty.
-- **D-010 verifier:** 7/7 samples, 62/62 applicable tamper cases over 24 distinct modes, 149/149 tests — **and all four
-  are now FLOORS the gate asserts (A-047), not prose.** *This line read `6/6, 42/42, 70/70` until
+- **D-010 verifier: 7 samples, 77 tamper cases over 29 modes, 160 tests — and all four are FLOORS
+  the gate asserts.** *(CORRECTED 2026-08-17, round five `B-4`/`B-1`: this line read `7/7, 62/62,
+  24 modes, 149/149` — a fourth staleness in this file, seventy-nine lines below a §3 headline
+  that already said 160 and 77/29. **The identical stale trio is STILL PRINTED BY THE GATE
+  ITSELF** in `scripts/test.sh`'s COVERAGE BOUNDARY, where it is labelled "ALL THREE FIGURES ARE
+  FLOORS THIS RUN ASSERTS" beside floors of 160/7/77/29 — five of eight round-five lenses found
+  it independently. That one is CODE and is NOT fixed: it is unscoped remediation awaiting John,
+  register §13.)* *This line read `6/6, 42/42, 70/70` until
   2026-08-16, forty-six lines below the headline in §3 that already said 146/146 and 7 samples —
   i.e. this file contradicted itself, in the file that opens by declaring itself the memory. It
   was **not** fixed by A-045, whose decision entry and commit message both claim "both layers are
@@ -310,6 +344,8 @@ reasoning, its rejected options, and where stated the condition that would rever
 | A-054 | Charsets pinned by COMPLEMENT rather than by bad list |
 | A-055 | **`verify.py`: 14 survivors + TWO LIVE certification defects.** Presenter chose the trust root |
 | A-056 | Override cluster, the anchor, and **the corpus-vs-verifier category error** |
+| A-057 | Round five commissioned; the reading declared before results; eight lenses, whole tree |
+| A-058 | **ROUND FIVE: NOT CLEAN. 51 findings, 2 CRITICAL, the same repair defect three times. D-048(b) fired** |
 | A-042 | **The D-010 experiment run properly:** a schema-only build met a real signed refusal it had never seen. Everything §5.5.1 STATED matched first time; the envelope it omitted diverged, plus three defects in the section — all mine, all corrected. 101 → 146 tests |
 
 ## 5. Traces — what worked, and what was a dead end
