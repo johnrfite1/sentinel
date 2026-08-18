@@ -611,6 +611,103 @@ contract SentinelVaultBackstopsTest is Test {
         assertEq(v.actionNonce(), 1, "one nonce consumed for unlimited token authority");
     }
 
+    /// @notice THE NATIVE CEILING IS PER-ACTION AND BOUNDS NOTHING IN AGGREGATE. Like the
+    ///         test above, this asserts a LIMIT rather than a protection, so the limit cannot
+    ///         regress into an assumption.
+    ///
+    /// @dev Found by round five's vault lens, 2026-08-17, recorded as A-063. D-042 corrected
+    ///      §7.1 to say the hard caps "bound the NATIVE-VALUE dimension only". **They do not
+    ///      bound it either.** `maxNativeValueWei` is compared once per action, and no
+    ///      cumulative, rate-limited or velocity bound exists anywhere in `contracts/src`.
+    ///
+    ///      So the correction to a claim that overstated containment ITSELF overstated
+    ///      containment, in the one dimension it had just narrowed to. That is why this test
+    ///      exists rather than a sentence: the previous two attempts at this row were prose.
+    ///
+    ///      Under the threat model §7.1 names — evaluator or signer compromise — the attacker
+    ///      mints one receipt per nonce at exactly the ceiling. `execute` is permissionless, so
+    ///      the relayer needs no key. Only PAUSE bounds this, and pause is an owner REACTION,
+    ///      not a cap.
+    ///
+    ///      If a cumulative or rate-limited ceiling is ever added, this test should fail — and
+    ///      that failure is the signal to update §7.1 and the v1.1 register, not to delete it.
+    function test_LIMIT_nativeCeilingIsPerActionAndBoundsNoAggregate() public {
+        uint256 cap = 0.01 ether;
+        address[] memory targets = new address[](1);
+        targets[0] = address(demoPay);
+        bytes4[] memory selectors = new bytes4[](1);
+        selectors[0] = PURCHASE_SEL;
+
+        SentinelVault v = new SentinelVault(owner, signerAddr, cap, targets, selectors);
+        vm.startPrank(owner);
+        v.activateMandate(MANDATE_HASH);
+        v.activatePolicy(POLICY_HASH);
+        vm.stopPrank();
+        vm.deal(address(v), 100 * cap);
+
+        // CONTROL FIRST. One action ABOVE the cap is still refused. Without it the drain below
+        // could be passing because the ceiling is ABSENT rather than because it is PER-ACTION,
+        // and the test would assert nothing (A-051: a check that always fires looks exactly
+        // like one that catches everything).
+        {
+            bytes memory data = _purchaseFor(0);
+            T.ActionPayload memory a = _actionOn(v, cap + 1, data);
+            T.DecisionReceiptPayload memory r = _receipt(a, T.Verdict.ALLOW);
+            bytes memory sig = _signFor(v, SIGNER_PK, T.hashReceipt(r));
+            vm.prank(address(0xDEAD));
+            vm.expectRevert(SentinelVault.ValueOverCap.selector);
+            v.executeWithReceipt(a, data, r, sig);
+        }
+
+        // Now 100 actions at EXACTLY the cap. Every one is a valid ALLOW, the ceiling engages
+        // on all of them, and it refuses none.
+        for (uint256 i = 0; i < 100; i++) {
+            bytes memory data = _purchaseFor(i + 1);
+            T.ActionPayload memory a = _actionOn(v, cap, data);
+            T.DecisionReceiptPayload memory r = _receipt(a, T.Verdict.ALLOW);
+            bytes memory sig = _signFor(v, SIGNER_PK, T.hashReceipt(r));
+            vm.prank(address(0xDEAD)); // no key needed: execution is permissionless
+            v.executeWithReceipt(a, data, r, sig);
+            vm.warp(block.timestamp + 365 days); // and no deadline pressure either
+        }
+
+        assertEq(v.actionNonce(), 100, "100 nonces consumed and not one action refused");
+        assertEq(
+            address(v).balance,
+            0,
+            "REGRESSION or REPAIR: the vault now bounds CUMULATIVE native value - see A-063"
+        );
+    }
+
+    function _purchaseFor(uint256 i) internal view returns (bytes memory) {
+        return abi.encodeCall(DemoPay.purchase, (keccak256(abi.encode(i)), owner, 24 hours, false));
+    }
+
+    function _actionOn(SentinelVault v, uint256 valueWei, bytes memory data)
+        internal
+        view
+        returns (T.ActionPayload memory a)
+    {
+        a = T.ActionPayload({
+            schemaVersion: 1,
+            chainId: block.chainid,
+            vault: address(v),
+            actionNonce: v.actionNonce(),
+            target: address(demoPay),
+            valueWei: valueWei,
+            dataHash: keccak256(data),
+            operation: uint8(T.Operation.CALL),
+            mandateHash: MANDATE_HASH,
+            policyHash: POLICY_HASH,
+            // `type(uint64).max`, and that is the point rather than a convenience. `deadline`
+            // lives in the ActionPayload the receipt commits to, so under the compromise this
+            // test models it is the ATTACKER's to choose, and the vault rejects only values
+            // already in the past. D-042 listed `deadline` as onchain containment; it bounds
+            // a careless signer, not a compromised one.
+            deadline: type(uint64).max
+        });
+    }
+
     /// @notice §3.3(2) requires override be LOGGED, and until D-043 it was not.
     ///
     /// @dev Asserts the authorization is identifiable from the log alone — the override's own

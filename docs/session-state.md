@@ -219,9 +219,10 @@ design forks. Never sign a gate, never certify a public claim.
 
 ## 3. Where the build is
 
-**73/73 Foundry · 407/407 TypeScript · 173/173 verifier · 78 tamper cases over 30 modes ·
+**74/74 Foundry · 407/407 TypeScript · 173/173 verifier · 78 tamper cases over 30 modes ·
 50 corpus fixtures · 7 samples · gate green at the deep profile · workspace guards OK.**
-*(A-059 moved 160→170 / 77→78 / 29→30; A-061 moved 405→407 TypeScript and 170→173 verifier.
+*(A-059 moved 160→170 / 77→78 / 29→30; A-061 moved 405→407 TypeScript and 170→173 verifier;
+A-063 moved 73→74 Foundry.
 Every gate FLOOR was ratcheted in the SAME edit as the suite it bounds, which is the rule this
 line exists to enforce and the rule it has broken three times.)*
 *(Read `149/149` and omitted the tamper figures entirely until 2026-08-17 — stale for the third
@@ -380,6 +381,8 @@ reasoning, its rejected options, and where stated the condition that would rever
 | A-060 | ~~DRAFT~~ **RATIFIED by D-050(1)** — the nine-surface definition of "full breadth" |
 | D-050 | John's six walkthrough rulings: **A-060 ratified**, cluster C only, leads → round six, reports committed, push, kill the leaks |
 | A-061 | Cluster C built: the signer's prototype-chain verdict check and the verifier's array-precedence hole |
+| A-062 | The coverage boundary audited WHOLE — four false statements, two reported by nobody; G-2 closed with a provenance gate stage |
+| A-063 | **F-VAULT-1: D-042's correction was itself false.** Four sites repaired, a limit test added, **claim UNCERTIFIED — awaits John** |
 | A-042 | **The D-010 experiment run properly:** a schema-only build met a real signed refusal it had never seen. Everything §5.5.1 STATED matched first time; the envelope it omitted diverged, plus three defects in the section — all mine, all corrected. 101 → 146 tests |
 
 ## 5. Traces — what worked, and what was a dead end

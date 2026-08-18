@@ -651,9 +651,20 @@ WHAT IS NOT COVERED:
   - A LIVE agent. §9 step 7 connected the proposal to the pipeline, so the D-018 gap is
     closed for the recorded case, but every agent proposal exercised here comes from a
     pinned D-007 transcript. Nothing in this suite calls a model.
+  - THAT THE VAULT CONSTRAINS CUMULATIVE AUTHORITY IN ANY DIMENSION. It constrains what a
+    SINGLE action may do and nothing about how many such actions a compromised signer may
+    issue. This line said "the hard caps bound the NATIVE-VALUE dimension only" until
+    2026-08-17 — D-042's correction to a claim that overstated containment, itself
+    overstating containment in the one dimension it had just narrowed to (A-063).
+    `maxNativeValueWei` is compared PER ACTION and no cumulative, rate-limited or velocity
+    bound exists anywhere in contracts/src. A vault capped at 0.01 ether was drained from
+    1 ether to zero by 100 valid ALLOW receipts, each at exactly the cap, relayed by an
+    address holding no key. Of the four items that list named, only PAUSE bounds a
+    compromised signer, and pause is an owner REACTION rather than a cap: nonce prevents
+    replay but not a fresh receipt at N+1, and deadline and expiresAt are the attacker's
+    own fields. test_LIMIT_nativeCeilingIsPerActionAndBoundsNoAggregate asserts it.
   - THAT THE VAULT CONSTRAINS TOKEN AUTHORITY. It does not, and §7.1 said otherwise until
-    2026-08-16 (D-042). The hard caps bound the NATIVE-VALUE dimension only: pause, nonce,
-    deadline and the wei ceiling. One valid ALLOW receipt for approve(spender, max) passes
+    2026-08-16 (D-042). One valid ALLOW receipt for approve(spender, max) passes
     every onchain check — the wei ceiling never engages, valueWei being zero — and the
     vault's whole token balance becomes transferable. The flagship Case 2 attack is
     refused by the EVALUATOR with nothing behind it. A per-action allowance ceiling is

@@ -446,10 +446,21 @@ prevent.
   stateful campaign disabled. Five survived all ten invariants, including a vault honouring
   receipts for arbitrary FUTURE nonces. **Repaired** — the two arms the handler could not build
   were added and both mutations are now killed, verified by re-running them.
-  **§7.1's "within the vault's hard caps" overstated containment.** The vault caps native value
-  only; one valid ALLOW receipt for `approve(spender, max)` transfers authority over the entire
-  token balance, and `maxAllowanceIncreaseBaseUnits` has no onchain counterpart. **The claim is
-  corrected; the cap is v1.1.** The flagship Case 2 attack is refused by the evaluator with
+  **§7.1's "within the vault's hard caps" overstated containment.** ~~The vault caps native value
+  only;~~ **CORRECTED 2026-08-17 (A-063): THAT SENTENCE WAS ITSELF AN OVERSTATEMENT and is the
+  error being repaired here, stated before its content because a correction that misdescribes
+  what it corrects has already happened once in this pack (A-048).** The vault does not cap
+  native value in aggregate either: `maxNativeValueWei` is compared PER ACTION, no cumulative or
+  rate-limited bound exists anywhere in `contracts/src`, and a capped vault was drained to zero
+  by 100 valid ALLOW receipts each at exactly the cap. What the vault bounds is the SHAPE of a
+  single action; cumulative authority is unbounded in every dimension. Separately and still
+  true: one valid ALLOW receipt for `approve(spender, max)` transfers authority over the entire
+  token balance, and `maxAllowanceIncreaseBaseUnits` has no onchain counterpart. **Both claims
+  are corrected; both caps are v1.1, and both limits are now asserted by tests
+  (`test_LIMIT_vaultCapsNativeValueOnlyAndNotTokenAuthority`,
+  `test_LIMIT_nativeCeilingIsPerActionAndBoundsNoAggregate`) so neither can regress into an
+  assumption. NEITHER CORRECTION IS CERTIFIED: certification of public claims is autonomy NONE
+  and awaits John.** The flagship Case 2 attack is refused by the evaluator with
   nothing behind it, and that is now said plainly rather than implied away.
   **The D-010 verifier certified a forged refusal and a cross-domain receipt as PASS. REPAIRED
   (A-041), 70 tests → 101, by an agent that never read the implementation.** Both exploits
