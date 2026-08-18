@@ -669,3 +669,35 @@ exists to prevent, and which the guard itself would have to be taught to ignore.
 is exactly the shape of hole this section keeps recording. **Whoever scopes this should decide
 between a fixture the guard is taught to skip (cheap, and a new exemption to defend) and a probe
 that writes only to a temp directory outside the tracked tree (more work, no exemption).**
+
+### 13.3 Status after the overnight session of 2026-08-17
+
+**The table above records what round five FOUND. This section records what is now TRUE**, because
+a register that only grows is a list of things nobody can tell the state of.
+
+**CLOSED — 20 of the 51.** The three live security defects (`H-1`, `H-2`, `A-1`/`C-1`) under
+A-059; cluster C (`E1`, `H-3`) under A-061; the coverage boundary audited whole (`A-2`, `B-1`,
+`B-2`, `B-3`, `C-2`, `E6`, `H-7`) and the ablation report's provenance (`G-2`) under A-062; the
+containment claim (`F-VAULT-1`) under A-063, **drafted but NOT CERTIFIED**; cluster B (`G-1`,
+`D-03`, `D-01`, `D-02`, `F-VAULT-2`) under A-064; and the unshipped env template (`C-4`) plus a
+double-counted suite figure (`B-5`) under A-065. `B-6` and `B-7` went with the session-state
+corrections.
+
+**Every one was falsified before being believed closed** — the new check made to fail first, or
+the exploit re-run against both the pre-fix and post-fix trees. Two of those falsifications were
+themselves dead on the first attempt and are recorded as such in A-062 and A-063; that is the
+rate this technique actually runs at, and pretending otherwise would be the honesty defect this
+project exists to study.
+
+**AWAITING JOHN — one item, and it is not a formality.** `F-VAULT-1`'s §7.1 correction is drafted
+and marked uncertified in the proposal, in `scripts/test.sh`'s coverage boundary, and in
+`docs/gate-s2-evidence.md`. Certification of public claims is autonomy NONE. What is being asked
+for is certification of a correction from something FALSE to something MEASURED, with the
+measurement, its control and its falsification all in the tree.
+
+**UNDER ADJUDICATION — 24 leads**, farmed to four independent adjudicators on frozen worktrees
+and told that ALREADY-CLOSED is as valuable a verdict as CONFIRMED, because the tree moved under
+these findings overnight. Their results, and what was done about them, follow this entry.
+
+**NOT STARTED — round six.** D-050(1) ratified A-060's nine-surface definition, so it is defined
+before it is briefed, which round five was not. It is John's to trigger.
