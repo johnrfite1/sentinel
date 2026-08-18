@@ -552,7 +552,12 @@ excluded.
 
 ## 13. Round five — the full-breadth adversarial round (A-057/A-058), 2026-08-17 — 51 findings, RECORDED, NOT SCOPED
 
-**Nothing in this section has been fixed.** It is the raw output of round five, run at frozen
+**UPDATED 2026-08-17 after D-049(b): FOUR of the entries below are FIXED** — `H-1`, `H-2`, and
+`A-1`/`C-1`, which are one defect reported by two lenses. Their rows still say what the round
+found; the repairs are A-059. **The other 47 are not fixed**, and 12 of those are ones I
+re-verified myself (8 HIGH, 4 MEDIUM).
+
+**Nothing else in this section has been fixed.** It is the raw output of round five, run at frozen
 `8234aba` by eight independent reviewers, plus my own re-verification. **Remediation scoping is
 John's and has not happened**, which is why the list is here rather than in a commit.
 

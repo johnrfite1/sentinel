@@ -96,8 +96,10 @@ blocked.**
    converging because it was looking at one file"* are different diagnoses with opposite
    implications. **Do not pick between them on his behalf.**
 2. ~~**Remediation scoping for 51 findings.**~~ **RULED (D-049(b)): the three LIVE security
-   defects only, and they are FIXED (A-059).** The other 48 stay in `docs/v1-1-register.md`
-   §13 — 13 of them re-verified by me, the rest leads — and are NOT to be worked without him.
+   defects only, and they are FIXED (A-059).** **47 stay open** in `docs/v1-1-register.md`
+   §13 — **12 re-verified by me (8 HIGH, 4 MEDIUM), 35 unconfirmed reviewer leads** — and are
+   NOT to be worked without him. *(This line first read "48 … 13 of them"; both were wrong and
+   are counted from the round's data now.)*
    **D-047 makes DECLINING to fix a finding a change to a claim**, so they are recorded rather
    than quietly dropped, and this session's round is not clean on any reading.
 
