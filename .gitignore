@@ -1,6 +1,13 @@
 .DS_Store
 .env
 .env.*
+# ...but the TEMPLATE must ship. `.env.*` swallowed `.env.example`, so the file A-007 and
+# HANDOFF.md both describe as "a committed .env.example" was never committed: it existed only
+# on the author's disk, `check-secrets.sh` carried a carve-out for a path that could never be
+# tracked, and its design note cited it as where the Anvil allowlist is documented — pointing a
+# fresh clone at a file it does not have. Found by round five's free lens (C-4). It holds no
+# secrets by construction; the guard scans it like any other tracked file.
+!.env.example
 node_modules/
 out/
 cache/
