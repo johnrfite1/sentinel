@@ -149,7 +149,20 @@ checking conformance, and it still could not re-derive simulated effects without
 the simulation. That is an invitation to overclaim precisely where §7.5's honesty gate bites.
 Reviewer 1's alternative is strictly better than either branch of the original fork: the
 signer **decodes the calldata itself and binds its own decoding into the receipt**, deriving
-without judging. A wrong-purpose ALLOW then becomes detectable after the fact by the D-010
+**[ANNOTATED 2026-08-18 (D-055(b)). THIS SENTENCE WAS FALSE WHEN THIS PACK WAS SIGNED, AND IS
+NOW TRUE. It is annotated rather than withdrawn, at John's ruling.** Round six found that the
+D-010 verifier performed NO conformance comparison — `grep -c decodedSelectorAndParameters
+verifier/verify.py` returned 0 — so a wholly self-consistent wrong-purpose ALLOW, honestly
+reporting the attacker's own parameters, verified `=> PASS`, exit 0. Two independent lenses found
+it by different routes. **John ruled the ARCHITECTURE must hold rather than the claim be
+withdrawn: D-014 keeps conformance out of the signer precisely because the verifier completes
+it.** The comparison is now built (A-074): under an evidence verdict of ALLOW, the signer-attested
+decoded parameters are compared against the mandate's §5.7.1 purpose fields, on the receipt AND
+refusal paths, with absence and wrong type failing. Legitimate nonconforming BLOCK/REVIEW bundles
+remain verifiable and are asserted to. Falsified in both directions: the wrong-purpose ALLOW
+PASSES against the pre-fix verifier and FAILS against the current one, with the BLOCK fixture
+verifying throughout. **The Gate S1 signature stands; this corrects a claim to what the artifact
+now does.]** A wrong-purpose ALLOW then becomes detectable after the fact by the D-010
 verifier, with no second evaluator and no two-implementations-must-agree problem. Decoding is
 a pure function of bytes already differentially tested against the EVM, so sharing the
 decoder is not the concern that sharing hashing would be.

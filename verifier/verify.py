@@ -1302,6 +1302,92 @@ def _calldata_check(action):
                  f"computed {computed}\naction   {action.get('dataHash')}")
 
 
+def _allow_conforms_to_the_mandate(evidence, mandate, policy):
+    """§5.7.1's decoded-parameter checks, from the verifier's own side.
+
+    Derived from the published §5.7.1 list ("Decoded parameters against the mandate":
+    EVAL_PURCHASE_RESOURCE, _BENEFICIARY, _DURATION, _RECURRENCE, EVAL_APPROVAL_SPENDER,
+    EVAL_APPROVAL_CEILING) rather than transcribed from the TypeScript engine, which is the
+    whole point of D-010: two implementations of one published rule, and a divergence is a
+    finding rather than a copy of a mistake.
+
+    ABSENCE IS NOT AGREEMENT. Under ALLOW, a missing or non-object decoded record, a missing
+    mandate, or a schema this verifier cannot evaluate all FAIL. An ALLOW nobody can check is
+    not an ALLOW anybody should certify.
+    """
+    out = []
+    if not isinstance(evidence, dict):
+        return out
+    if evidence.get("verdict") != "ALLOW":
+        # BLOCK and REVIEW bundles are legitimately nonconforming and MUST stay verifiable.
+        return out
+
+    dsp = evidence.get("decodedSelectorAndParameters")
+    if not isinstance(dsp, dict):
+        out.append(Check(
+            "ALLOW: evidence carries a signer-attested decoded-parameter record", False,
+            "absent" if dsp is None else f"got {type(dsp).__name__}"))
+        return out
+    params = dsp.get("parameters")
+    if not isinstance(params, dict):
+        out.append(Check(
+            "ALLOW: the decoded record carries a parameters object", False,
+            "absent" if params is None else f"got {type(params).__name__}"))
+        return out
+    if not isinstance(mandate, dict):
+        out.append(Check(
+            "ALLOW: a mandate is present to compare the decoded parameters against", False,
+            "no mandate.json in the bundle"))
+        return out
+
+    if str(dsp.get("decoded")).lower() not in ("true", "1"):
+        out.append(Check("ALLOW: the calldata was decoded", False,
+                         f"decoded={dsp.get('decoded')!r}; an undecoded call cannot be ALLOWed"))
+        return out
+
+    if _norm_hex(dsp.get("selector")) != _norm_hex(mandate.get("selector")):
+        out.append(Check(
+            "ALLOW: the decoded selector is the one the mandate authorises", False,
+            f"decoded {dsp.get('selector')!r} vs mandate {mandate.get('selector')!r}"))
+
+    schema, wrong = dsp.get("schema"), []
+    if schema == "DemoPay.purchase":
+        for name, field in (("resourceId", "resourceId"), ("beneficiary", "beneficiary")):
+            if _norm_hex(params.get(name)) != _norm_hex(mandate.get(field)):
+                wrong.append(f"{name}: decoded {params.get(name)!r} vs mandate "
+                             f"{mandate.get(field)!r}")
+        try:
+            if int(params.get("durationSeconds")) != int(mandate.get("durationSeconds")):
+                wrong.append(f"durationSeconds: decoded {params.get('durationSeconds')!r} vs "
+                             f"mandate {mandate.get('durationSeconds')!r}")
+        except (TypeError, ValueError) as exc:
+            wrong.append(f"durationSeconds: unreadable ({exc})")
+        if params.get("recurring") and not mandate.get("recurringAllowed"):
+            wrong.append("recurring requested, mandate forbids it")
+    elif schema == "DemoERC20.approve":
+        if _norm_hex(params.get("spender")) != _norm_hex(mandate.get("beneficiary")):
+            wrong.append(f"spender: decoded {params.get('spender')!r} is not the mandate's "
+                         f"beneficiary {mandate.get('beneficiary')!r}")
+        try:
+            ceiling = policy.get("maxAllowanceIncreaseBaseUnits") if isinstance(policy, dict) else None
+            if ceiling is None:
+                wrong.append("no policy allowance ceiling to compare the approval against")
+            elif int(params.get("amount")) > int(ceiling):
+                wrong.append(f"amount: decoded {params.get('amount')!r} exceeds the policy "
+                             f"ceiling {ceiling!r}")
+        except (TypeError, ValueError) as exc:
+            wrong.append(f"amount: unreadable ({exc})")
+    else:
+        # An ALLOW whose schema this verifier cannot evaluate is an ALLOW it cannot certify.
+        wrong.append(f"schema {schema!r} is not one this verifier can check conformance for")
+
+    out.append(Check(
+        "ALLOW: the signer-attested decoded parameters conform to the mandate (§5.7.1)",
+        not wrong,
+        "; ".join(wrong) if wrong else f"{schema}: every §5.7.1 purpose field agrees"))
+    return out
+
+
 def _evidence_describes_the_bundle(evidence, action, mandate, policy):
     """§5.6's `normalizedAction` and `expectedEffects` must describe the presented documents.
 
@@ -1361,6 +1447,35 @@ def _evidence_describes_the_bundle(evidence, action, mandate, policy):
             out.append(Check(
                 "keccak256(evidence.normalizedAction.callData) == action.dataHash", ok,
                 "" if ok else f"computed {digest}\naction   {action.get('dataHash')}"))
+
+    # ---- THE CONFORMANCE COMPARISON D-014 ASSIGNS TO THIS VERIFIER -----------------------
+    #
+    # D-055(b), closing round six's L2-2/L8-01. THE ARGUMENT, stated as a general property:
+    # **a bundle whose evidence verdict is ALLOW ASSERTS that the action conforms to the
+    # mandate; a verifier that certifies it without comparing the signer-attested decoded
+    # parameters to the mandate's purpose fields certifies the ASSERTION rather than the FACT.**
+    #
+    # WHY THIS IS NOT AN OPTIONAL EXTRA. D-014 rejected giving the signer conformance checks,
+    # and its stated ground — carried into the SIGNED Gate S1 pack at `gate-s1-evidence.md:124`
+    # and `:152` — is that "a wrong-purpose ALLOW is detectable after the fact by the D-010
+    # verifier, which does the conformance comparison". It did not. `grep -c
+    # decodedSelectorAndParameters verify.py` returned 0, and a wholly self-consistent
+    # wrong-purpose ALLOW — re-canonicalised, re-hashed, re-bound and RE-SIGNED, honestly
+    # reporting the attacker's own parameters — verified `=> PASS`, exit 0. John ruled that the
+    # architecture, not the sentence, is what must hold: withdrawing the claim would leave
+    # D-014 without the half that justifies keeping conformance out of the signer.
+    #
+    # BOUND, AND IT IS THE HALF THAT IS EASY TO GET WRONG: this binds ONLY to ALLOW. A BLOCK or
+    # REVIEW bundle is legitimately nonconforming — that is what it is FOR, the corpus is full
+    # of them, and `case-3-wrong-purpose-block` is the flagship. Requiring conformance of those
+    # would reject the artifacts this project exists to produce.
+    #
+    # It lives in `_evidence_describes_the_bundle` deliberately: that function is reached from
+    # `_chain_checks` on the receipt path AND from `_refusal_checks` on the §5.5.1 path, so the
+    # comparison runs on EVERY verification path rather than on the one a reviewer probed.
+    # "Which paths does this check NOT run on?" is the question that produced this placement
+    # (docs/repair-protocol.md step 2).
+    out.extend(_allow_conforms_to_the_mandate(evidence, mandate, policy))
 
     expected = evidence.get("expectedEffects")
     if not isinstance(expected, dict):

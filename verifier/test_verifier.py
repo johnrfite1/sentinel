@@ -1193,11 +1193,11 @@ class TestEvidenceDescribesTheBundle(unittest.TestCase):
 
     SIGNER = 0x59C6995E998F97A5A0044966F0945389DC9E86DAE88C7A8412F4603B6B78690D
 
-    def resealed(self, mutate):
+    def resealed(self, mutate, sample="case-1-allow"):
         """A bundle mutated by `mutate(evidence)` and then made wholly self-consistent."""
         tmp = tempfile.mkdtemp()
         self.addCleanup(shutil.rmtree, tmp)
-        target = stage(os.path.join(SAMPLES, "case-1-allow"), tmp)
+        target = stage(os.path.join(SAMPLES, sample), tmp)
         ev = read_json(target, "evidence.json")
         mutate(ev)
         with open(os.path.join(target, "evidence.json"), "w") as h:
@@ -1326,6 +1326,110 @@ class TestEvidenceDescribesTheBundle(unittest.TestCase):
         self.assertFalse(ok, "a bundle omitting its own verdict was certified")
         self.assertIn("evidence.verdict is present to compare against the receipt (§5.6)",
                       [c.name for c in checks if not c.ok])
+
+
+class TestAllowConformsToTheMandate(unittest.TestCase):
+    """D-055(b): the conformance comparison D-014's architecture assigns to THIS verifier.
+
+    D-014 rejected giving the signer conformance checks, and its stated ground -- carried into
+    the SIGNED Gate S1 pack -- is that "a wrong-purpose ALLOW is detectable after the fact by
+    the D-010 verifier, which does the conformance comparison". It did not: `grep -c
+    decodedSelectorAndParameters verify.py` returned 0, and a wholly self-consistent
+    wrong-purpose ALLOW verified `=> PASS`, exit 0.
+
+    John ruled the architecture must hold rather than the sentence be withdrawn, so the check
+    is built here. It binds ONLY to ALLOW: a BLOCK or REVIEW bundle is legitimately
+    nonconforming, which is what the corpus is full of and what `case-3-wrong-purpose-block`
+    exists to be. The last test in this class is that negative, and it is the one that would
+    catch an over-broad repair.
+    """
+
+    # Borrowed from TestEvidenceDescribesTheBundle.resealed, which this class reuses rather
+    # than duplicating: one reseal harness, so a defect in it cannot pass here and fail there.
+    SIGNER = TestEvidenceDescribesTheBundle.SIGNER
+
+    CONFORMANCE = "ALLOW: the signer-attested decoded parameters conform to the mandate (§5.7.1)"
+
+    def _params(self, ev):
+        return ev["decodedSelectorAndParameters"]["parameters"]
+
+    def test_a_wrong_resource_under_ALLOW_is_refused(self):
+        # The flagship shape: mechanically valid, wrong purpose, asserted as ALLOW.
+        t = TestEvidenceDescribesTheBundle.resealed(
+            self, lambda ev: self._params(ev).__setitem__("resourceId", "0x" + "ab" * 32))
+        ok, checks = _verify(t)
+        self.assertFalse(ok, "a wrong-purpose ALLOW was certified")
+        self.assertIn(self.CONFORMANCE, [c.name for c in checks if not c.ok])
+
+    def test_a_wrong_beneficiary_under_ALLOW_is_refused(self):
+        t = TestEvidenceDescribesTheBundle.resealed(
+            self, lambda ev: self._params(ev).__setitem__("beneficiary", "0x" + "44" * 20))
+        ok, checks = _verify(t)
+        self.assertFalse(ok)
+        self.assertIn(self.CONFORMANCE, [c.name for c in checks if not c.ok])
+
+    def test_a_widened_duration_under_ALLOW_is_refused(self):
+        t = TestEvidenceDescribesTheBundle.resealed(
+            self, lambda ev: self._params(ev).__setitem__("durationSeconds", "31536000"))
+        ok, checks = _verify(t)
+        self.assertFalse(ok)
+        self.assertIn(self.CONFORMANCE, [c.name for c in checks if not c.ok])
+
+    def test_recurrence_the_mandate_forbids_under_ALLOW_is_refused(self):
+        t = TestEvidenceDescribesTheBundle.resealed(
+            self, lambda ev: self._params(ev).__setitem__("recurring", True))
+        ok, checks = _verify(t)
+        self.assertFalse(ok)
+        self.assertIn(self.CONFORMANCE, [c.name for c in checks if not c.ok])
+
+    def test_a_selector_the_mandate_does_not_authorise_is_refused(self):
+        # A route no reviewer demonstrated (protocol step 3): the parameters can agree while
+        # the CALL is a different function entirely.
+        t = TestEvidenceDescribesTheBundle.resealed(
+            self, lambda ev: ev["decodedSelectorAndParameters"].__setitem__(
+                "selector", "0x095ea7b3"))
+        ok, checks = _verify(t)
+        self.assertFalse(ok)
+        self.assertIn("ALLOW: the decoded selector is the one the mandate authorises",
+                      [c.name for c in checks if not c.ok])
+
+    def test_an_ALLOW_whose_decoded_record_is_absent_is_refused(self):
+        # Absence is not agreement: omission must cost more than contradiction, not less.
+        t = TestEvidenceDescribesTheBundle.resealed(
+            self, lambda ev: ev.pop("decodedSelectorAndParameters"))
+        ok, checks = _verify(t)
+        self.assertFalse(ok)
+        self.assertIn("ALLOW: evidence carries a signer-attested decoded-parameter record",
+                      [c.name for c in checks if not c.ok])
+
+    def test_an_ALLOW_whose_parameters_are_not_an_object_is_refused(self):
+        t = TestEvidenceDescribesTheBundle.resealed(
+            self, lambda ev: ev["decodedSelectorAndParameters"].__setitem__(
+                "parameters", [self._params(ev)]))
+        ok, checks = _verify(t)
+        self.assertFalse(ok)
+        self.assertIn("ALLOW: the decoded record carries a parameters object",
+                      [c.name for c in checks if not c.ok])
+
+    def test_an_ALLOW_over_an_undecoded_call_is_refused(self):
+        t = TestEvidenceDescribesTheBundle.resealed(
+            self, lambda ev: ev["decodedSelectorAndParameters"].__setitem__("decoded", "false"))
+        ok, checks = _verify(t)
+        self.assertFalse(ok)
+        self.assertIn("ALLOW: the calldata was decoded", [c.name for c in checks if not c.ok])
+
+    def test_a_NONCONFORMING_BLOCK_BUNDLE_STILL_VERIFIES(self):
+        # THE NEGATIVE THAT BOUNDS THE REPAIR, and the one an over-broad version fails.
+        # `case-3-wrong-purpose-block` buys a resource its mandate does not authorise. That is
+        # the artifact this project exists to produce, and requiring conformance of it would
+        # reject the corpus. Resealed through the same harness so this is not passing because
+        # the bundle was untouched.
+        t = TestEvidenceDescribesTheBundle.resealed(
+            self, lambda ev: None, sample="case-3-wrong-purpose-block")
+        ok, checks = _verify(t)
+        self.assertTrue(ok, [c.name for c in checks if not c.ok])
+        self.assertNotIn(self.CONFORMANCE, [c.name for c in checks],
+                         "the conformance check must not even run on a BLOCK bundle")
 
 
 class TestAbsenceIsNotAgreement(unittest.TestCase):

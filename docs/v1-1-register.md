@@ -745,7 +745,7 @@ verdict as CONFIRMED and to assume each claim wrong until they had made its fail
 | `D-09` | CONFIRMED | LOW stands for (a) and (b) | open |
 | `D-10` | CONFIRMED | LOW is right for (a) and (b) — inert mutants over a corpus that happens to be single-case | open |
 | `E2` | CONFIRMED | Keep MEDIUM | open |
-| `E3` | CONFIRMED | MEDIUM is right, arguably light | open |
+| `E3` | CONFIRMED | MEDIUM is right, arguably light | **RULED FIXED (D-055)** — was a declared limit under A-044(f); A-068 wrongly re-opened it as a fork |
 | `E4` | CONFIRMED | Keep MEDIUM, raise confidence from the finding's own 'medium' to high — it is now reproduced wi | open |
 | `E5` | CONFIRMED | LOW is correct | open |
 | `F-VAULT-3` | CONFIRMED | MEDIUM stands, and would be MEDIUM even framed as document-only | open |

@@ -449,7 +449,7 @@ reasoning, its rejected options, and where stated the condition that would rever
 | A-066 | **The deep profile can now be run from a worktree** — D-050(1)'s condition was unmeetable when it was ratified |
 | A-067 | **21 of 24 leads CONFIRMED** by four independent adjudicators. `D-08` raised to HIGH and fixed; `H-4` fixed; 19 recorded |
 | D-051 | John's four walkthrough rulings: **§7.1 CERTIFIED**, fix MEDIUM / accept LOW, round six after the fixes, probes preserved |
-| A-068 | Seven MEDIUMs fixed; **`E3` and `E4` returned to John as design forks** |
+| A-068 | Seven MEDIUMs fixed; ~~`E3` and `E4` returned to John as design forks~~ **`E3` was ALREADY ruled a declared limit by John at A-044(f) 2026-08-16; A-068 re-opened it without citing that. NOW RULED FIXED (D-055).** `E4`'s signer half stays unbuilt (D-014) |
 | A-069 | E4's verifier half built — and the fixture gap it found matters more than the check |
 | A-042 | **The D-010 experiment run properly:** a schema-only build met a real signed refusal it had never seen. Everything §5.5.1 STATED matched first time; the envelope it omitted diverged, plus three defects in the section — all mine, all corrected. 101 → 146 tests |
 
