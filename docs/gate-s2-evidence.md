@@ -357,6 +357,51 @@ paragraph did not. If the campaign is ever meant to carry more than corroboratio
 handler arms that build OUT-OF-BOUND bundles: a `valueWei` drawn above the cap, a foreign target
 or selector, an expired receipt. **That is v1.1 work and is not claimed here.**
 
+**CORRECTED AGAIN 2026-08-18 (A-073, D-052(b) priority 3, from round six lens 4 and reproduced
+independently). "CORROBORATES" IS STILL TOO STRONG, IN TWO SEPARATE WAYS, AND THE SECOND IS THE
+ONE THAT MATTERS.** Stated before its content, per A-048's rule.
+
+**(1) THE MARGINAL CONTRIBUTION IS MEASURED AT ZERO, not merely "less than the deterministic
+tests".** Nine of the vault's validation checks were deleted one at a time and each mutant was
+run through both arms SEPARATELY — the campaign alone (`--match-test invariant_`) and the
+deterministic tests alone (`--no-match-test invariant_`):
+
+| | caught by the campaign | caught deterministically |
+|---|---|---|
+| 9 check-deletion mutants | **1** | **9** |
+
+**Every mutant the campaign caught was also caught without it.** The single exception is the
+`keccak256(callData) != action.dataHash` recompute — which §7's list of twelve does not name
+either. So the campaign killed nothing the deterministic suite would not have killed alone.
+"Corroborates" is fair as a description of intent; as a claim about added assurance the measured
+value is zero.
+
+**(2) THE ENUMERATION OF TWELVE IS INCOMPLETE.** `ReceiptActionMismatch` and `OverrideExpired`
+also survive all eleven invariants and are not among the twelve named above, so the true figure
+is **at least fourteen** action/receipt-validation checks the campaign cannot reach.
+
+**(3) THE CAMPAIGN CANNOT DISTINGUISH A WORKING VAULT FROM ONE THAT EXECUTES NOTHING. This is
+the correction that changes what a green campaign means.** Inverting the chain check —
+`action.chainId == block.chainid` — so that **no action can ever execute** leaves the campaign
+reporting **11 passed, 0 failed**, while the deterministic suite produces **42 failures**. All
+ten live invariants are `assertFalse(ghost)` predicates, and zero executions satisfies every one
+of them.
+
+The `test_nonVacuity_*` tests above are real and they do fire — but they run as SEPARATE test
+instances, so **nothing asserts that the campaign's own 16,384-call run executed anything at
+all.** The paragraph above says the vacuity risk "was caught here", and it was, once, by a
+different mechanism than the one now guarding it. A campaign that passes identically on a
+working vault and on a dead one is not corroboration of the vault's behaviour; it is a
+measurement of the handler's action set.
+
+**WHAT IS AND IS NOT CLAIMED NOW.** Gate 6's status is unchanged and still **MET**, because it
+always rested on the deterministic tests and they remain green and remain the thing that kills
+mutants. What is withdrawn is any reading in which the campaign adds assurance: **it currently
+adds none that is measurable.** The remedy is unchanged and still v1.1 — handler arms that build
+OUT-OF-BOUND bundles, plus a non-vacuity assertion that binds the campaign's OWN run rather than
+a sibling instance. **This correction is a repair of a claim to what was measured, not a new
+capability claim, and it is offered for ratification rather than treated as ratified.**
+
 ---
 
 ## 8. Gate 7 — "A real prompt injection changes the agent proposal and is contained"
