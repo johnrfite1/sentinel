@@ -459,8 +459,7 @@ prevent.
   are corrected; both caps are v1.1, and both limits are now asserted by tests
   (`test_LIMIT_vaultCapsNativeValueOnlyAndNotTokenAuthority`,
   `test_LIMIT_nativeCeilingIsPerActionAndBoundsNoAggregate`) so neither can regress into an
-  assumption. NEITHER CORRECTION IS CERTIFIED: certification of public claims is autonomy NONE
-  and awaits John.** The flagship Case 2 attack is refused by the evaluator with
+  assumption. BOTH CORRECTIONS CERTIFIED BY JOHN 2026-08-18 (D-051(a)), on the drain and its control in `contracts/test/SentinelVault.backstops.t.sol` rather than on a summary of them.** The flagship Case 2 attack is refused by the evaluator with
   nothing behind it, and that is now said plainly rather than implied away.
   **The D-010 verifier certified a forged refusal and a cross-domain receipt as PASS. REPAIRED
   (A-041), 70 tests → 101, by an agent that never read the implementation.** Both exploits

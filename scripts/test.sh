@@ -739,6 +739,7 @@ WHAT IS NOT COVERED:
     compromised signer, and pause is an owner REACTION rather than a cap: nonce prevents
     replay but not a fresh receipt at N+1, and deadline and expiresAt are the attacker's
     own fields. test_LIMIT_nativeCeilingIsPerActionAndBoundsNoAggregate asserts it.
+    Certified by John 2026-08-18 (D-051(a)).
   - THAT THE VAULT CONSTRAINS TOKEN AUTHORITY. It does not, and §7.1 said otherwise until
     2026-08-16 (D-042). One valid ALLOW receipt for approve(spender, max) passes
     every onchain check — the wei ceiling never engages, valueWei being zero — and the

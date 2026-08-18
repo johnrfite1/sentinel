@@ -1,0 +1,142 @@
+{
+ "num_int": {
+  "ok": true,
+  "canonical": "{\"a\":1}",
+  "hexbytes": "7b2261223a317d"
+ },
+ "num_float_same": {
+  "ok": true,
+  "canonical": "{\"a\":1}",
+  "hexbytes": "7b2261223a317d"
+ },
+ "num_e21": {
+  "ok": true,
+  "canonical": "{\"a\":1e+21}",
+  "hexbytes": "7b2261223a31652b32317d"
+ },
+ "num_e_minus7": {
+  "ok": true,
+  "canonical": "{\"a\":1e-7}",
+  "hexbytes": "7b2261223a31652d377d"
+ },
+ "num_tenth": {
+  "ok": true,
+  "canonical": "{\"a\":0.1}",
+  "hexbytes": "7b2261223a302e317d"
+ },
+ "num_negzero": {
+  "ok": true,
+  "canonical": "{\"a\":0}",
+  "hexbytes": "7b2261223a307d"
+ },
+ "num_e100": {
+  "ok": true,
+  "canonical": "{\"a\":1e+100}",
+  "hexbytes": "7b2261223a31652b3130307d"
+ },
+ "num_denormal": {
+  "ok": true,
+  "canonical": "{\"a\":5e-324}",
+  "hexbytes": "7b2261223a35652d3332347d"
+ },
+ "num_2p53p1": {
+  "ok": false,
+  "err": "CanonicalizationError: integer 9007199254740993 exceeds the IEEE-754 exactly-representable range; RFC 8785 sectio"
+ },
+ "num_big_int": {
+  "ok": false,
+  "err": "CanonicalizationError: integer 12345678901234567890 exceeds the IEEE-754 exactly-representable range; RFC 8785 se"
+ },
+ "num_333": {
+  "ok": true,
+  "canonical": "{\"a\":333333333.3333333}",
+  "hexbytes": "7b2261223a3333333333333333332e333333333333337d"
+ },
+ "str_latin1": {
+  "ok": true,
+  "canonical": "{\"a\":\"\u00e9\"}",
+  "hexbytes": "7b2261223a22c3a9227d"
+ },
+ "str_cjk": {
+  "ok": true,
+  "canonical": "{\"a\":\"\u65e5\u672c\"}",
+  "hexbytes": "7b2261223a22e697a5e69cac227d"
+ },
+ "str_astral": {
+  "ok": true,
+  "canonical": "{\"a\":\"\ud83d\ude00\"}",
+  "hexbytes": "7b2261223a22f09f9880227d"
+ },
+ "str_del": {
+  "ok": true,
+  "canonical": "{\"a\":\"\u007f\"}",
+  "hexbytes": "7b2261223a227f227d"
+ },
+ "str_lone_hi_sur": {
+  "ok": false,
+  "err": "UnicodeEncodeError: 'utf-8' codec can't encode character '\\ud800' in position 6: surrogates not allowed"
+ },
+ "str_lone_lo_sur": {
+  "ok": false,
+  "err": "UnicodeEncodeError: 'utf-8' codec can't encode character '\\udc00' in position 6: surrogates not allowed"
+ },
+ "str_sur_pair_esc": {
+  "ok": true,
+  "canonical": "{\"a\":\"\ud83d\ude00\"}",
+  "hexbytes": "7b2261223a22f09f9880227d"
+ },
+ "str_solidus": {
+  "ok": true,
+  "canonical": "{\"a\":\"a/b\"}",
+  "hexbytes": "7b2261223a22612f62227d"
+ },
+ "str_nul": {
+  "ok": true,
+  "canonical": "{\"a\":\"\\u0000\"}",
+  "hexbytes": "7b2261223a225c7530303030227d"
+ },
+ "key_nonascii": {
+  "ok": true,
+  "canonical": "{\"z\":2,\"\u00e9\":1}",
+  "hexbytes": "7b227a223a322c22c3a9223a317d"
+ },
+ "key_astral_vs_ffff": {
+  "ok": true,
+  "canonical": "{\"\ud83d\ude00\":\"x\",\"\uffff\":\"y\"}",
+  "hexbytes": "7b22f09f9880223a2278222c22efbfbf223a2279227d"
+ },
+ "key_empty": {
+  "ok": true,
+  "canonical": "{\"\":\"x\",\"a\":\"y\"}",
+  "hexbytes": "7b22223a2278222c2261223a2279227d"
+ },
+ "key_order_basic": {
+  "ok": true,
+  "canonical": "{\"C\":\"3\",\"_\":\"4\",\"a\":\"2\",\"b\":\"1\"}",
+  "hexbytes": "7b2243223a2233222c225f223a2234222c2261223a2232222c2262223a2231227d"
+ },
+ "key_dup": {
+  "ok": false,
+  "err": "CanonicalizationError: duplicate object member 'a': RFC 8785 input must not contain duplicate keys (see RFC 8785 "
+ },
+ "top_string": {
+  "ok": true,
+  "canonical": "\"hi\"",
+  "hexbytes": "22686922"
+ },
+ "top_number": {
+  "ok": true,
+  "canonical": "42",
+  "hexbytes": "3432"
+ },
+ "top_null": {
+  "ok": true,
+  "canonical": "null",
+  "hexbytes": "6e756c6c"
+ },
+ "nested_num": {
+  "ok": true,
+  "canonical": "{\"z\":{\"y\":[\"s\",7]}}",
+  "hexbytes": "7b227a223a7b2279223a5b2273222c375d7d7d"
+ }
+}

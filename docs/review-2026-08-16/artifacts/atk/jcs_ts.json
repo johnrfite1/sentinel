@@ -1,0 +1,132 @@
+{
+ "num_int": {
+  "ok": false,
+  "err": "CanonicalizationError: $.a: the evidence schema carries no JSON numbers — encode 1 as a decimal string. RFC 8785 "
+ },
+ "num_float_same": {
+  "ok": false,
+  "err": "CanonicalizationError: $.a: the evidence schema carries no JSON numbers — encode 1 as a decimal string. RFC 8785 "
+ },
+ "num_e21": {
+  "ok": false,
+  "err": "CanonicalizationError: $.a: the evidence schema carries no JSON numbers — encode 1e+21 as a decimal string. RFC 8"
+ },
+ "num_e_minus7": {
+  "ok": false,
+  "err": "CanonicalizationError: $.a: the evidence schema carries no JSON numbers — encode 1e-7 as a decimal string. RFC 87"
+ },
+ "num_tenth": {
+  "ok": false,
+  "err": "CanonicalizationError: $.a: the evidence schema carries no JSON numbers — encode 0.1 as a decimal string. RFC 878"
+ },
+ "num_negzero": {
+  "ok": false,
+  "err": "CanonicalizationError: $.a: the evidence schema carries no JSON numbers — encode 0 as a decimal string. RFC 8785 "
+ },
+ "num_e100": {
+  "ok": false,
+  "err": "CanonicalizationError: $.a: the evidence schema carries no JSON numbers — encode 1e+100 as a decimal string. RFC "
+ },
+ "num_denormal": {
+  "ok": false,
+  "err": "CanonicalizationError: $.a: the evidence schema carries no JSON numbers — encode 5e-324 as a decimal string. RFC "
+ },
+ "num_2p53p1": {
+  "ok": false,
+  "err": "CanonicalizationError: $.a: the evidence schema carries no JSON numbers — encode 9007199254740992 as a decimal st"
+ },
+ "num_big_int": {
+  "ok": false,
+  "err": "CanonicalizationError: $.a: the evidence schema carries no JSON numbers — encode 12345678901234567000 as a decima"
+ },
+ "num_333": {
+  "ok": false,
+  "err": "CanonicalizationError: $.a: the evidence schema carries no JSON numbers — encode 333333333.3333333 as a decimal s"
+ },
+ "str_latin1": {
+  "ok": true,
+  "canonical": "{\"a\":\"é\"}",
+  "hexbytes": "7b2261223a22c3a9227d"
+ },
+ "str_cjk": {
+  "ok": true,
+  "canonical": "{\"a\":\"日本\"}",
+  "hexbytes": "7b2261223a22e697a5e69cac227d"
+ },
+ "str_astral": {
+  "ok": true,
+  "canonical": "{\"a\":\"😀\"}",
+  "hexbytes": "7b2261223a22f09f9880227d"
+ },
+ "str_del": {
+  "ok": true,
+  "canonical": "{\"a\":\"\"}",
+  "hexbytes": "7b2261223a227f227d"
+ },
+ "str_lone_hi_sur": {
+  "ok": true,
+  "canonical": "{\"a\":\"\\ud800\"}",
+  "hexbytes": "7b2261223a225c7564383030227d"
+ },
+ "str_lone_lo_sur": {
+  "ok": true,
+  "canonical": "{\"a\":\"\\udc00\"}",
+  "hexbytes": "7b2261223a225c7564633030227d"
+ },
+ "str_sur_pair_esc": {
+  "ok": true,
+  "canonical": "{\"a\":\"😀\"}",
+  "hexbytes": "7b2261223a22f09f9880227d"
+ },
+ "str_solidus": {
+  "ok": true,
+  "canonical": "{\"a\":\"a/b\"}",
+  "hexbytes": "7b2261223a22612f62227d"
+ },
+ "str_nul": {
+  "ok": true,
+  "canonical": "{\"a\":\"\\u0000\"}",
+  "hexbytes": "7b2261223a225c7530303030227d"
+ },
+ "key_nonascii": {
+  "ok": false,
+  "err": "CanonicalizationError: $: key \"é\" is not printable ASCII. RFC 8785 sorts by UTF-16 code unit, which diverges from"
+ },
+ "key_astral_vs_ffff": {
+  "ok": false,
+  "err": "CanonicalizationError: $: key \"😀\" is not printable ASCII. RFC 8785 sorts by UTF-16 code unit, which diverges fro"
+ },
+ "key_empty": {
+  "ok": true,
+  "canonical": "{\"\":\"x\",\"a\":\"y\"}",
+  "hexbytes": "7b22223a2278222c2261223a2279227d"
+ },
+ "key_order_basic": {
+  "ok": true,
+  "canonical": "{\"C\":\"3\",\"_\":\"4\",\"a\":\"2\",\"b\":\"1\"}",
+  "hexbytes": "7b2243223a2233222c225f223a2234222c2261223a2232222c2262223a2231227d"
+ },
+ "key_dup": {
+  "ok": true,
+  "canonical": "{\"a\":\"2\"}",
+  "hexbytes": "7b2261223a2232227d"
+ },
+ "top_string": {
+  "ok": true,
+  "canonical": "\"hi\"",
+  "hexbytes": "22686922"
+ },
+ "top_number": {
+  "ok": false,
+  "err": "CanonicalizationError: $: the evidence schema carries no JSON numbers — encode 42 as a decimal string. RFC 8785 n"
+ },
+ "top_null": {
+  "ok": true,
+  "canonical": "null",
+  "hexbytes": "6e756c6c"
+ },
+ "nested_num": {
+  "ok": false,
+  "err": "CanonicalizationError: $.z.y[1]: the evidence schema carries no JSON numbers — encode 7 as a decimal string. RFC "
+ }
+}
