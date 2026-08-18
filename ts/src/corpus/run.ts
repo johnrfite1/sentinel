@@ -191,7 +191,37 @@ const baselineConfig: BaselineConfig = {
     blockUnlimitedApproval: true,
 };
 
-const socketPath = join(REPO, ".sentinel", `corpus-${port}.sock`);
+// THE SOCKET PATH IS BOUNDED BY THE OS, NOT BY US (A-066).
+//
+// A unix socket path must fit macOS's 104-byte `sun_path`, and `REPO/.sentinel/corpus-N.sock`
+// does not when REPO is a review worktree: 129 bytes from the paths this project actually uses,
+// so `npm run corpus` — and therefore `./scripts/test.sh --gate` — aborted with `connect
+// EINVAL` before evaluating a single fixture. **Round five discovered this the expensive way:
+// all eight of its reviewers ran the FAST profile, none of them knew it, and one measured it
+// only after its own findings were written** (A-058, D-12).
+//
+// That is now more than an inconvenience. D-050(1) ratified A-060, which requires at least one
+// reviewer per round to be able to run the DEEP profile — so without this, round six cannot
+// satisfy its own definition of breadth.
+//
+// The fallback triggers on LENGTH rather than on being-in-a-worktree, because the thing that
+// breaks is the byte count and nothing else. In the live tree the path is short and unchanged,
+// so the default behaviour and the committed evidence are untouched.
+//
+// THE FALLBACK GETS ITS OWN PRIVATE DIRECTORY, and the first version of this fix did not — it
+// put the socket directly in `tmpdir()` and died with `EPERM: chmod '/var/folders/.../T'`.
+// `startSignerServer` deliberately chmods the socket's PARENT to 0700, because unix-socket
+// permissions are checked at connect time and a 0700 parent closes that window however the
+// socket was created (itself an adversarial-review finding). Pointing the signer at a shared
+// system directory asks it to lock down a directory it does not own. `mkdtempSync` gives it a
+// fresh private one, so the hardening still applies to a directory that is ours.
+const preferredSocket = join(REPO, ".sentinel", `corpus-${port}.sock`);
+const socketDirOverride = process.env.SENTINEL_CORPUS_SOCKET_DIR;
+const socketPath = socketDirOverride
+    ? join(socketDirOverride, `corpus-${port}.sock`)
+    : Buffer.byteLength(preferredSocket) < 100
+      ? preferredSocket
+      : join(mkdtempSync(join(tmpdir(), "sentinel-corpus-")), `corpus-${port}.sock`);
 const signerProc = spawn(process.execPath, [join(REPO, "ts", "src", "signer", "main.ts")], {
     cwd: join(REPO, "ts"),
     stdio: ["ignore", "ignore", "ignore"],
