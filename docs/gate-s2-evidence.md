@@ -400,7 +400,7 @@ mutants. What is withdrawn is any reading in which the campaign adds assurance: 
 adds none that is measurable.** The remedy is unchanged and still v1.1 — handler arms that build
 OUT-OF-BOUND bundles, plus a non-vacuity assertion that binds the campaign's OWN run rather than
 a sibling instance. **This correction is a repair of a claim to what was measured, not a new
-capability claim, and it is offered for ratification rather than treated as ratified.**
+capability claim. **RATIFIED AND CERTIFIED BY JOHN 2026-08-18 (D-054(b)):** Gate 6 remains MET on the deterministic evidence, the campaign supplies no independently measurable assurance and can pass a vault that executes nothing, and §7's twelve is corrected to at least fourteen. The S2 signature otherwise stands and no gate's status changes.**
 
 ---
 
@@ -595,8 +595,10 @@ prevent.
   either — **WAS CERTIFIED BY JOHN 2026-08-18 (D-051(a))**, on the drain and its control in
   `contracts/test/SentinelVault.backstops.t.sol` rather than on a summary of them. The later
   D-053(a) correction — that the drain is **ATOMIC**, so pause protects only before execution
-  begins or between transactions — **IS OFFERED FOR RATIFICATION AND IS NOT YET CERTIFIED.** No
-  agent may record it as certified.
+  begins or between transactions — **WAS RATIFIED AND CERTIFIED BY JOHN 2026-08-18 (D-054(a))**,
+  on the drain and its control rather than on a summary. It supersedes D-051(a) ONLY where the
+  earlier wording is inconsistent with the demonstrated atomic-drain boundary; everything else
+  D-051(a) certified stands unchanged.
 
   The flagship Case 2 attack is refused by the evaluator with
   nothing behind it, and that is now said plainly rather than implied away.

@@ -747,9 +747,9 @@ WHAT IS NOT COVERED:
       * CERTIFIED (D-051(a), John, 2026-08-18): the per-action wording -- maxNativeValueWei
         is compared PER ACTION, no cumulative bound exists, only PAUSE bounds a compromised
         signer. Certified on the drain and its control, not on a summary.
-      * OFFERED, NOT CERTIFIED (D-053(a), 2026-08-18): the ATOMICITY correction below. It is
-        recorded and asserted by a test; it has NOT been ratified, and no agent may record
-        it as certified.
+      * ALSO CERTIFIED (D-054(a), John, 2026-08-18): the ATOMICITY correction below. It
+        supersedes D-051(a) ONLY where the earlier wording is inconsistent with it; the rest
+        of what D-051(a) certified stands unchanged.
     THE ATOMICITY CORRECTION, offered: the drain is ATOMIC. A relayer calls
     executeWithReceipt repeatedly inside ONE transaction -- nonReentrant stops nesting, not
     repetition -- so all 100 executions land with block.number and block.timestamp UNCHANGED,
@@ -773,7 +773,7 @@ WHAT IS NOT COVERED:
     both of those mutations are now killed. A campaign's coverage is bounded by what its
     handler can BUILD, not by its call count.
     ~~the deterministic tests carry it and the campaign corroborates~~ CORRECTED 2026-08-18
-    (A-073, OFFERED FOR RATIFICATION, NOT CERTIFIED). "CORROBORATES" OVERSTATES IT AND IS
+    (A-073; RATIFIED AND CERTIFIED BY JOHN 2026-08-18, D-054(b)). "CORROBORATES" OVERSTATES IT AND IS
     WITHDRAWN. Re-measured independently: nine validation checks deleted one at a time, each
     mutant run through both arms separately -- the campaign caught 1, the deterministic tests
     caught 9, and the ONE the campaign caught was also caught without it. Marginal

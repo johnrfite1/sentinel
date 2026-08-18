@@ -94,10 +94,10 @@ corrected, measured, asserted by a test, and **certified by John** (D-051(a)).
 is now PAUSED (D-052(b)) while both the repair protocol and the terminating condition are recut.
 **§1 says what is done and what is John's. Round seven is NOT yours to start.**
 
-**TWO CORRECTIONS ARE OFFERED FOR RATIFICATION AND ARE NOT RATIFIED** — the D-053(a) atomic-drain
-correction to §7.1 (D-051(a) certified the earlier per-action wording, NOT the atomicity finding)
-and the A-073 Gate 6 correction. **Do not record either as certified.** The S2 signature otherwise
-stands and no gate's status changes.
+**BOTH CORRECTIONS ARE NOW RATIFIED AND CERTIFIED BY JOHN (D-054, 2026-08-18)** — the D-053(a)
+atomic-drain correction to §7.1, superseding D-051(a) ONLY where the earlier wording is
+inconsistent with the atomic-drain boundary, and the A-073 Gate 6 correction. **The S2 signature
+otherwise stands and no gate's status changes.**
 
 **John has delegated design forks to the build loop.** Two things stay outside that
 permanently, and were restated to him: **gate signing** (D-002) and **certification of public
@@ -132,15 +132,20 @@ campaign's claims corrected to what was measured (A-073); and both product-guara
 1. **D-047's replacement.** A bounded, risk-based exit criterion is JOHN'S TO SET. An agent may
    prepare measured input and **may not author, adopt or infer the criterion.** Until it exists,
    **round seven does not start.**
-2. **Two corrections are OFFERED FOR RATIFICATION AND ARE NOT RATIFIED.** Do not record either as
-   certified, and do not treat the documents carrying them as settled:
-   * **The D-053(a) §7.1 atomic-drain correction.** D-051(a) certified the earlier per-action
-     wording; it did NOT certify the atomicity finding, which supersedes that wording only where
-     the two are inconsistent.
-   * **The A-073 Gate 6 correction** — that Gate 6 is carried entirely by the deterministic tests
-     and the invariant campaign supplies no independently measurable assurance and can pass a
-     vault that executes nothing.
-   **The S2 signature otherwise stands.** Neither correction changes any gate's status.
+2. ~~Two corrections are offered for ratification.~~ **BOTH ARE NOW RATIFIED AND CERTIFIED
+   (D-054, 2026-08-18):**
+   * **The D-053(a) §7.1 atomic-drain correction** — certified on the drain and its control. It
+     supersedes D-051(a) **ONLY** where the earlier wording is inconsistent with the atomic-drain
+     boundary; everything else D-051(a) certified stands unchanged. The withdrawal of the
+     cumulative-ceiling "v1.1 work" commitment is certified with it: aggregate rate/cumulative
+     bounding is an OPTIONAL FUTURE EXTENSION, while the TOKEN-allowance cap remains v1.1.
+   * **The A-073 Gate 6 correction** — Gate 6 remains MET on the deterministic evidence; the
+     campaign supplies no independently measurable assurance and can pass a vault that executes
+     nothing; §7's twelve unreachable checks is corrected to at least fourteen.
+   **The S2 signature otherwise stands and neither changes any gate's status.** D-054(b) carries a
+   reversal condition: if the campaign ever gains out-of-bound arms AND a non-vacuity assertion
+   binding its own run, its marginal power must be re-measured before any document again says it
+   corroborates Gate 6.
 
 
 
