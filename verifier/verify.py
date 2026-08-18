@@ -86,7 +86,7 @@ def _norm_hex(value):
 
 
 def _find_domain(sample_dir, override):
-    """Locate domain.json — the TRUST ROOT — preferring the deployment's copy.
+    """Resolve domain.json — the TRUST ROOT. It must be ASSERTED, never discovered.
 
     THE PRESENTER OF A BUNDLE MUST NOT CHOOSE THE TRUST ROOT, AND UNTIL 2026-08-17 IT COULD
     (A-055). This function searched the BUNDLE directory first and the parent second. Since
@@ -98,36 +98,58 @@ def _find_domain(sample_dir, override):
     inside a corpus overrode the signer identity for itself and the run still printed
     `N/N verified`. No mutation was required; this was shipped behaviour.
 
-    Now: `--domain` wins if given, then the DEPLOYMENT's copy in the parent directory, and a
-    bundle-supplied copy is used only when there is no deployment copy at all — in which case
-    the caller marks the trust root as presenter-supplied and FAILS the sample, because a bundle
-    plus its own idea of the signer is not something that can be certified. A bundle that ships
-    a copy CONTRADICTING the deployment's is an error rather than a preference.
+    THE 2026-08-17 REPAIR CLOSED THE DEMONSTRATION AND NOT THE ARGUMENT, AND ROUND FIVE
+    REPRODUCED IT ONE DIRECTORY UP (A-058, H-1). That repair searched the PARENT first and
+    called what it found there "the deployment's copy". A parent directory is not a provenance;
+    it is a path, and it belongs to whoever assembled the tree. A presenter who ships
+    `tree/domain.json` beside `tree/bundle/` supplies the trust root exactly as before, and the
+    verifier printed `[PASS] the trust root is the deployment's, not the presenter's` while
+    certifying a receipt signed by an arbitrary outsider key — `=> PASS`, exit 0, and `1/1
+    sample(s) verified` under `--all`. **A check whose text asserts the invariant it is failing
+    to enforce is worse than no check.**
+
+    THE ARGUMENT, GENERALISED: no location inside the material handed over can establish
+    provenance, because the presenter chooses all of it. The trust root must be ASSERTED by the
+    VERIFYING PARTY. So `override` — `--domain`, or the directory the caller NAMED under
+    `--all`, resolved by `main()` for the same reason — is the only certifying source. Anything
+    merely found next to a bundle is presenter-supplied, whichever directory it sits in, and the
+    caller FAILS the sample on it: "here is a bundle and here is who I say signed it" is not a
+    certifiable claim, and answering it with PASS was the defect both times.
+
+    A discovered copy is still LOADED, so the rest of the run produces real diagnostics rather
+    than one bare error — but it can never carry a PASS.
 
     Returns (path, provenance, presenter_supplied).
     """
     if override:
-        return override, "supplied explicitly via --domain", False
+        if not os.path.isfile(override):
+            raise FileNotFoundError(
+                f"the asserted trust root {override!r} does not exist. `--domain` names the "
+                "DEPLOYMENT's domain.json, obtained from the deployment record — never a copy "
+                "taken from the material being verified."
+            )
+        inside = os.path.join(sample_dir, "domain.json")
+        if os.path.isfile(inside):
+            try:
+                identical = _read_json(os.path.abspath(override)) == _read_json(inside)
+            except Exception:
+                identical = False
+            if not identical:
+                raise ValueError(
+                    "the bundle ships its own domain.json and it CONTRADICTS the trust root "
+                    "you asserted. The trust root is not the presenter's to choose: "
+                    "`signerAddress` is what binds a receipt to the deployment's signer. "
+                    "Remove the bundle's copy, or state which root you mean."
+                )
+        return override, "ASSERTED by the verifying party", False
     inside = os.path.join(sample_dir, "domain.json")
     parent = os.path.join(os.path.dirname(os.path.abspath(sample_dir)), "domain.json")
-    have_inside, have_parent = os.path.isfile(inside), os.path.isfile(parent)
-    if have_parent and have_inside:
-        try:
-            identical = _read_json(parent) == _read_json(inside)
-        except Exception:
-            identical = False
-        if not identical:
-            raise ValueError(
-                "the bundle ships its own domain.json and it CONTRADICTS the deployment's "
-                "copy in the parent directory. The trust root is not the presenter's to "
-                "choose: `signerAddress` is what binds a receipt to the deployment's signer. "
-                "Remove the bundle's copy, or pass --domain to state which root you mean."
-            )
-        return parent, "deployment copy (parent directory); the bundle's copy is identical", False
-    if have_parent:
-        return parent, "deployment copy (parent directory)", False
-    if have_inside:
-        return inside, "PRESENTER-SUPPLIED (the bundle's own domain.json; no deployment copy found)", True
+    if os.path.isfile(inside):
+        return inside, ("PRESENTER-SUPPLIED (found inside the bundle). No trust root was "
+                        "asserted."), True
+    if os.path.isfile(parent):
+        return parent, ("PRESENTER-SUPPLIED (found beside the bundle, in a directory nobody "
+                        "named). No trust root was asserted."), True
     raise FileNotFoundError(
         "domain.json not found in the sample directory or its parent; "
         "pass --domain"
@@ -139,6 +161,7 @@ TAMPER_MODES = (
     "reasons-substitute", "reasons-add", "reasons-remove", "reasons-reorder",
     "override-reviewreceipt", "override-nonce", "override-wrongkey",
     "override-repoint", "override-nonce-resigned", "override-signer-mints",
+    "override-outsider-mints",
     "receipt-anchor-split",
     "override-otherchain",
     # §5.5.1. Every one of these leaves a *validly signed* SignedRefusalRecord
@@ -193,12 +216,13 @@ def verify_sample(sample_dir, domain_path=None, tamper=None):
     # bundle whose only trust root is its own copy now FAILS: "here is a bundle and here is who
     # I say signed it" is not a certifiable claim, and answering it with PASS was the defect.
     checks.append(Check(
-        "the trust root is the deployment's, not the presenter's",
+        "the trust root was ASSERTED by the verifying party, not found in the material",
         not domain_presenter_supplied,
         domain_provenance if not domain_presenter_supplied else (
-            domain_provenance + " — pass --domain with the deployment's domain.json, or place "
-            "it beside the bundle. A receipt can only be certified against a signer identity "
-            "the presenter did not supply."),
+            domain_provenance + " — pass --domain naming the DEPLOYMENT's domain.json, taken "
+            "from the deployment record rather than from this bundle or the directory holding "
+            "it. A receipt can only be certified against a signer identity the presenter did "
+            "not choose, and no path inside the material handed over can establish that."),
     ))
 
     override_tamper = None
@@ -1331,6 +1355,48 @@ def _override_checks(sample_dir, receipt, domain, tamper=None):
         f"owner {recovered}\nsigner {signer}" if recovered == signer else "",
     ))
 
+    # 2b. WHO THE OWNER IS — the check this stage did not have at all (A-058, H-2).
+    #
+    # Everything above establishes that SOMEBODY signed this override and that it was not the
+    # Sentinel signer. `ownerAddress` is a SIBLING DECLARATION, not a member of the signed
+    # §5.5 payload, so anyone can sign the identical payload with their own key, write their
+    # own address beside it, and satisfy every check above. Reproduced against the unmutated
+    # verifier with the REAL deployment domain.json as the trust root: eleven consecutive
+    # [PASS] lines, `=> PASS`, exit 0, for an override minted by a key generated seconds
+    # earlier. §3.3(7)'s `recovered != signer` is passed trivially by ANY third party; it was
+    # the only party check here, and it answers a different question.
+    #
+    # The refusal stage already carries this argument in its own comment — "a self-declared
+    # signer is not an identity. Anyone can mint a record naming their own key and sign it,
+    # and every check above passes" — and A-055 closed it on the receipt and the refusal. The
+    # override was the third signed artifact and was not reached.
+    #
+    # THE IDENTITY IS AVAILABLE AND AUTHENTICATED: §5.1's MandatePayload carries `principal`,
+    # REPORT.md records that principal IS the owner address, and the mandate is bound into the
+    # signed receipt by `mandateHash` — which this stage has already required the override to
+    # match, and which `_chain_checks` recomputes from the mandate document. So the chain is
+    # asserted root -> receipt signature -> mandateHash -> mandate.principal -> this override.
+    # `grep principal verify.py` returned NOTHING before this block: the file that decides the
+    # verdict never read the one field naming the party it was certifying.
+    #
+    # The vault is not fooled by any of this -- `SentinelVault.execute` recovers the owner
+    # signature against its own immutable `owner` -- so what was defective is precisely the
+    # INDEPENDENT verifier's certification, which is the artifact D-010 exists to be.
+    principal = None
+    try:
+        principal = _norm_hex(_read_json(os.path.join(sample_dir, "mandate.json"))
+                              .get("principal", "")) or None
+    except Exception:
+        principal = None
+    out.append(Check(
+        "override owner is the mandate's principal (§5.1), not a self-declared address",
+        principal is not None and recovered is not None and recovered == principal,
+        (f"recovered {recovered}\nprincipal {principal}"
+         if principal else
+         "no mandate.json principal to bind the authorising party to — an override naming its "
+         "own owner is not a certifiable claim"),
+    ))
+
     # 3. Bindings.
     receipt_struct = "0x" + eip712.receipt_struct_hash(receipt).hex()
     ok = _norm_hex(override.get("reviewReceiptHash", "")) == receipt_struct
@@ -1536,6 +1602,20 @@ def _tamper_override(doc, domain, mode):
             point_mul(_SENTINEL_SIGNER_TEST_KEY, G))
         doc["ownerSignature"] = sign_digest(
             eip712.override_digest(domain, override), _SENTINEL_SIGNER_TEST_KEY)
+    elif mode == "override-outsider-mints":
+        # THE MODE THE OVERRIDE STAGE DID NOT HAVE (A-058, H-2), and its absence is the single
+        # reason the authorising party's IDENTITY was asserted by nothing. `override-wrongkey`
+        # and `override-signer-mints` both mint as the SENTINEL SIGNER, so §3.3(7) catches
+        # them and the question "is this the owner?" is never asked. Here an ARBITRARY THIRD
+        # PARTY mints: the payload is byte-identical to the owner's, `ownerAddress` names the
+        # outsider, the signature recovers to it, and it is not the Sentinel signer — so every
+        # pre-existing check in this stage passes and only the binding to the mandate's
+        # principal can reject it. That is what makes it a witness for the new check rather
+        # than an incidental catch by an old one (A-055/A-056: a mode caught by a DIFFERENT
+        # check than the one it targets is worth nothing).
+        doc["ownerAddress"] = public_key_to_address(point_mul(_OUTSIDER_TEST_KEY, G))
+        doc["ownerSignature"] = sign_digest(
+            eip712.override_digest(domain, override), _OUTSIDER_TEST_KEY)
     elif mode == "override-otherchain":
         # Lift the untouched, genuinely-signed override to another deployment.
         domain = dict(domain)
@@ -1787,7 +1867,11 @@ def main(argv=None):
         epilog=__doc__,
     )
     parser.add_argument("sample", nargs="+", help="sample directory (or, with --all, its parent)")
-    parser.add_argument("--domain", help="path to domain.json (default: sample dir, then parent)")
+    parser.add_argument("--domain",
+                        help="path to the DEPLOYMENT's domain.json — the asserted trust "
+                             "root, and the ONLY way to certify anything. Without it a run "
+                             "reports diagnostics but cannot PASS, because every other copy is "
+                             "material the presenter chose.")
     parser.add_argument("--tamper", nargs="?", const="all", choices=("all",) + TAMPER_MODES,
                         help="self-test: mutate the artifact and require verification to FAIL "
                              "(default 'all' runs every mode)")
@@ -1802,22 +1886,31 @@ def main(argv=None):
         print("struct type:", eip712.RECEIPT_TYPE)
         return 0
 
+    # `--domain` IS THE ONLY ASSERTION OF A TRUST ROOT. There is no second route, and the first
+    # draft of this repair invented one — it treated the directory named under `--all` as the
+    # caller's assertion, which sounds right and is wrong: when a presenter hands you a tree,
+    # the directory you name IS the presenter's. That draft closed the single-bundle exploit
+    # and left `--all` certifying the identical hostile tree, `1/1 sample(s) verified`. It is
+    # the exact defect this repair exists to fix — a fix that generalises the DEMONSTRATION
+    # instead of the ARGUMENT — caught here only because the exploit was re-run against BOTH
+    # invocation shapes rather than the one that produced it. Do not reintroduce a second
+    # source; if certification needs a root, the verifying party names it.
     targets = []
     for path in args.sample:
         if args.all:
             targets.extend(
-                os.path.join(path, entry)
+                (os.path.join(path, entry), args.domain)
                 for entry in sorted(os.listdir(path))
                 if os.path.isdir(os.path.join(path, entry))
             )
         else:
-            targets.append(path)
+            targets.append((path, args.domain))
 
     if args.tamper == "all":
-        oks = [run_tamper_suite(t, args.domain, verbose=False) for t in targets]
+        oks = [run_tamper_suite(t, root, verbose=False) for t, root in targets]
     else:
-        oks = [run(t, args.domain, args.tamper)[0] for t in targets]
-    failed = [t for t, ok in zip(targets, oks) if not ok]
+        oks = [run(t, root, args.tamper)[0] for t, root in targets]
+    failed = [t for (t, _root), ok in zip(targets, oks) if not ok]
     passed = len(oks) - len(failed)
     print(f"{passed}/{len(oks)} sample(s) "
           f"{'behaved as expected under every tamper mode' if args.tamper else 'verified'}")

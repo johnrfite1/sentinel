@@ -48,6 +48,27 @@ def write_json(path, doc):
         json.dump(doc, handle)  # ensure_ascii=True, so lone surrogates escape
 
 
+def trust_root(sample_dir):
+    """The trust root THIS TEST asserts, as the verifying party.
+
+    A-058 (H-1): `verify_sample` no longer certifies a domain.json it merely FOUND, in the
+    bundle or beside it, because every such path belongs to whoever assembled the material.
+    A test is the verifying party for the fixtures it stages, so it names the root rather than
+    letting the code guess — which is the same thing `--domain` does at the CLI.
+
+    This is NOT the old discovery rule wearing a new name: the code no longer has that rule at
+    all, so nothing here can drift back into agreement with an implementation. It is one
+    caller stating where its own fixture put the file.
+    """
+    return os.path.join(os.path.dirname(os.path.abspath(sample_dir)), "domain.json")
+
+
+def _verify(sample_dir, **kwargs):
+    """verify_sample with this test's asserted trust root (see `trust_root`)."""
+    kwargs.setdefault("domain_path", trust_root(sample_dir))
+    return verify.verify_sample(sample_dir, **kwargs)
+
+
 def stage(case, tmp, domain=None):
     """Copy a sample directory into `tmp`, with a domain.json beside it."""
     target = os.path.join(tmp, os.path.basename(case))
@@ -305,7 +326,7 @@ class TestJCSSurrogates(unittest.TestCase):
         bundle["aiExplanation"] = "the model said \ud800"
         write_json(os.path.join(target, "evidence.json"), bundle)
 
-        ok, checks = verify.verify_sample(target)  # must not raise
+        ok, checks = _verify(target)  # must not raise
         self.assertFalse(ok)
         canon = [c for c in checks if "recanonicalization" in c.name]
         self.assertTrue(canon and not canon[0].ok)
@@ -350,7 +371,7 @@ class TestSamples(unittest.TestCase):
         self.assertEqual(len(dirs), 6, "expected the five §4.2 samples plus the single-reason-code edge")
         for path in dirs:
             with self.subTest(sample=os.path.basename(path)):
-                ok, checks = verify.verify_sample(path)
+                ok, checks = _verify(path)
                 failures = [c.name for c in checks if not c.ok]
                 self.assertTrue(ok, f"failing checks: {failures}")
 
@@ -396,7 +417,9 @@ class TestSamples(unittest.TestCase):
         with open(os.devnull, "w") as devnull:
             saved, sys.stdout = sys.stdout, devnull
             try:
-                self.assertEqual(verify.main(["--all", SAMPLES]), 0)
+                self.assertEqual(
+                    verify.main(["--domain", os.path.join(SAMPLES, "domain.json"),
+                                 "--all", SAMPLES]), 0)
             finally:
                 sys.stdout = saved
 
@@ -423,7 +446,7 @@ class TestTamper(unittest.TestCase):
             for mode in verify.TAMPER_MODES:
                 with self.subTest(sample=os.path.basename(path), mode=mode):
                     try:
-                        ok, _ = verify.verify_sample(path, tamper=mode)
+                        ok, _ = _verify(path, tamper=mode)
                     except verify.NotApplicable:
                         continue  # this sample's shape cannot express the mode
                     exercised += 1
@@ -455,20 +478,25 @@ class TestTamper(unittest.TestCase):
         # re-signing, so the signature check fires first and §3.3(9)'s nonce binding never
         # bites; `override-wrongkey` leaves `ownerAddress` declaring the owner, so §3.3(7)
         # never bites. Re-signing is what makes the binding the witness.
-        self.assertEqual(exercised, 63, "expected 63 applicable tamper cases")
+        # 63 -> 64 (A-058, H-2): `override-outsider-mints`, applicable only to
+        # case-4-review, the one sample carrying an override. Both existing party modes mint
+        # as the SENTINEL SIGNER and are therefore caught by §3.3(7); an ARBITRARY THIRD
+        # PARTY passes every check this stage had, which is why the stage's owner-identity
+        # binding was asserted by nothing until this mode existed.
+        self.assertEqual(exercised, 64, "expected 64 applicable tamper cases")
 
     def test_evidence_tamper_breaks_the_receipt_binding(self):
         # Specifically: it must fail the receipt.evidenceHash check, not merely
         # the file comparison. Otherwise a verifier handed only a bundle and a
         # receipt would still accept.
-        ok, checks = verify.verify_sample(sample_dirs()[0], tamper="evidence")
+        ok, checks = _verify(sample_dirs()[0], tamper="evidence")
         self.assertFalse(ok)
         binding = [c for c in checks if "evidenceHash binds" in c.name]
         self.assertEqual(len(binding), 1)
         self.assertFalse(binding[0].ok)
 
     def test_receipt_tamper_breaks_signer_recovery(self):
-        ok, checks = verify.verify_sample(sample_dirs()[0], tamper="receipt")
+        ok, checks = _verify(sample_dirs()[0], tamper="receipt")
         self.assertFalse(ok)
         recovery = [c for c in checks if "recovered signer ==" in c.name]
         self.assertTrue(recovery and not all(c.ok for c in recovery))
@@ -483,7 +511,7 @@ class TestTamper(unittest.TestCase):
             domain_path = os.path.join(tmp, "domain.json")
             with open(domain_path, "w") as handle:
                 json.dump(domain, handle)
-            ok, _ = verify.verify_sample(path, domain_path=domain_path)
+            ok, _ = _verify(path, domain_path=domain_path)
             self.assertFalse(ok, "a cross-chain replay was accepted")
 
     def test_wrong_verifying_contract_is_rejected(self):
@@ -494,7 +522,7 @@ class TestTamper(unittest.TestCase):
             domain_path = os.path.join(tmp, "domain.json")
             with open(domain_path, "w") as handle:
                 json.dump(domain, handle)
-            ok, _ = verify.verify_sample(path, domain_path=domain_path)
+            ok, _ = _verify(path, domain_path=domain_path)
             self.assertFalse(ok)
 
     def test_wrong_type_string_would_not_verify(self):
@@ -507,7 +535,7 @@ class TestTamper(unittest.TestCase):
                 ("uint256", name) if name == "schemaVersion" else (t, name)
                 for t, name in original
             ]
-            ok, _ = verify.verify_sample(sample_dirs()[0])
+            ok, _ = _verify(sample_dirs()[0])
             self.assertFalse(ok, "the uint widths are apparently not load-bearing")
         finally:
             eip712.RECEIPT_FIELDS = original
@@ -526,7 +554,7 @@ class TestTamper(unittest.TestCase):
                         ("uint256", n) if n == target_name else (t, n)
                         for t, n in original
                     ]
-                    ok, _ = verify.verify_sample(sample_dirs()[0])
+                    ok, _ = _verify(sample_dirs()[0])
                     self.assertFalse(ok)
         finally:
             eip712.RECEIPT_FIELDS = original
@@ -542,7 +570,7 @@ class TestTamper(unittest.TestCase):
         shutil.copy(os.path.join(SAMPLES, "domain.json"), tmp)
         other = os.path.join(SAMPLES, "case-4-review-failmode-review", "mandate.json")
         shutil.copy(other, os.path.join(target, "mandate.json"))
-        ok, checks = verify.verify_sample(target)
+        ok, checks = _verify(target)
         self.assertFalse(ok, "a swapped mandate was accepted")
         self.assertTrue(any("mandateHash" in c.name and not c.ok for c in checks))
 
@@ -585,7 +613,7 @@ class TestRefusedShape(unittest.TestCase):
             "receipt": None,
             "signature": None,
         })
-        ok, checks = verify.verify_sample(path)
+        ok, checks = _verify(path)
         self.assertFalse(ok, "an unsigned refusal claim was certified")
         failed = [c for c in checks if not c.ok]
         self.assertTrue(any("signed receipt is present" in c.name for c in failed))
@@ -604,7 +632,7 @@ class TestRefusedShape(unittest.TestCase):
         path = self._refused_copy(
             {"refused": True, "refusalReason": "nothing to see here"},
             case=allow_case)
-        ok, checks = verify.verify_sample(path)
+        ok, checks = _verify(path)
         self.assertFalse(ok)
         detail = "\n".join(c.detail for c in checks if not c.ok)
         self.assertIn("ALLOW", detail,
@@ -618,7 +646,7 @@ class TestRefusedShape(unittest.TestCase):
 
     def test_refused_with_omitted_keys_does_not_crash(self):
         path = self._refused_copy({"refused": True})
-        ok, checks = verify.verify_sample(path)  # must not raise
+        ok, checks = _verify(path)  # must not raise
         self.assertFalse(ok)
         self.assertTrue(any("signed receipt is present" in c.name and not c.ok
                             for c in checks))
@@ -629,7 +657,7 @@ class TestRefusedShape(unittest.TestCase):
         doc = read_json(sample_dirs()[0], "receipt.json")
         doc.pop("signature")
         path = self._refused_copy(doc)
-        ok, checks = verify.verify_sample(path)
+        ok, checks = _verify(path)
         self.assertFalse(ok, "a receipt with no signature was certified")
         self.assertTrue(any("signed receipt is present" in c.name and not c.ok
                             for c in checks))
@@ -640,7 +668,7 @@ class TestRefusedShape(unittest.TestCase):
         original = read_json(sample_dirs()[0], "receipt.json")
         original["refused"] = True
         path = self._refused_copy(original)
-        ok, checks = verify.verify_sample(path)
+        ok, checks = _verify(path)
         self.assertFalse(ok)
         self.assertTrue(any("self-consistent" in c.name for c in checks))
 
@@ -794,7 +822,7 @@ class TestReasonCodeTamper(unittest.TestCase):
             for mode in self.REJECT_MODES:
                 with self.subTest(sample=os.path.basename(path), mode=mode):
                     try:
-                        ok, checks = verify.verify_sample(path, tamper=mode)
+                        ok, checks = _verify(path, tamper=mode)
                     except verify.NotApplicable:
                         continue  # empty reason-code list; nothing to mutate
                     self.assertFalse(ok, f"{mode} was WRONGLY ACCEPTED")
@@ -811,7 +839,7 @@ class TestReasonCodeTamper(unittest.TestCase):
         for path in sample_dirs():
             with self.subTest(sample=os.path.basename(path)):
                 try:
-                    ok, checks = verify.verify_sample(path, tamper="reasons-reorder")
+                    ok, checks = _verify(path, tamper="reasons-reorder")
                 except verify.NotApplicable:
                     continue
                 applied += 1
@@ -842,7 +870,7 @@ class TestReasonCodeTamper(unittest.TestCase):
         with open(os.path.join(target, "receipt.json"), "w") as handle:
             json.dump(doc, handle)
 
-        ok, checks = verify.verify_sample(target)
+        ok, checks = _verify(target)
         self.assertFalse(ok, "a dropped signer finding was accepted")
         self.assertTrue(any("reasonCodesHash recomputed" in c.name and not c.ok
                             for c in checks))
@@ -861,7 +889,7 @@ class TestReasonCodeTamper(unittest.TestCase):
         shutil.copy(os.path.join(SAMPLES, "domain.json"), tmp)
         with open(os.path.join(target, "receipt.json"), "w") as handle:
             json.dump(doc, handle)
-        ok, checks = verify.verify_sample(target)
+        ok, checks = _verify(target)
         self.assertFalse(ok, "a receipt with no reasonCodes list was accepted")
 
     def test_malformed_identifier_fails_verification(self):
@@ -876,7 +904,7 @@ class TestReasonCodeTamper(unittest.TestCase):
         shutil.copy(os.path.join(SAMPLES, "domain.json"), tmp)
         with open(os.path.join(target, "receipt.json"), "w") as handle:
             json.dump(doc, handle)
-        ok, checks = verify.verify_sample(target)
+        ok, checks = _verify(target)
         self.assertFalse(ok)
         grammar = [c for c in checks if "identifier matches" in c.name]
         self.assertTrue(grammar and not grammar[0].ok)
@@ -932,7 +960,7 @@ class TestOverride(unittest.TestCase):
         return read_json(OVERRIDE_SAMPLE, "override.json")
 
     def test_override_verifies(self):
-        ok, checks = verify.verify_sample(OVERRIDE_SAMPLE)
+        ok, checks = _verify(OVERRIDE_SAMPLE)
         self.assertTrue(ok, [c.name for c in checks if not c.ok])
         names = [c.name for c in checks]
         for expected in ("override signature recovers ownerAddress",
@@ -974,8 +1002,65 @@ class TestOverride(unittest.TestCase):
         self.assertGreaterEqual(len(modes), 3)
         for mode in modes:
             with self.subTest(mode=mode):
-                ok, _ = verify.verify_sample(OVERRIDE_SAMPLE, tamper=mode)
+                ok, _ = _verify(OVERRIDE_SAMPLE, tamper=mode)
                 self.assertFalse(ok, f"{mode} was WRONGLY ACCEPTED")
+
+    def test_the_outsider_minting_mode_is_registered_structurally(self):
+        # A-049's rule: a mode can be implemented and never registered, and the loop-driven
+        # test above would then simply not run it. Assert membership, not behaviour.
+        self.assertIn("override-outsider-mints", verify.TAMPER_MODES)
+
+    def test_an_override_minted_by_an_arbitrary_outsider_is_rejected(self):
+        """A-058 (H-2). The override stage had NO deployment-anchored owner identity.
+
+        `ownerAddress` is a sibling declaration, not a member of the signed §5.5 payload, so
+        anyone can sign the identical payload with their own key and name themselves. Against
+        the REAL domain.json this produced eleven consecutive [PASS] lines and `=> PASS`,
+        exit 0. Both existing party modes mint as the SENTINEL SIGNER, which §3.3(7) catches,
+        so neither could ever witness this.
+
+        Built by DERIVING from the genuine override rather than hand-assembling one, so the
+        rejection cannot be an artefact of a malformed payload — the paired assertions below
+        require every pre-existing check in the stage to still PASS.
+        """
+        from secp256k1 import sign_digest, point_mul, public_key_to_address, G
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp)
+        target = stage(OVERRIDE_SAMPLE, tmp)
+        domain = read_json(SAMPLES, "domain.json")
+        outsider = 0x00C0FFEE00C0FFEE00C0FFEE00C0FFEE00C0FFEE00C0FFEE00C0FFEE00C0FF02
+        address = public_key_to_address(point_mul(outsider, G))
+        doc = read_json(target, "override.json")
+        payload_before = json.dumps(doc["override"], sort_keys=True)
+        doc["ownerAddress"] = address
+        doc["ownerSignature"] = sign_digest(
+            eip712.override_digest(domain, doc["override"]), outsider)
+        write_json(os.path.join(target, "override.json"), doc)
+        self.assertEqual(json.dumps(read_json(target, "override.json")["override"],
+                                    sort_keys=True), payload_before,
+                         "the PAYLOAD must be untouched, or this tests something else")
+
+        ok, checks = _verify(target)
+        self.assertFalse(ok, "an override minted by an arbitrary outsider was certified")
+        by_name = {c.name: c for c in checks}
+        for name in ("override signature recovers ownerAddress",
+                     "override owner is NOT the Sentinel signer (§3.3(7))",
+                     "override.reviewReceiptHash == this receipt's EIP-712 hashStruct",
+                     "override targets a REVIEW receipt, not a BLOCK (§5.5)"):
+            self.assertTrue(by_name[name].ok,
+                            f"{name} must still PASS -- every pre-existing check in this "
+                            "stage does, which is precisely why the stage needed a new one")
+        self.assertEqual(
+            [c.name for c in checks if not c.ok],
+            ["override owner is the mandate's principal (§5.1), "
+             "not a self-declared address"])
+
+    def test_the_genuine_owner_is_the_mandate_principal(self):
+        # The paired positive. Without it the check above could be satisfied by a rule that
+        # rejects every override, and the sample walk would be the only thing noticing.
+        doc = read_json(OVERRIDE_SAMPLE, "override.json")
+        mandate = read_json(OVERRIDE_SAMPLE, "mandate.json")
+        self.assertEqual(doc["ownerAddress"].lower(), mandate["principal"].lower())
 
     def test_wrongkey_signature_is_valid_but_from_the_wrong_party(self):
         # The forged signature must be well-formed -- otherwise this only tests
@@ -990,7 +1075,7 @@ class TestOverride(unittest.TestCase):
         self.assertEqual(recovered, receipt["signer"].lower(),
                          "the forgery should recover the Sentinel signer")
         self.assertNotEqual(recovered, doc["ownerAddress"].lower())
-        ok, checks = verify.verify_sample(OVERRIDE_SAMPLE, tamper="override-wrongkey")
+        ok, checks = _verify(OVERRIDE_SAMPLE, tamper="override-wrongkey")
         self.assertFalse(ok)
         self.assertTrue(any("recovers ownerAddress" in c.name and not c.ok
                             for c in checks))
@@ -1093,6 +1178,115 @@ class TestOverrideChainBinding(unittest.TestCase):
 # §3.3(4)/§3.3(5) chain and vault binding, established from the bundle
 # ---------------------------------------------------------------------------
 
+class TestTheTrustRootMustBeAsserted(unittest.TestCase):
+    """A-058 (H-1): no path inside the presented material can establish provenance.
+
+    The 2026-08-17 repair searched the parent directory first and called what it found there
+    "the deployment's copy". A presenter who ships `tree/domain.json` beside `tree/bundle/`
+    supplies that file, so an outsider-signed receipt verified `=> PASS`, exit 0. These tests
+    are written against the ARGUMENT rather than that demonstration, so BOTH invocation shapes
+    are pinned -- the first draft of the repair closed the single-bundle path and left `--all`
+    certifying the identical tree.
+    """
+
+    def hostile_tree(self):
+        """A tree whose receipt is signed by an OUTSIDER key, presented with its own root.
+
+        Everything is self-consistent: `receipt.signer` is inside the signed body and names
+        the outsider, and the domain.json beside the bundle names it too. Only the question
+        of WHERE that domain.json came from can reject this.
+        """
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp)
+        target = os.path.join(tmp, "bundle")
+        shutil.copytree(os.path.join(SAMPLES, "case-1-allow"), target)
+        outsider = 0x00C0FFEE00C0FFEE00C0FFEE00C0FFEE00C0FFEE00C0FFEE00C0FFEE00C0FF01
+        address = public_key_to_address(point_mul(outsider, G))
+        domain = dict(read_json(SAMPLES, "domain.json"), signerAddress=address)
+        write_json(os.path.join(tmp, "domain.json"), domain)
+        doc = read_json(target, "receipt.json")
+        doc["receipt"]["signer"] = address
+        doc["signature"] = sign_digest(
+            eip712.receipt_digest(domain, doc["receipt"]), outsider)
+        write_json(os.path.join(target, "receipt.json"), doc)
+        return tmp, target, address
+
+    def test_the_outsider_tree_is_internally_consistent(self):
+        # Without this the rejections below could be passing because the bundle is MALFORMED,
+        # which would make every other test in this class worthless -- the A-056 rule that a
+        # mode caught by a different check than the one it targets is worth nothing.
+        #
+        # So: assert the outsider's own root DELIBERATELY, and the tree verifies end to end.
+        # That is not a defect. `--domain` means "I, the verifying party, state that this is
+        # the deployment's signer", and a tool cannot stop someone asserting a false root on
+        # purpose. The defect was reaching that same PASS with nobody having asserted anything.
+        _, target, _ = self.hostile_tree()
+        ok, checks = _verify(target)          # trust_root() names the attacker's own copy
+        self.assertTrue(ok, "the outsider tree must be internally consistent, or the "
+                            "rejections below prove nothing about provenance")
+        by_name = {c.name: c for c in checks}
+        for name in ("recovered signer == receipt.signer",
+                     "recovered signer == domain.json signerAddress"):
+            self.assertTrue(by_name[name].ok)
+
+    def test_a_root_found_beside_the_bundle_cannot_certify(self):
+        _, target, _ = self.hostile_tree()
+        ok, checks = verify.verify_sample(target)          # nothing asserted
+        self.assertFalse(ok, "an outsider-signed receipt was certified against a domain.json "
+                             "the presenter supplied one directory up")
+        failed = [c for c in checks if not c.ok]
+        self.assertEqual([c.name for c in failed],
+                         ["the trust root was ASSERTED by the verifying party, "
+                          "not found in the material"])
+
+    def test_a_root_found_inside_the_bundle_cannot_certify(self):
+        tmp, target, address = self.hostile_tree()
+        shutil.move(os.path.join(tmp, "domain.json"),
+                    os.path.join(target, "domain.json"))
+        ok, _ = verify.verify_sample(target)
+        self.assertFalse(ok)
+
+    def test_the_cli_refuses_to_certify_a_single_bundle_with_no_asserted_root(self):
+        _, target, _ = self.hostile_tree()
+        with open(os.devnull, "w") as devnull:
+            saved, sys.stdout = sys.stdout, devnull
+            try:
+                self.assertEqual(verify.main([target]), 1)
+            finally:
+                sys.stdout = saved
+
+    def test_the_cli_refuses_under_all_too(self):
+        # THE BRANCH THE FIRST DRAFT OF THIS REPAIR LEFT OPEN. It treated the directory named
+        # under `--all` as the caller's assertion; when the presenter hands you the tree, the
+        # directory you name IS the presenter's, and `--all` printed `1/1 sample(s) verified`
+        # on the identical hostile tree the single-bundle path had just started rejecting.
+        tmp, _, _ = self.hostile_tree()
+        with open(os.devnull, "w") as devnull:
+            saved, sys.stdout = sys.stdout, devnull
+            try:
+                self.assertEqual(verify.main(["--all", tmp]), 1)
+            finally:
+                sys.stdout = saved
+
+    def test_an_asserted_root_certifies_and_a_wrong_asserted_root_does_not(self):
+        # `--domain` is an ASSERTION, so pointing it at the deployment's real root must still
+        # certify the real samples -- otherwise this repair is just a guard that cries wolf.
+        real = os.path.join(SAMPLES, "domain.json")
+        ok, _ = verify.verify_sample(os.path.join(SAMPLES, "case-1-allow"), domain_path=real)
+        self.assertTrue(ok)
+        _, target, _ = self.hostile_tree()
+        ok, checks = verify.verify_sample(target, domain_path=real)
+        self.assertFalse(ok, "the outsider bundle was certified against the DEPLOYMENT's root")
+        self.assertIn("recovered signer == domain.json signerAddress",
+                      [c.name for c in checks if not c.ok])
+
+    def test_a_bundle_copy_contradicting_the_asserted_root_is_an_error(self):
+        tmp, target, _ = self.hostile_tree()
+        shutil.copy(os.path.join(tmp, "domain.json"), os.path.join(target, "domain.json"))
+        with self.assertRaises(ValueError):
+            verify.verify_sample(target, domain_path=os.path.join(SAMPLES, "domain.json"))
+
+
 class TestChainAndVaultBinding(unittest.TestCase):
     """§5.8: the payload hashes are bare hashStruct values, so "Chain and vault
     binding for these hashes therefore comes solely from the `chainId` and
@@ -1132,7 +1326,7 @@ class TestChainAndVaultBinding(unittest.TestCase):
     def test_samples_pass_the_binding_checks(self):
         for path in sample_dirs():
             with self.subTest(sample=os.path.basename(path)):
-                _, checks = verify.verify_sample(path)
+                _, checks = _verify(path)
                 binding = [c for c in checks
                            if "bind the same" in c.name or "equals the presented" in c.name]
                 self.assertEqual(len(binding), 4)
@@ -1152,7 +1346,7 @@ class TestChainAndVaultBinding(unittest.TestCase):
         target = stage(os.path.join(SAMPLES, "case-1-allow"), tmp, domain)
         reseal(target, domain)
 
-        ok, checks = verify.verify_sample(target)
+        ok, checks = _verify(target)
         self.assertFalse(
             ok, "a bundle was certified against a domain naming another chain "
                 "and another vault")
@@ -1196,7 +1390,7 @@ class TestChainAndVaultBinding(unittest.TestCase):
         write_json(os.path.join(target, "receipt.json"), doc)
         reseal(target, domain)
 
-        ok, checks = verify.verify_sample(target)
+        ok, checks = _verify(target)
         self.assertFalse(ok, "a mandate binding a different vault than the "
                              "action it authorises was accepted")
         for name in ("recomputed mandateHash from §5.1 MandatePayload matches the receipt",
@@ -1309,7 +1503,7 @@ class TestStrictFieldParsing(unittest.TestCase):
         action = read_json(target, "action.json")
         action["callData"] = action["callData"][:10] + " " + action["callData"][10:]
         write_json(os.path.join(target, "action.json"), action)
-        ok, checks = verify.verify_sample(target)
+        ok, checks = _verify(target)
         self.assertFalse(ok, "callData with embedded whitespace still hashed "
                              "to the committed dataHash")
         data = [c for c in checks if "callData" in c.name]
@@ -1332,7 +1526,7 @@ class TestStrictFieldParsing(unittest.TestCase):
         self.assertNotEqual(json.dumps(mandate), json.dumps(original))
         write_json(os.path.join(target, "mandate.json"), mandate)
 
-        ok, checks = verify.verify_sample(target)
+        ok, checks = _verify(target)
         self.assertFalse(ok, "a re-spelled mandate still recomputed the "
                              "receipt's mandateHash")
         failed = [c for c in checks if not c.ok]
@@ -1384,7 +1578,7 @@ class TestSignatureCanonicalForm(unittest.TestCase):
         doc["ownerSignature"] = self.malleate(doc["ownerSignature"])
         write_json(os.path.join(target, "override.json"), doc)
 
-        ok, checks = verify.verify_sample(target)
+        ok, checks = _verify(target)
         self.assertFalse(ok, "a non-canonical (high-s) override signature was "
                              "accepted")
         low_s = [c for c in checks
@@ -1397,7 +1591,7 @@ class TestSignatureCanonicalForm(unittest.TestCase):
                         "tests signature parsing, not canonical form")
 
     def test_the_receipt_and_the_override_are_held_to_the_same_rule(self):
-        _, checks = verify.verify_sample(OVERRIDE_SAMPLE)
+        _, checks = _verify(OVERRIDE_SAMPLE)
         canonical = [c for c in checks if "EIP-2 canonical (low-s)" in c.name]
         self.assertEqual(len(canonical), 2,
                          "both signatures in a bundle must be held to the "
@@ -1660,7 +1854,7 @@ class TestRefusalBundle(unittest.TestCase):
         return target
 
     def run_sample(self, target):
-        return verify.verify_sample(target)
+        return _verify(target)
 
     def assertFailsOn(self, checks, fragment):
         failed = [c.name for c in checks if not c.ok]
@@ -1690,7 +1884,8 @@ class TestRefusalBundle(unittest.TestCase):
         with open(os.devnull, "w") as devnull:
             saved, sys.stdout = sys.stdout, devnull
             try:
-                self.assertEqual(verify.main([target]), 0)
+                self.assertEqual(
+                    verify.main(["--domain", trust_root(target), target]), 0)
             finally:
                 sys.stdout = saved
 
@@ -1976,7 +2171,7 @@ class TestRefusalSampleInCorpus(unittest.TestCase):
     def test_every_refusal_sample_verifies(self):
         for path in refusal_sample_dirs():
             with self.subTest(sample=os.path.basename(path)):
-                ok, checks = verify.verify_sample(path)
+                ok, checks = _verify(path)
                 self.assertTrue(ok, [c.name for c in checks if not c.ok])
 
     def test_every_refusal_sample_is_actually_verified_not_skipped(self):
@@ -1984,7 +2179,7 @@ class TestRefusalSampleInCorpus(unittest.TestCase):
         # have genuinely run.
         for path in refusal_sample_dirs():
             with self.subTest(sample=os.path.basename(path)):
-                _, checks = verify.verify_sample(path)
+                _, checks = _verify(path)
                 ran = {c.name for c in checks if c.ok and not c.skipped}
                 for expected in (
                     "the signature recovers the record's declared signer",
@@ -2011,7 +2206,7 @@ class TestRefusalSampleInCorpus(unittest.TestCase):
             for mode in modes:
                 with self.subTest(sample=os.path.basename(path), mode=mode):
                     try:
-                        ok, _ = verify.verify_sample(path, tamper=mode)
+                        ok, _ = _verify(path, tamper=mode)
                     except verify.NotApplicable:
                         continue
                     self.assertFalse(ok, f"{mode} was WRONGLY ACCEPTED")
@@ -2044,7 +2239,7 @@ class TestRefusalSampleInCorpus(unittest.TestCase):
         for name in ("receipt.json", "meta.json"):
             shutil.copy(os.path.join(refusal_case, name),
                         os.path.join(target, name))
-        ok, checks = verify.verify_sample(target)
+        ok, checks = _verify(target)
         self.assertFalse(ok, "a signed refusal was moved onto another bundle")
         failed = [c.name for c in checks if not c.ok]
         self.assertIn("refusal.evidenceHash binds the recomputed evidence",
@@ -2058,7 +2253,7 @@ class TestRefusalSampleInCorpus(unittest.TestCase):
         for path in sample_dirs():
             with self.subTest(sample=os.path.basename(path)):
                 with self.assertRaises(verify.NotApplicable):
-                    verify.verify_sample(path, tamper="refusal-actionhash")
+                    _verify(path, tamper="refusal-actionhash")
 
 
 class TestEvidenceHashTamper(unittest.TestCase):
@@ -2077,7 +2272,7 @@ class TestEvidenceHashTamper(unittest.TestCase):
     def test_it_is_applicable_to_every_receipt_sample_and_is_rejected(self):
         for path in sample_dirs():
             with self.subTest(sample=os.path.basename(path)):
-                ok, checks = verify.verify_sample(path, tamper="evidence-hash")
+                ok, checks = _verify(path, tamper="evidence-hash")
                 self.assertFalse(
                     ok, "a corrupted evidence.hash must not verify")
                 named = [c for c in checks
@@ -2093,7 +2288,7 @@ class TestEvidenceHashTamper(unittest.TestCase):
         # Without this the test above could pass because the check ALWAYS fails.
         for path in sample_dirs():
             with self.subTest(sample=os.path.basename(path)):
-                _, checks = verify.verify_sample(path)
+                _, checks = _verify(path)
                 named = [c for c in checks if "matches evidence.hash" in c.name]
                 self.assertTrue(named)
                 self.assertTrue(named[0].ok)
@@ -2336,7 +2531,7 @@ class TestVerifierPropertiesNotCorpusProperties(unittest.TestCase):
             with open(os.path.join(dest, "override.json"), "w") as fh:
                 json.dump({"override": override, "ownerSignature": sig,
                            "ownerAddress": owner}, fh, indent=2)
-            ok, checks = verify.verify_sample(
+            ok, checks = _verify(
                 dest, domain_path=os.path.join(os.path.dirname(path.rstrip("/")),
                                                "domain.json"))
 

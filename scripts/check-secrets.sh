@@ -23,6 +23,23 @@
 # placeholder. Verified both ways: four real-key spellings blocked, four genuine placeholders
 # (`YOUR_…`, `PLACEHOLDER`, `xxx`, empty) still suppressed, clean tree still green.
 #
+# THAT FIX WAS INCOMPLETE AND THE GUARD WAS HOLED A THIRD TIME (A-058, round five, found by two
+# independent reviewers and reproduced with a control). A-052 anchored the MARKER to an
+# assignment operator, which is necessary and not sufficient: the suppressor still ran with
+# `grep -v` against the WHOLE LINE, and a line can hold more than one assignment. So a real
+# 64-hex key passed clean whenever ORDINARY sibling syntax appeared beside it —
+# `{ deployKey: "0x…", API_KEY: "YOUR_API_KEY" }`, or a trailing `// see: EXAMPLE bundle`.
+# A-052 had generalised its DEMONSTRATION (marker adjacent to the operator) and not its
+# ARGUMENT (a suppressor must discard an OCCURRENCE, never a line). It is now `grep -o`: every
+# suppressor sees one match at a time and cannot reach past it. **This also closes the
+# line-wise `ANVIL_ALLOW` hole recorded separately in register §8.2 — one real key beside one
+# allowlisted Anvil key was the same defect wearing a different filter, and fixing the argument
+# rather than the demonstration necessarily takes both.**
+#
+# The report now names the MATCH rather than the whole line. That is deliberate: it is the
+# thing being judged, and printing less surrounding context around a live credential is not a
+# loss.
+#
 # DESIGN NOTE — why this does not grep for bare 64-hex strings.
 # A private key and a keccak256 hash are the same shape. This repository is full
 # of legitimate bytes32 literals: type hashes, domain separators, mandate and
@@ -106,8 +123,14 @@ ANVIL_ALLOW='ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80|59
 scan_content() {
   local label="$1" content="$2"
   local hits
+  # `-o` IS THE WHOLE FIX FOR A-058's A-1/C-1 AND IT IS LOAD-BEARING: DO NOT REMOVE IT.
+  # Every filter below this line is a SUPPRESSOR, and with `-n` alone each one deleted the
+  # entire LINE. A line can carry more than one assignment, so suppressing it because ONE of
+  # its assignments is a placeholder — or an allowlisted Anvil key — threw the others away
+  # unexamined. With `-o` each record is `LINENO:MATCH`, so a suppressor can only ever discard
+  # the occurrence it actually matched.
   hits=$(printf '%s' "$content" \
-    | grep -nE "$CRED_RE|$ASSIGN_RE|$KEYLIT_RE" 2>/dev/null \
+    | grep -onE "$CRED_RE|$ASSIGN_RE|$KEYLIT_RE" 2>/dev/null \
     | grep -vE "$ANVIL_ALLOW" \
     | grep -vE '=[[:space:]]*$|=[[:space:]]*["'"'"']{2}|[:=][[:space:]]*["'"'"']?(0x)?(YOUR_|REPLACE_|EXAMPLE|PLACEHOLDER|xxx)' \
     || true)

@@ -643,3 +643,24 @@ rating and are **not yet independently confirmed**; treat them as leads until th
   runs it, and this one had no per-lens isolation of evidence.
 - **No live model was called.** The reviewers had no `.env` by design, so the Gate 7 canary and
   every model-dependent arm went unexercised.
+
+### 13.2 The secret guard's falsification is not re-runnable from the repository (A-059)
+
+The `grep -o` repair was falsified with a twelve-row probe — six spellings that MUST block a real
+64-hex key (plain, with a sibling placeholder field, with a trailing `EXAMPLE` comment, with a
+trailing `xxx` comment, with a `PLACEHOLDER` sibling, and with an allowlisted Anvil key beside
+it) and six that MUST stay clean (four genuine placeholders, an empty value, an Anvil key alone,
+and a legitimate bytes32 typehash). **Run against the PRE-FIX code first, as A-044 requires:
+five of the six must-block rows failed. After the repair all twelve pass.**
+
+**That probe lives in a scratchpad and dies with this session.** A guard whose falsification is
+not re-runnable rots, and **this one has now rotted twice** — A-052's repair and A-047's before
+it were each falsified by hand, against the spellings their author had thought of, and each was
+holed again by the next reviewer who tried a spelling nobody had listed.
+
+**Not built, deliberately:** committing it is new tooling and outside D-049(b)'s scope, and it
+would put a 64-hex key-shaped literal into a tracked file — which is the thing house rule 6
+exists to prevent, and which the guard itself would have to be taught to ignore. That exemption
+is exactly the shape of hole this section keeps recording. **Whoever scopes this should decide
+between a fixture the guard is taught to skip (cheap, and a new exemption to defend) and a probe
+that writes only to a temp directory outside the tracked tree (more work, no exemption).**

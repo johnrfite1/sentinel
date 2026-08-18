@@ -246,9 +246,9 @@ fi
 # nothing reconciling them. That is precisely the defect A-045 was written to close, reproduced
 # inside A-045's own remediation. These three numbers are the assertion. Raise a floor when the
 # suite genuinely grows; NEVER lower one to make a run pass.
-VERIFIER_MIN_TESTS=160
+VERIFIER_MIN_TESTS=170
 VERIFIER_MIN_SAMPLES=7
-VERIFIER_MIN_TAMPER=77
+VERIFIER_MIN_TAMPER=78
 # A MODE FLOOR, because a pair count alone rewards padding (A-049): `tamper cases` counts
 # (sample x mode) pairs, so ADDING a sample raises it whether or not modes were deleted.
 #
@@ -261,7 +261,7 @@ VERIFIER_MIN_TAMPER=77
 # to mutate at all. **Both floors are ratchets against accident, not against intent.** What
 # actually defends a specific mode is a structural test naming it — `test_the_mode_is_declared`
 # does that for `evidence-hash`, and no other mode has one.
-VERIFIER_MIN_TAMPER_MODES=29
+VERIFIER_MIN_TAMPER_MODES=30
 
 step "D-010 receipt verifier (independent Python; §14.2, D-010)"
 if command -v python3 >/dev/null 2>&1; then
@@ -327,10 +327,10 @@ VERIFIERRUN
         fi
     done
 
-    s_out="$(python3 verifier/verify.py --all fixtures/samples 2>&1)" || v_fail=1
+    s_out="$(python3 verifier/verify.py --domain fixtures/samples/domain.json --all fixtures/samples 2>&1)" || v_fail=1
     v_samples="$(printf '%s\n' "$s_out" | sed -n 's#^\([0-9][0-9]*\)/[0-9][0-9]* sample(s) verified.*#\1#p' | tail -1)"
 
-    t_out="$(python3 verifier/verify.py --all fixtures/samples --tamper all 2>&1)" || v_fail=1
+    t_out="$(python3 verifier/verify.py --domain fixtures/samples/domain.json --all fixtures/samples --tamper all 2>&1)" || v_fail=1
     v_tamper="$(printf '%s\n' "$t_out" | grep -c 'tamper self-test PASS' || true)"
     v_modes="$(printf '%s\n' "$t_out" | grep -oE 'the mutated [a-z-]+' | sed 's/the mutated //' | sort -u | wc -l | tr -d ' ')"
 
@@ -520,9 +520,20 @@ WHAT IS COVERED, by layer, each with the limit that layer cannot exceed:
 
   D-010    The independent Python receipt verifier, in `verifier/`. Zero third-party
            dependencies; its own RFC 8785, Keccak-f[1600] and secp256k1 recovery, built by
-           an agent that never read this repository's TypeScript. 7/7 samples verify, 62/62
-           applicable tamper cases across 24 distinct modes behave as specified, and 149/149
+           an agent that never read this repository's TypeScript. 7/7 samples verify, 78/78
+           applicable tamper cases across 30 distinct modes behave as specified, and 170/170
            of its own tests pass.
+           THIS PARAGRAPH'S THREE FIGURES READ 62/24/149 FROM 2026-08-16 UNTIL 2026-08-17,
+           while the floors this same run asserts read 160/7/77/29 and printed 142 lines
+           above — five of round five's eight reviewers found it independently (A-058, B-1
+           and C-2). They are corrected here because the same edit moved them again, under
+           this file's own rule that a suite count is updated in the edit that changes the
+           suite and not later. **THE REST OF THIS BLOCK'S FALSE STATEMENTS ARE STILL HERE
+           AND ARE NOT FIXED** — the `verify.py` line count and the claim about what has
+           been swept below, and the RFC 8785 claim further down (A-058, B-2 and B-3) —
+           because John scoped this session's remediation to the live security defects and
+           a half-corrected block is this project's own documented failure mode. Register
+           §13 holds them.
            It verifies REFUSALS as well as decisions as of 2026-08-16: §5.5.1's
            RefusalRecord was implemented by a schema-only agent and met a real signed
            refusal it had never seen, which is where the envelope gap and three further

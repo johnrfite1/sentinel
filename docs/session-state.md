@@ -84,16 +84,22 @@ blocked.**
 
 **THE NEXT MOVE IS TWO RULINGS FROM JOHN, and neither is an agent's to make.**
 
-1. **D-048(b) HAS FIRED and the decision is back with him.** Its condition — severe INSTRUMENT
+1. ~~**D-048(b) HAS FIRED and the decision is back with him.**~~ **RULED (D-049(a)): the loop
+   CONTINUES, and John will rule on what "full breadth" means as a named surface list — because
+   D-047's cleanliness test has no fixed denominator and any round can be defeated by widening
+   the next one. THE DRAFT IS A-060 AND IT IS NOT IN FORCE.** The original fork, kept because
+   it is the reasoning behind the ruling: Its condition — severe INSTRUMENT
    defects at round one's rate — is met. **The confound belongs with the number:** rounds two
    through four NARROWED (round four was one file) and the yield fell, which read as
    convergence; round five WIDENED and the yield returned, with the same defect classes on four
    surfaces that had never been swept. *"The loop is not converging"* and *"the loop had been
    converging because it was looking at one file"* are different diagnoses with opposite
    implications. **Do not pick between them on his behalf.**
-2. **Remediation scoping for 51 findings.** None is fixed. `docs/v1-1-register.md` §13 is the
-   list; 16 are re-verified from scratch and the rest are leads. **D-047 makes DECLINING to fix
-   a finding a change to a claim**, so an agent cannot quietly leave one alone either.
+2. ~~**Remediation scoping for 51 findings.**~~ **RULED (D-049(b)): the three LIVE security
+   defects only, and they are FIXED (A-059).** The other 48 stay in `docs/v1-1-register.md`
+   §13 — 13 of them re-verified by me, the rest leads — and are NOT to be worked without him.
+   **D-047 makes DECLINING to fix a finding a change to a claim**, so they are recorded rather
+   than quietly dropped, and this session's round is not clean on any reading.
 
 **WHAT ROUND FIVE FOUND, in one line each, because the next instance must not restart the
 project on a stale picture.** Two CRITICALs, both LIVE and both in the D-010 verifier: the
@@ -193,8 +199,10 @@ design forks. Never sign a gate, never certify a public claim.
 
 ## 3. Where the build is
 
-**73/73 Foundry · 405/405 TypeScript · 160/160 verifier · 77 tamper cases over 29 modes ·
+**73/73 Foundry · 405/405 TypeScript · 170/170 verifier · 78 tamper cases over 30 modes ·
 50 corpus fixtures · 7 samples · gate green at the deep profile · workspace guards OK.**
+*(Moved 160→170 / 77→78 / 29→30 by A-059's fixes; the three gate FLOORS were ratcheted in the
+same edit, which is the rule this line exists to enforce.)*
 *(Read `149/149` and omitted the tamper figures entirely until 2026-08-17 — stale for the third
 time, in the file that opens by declaring itself the memory. The verifier moved 146 → 149 → 154 →
 158 → 160 in two days and this line tracked none of it.)* *(This line read 66/66 and 70/70 for
@@ -346,6 +354,9 @@ reasoning, its rejected options, and where stated the condition that would rever
 | A-056 | Override cluster, the anchor, and **the corpus-vs-verifier category error** |
 | A-057 | Round five commissioned; the reading declared before results; eight lenses, whole tree |
 | A-058 | **ROUND FIVE: NOT CLEAN. 51 findings, 2 CRITICAL, the same repair defect three times. D-048(b) fired** |
+| D-049 | John: **the loop continues and "full breadth" gets defined**; remediation scoped to the three LIVE defects |
+| A-059 | The three live defects fixed. **The first draft of the first fix shipped the very defect it was fixing** |
+| A-060 | **DRAFT, NOT RATIFIED** — a proposed named-surface definition of "full breadth" |
 | A-042 | **The D-010 experiment run properly:** a schema-only build met a real signed refusal it had never seen. Everything §5.5.1 STATED matched first time; the envelope it omitted diverged, plus three defects in the section — all mine, all corrected. 101 → 146 tests |
 
 ## 5. Traces — what worked, and what was a dead end
