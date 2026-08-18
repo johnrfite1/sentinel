@@ -263,6 +263,18 @@ SAYS it protects and what it mechanically does.
 
 ### 8.2 `check-secrets.sh` — three independent evasions
 
+> **CORRECTION 2026-08-17 (round five, A-058): THE FIRST ITEM BELOW IS MARKED FIXED AND IS
+> NOT FIXED.** A-052 anchored the placeholder markers to a value, but the suppressor is
+> still applied to the WHOLE LINE, and a line can hold more than one assignment. A real
+> 64-hex key is still passed clean when an ordinary sibling field (`apiKey:
+> "YOUR_API_KEY"`) or an ordinary trailing comment (`// see: EXAMPLE bundle`) sits on the
+> same line. Reproduced with a control by two independent reviewers and again by me:
+> the identical key on a plain line is BLOCKED. This is the third time this guard has been
+> found holed, and the second time a repair generalised its demonstration rather than its
+> argument. See §13, `A-1` and `C-1`. **The severity note below still applies and is the
+> reason this correction sits at the top of the section rather than in the list.**
+
+
 > **SEVERITY NOTE, added 2026-08-17 (A-052) at John's direction. THIS SUBSECTION IS NOT LIKE ITS
 > NEIGHBOURS AND THE FLAT LIST WAS HIDING THAT.** Everything else in §8 is an instrument that
 > reports a property it does not check. The first item below was different in kind: its failure
@@ -535,3 +547,99 @@ asserts them. **That second direction is the dangerous one. The tamper matrix is
 measure; mutation is.** The corrected figure: 79 named `Check(...)` sites, 46 ever constructed,
 **24 ever made to fail** — and 33 sites never constructed at all, which the "32" headline silently
 excluded.
+
+---
+
+## 13. Round five — the full-breadth adversarial round (A-057/A-058), 2026-08-17 — 51 findings, RECORDED, NOT SCOPED
+
+**Nothing in this section has been fixed.** It is the raw output of round five, run at frozen
+`8234aba` by eight independent reviewers, plus my own re-verification. **Remediation scoping is
+John's and has not happened**, which is why the list is here rather than in a commit.
+
+**READ THE SEVERITY, NOT THE ORDER.** A-052's lesson was that a flat list is itself a claim —
+that its items are comparable — and that claim was false for two days while three rounds ran
+past a guard letting a real private key through. Three items below are live security defects:
+`H-1` and `H-2` (the D-010 verifier certifying artifacts minted by an arbitrary outsider key)
+and `A-1`/`C-1` (that same secret guard, holed for the third time, **currently recorded as
+FIXED in §8.2 — see the correction there**).
+
+**"Re-verified by me" means I reproduced it myself from scratch**, with my own keys, my own
+probe and a control, against the unmutated tree — not that I re-ran the reviewer's script. The
+sixteen so marked are established. The rest carry the reviewer's evidence and its confidence
+rating and are **not yet independently confirmed**; treat them as leads until they are.
+
+| | Finding | Sev | Kind | Changes | Mine? |
+|---|---|---|---|---|---|
+| `H-1` | A-055's trust-root repair closed the DEMONSTRATION, not the ARGUMENT: the presenter still chooses the trust root, one directory up — and the check added to stop it affirmatively states th… | CRITICAL | code-defect | code | **re-verified by me** |
+| `H-2` | The §5.5 override stage has NO deployment-anchored owner identity check: an override minted by an arbitrary outsider key, payload byte-identical to the owner's, verifies => PASS with the … | CRITICAL | code-defect | code | **re-verified by me** |
+| `A-1` | check-secrets.sh still suppresses whole lines: a real 64-hex private key bound to `signerKey:` passes the guard and the pre-commit hook when an ORDINARY sibling field or trailing comment … | HIGH | code-defect | code | **re-verified by me** |
+| `C-1` | check-secrets.sh placeholder suppressor is still LINE-scoped: adding one colon to the exact comment A-052 falsified lets a real private key through | HIGH | instrument-defect | code | **re-verified by me** |
+| `C-2` | The gate's own COVERAGE BOUNDARY prints verifier figures 62/24/149 on a run that measured 77/29/160 — and calls them 'FLOORS THIS RUN ASSERTS' | HIGH | false-claim | code | **re-verified by me** |
+| `D-01` | EVAL_MANDATE_WINDOW's lower bound is pinned by nothing in either gate profile: a future-dated mandate ALLOWs and every comparison surface stays identical | HIGH | instrument-defect | code | **re-verified by me** |
+| `D-02` | EVAL_POLICY_WINDOW's lower bound has zero coverage anywhere in the repository — no test, no corpus fixture, no sample | HIGH | instrument-defect | code | reviewer only |
+| `D-03` | No gate profile compares the corpus's engine verdicts — and the deep stage's two comparison arms are provably blind to a verdict flip. The register's recorded bound for this gap is unders… | HIGH | instrument-defect | code | **re-verified by me** |
+| `E1` | `verdict in VERDICT` walks the prototype chain: the signer signs §5.5.1 refusal records whose `requestedVerdict` the D-010 verifier structurally rejects — a caller-selectable way to make … | HIGH | code-defect | code | **re-verified by me** |
+| `F-VAULT-1` | The corrected §7.1 containment claim is still false in the dimension it says it bounds: the wei ceiling is per-ACTION, and a compromised signer drains the vault's whole native balance | HIGH | false-claim | document | **re-verified by me** |
+| `F-VAULT-2` | The D-042 invariant repair is silently reversible and its verifying mutation ships nowhere: deleting one line leaves 73/73 green and restores the exact pre-repair blind spot | HIGH | instrument-defect | code | **re-verified by me** |
+| `G-1` | The labels of record are pinned by nothing: one word turns the flagship into a perfect score under a fully green gate | HIGH | instrument-defect | code | **re-verified by me** |
+| `H-3` | A-055's signerFindings repair used PRECEDENCE, not both: one added key inside the envelope re-opens the exact hole it closed, and an uncommitted reason code passes with [PASS] signerFindi… | HIGH | code-defect | code | **re-verified by me** |
+| `A-2` | The COVERAGE BOUNDARY that scripts/test.sh prints on every pass publishes three stale verifier figures, asserts they are "ALL THREE FIGURES ARE FLOORS THIS RUN ASSERTS", and states a LIMI… | MEDIUM | false-claim | document | **re-verified by me** |
+| `B-1` | The gate's own COVERAGE BOUNDARY quotes verifier counts of 149/62/24 and calls them "the floors this run asserts", 142 lines after the same run printed floors of 160/7/77/29 | MEDIUM | false-claim | code | **re-verified by me** |
+| `B-2` | The COVERAGE BOUNDARY states "No mutation sweep has been run over verify.py itself, which is 1681 lines" — it was swept (A-055) and the file is 1830 lines | MEDIUM | false-claim | code | **re-verified by me** |
+| `B-3` | The COVERAGE BOUNDARY says RFC 8785's number and code-unit-ordering paths "are untested by anything (REPORT.md F-6)" — both are tested, in the suite this same gate runs, and REPORT.md say… | MEDIUM | false-claim | code | reviewer only |
+| `B-4` | docs/session-state.md §5's D-010 bullet still reads 7/7, 62/62, 24 modes, 149/149 and calls all four floors — contradicting its own §3 headline 79 lines above, at the exact line whose in-… | MEDIUM | false-claim | document | reviewer only |
+| `C-3` | `internalCalls()` — the whole trace walk behind EVAL_CALL_GRAPH_EXPECTED and the bundle's internalCallTrace — is a surviving mutation; deleting its body entirely leaves the tests green | MEDIUM | instrument-defect | code | reviewer only |
+| `D-04` | reasonCodes can be emptied of every UNRESOLVED code and the whole 405-test suite stays green — Case 4 then issues a REVIEW receipt that states no reason | MEDIUM | instrument-defect | code | reviewer only |
+| `D-05` | EVAL_ACTION_BINDS_MANDATE_AND_POLICY folds two conditions under one code and only the mandate half is exercised; the policy half can be deleted undetected | MEDIUM | instrument-defect | code | reviewer only |
+| `D-06` | Every ceiling and deadline comparison boundary in the engine is unpinned: <= can become < on all five and nothing fails | MEDIUM | instrument-defect | code | reviewer only |
+| `D-07` | EVAL_EXECUTABILITY_CODES — D-026's remedy classification — is guarded against growing wrong and not against shrinking; members can be deleted silently | MEDIUM | instrument-defect | code | reviewer only |
+| `D-08` | The decoder's strictness predicates are pinned by one witness each: an address word is only checked for dirt in its TOP byte, and a bool word of 3 can be accepted | MEDIUM | instrument-defect | code | reviewer only |
+| `D-11` | All four round-five lenses share one scratchpad directory and all four wrote the same baseline.log, clobbering each other's baseline evidence | MEDIUM | environment | document | reviewer only |
+| `D-12` | The deep-profile corpus stage cannot run in the review worktrees at all, and once made to run, all 50 committed views mismatch on the deployed DemoPay code hash | MEDIUM | environment | document | reviewer only |
+| `E2` | Two wire integer fields escape `bounded()`, and the escape lets a caller convert a due refusal into a `SIGNER_ERROR` with no D-012 record | MEDIUM | code-defect | code | reviewer only |
+| `E3` | The signer attests an ALLOW anchored to any historical block — including one at which the vault had no code — and the vault executes it; `observedAtBlock` is read on every request and nev… | MEDIUM | code-defect | code | reviewer only |
+| `E4` | The receipt's `evidenceHash` commits to a §5.6 bundle whose `normalizedAction` and `expectedEffects` are checked by neither the signer nor the D-010 verifier | MEDIUM | spec-gap | code | reviewer only |
+| `F-VAULT-3` | Measured: the repaired campaign still cannot construct a violation of ANY of the vault's twelve action- and receipt-validation checks — 12/12 mutations survive all eleven invariants | MEDIUM | instrument-defect | document | reviewer only |
+| `G-2` | docs/ablation-report.md is not the output of its own generator on the committed inputs — the latency column is arithmetically impossible from the committed results | MEDIUM | doc-error | document | **re-verified by me** |
+| `G-3` | check-class-coverage.sh credits two classes on UNRESOLVED outcomes while calling them FAILING checks — the same shape D-039 used to rule another class a GAP | MEDIUM | instrument-defect | code | reviewer only |
+| `G-4` | The D-011(c) disagreement metric — the declared S2 halt condition — has no sample-size floor, and its own caveat is static prose that contradicts the derived number | MEDIUM | instrument-defect | code | reviewer only |
+| `H-4` | On the receipt path a payload-hash FAILURE becomes a PASS when the contradicting file is DELETED — `rm action.json` flips exit 1 to exit 0; the refusal path treats the same absence as a f… | MEDIUM | code-defect | code | reviewer only |
+| `H-6` | `test_owner_is_the_mandate_principal` is a fourth instance of the corpus-property/verifier-property category error A-056 named as 'THE CATEGORY ERROR IS THE FINDING' — and it is the ONLY … | MEDIUM | instrument-defect | code | reviewer only |
+| `B-5` | decisions.md A-055 claims "Suite 154 → 158" — its commit added zero test methods; A-054, its parent, made that transition and claims it too | LOW | false-claim | document | reviewer only |
+| `B-6` | docs/session-state.md's header says "Last updated: 2026-08-16, end of session" while the commit it names and every entry it summarises are 2026-08-17 | LOW | doc-error | document | reviewer only |
+| `B-7` | session-state.md tells a fresh instance that gate-s2-evidence.md §11 "is now empty" 22 lines after telling it to read §11 before repeating any claim — §11 has six entries, five of them live | LOW | doc-error | document | reviewer only |
+| `C-4` | A-007's and HANDOFF.md's 'committed .env.example' does not exist, is gitignored, and is cited by check-secrets.sh as the documentation of its Anvil-key allowlist | LOW | doc-error | document | reviewer only |
+| `D-09` | Three evidence-bundle fields are read by no assertion and can be made to state the opposite of what the engine computed | LOW | instrument-defect | code | reviewer only |
+| `D-10` | Address case-normalisation in the binding checks is unpinned in both directions | LOW | instrument-defect | code | reviewer only |
+| `E5` | The D-014 parameter comparison stringifies JSON numbers and arrays where the project's own §5.5.1 parser refuses to, and its comment states the opposite | LOW | code-defect | code | reviewer only |
+| `E6` | The gate's own COVERAGE BOUNDARY block prints three false D-010 figures on every green run, and `session-state.md` contradicts itself again in the exact bullet a previous reviewer already… | LOW | doc-error | document | reviewer only |
+| `F-VAULT-4` | `invariant_ownerAndCapsAreImmutableFromExecution` cannot fail for any behaviour: both fields it checks are write-once, and it is evaluated at environment setup | LOW | instrument-defect | code | reviewer only |
+| `F-VAULT-5` | The docstring justifying permissionless `execute` rests on owner authority the automatic path never checks | LOW | doc-error | comment | reviewer only |
+| `G-5` | The ablation report's '50 fixtures' and its F035/F051 caveats are hardcoded prose that cannot disagree with the table it sits above | LOW | instrument-defect | code | reviewer only |
+| `H-5` | `_verdict_check` and `_refusal_label_check` print 'no meta.json/index.json to cross-check against' about a bundle that carries meta.json | LOW | code-defect | code | reviewer only |
+| `H-7` | `verify.py` is 1830 lines; the gate PRINTS 1681, and three documents repeat it | LOW | doc-error | document | reviewer only |
+| `A-3` | Captured gate output can be silently truncated and duplicated under this review harness — a reviewer reading a log can see a printed warning vanish. Environment, not the project; reported… | INFO | environment | nothing | reviewer only |
+| `C-5` | `npm test` sets no per-test timeout, so a signer-socket failure hangs the gate indefinitely instead of failing it | INFO | environment | nothing | reviewer only |
+| `H-8` | `verify.py --all <dir>` over a directory containing no bundle subdirectories prints '0/0 sample(s) verified' and exits 0 | INFO | code-defect | code | reviewer only |
+
+### 13.1 What round five could NOT reach, stated so a null is not read as coverage
+
+- **The deep-profile corpus stage cannot run in a review worktree at all** (`D-12`). The corpus
+  runner builds its unix socket under the repository root, and from the worktree paths that
+  exceeds macOS's 104-byte `sun_path` limit, so `./scripts/test.sh --gate` aborts before
+  evaluating a fixture. **Every reviewer's baseline was therefore the FAST profile.** The deep
+  profile was run only by me, in the live tree, before the round started. Any finding that would
+  only show up under the deep gate was out of reach for all eight lenses.
+- **A second obstacle behind the first:** once the socket is repointed, a corpus run in a
+  worktree differs from all 50 committed views on `targetCodeHash`, so the committed-view
+  comparison cannot be exercised from a worktree either.
+- **The round's own instrument was defective** (`D-11`), and it is mine. All eight lenses were
+  given the same scratchpad directory, four of them independently chose
+  `scratchpad/baseline.log` for the mandated baseline run, and they clobbered each other. One
+  reviewer read a log containing another lens's run — two distinct `tests 405` completions —
+  caught it, and moved to its own subdirectory. **No finding is known to rest on a clobbered
+  baseline** (each reviewer used its own process's exit status), but that is the correct
+  reading only because a reviewer noticed. A brief is an instrument; so is the harness that
+  runs it, and this one had no per-lens isolation of evidence.
+- **No live model was called.** The reviewers had no `.env` by design, so the Gate 7 canary and
+  every model-dependent arm went unexercised.
