@@ -3,8 +3,8 @@
 Rewritten at the end of each working session. **This file, not the conversation, is the
 memory.** If it disagrees with anything an agent remembers, this file wins.
 
-Last updated: **2026-08-18 (post-D-052 remediation)**. Branch `step-3/isolated-signer`
-(`0e19e28` at the time of writing; the commit that updates this file necessarily
+Last updated: **2026-08-18 (post-D-055; exit criterion adopted)**. Branch
+`step-3/isolated-signer` (`caad4c1` at the time of writing, **9 commits UNPUSHED**; the commit that updates this file necessarily
 comes after, so expect the pointer to trail by one doc-only commit and check `git log` rather
 than treating a mismatch as a finding). Working tree clean. **This pointer names the last commit this file DESCRIBES, and the commit that updates
 it necessarily comes after — so expect it to trail by one doc-only commit, and check
@@ -14,12 +14,14 @@ correcting elsewhere, sitting in the file that opens by declaring itself the mem
 D-016 still blocks all publication. **Pushing to the private remote is backup, not publication;
 do not read the push as any relaxation of D-016.**
 
-**READING ORDER FOR A FRESH INSTANCE. ROUND SIX IS RUN AND ADJUDICATED; ROUND SEVEN IS PAUSED
-AND IS NOT YOURS TO START.** Read §1 first — it tells you
+**READING ORDER FOR A FRESH INSTANCE. ROUND SIX IS RUN AND ADJUDICATED. D-055 HAS REPLACED
+D-047'S TERMINATING CONDITION, SO THE LOOP IS BOUNDED NOW — but the review that closes it is
+John's to scope and trigger, not yours.** Read §1 first — it tells you
 what the state is and what is NOT yours. Then §0 for how this project fails. Then, in
-`docs/decisions.md`: **D-052 and D-053 FIRST — they are the current rulings and they bind you.**
-D-047 and D-048 still bind and **you may not amend them**, but D-052(b) has PAUSED the loop they
-govern and John is replacing D-047's terminating condition. `A-070` through `A-073` are the
+`docs/decisions.md`: **D-055 FIRST — it is the current governing ruling and it REPLACES D-047's
+terminating condition — then D-052, D-053 and D-054.**
+**D-047's TERMINATING CONDITION IS SUPERSEDED BY D-055(a)** — do not apply it. D-048 still binds
+unchanged: a clean result is a PRECONDITION for pre-publication, never a trigger. `A-070` through `A-073` are the
 post-round-six remediation and state what each repair does NOT reach.
 
 **`docs/round-six-brief.md` IS SPENT — round six ran against it and is adjudicated. It is history,
@@ -91,8 +93,11 @@ as documented limits, two design forks with John. §7.1's containment claim — 
 corrected, measured, asserted by a test, and **certified by John** (D-051(a)).
 
 **ROUND SIX THEN RAN AND RETURNED 91 FINDINGS, AND JOHN RULED IT NOT CLEAN (D-052(a)).** The loop
-is now PAUSED (D-052(b)) while both the repair protocol and the terminating condition are recut.
-**§1 says what is done and what is John's. Round seven is NOT yours to start.**
+was paused (D-052(b)) to recut both the repair protocol and the terminating condition. **BOTH ARE
+NOW DONE:** `docs/repair-protocol.md` binds every repair, and **D-055(a) has REPLACED D-047's
+terminating condition** with a bounded, risk-based one. **There is no open-ended review loop any
+more** — what remains is a finite list of repairs (§1) and then ONE bounded, John-scoped review.
+**§1 says what is yours and what is not.**
 
 **BOTH CORRECTIONS ARE NOW RATIFIED AND CERTIFIED BY JOHN (D-054, 2026-08-18)** — the D-053(a)
 atomic-drain correction to §7.1, superseding D-051(a) ONLY where the earlier wording is
@@ -108,55 +113,71 @@ autonomy *none*).
 
 ## 1. What the next instance should do
 
-### ROUND SEVEN IS PAUSED. Do not start it. Read D-052 and D-053 first, then this section.
+### YOUR JOB: finish D-055's remaining work, then STOP. The review after it is John's to scope.
 
-**ROUND SIX RAN (2026-08-18, frozen `140c59e`, nine lenses, 91 findings) AND JOHN RULED IT NOT
-CLEAN — and separately, NOT A QUALIFYING CLEAN ROUND (D-052(a)).** The provisioning defect does
-not erase its findings; it means round six cannot be the clean round D-047 requires.
+**READ FIRST, in this order:** `docs/decisions.md` **D-055** (the current governing ruling — it
+REPLACES D-047's terminating condition), then **D-052** (why the loop paused), then **D-053** and
+**D-054** (the two product-guarantee rulings and their ratification). Then
+`docs/exit-criterion-packet.md`, which is the measured input D-055(a) was decided from.
+`docs/repair-protocol.md` binds every repair you make — it is not optional and it is not advice.
 
-**D-052(b) PAUSED THE LOOP.** Both the repair protocol AND the terminating condition are being
-recut before any round seven. D-048(b)'s and D-050(1)'s reversal conditions both fired: four of
-the five repairs made in the preceding 48 hours were defeated by the same failure mode they were
-written to avoid, and the ratified definition of "full breadth" prescribed provisioning that made
-its own condition 1 unmeetable.
+**THE LOOP IS NO LONGER OPEN-ENDED.** D-047's "one full-breadth round with no finding" is gone.
+**D-055(a) replaces it:** exit requires ONE independent, FIXED-SCOPE post-D-052 review on the
+repaired apparatus; a passing deep gate and workspace guards; **zero unresolved confirmed
+Critical/High defects**; and **zero known false or unsupported signed/certified claims**.
+Confirmed Medium/Low may remain only when individually adjudicated, accurately documented as
+limits, and reflected in the affected claims. **"Zero findings of any severity" is expressly NOT
+the condition.** Two clarifications from John that close the obvious gaps: **an unadjudicated
+Critical/High lead is PENDING, not silently "unconfirmed"** — leaving leads unexamined cannot
+satisfy the criterion — and **a confirmed High stops blocking ONLY through verified repair or
+John's EXPLICIT acceptance as a documented product boundary.** An agent may do neither alone.
 
-**WHAT IS DONE (all committed):** the repair protocol (`docs/repair-protocol.md`, A-070); the
-D-010 verifier's absence-is-agreement class plus two siblings no reviewer reported (A-070); the
-credential guard's fourth hole and its scope asymmetry (A-070); the review apparatus, pinned at
-the argument level so a symlinked worktree now passes the DEEP gate (A-071); `D-06` closed across
-all ten comparison edges and the call-graph pipeline pinned at both ends (A-072); the invariant
-campaign's claims corrected to what was measured (A-073); and both product-guarantee rulings
-(D-053).
+**WHAT IS DONE (committed, `caad4c1` at the time of writing):**
 
-**WHAT IS NOT DONE, and is JOHN'S:**
-1. **D-047's replacement.** A bounded, risk-based exit criterion is JOHN'S TO SET. An agent may
-   prepare measured input and **may not author, adopt or infer the criterion.** Until it exists,
-   **round seven does not start.**
-2. ~~Two corrections are offered for ratification.~~ **BOTH ARE NOW RATIFIED AND CERTIFIED
-   (D-054, 2026-08-18):**
-   * **The D-053(a) §7.1 atomic-drain correction** — certified on the drain and its control. It
-     supersedes D-051(a) **ONLY** where the earlier wording is inconsistent with the atomic-drain
-     boundary; everything else D-051(a) certified stands unchanged. The withdrawal of the
-     cumulative-ceiling "v1.1 work" commitment is certified with it: aggregate rate/cumulative
-     bounding is an OPTIONAL FUTURE EXTENSION, while the TOKEN-allowance cap remains v1.1.
-   * **The A-073 Gate 6 correction** — Gate 6 remains MET on the deterministic evidence; the
-     campaign supplies no independently measurable assurance and can pass a vault that executes
-     nothing; §7's twelve unreachable checks is corrected to at least fourteen.
-   **The S2 signature otherwise stands and neither changes any gate's status.** D-054(b) carries a
-   reversal condition: if the campaign ever gains out-of-bound arms AND a non-vacuity assertion
-   binding its own run, its marginal power must be re-measured before any document again says it
-   corroborates Gate 6.
+| | |
+|---|---|
+| A-070 | repair protocol; verifier absence-is-agreement + 2 unreported siblings; credential guard's 4th hole and scope |
+| A-071 | review apparatus pinned — a SYMLINKED worktree now passes the DEEP gate; one shared socket helper |
+| A-072 | `D-06` closed across all ten comparison edges; call-graph pinned at both ends; the ~9% wall-clock flake |
+| A-073 | invariant campaign's claims corrected to measured (marginal power ZERO; passes a dead vault) |
+| A-074 | **the conformance comparison D-014 assigns to the D-010 verifier — it did not exist** |
+| D-053/D-054 | atomic drain accepted as a v1 boundary; nonce guard keyed by basis; both ratified |
+| D-055 | the exit criterion adopted; three blockers ruled; the E3 record conflict reconciled |
 
+**WHAT REMAINS BEFORE THE REVIEW — this is your work, in John's order:**
 
+1. **E3 — FIX IT, and do not invent a timeout.** John's mechanism, ruled at D-055(c): **pin all
+   signer state and code reads to ONE block, and require the evidence anchor to match that exact
+   block number and hash, retrying if the head moves.** The defensible answer is not a recency
+   number, it is CONSISTENCY — the signer attests against the state it actually read. Apply the
+   repair protocol and falsify both ways. **Do not re-litigate whether E3 is a fork: D-055(c)
+   already reconciled that. A-044(f) ruled it a declared limit on 2026-08-16; A-068 wrongly
+   re-opened it as an unruled fork without citing that; both are superseded by "fix it".**
+2. **Correct `docs/v1-1-register.md` §13's status column** — stale for ~17 of 24 rows, and every
+   review brief names it as the authority on what is already recorded. A reviewer trusting it
+   today will suppress real findings as re-reports.
+3. **Independently verify the factual basis of all ten D-051(b) accepted limits (T1), and
+   REOPEN `D-09(c)`** — its basis was "no corpus fixture has divergent ceilings", and **F006
+   refutes it** (mandate 1e18 vs policy 2e15). Record each verification beside its limit.
+4. **Add Foundry and TypeScript count floors to `scripts/test.sh`** — John authorised this. Today
+   only the verifier has floors, so a SHRINKING TypeScript suite is invisible to the gate. Round
+   six `L8-14`; the same defect A-047 closed for the verifier and did not generalise. Ratchet in
+   the SAME edit as the suite each floor bounds.
 
-**RUN IT FROM `docs/round-six-brief.md`.** That brief is ratified, not a draft: D-050(1) adopted
-A-060's definition of "full breadth" as **nine named surfaces**, and a round is full breadth when
-every one is covered by a reviewer that ran its own baseline and returned a coverage statement.
-**You are not designing the round. You are running the one that is already defined** — and the
-reason it is defined in advance is that the last three rounds each had a defective brief, twice
-in ways that cost coverage.
+**THEN STOP.** The bounded four-reviewer post-repair review comes next, and **T3 makes its SCOPE
+John's to fix BEFORE it runs** — covering at minimum the nine D-050(1) surfaces plus every surface
+D-052 remediation touched. Packet §5 proposes 4 reviewers, ~1.6M tokens, ~45 min wall clock, run
+serially or at most two at a time (round six's nine-way concurrency produced three false CAUGHTs
+and one lost probe). **Do not start it, do not scope it yourself, and do not treat it as round
+seven of an open-ended loop — it is one bounded review with a defined exit.**
 
-**HOW TO RUN IT, mechanically.**
+**WHAT NONE OF THIS AUTHORISES.** Pre-publication does not begin — D-048 makes a clean result a
+PRECONDITION, never a trigger, and that is untouched. No gate is signed. No public claim is
+certified. D-016 still blocks all publication and the repository is PRIVATE.
+
+**HOW A REVIEW IS RUN, MECHANICALLY — REFERENCE, NOT AN INSTRUCTION TO START ONE.** The bounded
+review is John's to scope and trigger (T3). Kept because the mechanics are hard-won and the
+worktree hazards below cost round six most of its trees.
 
 1. **Freeze a commit.** `git worktree add <scratch>/w<N> <HEAD> --detach` per reviewer, then
    symlink `ts/node_modules` and both `contracts/lib/*` submodule directories into each. Nine
@@ -276,11 +297,13 @@ design forks. Never sign a gate, never certify a public claim.
 
 ## 3. Where the build is
 
-**75/75 Foundry · 494/494 TypeScript · 189/189 verifier · 78 tamper cases over 30 modes ·
-50 corpus fixtures · 7 samples · gate green at the deep profile · workspace guards OK.**
-*(2026-08-18, post-D-052 remediation: A-070 moved 180→188 verifier and A-072 the 189th; A-072
-moved 481→489 TypeScript and D-053 489→494. `VERIFIER_MIN_TESTS` was ratcheted in the SAME edit
-as the suite each time. VERIFY THESE BEFORE QUOTING THEM — this line has been wrong four times.)*
+**75/75 Foundry · 494/494 TypeScript · 198/198 verifier · 78 tamper cases over 30 modes ·
+50 corpus fixtures · 7 samples · gate green · workspace guards OK.**
+*(Measured 2026-08-18 at `caad4c1` by running `./scripts/test.sh` and reading its output, not by
+copying this line. Post-D-052 arc: A-070 moved 180→188 verifier, A-072 the 189th, **A-074 189→198**;
+A-072 moved 481→489 TypeScript and D-053 489→494. `VERIFIER_MIN_TESTS` was ratcheted in the SAME
+edit as the suite every time. **VERIFY BEFORE QUOTING — this line has been wrong four times, and
+there are still NO floors on the Foundry or TypeScript counts, which is item 4 of §1.**)*
 *(A-059 moved 160→170 / 77→78 / 29→30; A-061 moved 405→407 TypeScript and 170→173 verifier;
 A-063 moved 73→74 Foundry; A-064 moved 74→75 Foundry and 407→409 TypeScript;
 A-067 moved 409→426 TypeScript and 173→176 verifier.
@@ -421,7 +444,7 @@ reasoning, its rejected options, and where stated the condition that would rever
 | D-044 | **Session close.** Pushed; one last review of §9 step 3 (A-016's 6 unadjudicated skeptics); both capability deferrals CONFIRMED; **pre-publication NOT started** |
 | D-045 | S2 pack annotated for A-042 and A-047, **with a stopping rule** |
 | D-046 | Round two authorised; reading declared before results |
-| D-047 | **The review loop terminates on a CLEAN ROUND — and an agent may not amend that** |
+| D-047 | ~~The review loop terminates on a CLEAN ROUND~~ **SUPERSEDED by D-055(a), 2026-08-18.** Its anti-gaming and non-amendability spirit carries into T1–T4 |
 | D-048 | **Pre-publication sequences AFTER the loop.** A clean round is a precondition, not a trigger |
 | A-045 | The D-010 verifier was an S2 deliverable **no gate ran** |
 | A-046 | All eight guards falsified — headline later shown worthless (see A-047) |
