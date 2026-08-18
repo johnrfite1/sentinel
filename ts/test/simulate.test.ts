@@ -14,6 +14,7 @@ import {
 import {anvil} from "viem/chains";
 import {buildRegistry, decodeCall, type TargetRegistry} from "../src/decode/index.ts";
 import {simulateAction} from "../src/simulate/index.ts";
+import {internalCalls} from "../src/simulate/anvil.ts";
 import type {Hex} from "../src/signer/protocol.ts";
 import {OWNER, SIGNER, artifact, startAnvil, type AnvilHandle} from "./harness.ts";
 
@@ -467,5 +468,44 @@ describe("concurrent simulations do not contaminate each other", () => {
             args: [OWNER.address, RESOURCE],
         })) as bigint;
         assert.equal(expiry, 0n, "concurrent simulations leaked entitlement state");
+    });
+});
+
+describe("internalCalls walks the whole trace, not just the top level (A-068)", () => {
+    /**
+     * Replacing this function's entire body with `return []` left ALL 426 tests green.
+     *
+     * Not an accident of coverage: every real trace in the suite is a vault→DemoPay call with
+     * no subcalls, so the real walk and `return []` produce the same `[]`; the one non-empty
+     * case in the suite is a hand-written override that never reaches the walker; and the
+     * end-to-end assertion checks only that the key `internalCallTrace` is PRESENT in the
+     * bundle, never its value. So `EVAL_CALL_GRAPH_EXPECTED` and §3.3(11)'s
+     * unexpected-internal-call defence rested on a function nothing measured.
+     *
+     * These need no chain: `internalCalls` is a pure walk over a TraceNode, and the reason it
+     * was untested is precisely that every test that could reach it needs anvil.
+     */
+    const node = (to: string, calls: any[] = []): any =>
+        ({type: "CALL", from: "0x" + "11".repeat(20), to, input: "0x", calls});
+
+    it("returns every descendant depth-first, excluding the root", () => {
+        const root = node("0xaaa", [node("0xbbb", [node("0xccc")]), node("0xddd")]);
+        const out = internalCalls(root);
+        assert.deepEqual(out.map((c) => c.to), ["0xbbb", "0xccc", "0xddd"],
+            "depth-first order, root excluded — `return []` and any non-recursive rewrite " +
+            "both fail here");
+    });
+
+    it("recurses past the first level, which a one-level walk would not", () => {
+        // Pinned separately: a rewrite that pushed `node.calls` without recursing would pass a
+        // single-level assertion and miss exactly the nested call an attacker would use.
+        const root = node("0xaaa", [node("0xbbb", [node("0xccc", [node("0xeee")])])]);
+        assert.deepEqual(internalCalls(root).map((c) => c.to), ["0xbbb", "0xccc", "0xeee"]);
+    });
+
+    it("returns [] for a genuinely leaf call, which is the conforming case", () => {
+        // The paired positive. Without it, a function that always returned a non-empty array
+        // would satisfy both assertions above while breaking every conforming purchase.
+        assert.deepEqual(internalCalls(node("0xaaa")), []);
     });
 });

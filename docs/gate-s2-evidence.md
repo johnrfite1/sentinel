@@ -339,7 +339,23 @@ calls and zero executions while every invariant reported PASS.
 **Boundary, and it moved this session.** The invariant handler's action set defines what
 "cannot bypass" was tested against; a path the handler never generates was not tested. Until
 2026-08-15 that set had no override action at all, so this gate's evidence covered one of the
-vault's two execution paths. It now covers both.
+vault's two execution paths. ~~It now covers both.~~
+
+**CORRECTED 2026-08-18 (A-068, from round five's F-VAULT-3, adjudicated and confirmed). "It now
+covers both" stated the EXECUTION-PATH bound and was silently read as a CHECK-coverage bound,
+which it is not.** Both paths are now generated, and that is all it says. Measured
+independently: **the repaired campaign still cannot construct a violation of ANY of the vault's
+twelve action- and receipt-validation checks** — value cap, target allowlist, selector
+allowlist, operation, chainId, vault, action deadline, receipt expiry, both zero-hash guards,
+calldata length, and the named signer. All twelve mutations survive all eleven invariants. The
+handler builds well-formed bundles and varies WHICH path they take, not whether they are within
+bounds.
+
+**So Gate 6 is carried by the deterministic tests, and the campaign corroborates** — which is
+what `scripts/test.sh`'s own coverage boundary has said since 2026-08-16, and what this
+paragraph did not. If the campaign is ever meant to carry more than corroboration, the work is
+handler arms that build OUT-OF-BOUND bundles: a `valueWei` drawn above the cap, a foreign target
+or selector, an expired receipt. **That is v1.1 work and is not claimed here.**
 
 ---
 
@@ -427,6 +443,55 @@ code-unit-ordering paths are untested by anything (REPORT.md F-6).
 ---
 
 ## 11. What is NOT in evidence
+
+### 11.0 Ten findings ACCEPTED as limits, not fixed (D-051(b), 2026-08-18)
+
+**These are confirmed defects that John has decided not to fix.** Round five's reviewers found
+them, four independent adjudicators reproduced them, and each is real. They are listed here
+rather than left in a backlog because **leaving a finding open and ACCEPTING it are different
+acts** — the first is nobody deciding, the second is a decision about what this artifact is,
+and only the second gives the next review round a declared baseline to measure against.
+
+**None is exploitable in the adjudicators' own judgement** — their words include "latent
+inconsistency debt, not an exploitable hole" and "inert mutants over a corpus that happens not
+to contain the input". Two were downgraded from MEDIUM on inspection. **That is the basis for
+accepting them, and it is a judgement rather than a proof.** The nine MEDIUM findings from the
+same set were fixed (A-068) rather than accepted.
+
+**If any of these is later shown to be worse than recorded, that is a new finding, not a
+re-report** — the same rule the review briefs carry.
+
+- **`D-07` — EVAL_EXECUTABILITY_CODES — D-026's remedy classification — is guarded against growing wrong and not against shrinking; members can be deleted silently**
+  *Adjudicated CONFIRMED.* Consider MEDIUM → LOW. The mechanism is fully confirmed, but D-026's own text in docs/decisions.md:53 is explicit that this classification "changes no verdict, no schema change, no receipt hash changes" — it makes the REMEDY derivable. A silently shrunk set th
+
+- **`D-09` — Three evidence-bundle fields are read by no assertion and can be made to state the opposite of what the engine computed**
+  *Adjudicated CONFIRMED.* LOW stands for (a) and (b). Downgrade (c) from 'mutation survives the oracle' to 'no fixture distinguishes the two ceilings' — same remedy family, but it should not be counted as a third surviving mutant, because it could not have failed.
+
+- **`D-10` — Address case-normalisation in the binding checks is unpinned in both directions**
+  *Adjudicated CONFIRMED.* LOW is right for (a) and (b) — inert mutants over a corpus that happens to be single-case. For (c) I would raise to MEDIUM: the substantive defect is not the beneficiary/principal swap (which no fixture distinguishes) but that EVAL_APPROVAL_SPENDER can be made
+
+- **`E5` — The D-014 parameter comparison stringifies JSON numbers and arrays where the project's own §5.5.1 parser refuses to, and its comment states the opposite**
+  *Adjudicated CONFIRMED.* LOW is correct. No value substitution was found and I did not find one either; the practical cost is that the signer's attested decoding accepts documents the project's own §5.5.1 parser refuses, which is a divergence between the two implementations of the sam
+
+- **`F-VAULT-4` — `invariant_ownerAndCapsAreImmutableFromExecution` cannot fail for any behaviour: both fields it checks are write-once, and it is evaluated at environment setup**
+  *Adjudicated CONFIRMED.* LOW stands. A tautological invariant inflates the '11 invariants' count without adding a property, and the fix is cheap; but nothing is wrong in the vault, and no claim in the gate evidence rests on this one invariant specifically.
+
+- **`F-VAULT-5` — The docstring justifying permissionless `execute` rests on owner authority the automatic path never checks**
+  *Adjudicated CONFIRMED.* LOW stands, but I would raise the confidence above the finding's own 'medium'. The claim is a security argument in the contract that a reader will take at face value, it sits in the exact place §7.1 has now been corrected twice, and its withdrawal costs nothin
+
+- **`G-3` — check-class-coverage.sh credits two classes on UNRESOLVED outcomes while calling them FAILING checks — the same shape D-039 used to rule another class a GAP**
+  *Adjudicated CONFIRMED.* MEDIUM -> LOW. The mechanism is real and the guard's silence about it is a fair documentation gap, but the finding's security framing (that this is 'the same shape D-039 used to rule another class a GAP') is refuted by the engine's own deliberate outcome taxon
+
+- **`G-5` — The ablation report's '50 fixtures' and its F035/F051 caveats are hardcoded prose that cannot disagree with the table it sits above**
+  *Adjudicated CONFIRMED.* LOW stands. This is latent-inconsistency debt, not an exploitable hole — the demonstration route is detected by A-062 — but the literals are genuinely unpinned to the data and will drift on the next legitimate corpus change.
+
+- **`H-5` — `_verdict_check` and `_refusal_label_check` print 'no meta.json/index.json to cross-check against' about a bundle that carries meta.json**
+  *Adjudicated CONFIRMED.* 
+
+- **`H-8` — `verify.py --all <dir>` over a directory containing no bundle subdirectories prints '0/0 sample(s) verified' and exits 0**
+  *Adjudicated CONFIRMED.* 
+
+
 
 Stated because a gate pack that only lists what it has is the failure mode §7.5 exists to
 prevent.

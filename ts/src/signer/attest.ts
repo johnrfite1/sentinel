@@ -352,6 +352,18 @@ export function createAttestor(config: AttestorConfig): Attestor {
             // that the block actually has that hash is what keeps "conformance against
             // simulated effects at a recorded block" from being a claim the evaluator can
             // simply assert.
+            //
+            // WHAT THIS DOES NOT ESTABLISH, stated because the paragraph above reads as though
+            // it did (A-068, from round five's E3, adjudicated and confirmed). It checks that
+            // the named block EXISTS with the named hash — not that it is RECENT. Any
+            // historical block satisfies it, including one at which the vault had no code, so
+            // the signer will attest an ALLOW anchored arbitrarily far back and the vault will
+            // execute it. Anchor recency is bounded by nothing here and nothing downstream.
+            //
+            // Whether to bind the receipt to the signer's OWN observation — an `observedAtBlock`
+            // in the receipt, or a required proximity between the caller's anchor and the
+            // signer's — changes what the product guarantees, so it is John's fork and is open
+            // (v1.1 register). This comment states the limit rather than implying it away.
             const simHash = await chain.blockHashAt(evaluation.simulationBlockNumber);
             if (simHash === null || simHash !== evaluation.simulationBlockHash) {
                 findings.push("SIGNER_SIMULATION_BLOCK_MISMATCH");

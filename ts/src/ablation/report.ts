@@ -402,14 +402,25 @@ export function buildReport(inputs: AblationInputs): string {
         for (const d of dis.disagreed) w(`| ${d.fixtureId} | ${d.a} | ${d.b} |`);
         w();
     }
+    // A FLOOR ON THE SAMPLE, NOT JUST ON THE RATE (A-068). D-011(c)'s rate is the declared S2
+    // HALT CONDITION, and it had no sample-size floor: at n=0 the rate is 0 by the guard in
+    // `disagreement()`, and this line printed "Rate is within the declared threshold" — a halt
+    // condition reporting itself satisfied on no evidence at all. Same asserted-floor pattern
+    // A-047/A-048 applied to the verifier, for the same reason: a number that cannot fail is
+    // not a measurement.
     w(
-        dis.ratePercent > 10
-            ? "**THRESHOLD BREACHED — S2 halts pending corpus review (D-011d).**"
-            : "Rate is within the declared threshold.",
+        dis.sampleSize < 10
+            ? `**SAMPLE TOO SMALL — ${dis.sampleSize} fixtures re-labelled, and D-011(c) rests ` +
+              "on at least 10. The rate above is not evidence for or against the D-011(d) " +
+              "threshold, and must not be read as either.**"
+            : dis.ratePercent > 10
+              ? "**THRESHOLD BREACHED — S2 halts pending corpus review (D-011d).**"
+              : "Rate is within the declared threshold.",
     );
     w();
     w("**Two limits on what this rate can mean, both raised by the second labeller itself.**");
-    w("First, with n=10 the only attainable rates are multiples of 10%, so the declared \">10%\"");
+    w(`First, with n=${dis.sampleSize} the only attainable rates are multiples of ` +
+      `${dis.sampleSize === 0 ? "nothing — there is no sample" : `${(100 / dis.sampleSize).toFixed(0)}%`}, so the declared ">10%"`);
     w("boundary is operationally \"halt at two or more disagreements\" — a single disagreement");
     w("lands exactly on 10.0% and does not breach. Second, the sample was drawn at random and");
     w("happened to contain **no conforming fixture and no fixture whose primary defect is an");

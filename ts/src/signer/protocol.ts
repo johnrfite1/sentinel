@@ -606,8 +606,15 @@ export function parsePolicy(v: unknown, path = "policy"): PolicyPayload {
         allowedTargetsHash: hex(o.allowedTargetsHash, `${path}.allowedTargetsHash`, 32),
         allowedSelectorsHash: hex(o.allowedSelectorsHash, `${path}.allowedSelectorsHash`, 32),
         maxNativeValueWei: bounded(o.maxNativeValueWei, `${path}.maxNativeValueWei`, 256),
-        maxAllowanceIncreaseBaseUnits: uint(
-            o.maxAllowanceIncreaseBaseUnits, `${path}.maxAllowanceIncreaseBaseUnits`),
+        // `bounded(..., 256)`, not `uint()` (A-068). Both fields are `uint256` on the wire and
+        // both escaped the bound: an out-of-range value parsed fine and then threw inside
+        // `leftPad` at signing time, giving a SIGNER_ERROR from within the signing routine
+        // rather than a BAD_REQUEST at the boundary — which is exactly the defect A-044 fixed
+        // for the other four integer fields and did not reach these two. The consequence is
+        // D-012's: the one request a caller could trigger at will produced NO signed refusal
+        // record, in the component whose record exists to make refusals provable.
+        maxAllowanceIncreaseBaseUnits: bounded(
+            o.maxAllowanceIncreaseBaseUnits, `${path}.maxAllowanceIncreaseBaseUnits`, 256),
         allowedCallGraphHash: hex(o.allowedCallGraphHash, `${path}.allowedCallGraphHash`, 32),
         validAfter: bounded(o.validAfter, `${path}.validAfter`, 64),
         validUntil: bounded(o.validUntil, `${path}.validUntil`, 64),
@@ -706,8 +713,8 @@ export function parseEvaluateAndSignRequest(v: unknown): EvaluateAndSignRequest 
                 str(ev.evidenceCanonical, "params.evaluation.evidenceCanonical"),
                 "params.evaluation.evidenceCanonical",
             ),
-            simulationBlockNumber: uint(
-                ev.simulationBlockNumber, "params.evaluation.simulationBlockNumber"),
+            simulationBlockNumber: bounded(
+                ev.simulationBlockNumber, "params.evaluation.simulationBlockNumber", 256),
             simulationBlockHash: hex(
                 ev.simulationBlockHash, "params.evaluation.simulationBlockHash", 32),
         },

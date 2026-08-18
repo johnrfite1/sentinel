@@ -225,7 +225,11 @@ const CASES: {code: string; expect: CheckOutcome; overrides: Overrides; note?: s
     {code: "EVAL_CALLDATA_BINDING", expect: "VIOLATION",
      overrides: {action: {dataHash: keccak256(stringToBytes("lie"))}}},
     {code: "EVAL_ACTION_BINDS_MANDATE_AND_POLICY", expect: "VIOLATION",
-     overrides: {action: {mandateHash: keccak256(stringToBytes("stale"))}}},
+     overrides: {action: {mandateHash: keccak256(stringToBytes("stale"))}},
+     note: "mandate half of the conjunction"},
+    {code: "EVAL_ACTION_BINDS_MANDATE_AND_POLICY", expect: "VIOLATION",
+     overrides: {action: {policyHash: keccak256(stringToBytes("unbound"))}},
+     note: "POLICY half — deletable with the whole suite green before A-068"},
     {code: "EVAL_MANDATE_BINDS_POLICY", expect: "VIOLATION",
      overrides: {mandate: {policyHash: keccak256(stringToBytes("unlinked"))}}},
     {code: "EVAL_TARGET_CODE_IDENTITY", expect: "UNRESOLVED",
@@ -246,6 +250,23 @@ const CASES: {code: string; expect: CheckOutcome; overrides: Overrides; note?: s
     {code: "EVAL_VALUE_WITHIN_VAULT_CAP", expect: "VIOLATION",
      overrides: {state: {maxNativeValueWei: VALUE - 1n}}},
     {code: "EVAL_POLICY_OPERATION", expect: "VIOLATION", overrides: {policy: {allowedOperation: 1n}}},
+
+    // A-068: AT the boundary, not one step outside it.
+    //
+    // Every ceiling and deadline row above perturbs the limit until it is VIOLATED, which pins
+    // the comparison's direction and not its edge: `<=` could become `<` on all five and
+    // nothing failed, so a value EXACTLY at a ceiling — the commonest real case, and the one a
+    // mandate author would think they had authorised — would have been refused. Same shape as
+    // the window bounds A-064 split by BOUND; this is that generalisation applied to the
+    // conjunction's other side, the upper limits it left alone.
+    {code: "EVAL_VALUE_WITHIN_MANDATE", expect: "PASS",
+     overrides: {mandate: {maxNativeValueWei: VALUE}}, note: "value EXACTLY at the ceiling"},
+    {code: "EVAL_VALUE_WITHIN_POLICY", expect: "PASS",
+     overrides: {policy: {maxNativeValueWei: VALUE}}, note: "value EXACTLY at the ceiling"},
+    {code: "EVAL_VALUE_WITHIN_VAULT_CAP", expect: "PASS",
+     overrides: {state: {maxNativeValueWei: VALUE}}, note: "value EXACTLY at the vault cap"},
+    {code: "EVAL_ACTION_DEADLINE", expect: "PASS",
+     overrides: {action: {deadline: NOW}}, note: "now EXACTLY at the deadline"},
     {code: "EVAL_CALLDATA_UNDECODABLE", expect: "UNRESOLVED",
      overrides: {callData: "0xdeadbeef" as Hex}},
     {code: "EVAL_SELECTOR_BOUND", expect: "VIOLATION", overrides: {mandate: {selector: "0x095ea7b3"}}},
@@ -322,6 +343,39 @@ describe("every conformance check fires on its own trigger", () => {
             );
         });
     }
+});
+
+describe("the receipt STATES the reason it was reached for", () => {
+    /**
+     * A-068. The table above asserts each check's OUTCOME. Nothing asserted that the outcome
+     * reaches the receipt, and `failingCodes` — the one function that carries it there — could
+     * be narrowed from `outcome !== "PASS"` to `outcome === "VIOLATION"` with all 426 tests
+     * green. Every UNRESOLVED code then vanished from `reasonCodes`, so a REVIEW receipt was
+     * issued that stated NO reason, and its `reasonCodesHash` committed to the empty list.
+     *
+     * The receipt is the product. A verdict whose stated reasons are empty is the failure this
+     * project's §5.4 reason codes exist to prevent, and it was reachable by deleting three
+     * characters.
+     *
+     * Asserted for every non-PASS row rather than for Case 4 alone, because pinning the one
+     * shape a reviewer exploited is this project's most-repeated defect.
+     */
+    for (const c of CASES.filter((x) => x.expect !== "PASS")) {
+        it(`${c.code} appears in reasonCodes${c.note ? ` (${c.note})` : ""}`, () => {
+            const result = evaluate(fixture(c.overrides));
+            assert.ok(
+                result.reasonCodes.includes(c.code),
+                `${c.code} was ${c.expect} but the receipt's reasonCodes are ` +
+                    `${JSON.stringify(result.reasonCodes)} — a verdict that does not state ` +
+                    "the reason it was reached for",
+            );
+        });
+    }
+
+    it("a conforming baseline states no reasons at all", () => {
+        // The paired positive: without it, `reasonCodes = every code` satisfies every row above.
+        assert.deepEqual(evaluate(fixture()).reasonCodes, []);
+    });
 });
 
 describe("the check table is exhaustive", () => {

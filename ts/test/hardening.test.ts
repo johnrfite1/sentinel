@@ -125,6 +125,14 @@ describe("A-044 — signer hardening", () => {
             ["action.actionNonce", (p: any) => (p.action.actionNonce = TOO_BIG)],
             ["action.chainId", (p: any) => (p.action.chainId = TOO_BIG)],
             ["mandate.maxNativeValueWei", (p: any) => (p.mandate.maxNativeValueWei = TOO_BIG)],
+            // A-068: this describe block is named for a property it did not measure. Two
+            // uint256 wire fields escaped `bounded()` entirely — an out-of-range value parsed,
+            // then threw inside leftPad at SIGNING time, so the one request a caller could
+            // trigger at will produced a SIGNER_ERROR and no D-012 refusal record.
+            ["policy.maxAllowanceIncreaseBaseUnits",
+             (p: any) => (p.policy.maxAllowanceIncreaseBaseUnits = TOO_BIG)],
+            ["evaluation.simulationBlockNumber",
+             (p: any) => (p.evaluation.simulationBlockNumber = TOO_BIG)],
         ] as const) {
             it(`rejects an out-of-range ${path} as a BAD_REQUEST`, () => {
                 const p = wire();

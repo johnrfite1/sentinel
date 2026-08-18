@@ -186,6 +186,20 @@ export function decodeCall(args: {
  * bundle's decoded parameters signer-attested rather than evaluator-asserted, so a
  * wrong-purpose ALLOW becomes detectable after the fact by the D-010 verifier.
  *
+ * "DETECTABLE BY THE D-010 VERIFIER" IS NOT YET TRUE OF THE WHOLE BUNDLE (A-068, from round
+ * five's E4, adjudicated and confirmed). What the signer binds is the PARAMETERS. The §5.6
+ * bundle also carries `normalizedAction` and `expectedEffects`, and those are checked by
+ * NEITHER the signer nor the verifier — the receipt's `evidenceHash` commits to them, so they
+ * are tamper-evident, but nothing compares them to the action and the mandate they purport to
+ * describe. A bundle can therefore state expected effects that its own action does not imply
+ * and still verify.
+ *
+ * Whether the SIGNER should compare them is a D-014 question and not an agent's to answer:
+ * D-014 deliberately kept conformance out of the signer. Whether the VERIFIER should is
+ * cheaper and needs no ruling — it already loads all three documents. Both are open (v1.1
+ * register); this comment states the gap rather than leaving the sentence above to imply it
+ * is closed.
+ *
  * BOUNDARY, STATED PRECISELY BECAUSE D-014 STATES IT PRECISELY: this checks that the
  * parameters match the bytes *given the selector*. It does NOT check that the selector
  * belongs at that target — that is `decodeCall`, and it remains the evaluator's job. A signer
