@@ -82,7 +82,25 @@ TRIGGERED IT AND IT RAN — ROUND FIVE, 2026-08-17 (A-057 commissioned it, A-058
 IT IS NOT CLEAN, so under D-047 the loop continues and under D-048 pre-publication is still
 blocked.**
 
-**THE NEXT MOVE IS TWO RULINGS FROM JOHN, and neither is an agent's to make.**
+**~~THE NEXT MOVE IS TWO RULINGS FROM JOHN~~ — BOTH TAKEN 2026-08-17 AT A FACILITATED
+WALKTHROUGH (D-050), ALONG WITH FOUR MORE. THE NEXT MOVE IS ROUND SIX, AND JOHN TRIGGERS IT.**
+
+**ROUND SIX IS DEFINED NOW, WHICH ROUND FIVE WAS NOT.** D-050(1) ratified A-060: a round is
+FULL BREADTH when every one of NINE named surfaces is covered by a reviewer that ran its own
+baseline and returned a coverage statement — guards and gate; signer; evaluator and decoders;
+vault; corpus/labels/ablation; the D-010 verifier; **the simulation and effect pipeline
+(`ts/src/simulate|propose|tools`, which round five assigned to nobody)**; the claims; and one
+wholly free lens. Two conditions ride with it: **at least one reviewer must be able to run the
+DEEP profile** (all eight of round five's were confined to the fast one by a socket-path limit
+and did not know it), and **each reviewer gets its own evidence directory** (four of eight
+clobbered each other's baseline logs). `docs/review-2026-08-17/` is round five's evidence, and
+its README says what that round could not reach.
+
+**Carry forward into the brief:** the 32 unconfirmed leads in register §13 fold into round six
+(D-050(3)), and reviewers are told that re-reporting a recorded item is not a new finding — but
+that showing a recorded item is WORSE than recorded IS one.
+
+*The two forks as they were put to him, kept because they are the reasoning behind the rulings:*
 
 1. ~~**D-048(b) HAS FIRED and the decision is back with him.**~~ **RULED (D-049(a)): the loop
    CONTINUES, and John will rule on what "full breadth" means as a named surface list — because
@@ -201,10 +219,11 @@ design forks. Never sign a gate, never certify a public claim.
 
 ## 3. Where the build is
 
-**73/73 Foundry · 405/405 TypeScript · 170/170 verifier · 78 tamper cases over 30 modes ·
+**73/73 Foundry · 407/407 TypeScript · 173/173 verifier · 78 tamper cases over 30 modes ·
 50 corpus fixtures · 7 samples · gate green at the deep profile · workspace guards OK.**
-*(Moved 160→170 / 77→78 / 29→30 by A-059's fixes; the three gate FLOORS were ratcheted in the
-same edit, which is the rule this line exists to enforce.)*
+*(A-059 moved 160→170 / 77→78 / 29→30; A-061 moved 405→407 TypeScript and 170→173 verifier.
+Every gate FLOOR was ratcheted in the SAME edit as the suite it bounds, which is the rule this
+line exists to enforce and the rule it has broken three times.)*
 *(Read `149/149` and omitted the tamper figures entirely until 2026-08-17 — stale for the third
 time, in the file that opens by declaring itself the memory. The verifier moved 146 → 149 → 154 →
 158 → 160 in two days and this line tracked none of it.)* *(This line read 66/66 and 70/70 for
@@ -358,7 +377,9 @@ reasoning, its rejected options, and where stated the condition that would rever
 | A-058 | **ROUND FIVE: NOT CLEAN. 51 findings, 2 CRITICAL, the same repair defect three times. D-048(b) fired** |
 | D-049 | John: **the loop continues and "full breadth" gets defined**; remediation scoped to the three LIVE defects |
 | A-059 | The three live defects fixed. **The first draft of the first fix shipped the very defect it was fixing** |
-| A-060 | **DRAFT, NOT RATIFIED** — a proposed named-surface definition of "full breadth" |
+| A-060 | ~~DRAFT~~ **RATIFIED by D-050(1)** — the nine-surface definition of "full breadth" |
+| D-050 | John's six walkthrough rulings: **A-060 ratified**, cluster C only, leads → round six, reports committed, push, kill the leaks |
+| A-061 | Cluster C built: the signer's prototype-chain verdict check and the verifier's array-precedence hole |
 | A-042 | **The D-010 experiment run properly:** a schema-only build met a real signed refusal it had never seen. Everything §5.5.1 STATED matched first time; the envelope it omitted diverged, plus three defects in the section — all mine, all corrected. 101 → 146 tests |
 
 ## 5. Traces — what worked, and what was a dead end

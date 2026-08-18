@@ -651,7 +651,16 @@ export function parseEvaluateAndSignRequest(v: unknown): EvaluateAndSignRequest 
     noExtras(ev, EVALUATION_FIELDS, "params.evaluation");
 
     const verdict = str(ev.verdict, "params.evaluation.verdict");
-    if (!(verdict in VERDICT)) fail("params.evaluation.verdict", "one of ALLOW, REVIEW, BLOCK");
+    // `Object.hasOwn`, NOT `in` (A-061). `in` walks the prototype chain, so `__proto__`,
+    // `toString`, `constructor` and every other Object.prototype member passed here as a legal
+    // verdict name. The consequence was not cosmetic: on the refusal path the signer produced a
+    // genuinely SIGNED §5.5.1 RefusalRecord whose `requestedVerdict` sits outside the published
+    // schema, and the ratified D-010 verifier enforces that schema — so an unauthenticated
+    // caller could choose a value that makes the signer's own proof-of-refusal unverifiable,
+    // which is precisely what D-012's record exists to prevent. On the attest path the same
+    // value reached `BigInt(verdictNumber(v))` and threw, returning SIGNER_ERROR from inside
+    // the signing routine rather than BAD_REQUEST at the boundary.
+    if (!Object.hasOwn(VERDICT, verdict)) fail("params.evaluation.verdict", "one of ALLOW, REVIEW, BLOCK");
 
     if (!Array.isArray(ev.reasonCodes)) fail("params.evaluation.reasonCodes", "an array");
     const reasonCodes = ev.reasonCodes.map((c, i) => {

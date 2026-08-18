@@ -183,6 +183,41 @@ describe("A-044 — signer hardening", () => {
             assert.throws(() => parseEvaluateAndSignRequest(p), /hex/i);
         });
 
+        it("rejects every Object.prototype member as a verdict (A-061)", () => {
+            // Kills: reverting `Object.hasOwn(VERDICT, verdict)` to `verdict in VERDICT`.
+            //
+            // `in` walks the PROTOTYPE CHAIN, so every member of Object.prototype passed as a
+            // legal verdict name. On the refusal path that produced a genuinely SIGNED §5.5.1
+            // RefusalRecord whose `requestedVerdict` is outside the schema -- and the ratified
+            // D-010 verifier enforces the schema, so the signer's own proof-of-refusal could
+            // not be established. On the attest path `BigInt(verdictNumber(v))` threw, giving
+            // an unauthenticated caller a SIGNER_ERROR from inside the signing routine.
+            //
+            // Asserted over the whole prototype rather than over the three spellings the
+            // reviewer happened to try: an enumerated bad list pins those spellings and
+            // nothing else, which is the A-054 lesson.
+            const inherited = Object.getOwnPropertyNames(Object.prototype);
+            assert.ok(inherited.length >= 10, "Object.prototype should have members to test");
+            for (const name of inherited) {
+                const p = wire();
+                p.evaluation.verdict = name;
+                assert.throws(
+                    () => parseEvaluateAndSignRequest(p),
+                    /one of ALLOW, REVIEW, BLOCK/,
+                    `"${name}" was accepted as a verdict`,
+                );
+            }
+        });
+
+        it("still accepts the three real verdicts", () => {
+            // The paired positive: without it, rejecting EVERY verdict satisfies the test above.
+            for (const name of ["ALLOW", "REVIEW", "BLOCK"]) {
+                const p = wire();
+                p.evaluation.verdict = name;
+                assert.doesNotThrow(() => parseEvaluateAndSignRequest(p));
+            }
+        });
+
         it("rejects a malformed reason code at the RPC boundary, not just at signing", () => {
             const p = wire();
             p.evaluation.reasonCodes = ["EVAL_HAS A SPACE"];

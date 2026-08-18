@@ -2143,6 +2143,63 @@ class TestRefusalBundle(unittest.TestCase):
         self.assertFalse(ok)
         self.assertFailsOn(checks, "signerFindings")
 
+    def test_a_shadowing_array_in_the_envelope_cannot_hide_the_top_level_one(self):
+        """A-061 (from A-058, H-3). A-055's repair resolved the two locations by PRECEDENCE.
+
+        Absent is not the same as trustworthy. `refusal-vault-paused` — the repository's only
+        refusal artifact — puts `reasonCodes` in the envelope and `signerFindings` at the TOP
+        LEVEL, so adding `"signerFindings": []` to the envelope shadowed the array actually in
+        use and the subset invariant passed over an empty set. Reproduced against the
+        unmutated verifier: an uncommitted reason code verified `=> PASS`, exit 0.
+
+        Written against the CORPUS'S OWN SHAPE, which is the specific thing the pre-existing
+        subset test could not do — it co-locates both keys in one envelope, so it never
+        exercised the split layout while its docstring claimed both were covered.
+        """
+        target = self.stage_refusal_corpus_shape()
+        doc = read_json(target, "receipt.json")
+        self.assertIsNotNone(doc.get("signerFindings"),
+                             "this fixture must carry findings at the TOP LEVEL, or the test "
+                             "is not exercising the shape the defect lived in")
+        doc["signerFindings"] = list(doc["signerFindings"]) + ["SIGNER_UNCOMMITTED_CODE"]
+        doc["refusalRecord"]["signerFindings"] = []          # the single shadowing key
+        write_json(os.path.join(target, "receipt.json"), doc)
+        ok, checks = _verify(target)
+        self.assertFalse(ok, "an uncommitted reason code was hidden by a shadowing array")
+        self.assertIn("`signerFindings` is published once, not twice with different contents",
+                      [c.name for c in checks if not c.ok])
+
+    def test_the_same_hole_in_reason_codes_is_closed_too(self):
+        # The ARGUMENT, not the demonstration: the identical precedence applied to
+        # `reasonCodes`, so the list a reader sees could differ entirely from the list that
+        # was hashed. Fixing only the array the reviewer exploited would be this project's
+        # most-repeated defect.
+        target = self.stage_refusal_corpus_shape()
+        doc = read_json(target, "receipt.json")
+        doc["reasonCodes"] = ["EVAL_NO_INJECTION_DETECTED", "EVAL_PURPOSE_CONFORMS"]
+        write_json(os.path.join(target, "receipt.json"), doc)
+        ok, checks = _verify(target)
+        self.assertFalse(ok)
+        self.assertIn("`reasonCodes` is published once, not twice with different contents",
+                      [c.name for c in checks if not c.ok])
+
+    def test_the_unmodified_corpus_refusal_still_verifies(self):
+        # The paired positive. Without it, a rule that rejects every refusal satisfies both
+        # tests above, and the split layout the corpus actually ships would be the casualty.
+        target = self.stage_refusal_corpus_shape()
+        ok, checks = _verify(target)
+        self.assertTrue(ok, [c.name for c in checks if not c.ok])
+        self.assertTrue(next(c for c in checks
+                             if c.name == "signerFindings ⊆ the committed reason-code set").ok)
+
+    def stage_refusal_corpus_shape(self):
+        """The shipped refusal bundle, copied verbatim: reasonCodes in the envelope,
+        signerFindings at the top level. Deliberately NOT the co-located envelope the other
+        refusal tests build."""
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp)
+        return stage(os.path.join(SAMPLES, "refusal-vault-paused"), tmp)
+
     def test_a_refusal_with_no_action_payload_fails(self):
         # §5.5.1: "A refusal is attributable or it is not issued." The record
         # names no mandate and no policy; actionHash is the only route to

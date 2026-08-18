@@ -1001,23 +1001,50 @@ def _refusal_reason_code_checks(located, receipt_doc, fields):
     """
     out = []
     source = located.get("doc") or {}
-    published = source.get("reasonCodes")
-    if published is None:
-        published = receipt_doc.get("reasonCodes")
 
-    # RESOLVED INDEPENDENTLY OF `published`, WHICH IS THE FIX (A-055). These two keys do not
-    # have to live in the same object, and IN THE SHIPPED CORPUS THEY DO NOT:
+    # BOTH LOCATIONS, AND THEY MUST AGREE — not one preferred over the other (A-061).
+    #
+    # A-055 found that `signerFindings` resolved to None on the repository's one refusal
+    # artifact, because the code consulted the top level only when the ENVELOPE key was absent.
     # `refusal-vault-paused/receipt.json` puts `reasonCodes` inside `refusalRecord` and
-    # `signerFindings` at the TOP LEVEL. The old code only consulted `receipt_doc` for findings
-    # when `published` was missing — so on the one refusal artifact in the repository `findings`
-    # resolved to None, the subset invariant was SKIPPED, and the verifier printed "the bundle
-    # carries no `signerFindings` array" about a bundle that carries one. Adding an uncommitted
-    # reason code to that array verified `=> PASS`, exit 0, against the unmutated verifier.
-    # `test_signer_findings_must_be_a_subset` co-locates both keys in one envelope, so it never
-    # exercised the corpus's own shape while its docstring claimed both were covered.
-    findings = source.get("signerFindings")
-    if findings is None:
-        findings = receipt_doc.get("signerFindings")
+    # `signerFindings` at the TOP LEVEL, so the subset invariant was silently SKIPPED and the
+    # verifier printed "the bundle carries no signerFindings array" about a bundle that carries
+    # one. That repair resolved findings independently of `reasonCodes` — and resolved it BY
+    # PRECEDENCE, envelope first.
+    #
+    # PRECEDENCE IS THE SAME DEFECT ONE LAYER IN, and round five demonstrated it (A-058, H-3):
+    # ABSENT is not the same as TRUSTWORTHY. Adding `"signerFindings": []` inside the envelope
+    # SHADOWS the top-level array — the one the shipped corpus actually uses, and the one the
+    # repair was written for — so `missing` is computed over an empty set and the check passes
+    # vacuously. Reproduced against the unmutated verifier: an uncommitted reason code in the
+    # top-level array verified `=> PASS`, exit 0. The identical hole applied to `reasonCodes`,
+    # so the list a reader sees could differ entirely from the list that was hashed.
+    #
+    # THE ARGUMENT, GENERALISED: a presenter must not choose which of two co-located arrays is
+    # invariant-checked. So both are read; if both are present and DISAGREE the bundle is
+    # rejected, because publishing two different answers to the same question is not a
+    # certifiable claim — the same reasoning that rejects a bundle whose domain.json
+    # contradicts the asserted trust root.
+    def _both(key):
+        """(value, conflict) for a §5.5.1 array that may sit in either place."""
+        inner, outer = source.get(key), receipt_doc.get(key)
+        if inner is not None and outer is not None and inner != outer:
+            return None, True
+        return (inner if inner is not None else outer), False
+
+    published, published_conflict = _both("reasonCodes")
+    findings, findings_conflict = _both("signerFindings")
+    for key, conflict in (("reasonCodes", published_conflict),
+                          ("signerFindings", findings_conflict)):
+        out.append(Check(
+            f"`{key}` is published once, not twice with different contents",
+            not conflict,
+            "" if not conflict else
+            f"the refusal envelope and the top level of receipt.json both carry `{key}` and "
+            f"they DISAGREE. Which one is invariant-checked is not the presenter's to choose; "
+            f"publish it in one place."))
+    if published_conflict or findings_conflict:
+        return out
 
     if published is None:
         out.append(Check(
