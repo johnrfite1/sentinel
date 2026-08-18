@@ -15,8 +15,8 @@ do not read the push as any relaxation of D-016.**
 
 **READING ORDER FOR A FRESH INSTANCE.** §0 for where the project stands and how it fails; §1 for
 what to do, which is probably nothing without an instruction from John; then `docs/decisions.md`
-for D-041 through D-044 and A-039 through A-047 — A-045, A-046 and A-047 are this session, and
-A-047 corrects A-046's headline and annotates A-045.
+for **D-045 through D-048 and A-045 through A-056**, which is the 2026-08-16/17 hardening arc.
+**Read D-047 and D-048 FIRST — they bind an agent and cannot be amended by one.**
 `docs/v1-1-register.md` is the list of known outstanding work, with each item's blocker stated.
 `docs/gate-s2-evidence.md` §11 is what is NOT in evidence — read it before repeating any claim
 about what this project has proven.
@@ -73,15 +73,31 @@ autonomy *none*).
 
 ## 1. What the next instance should do
 
-### FIRST: probably nothing. Read this before starting anything.
+### FIRST: read D-047 and D-048. They govern everything below and an agent may not amend them.
 
-**Both of D-002's mid-build gates are signed. There is no next gate until pre-publication, and
-`HANDOFF.md` records that "authorized through Gate S2" has been SPENT.** D-044(e) ruled the
-session closed at a clean point with pre-publication explicitly declined.
+**THE NEXT MOVE IS A FULL-BREADTH ADVERSARIAL REVIEW ROUND, and John triggers it.** Not a
+programme start — that is now blocked behind this. Updated 2026-08-17.
 
-**The next move is a PROGRAMME START, and it is John's to authorise.** If you have arrived with
-no instruction from him, the correct action is to say so and stop — not to find work. The
-v1.1 register exists so that "there is nothing to do" is checkable rather than a guess.
+- **D-047** — adversarial review continues **until one full round returns no finding that would
+  change code or a claim.** A *round* is at least one independent reviewer at a frozen commit
+  briefed to prove the work fails. *Clean* means no commits beyond the round's own record; **a
+  round that finds only things you decline to fix is NOT clean** — declining is a change to a
+  claim. **Scope may not shrink round-over-round**, and a deliberately narrow round coming back
+  clean does not close the loop. **AN AGENT MAY NOT RE-AUTHOR, NARROW, REINTERPRET OR ATTACH
+  EXCEPTIONS TO THIS RULE. Only John changes it.** It exists because the previous agent wrote a
+  stopping rule three times and each time the exception fired and it ran another round.
+- **D-048** — **pre-publication does not start until a clean round.** A clean round is a
+  PRECONDITION, not a trigger: the programme still needs John's separate authorisation.
+
+**BASE RATE, and it is the reason the loop exists: FOUR rounds, four times the previous round's
+fixes were broken** — including both rounds where the author had falsified everything itself
+first. Round three found a live path for a real private key to reach a remote. Round four found
+**two LIVE certification defects in shipped code**, needing no mutation at all. **"I falsified it
+myself" has a track record here of zero for four.**
+
+**If you have arrived with no instruction from John, say so and stop.** The correct action is
+still not to find work — the loop is John's to trigger, and the v1.1 register exists so that
+"there is nothing to do" is checkable rather than a guess.
 
 **Three things are specifically NOT authorised, and each was declined with reasons on 2026-08-16
 (D-043, D-044). "S2 is signed" is not permission for any of them:**
@@ -149,8 +165,11 @@ design forks. Never sign a gate, never certify a public claim.
 
 ## 3. Where the build is
 
-**73/73 Foundry · 405/405 TypeScript · 149/149 verifier · 50 corpus fixtures · 7 samples ·
-gate green at the deep profile · workspace guards OK.** *(This line read 66/66 and 70/70 for
+**73/73 Foundry · 405/405 TypeScript · 160/160 verifier · 77 tamper cases over 29 modes ·
+50 corpus fixtures · 7 samples · gate green at the deep profile · workspace guards OK.**
+*(Read `149/149` and omitted the tamper figures entirely until 2026-08-17 — stale for the third
+time, in the file that opens by declaring itself the memory. The verifier moved 146 → 149 → 154 →
+158 → 160 in two days and this line tracked none of it.)* *(This line read 66/66 and 70/70 for
 most of 2026-08-16 while all three numbers moved underneath it — in the file that opens by
 declaring itself the memory. Update it in the same edit that changes a suite, not later.)*
 
@@ -275,11 +294,58 @@ reasoning, its rejected options, and where stated the condition that would rever
 | A-044 | The six remaining step-3 findings, ruled and fixed: backpressure bounded nothing, the signer's namespace was caller-writable, `evidenceHash` non-injective, two refusal paths left no artifact. Anchor recency **recorded as a limit** |
 | A-043 | **CRITICAL, fixed.** A signed ALLOW was obtainable for calldata nobody decoded, and executed onchain twice in reproduction. A-028's repair covered one of two branches; **11 tests were passing through the hole** |
 | D-044 | **Session close.** Pushed; one last review of §9 step 3 (A-016's 6 unadjudicated skeptics); both capability deferrals CONFIRMED; **pre-publication NOT started** |
+| D-045 | S2 pack annotated for A-042 and A-047, **with a stopping rule** |
+| D-046 | Round two authorised; reading declared before results |
+| D-047 | **The review loop terminates on a CLEAN ROUND — and an agent may not amend that** |
+| D-048 | **Pre-publication sequences AFTER the loop.** A clean round is a precondition, not a trigger |
+| A-045 | The D-010 verifier was an S2 deliverable **no gate ran** |
+| A-046 | All eight guards falsified — headline later shown worthless (see A-047) |
+| A-047 | **Three reviewers: 7 guard defeats.** A-046's "8/8" refuted; corpus provenance never checked |
+| A-048 | **Round two broke A-047's fixes**, incl. one John had ratified. Floor counted tests that never ran |
+| A-049 | `evidence-hash` mode; vendor roster de-duplicated; casing residual narrowed |
+| A-050 | Round three launched; reading declared first; **taxonomy later proved incomplete** |
+| A-051 | **41 surviving mutations** across six verifier modules. My brief omitted `jcs.py` |
+| A-052 | **The secret guard let a real private key through** — `...` and `EXAMPLE` suppressed the line |
+| A-053 | The `verify.py` sweep commissioned; reviewer invited to criticise the brief |
+| A-054 | Charsets pinned by COMPLEMENT rather than by bad list |
+| A-055 | **`verify.py`: 14 survivors + TWO LIVE certification defects.** Presenter chose the trust root |
+| A-056 | Override cluster, the anchor, and **the corpus-vs-verifier category error** |
 | A-042 | **The D-010 experiment run properly:** a schema-only build met a real signed refusal it had never seen. Everything §5.5.1 STATED matched first time; the envelope it omitted diverged, plus three defects in the section — all mine, all corrected. 101 → 146 tests |
 
 ## 5. Traces — what worked, and what was a dead end
 
 **Dead ends and traps — do not repeat:**
+
+- **A CHECK THAT ALWAYS FIRES LOOKS EXACTLY LIKE ONE THAT CATCHES EVERYTHING.** A-051: the first
+  verdict check used BSD `sed` with `\|` alternation, which basic regex does not support, so it
+  matched nothing and failed on EVERY run including a clean tree. All three defeat probes duly
+  came back "caught, exit 1" — which is what a working fix looks like. **Caught only by running
+  the BASELINE first on an untouched tree.** This is the twin of the vacuous probe and it is the
+  more seductive one, because every falsification appears to succeed.
+- **A TEST THAT ASSERTS A PROPERTY OF THE CORPUS CANNOT CATCH A VERIFIER THAT ACCEPTS WHAT THE
+  CORPUS HAPPENS NOT TO CONTAIN.** A-056: `test_only_review_receipts_carry_an_override` asserts
+  no fixture overrides a BLOCK receipt — true, worth knowing, and completely silent on whether
+  the verifier would accept one. §5.5's check was changed to `verdict in ("REVIEW","BLOCK")` and
+  every test passed. Three checks survived on this confusion. **A fixture property says what the
+  repository CONTAINS; a verifier property says what the code ACCEPTS.**
+- **RE-SIGNING IS WHAT MAKES A BINDING THE WITNESS.** A-056: `override-nonce` bumps a SIGNED
+  field and leaves the old signature, so the signature check fires first and §3.3(9)'s nonce
+  binding never bites. `override-wrongkey` leaves `ownerAddress` declaring the owner, so §3.3(7)
+  never bites. A tamper mode that is caught by a *different* check than the one it targets is
+  worth nothing, and the tamper matrix will score that check as covered.
+- **THE TAMPER MATRIX IS NOT A COVERAGE MEASURE; MUTATION IS.** A-055 measured both directions
+  and refuted "a check no mode targets is a check nothing asserts" — an inference that had been
+  load-bearing across three entries. Of 33 checks no mode makes fail, 18 probed → **10 CAUGHT**.
+  Of checks that DO fail under some mode, 10 neutered → **5 SURVIVED**.
+- **`__pycache__` MASKS SAME-SIZE MUTATIONS.** A same-length edit landing in the same
+  filesystem-mtime second makes CPython reuse stale bytecode, so the mutated run executes clean
+  code and reads as a no-op — **and same-size mutations are the interesting ones.** Run `python3
+  -B` and clear `__pycache__` between variants.
+- **A REVIEW BRIEF IS AN INSTRUMENT AND NOTHING CHECKS IT.** Twice in two rounds the brief was
+  the defect: A-051's named five modules when there were six, omitting the one holding two of
+  that round's best findings; A-055's was scoped to `Check(...)` mutations and would have missed
+  the one live defect that needs no mutation. **Invite the reviewer to report that the brief is
+  wrong** — that is what surfaced the second one.
 
 - **A FALSIFICATION PROBE CAN ITSELF BE THE DEAD INSTRUMENT, AND ITS SILENCE READS AS A PASS.**
   A-045: to prove the new verifier stage could turn the gate red, I appended a deliberately
