@@ -1,0 +1,40 @@
+
+[1m== gate immutability (D-056(b)) ==[0m
+  extracted 104 lines of bootstrap verbatim from scripts/test.sh
+
+1. unchanged source
+  exit 0 and the body ran
+
+2a. CONTROL: the probe must actually be dangerous to an unprotected script
+  an unprotected script IS corrupted by this edit (exit 127, body never completed)
+
+2b. the protected script under the SAME edit
+  the body ran to completion — the mid-run edit did NOT corrupt the parser
+  no syntax error or shifted-offset damage in the output
+  exit 4 — a changed source is refused a zero exit
+  and it says so, rather than failing for an unrelated reason
+
+3. arguments preserved across the exec
+  all three arguments arrived, including the one containing a space
+
+4. snapshot cleanup
+  no snapshot left behind by either the passing or the failing run (7 before, 7 after)
+  and the body's own exit code survives the trap (9 preserved, not overwritten)
+
+5. inherited SENTINEL_GATE_SNAPSHOT from a parent (sibling invocation shape)
+  protected itself despite the inherited variable — the body survived the edit
+  and still refused a zero exit (exit 4)
+
+gate immutability: 5/5 — unchanged run passes · mid-run edit cannot corrupt the parser
+  and is refused a zero exit · arguments preserved · snapshot cleaned up on both paths
+  · a child inheriting a parent gate's snapshot variable still protects itself
+
+[1m== secret guard (A-007) ==[0m
+secret guard: clean
+
+[1m== rename gate (D-016) ==[0m
+rename gate: clean (johnrfite1/sentinel is private; D-016 publication block intact)
+
+[1m== labelling-prompt freeze (D-011a) ==[0m
+label prompt: frozen (02145d7b4f83d8c8…, D-011a)
+<TMP> line 141: this,: command not found

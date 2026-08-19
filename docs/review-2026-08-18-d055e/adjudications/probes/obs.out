@@ -1,0 +1,5 @@
+STAGE 1 ok
+  [child] inherited SENTINEL_GATE_SNAPSHOT=<SCRATCH>/scratchpad/adj/iso/sentinel-gate.Q0g81foU
+  [child] and it is WRITABLE by me
+  [child] rewrote the running parser's file in place (40 lines prepended)
+<SCRATCH>/scratchpad/adj/iso/sentinel-gate.Q0g81foU: line 3327: unexpected EOF while looking for matching `"'

@@ -1,0 +1,210 @@
+
+[1m== gate immutability (D-056(b)) ==[0m
+  extracted 104 lines of bootstrap verbatim from scripts/test.sh
+
+1. unchanged source
+  exit 0 and the body ran
+
+2a. CONTROL: the probe must actually be dangerous to an unprotected script
+  an unprotected script IS corrupted by this edit (exit 127, body never completed)
+
+2b. the protected script under the SAME edit
+  the body ran to completion — the mid-run edit did NOT corrupt the parser
+  no syntax error or shifted-offset damage in the output
+  exit 4 — a changed source is refused a zero exit
+  and it says so, rather than failing for an unrelated reason
+
+3. arguments preserved across the exec
+  all three arguments arrived, including the one containing a space
+
+4. snapshot cleanup
+  no snapshot left behind by either the passing or the failing run (1 before, 1 after)
+  and the body's own exit code survives the trap (9 preserved, not overwritten)
+
+5. inherited SENTINEL_GATE_SNAPSHOT from a parent (sibling invocation shape)
+  protected itself despite the inherited variable — the body survived the edit
+  and still refused a zero exit (exit 4)
+
+gate immutability: 5/5 — unchanged run passes · mid-run edit cannot corrupt the parser
+  and is refused a zero exit · arguments preserved · snapshot cleaned up on both paths
+  · a child inheriting a parent gate's snapshot variable still protects itself
+
+[1m== secret guard (A-007) ==[0m
+secret guard: clean
+
+[1m== rename gate (D-016) ==[0m
+rename gate: clean (johnrfite1/sentinel is private; D-016 publication block intact)
+
+[1m== labelling-prompt freeze (D-011a) ==[0m
+label prompt: frozen (02145d7b4f83d8c8…, D-011a)
+
+[1m== labelling artifacts pinned (A-064) ==[0m
+label integrity: 20 labelling artifact(s) pinned, none unpinned (A-064)
+
+[1m== published EIP-712 type strings (D-023) ==[0m
+type strings: 6/6 published in §5.8 match eip712.ts exactly (D-023)
+
+[1m== §5.7.1 check coverage (D-031) ==[0m
+eval codes: 41/41 engine checks documented in §5.7.1 (D-031)
+
+[1m== corpus class coverage (A-036) ==[0m
+corpus class coverage (A-036) — does each class exercise the class it names?
+  ok    14 of 20 classes exercise the class they name
+  note  39 of 43 individually fail a check their OWN class is about
+        not individually: F004, F048, F051, F056
+        A class stays green while a member of it exercises nothing. That is how
+        F051 would have shipped if it had had a sibling.
+  note  F002 is in the CONFORMING class 'exact-allowed-and-benign-variation' and does not conform: BLOCK on EVAL_SIMULATION_SUCCEEDS
+        RULED D-040 — this is deliberate, not a defect. The class means "exact
+        allowed action AND benign variations": variations that LOOK benign and
+        may not be. F002 is the fixture that exposed the D-021 gap and produced
+        the project's only inter-labeller disagreement. It earns its place BY
+        blocking. Printed every run so a BLOCK here reads as intent, not rot.
+
+corpus class coverage — CARRIED, never counted as covered
+  RESERVED  unexpected-internal-call   [D-025]
+            allowedCallGraphHash is RESERVED in v1 and read by nothing, so the class
+            cannot be driven to a positive case. Ratified, and the ablation says so
+            where the table is.
+  DELEGATED reentrancy-attempt   [A-036]
+            F056 is decided by the exact-target rule; its target has empty bytecode
+            and cannot re-enter. Delegated to the vault Foundry suite, which does
+            test reentrancy. Deferred with D-035 because repairing the fixture
+            changes the labelled view.
+  DELEGATED invalid-or-rotated-signer   [D-010]
+            Receipt authentication belongs to the isolated signer and the evaluator
+            has no code for it, so no corpus fixture can exercise it. F035 is ALLOW
+            with nothing failing. The signer has its own 42 tamper cases and the
+            independent Python verifier.
+  DELEGATED malicious-retrieved-instructions   [A-028 F-5]
+            The class subject is containment, measured by the corpus leak guard
+            rather than by a check. The ablation states these verdicts must not be
+            read as detections.
+  DELEGATED owner-override-and-block-behaviour   [D-039]
+            Found by this guard. F054/F055 fail on code identity and wrong resource,
+            neither about the override path — but they declare primaryEnforcement
+            vault-foundry-invariants and the vault suite does test the override
+            path. Ruled an accepted delegation: the declaration is accurate, the
+            corpus layer is simply not where it is proved.
+  GAP       conflicting-block-state   [D-039]
+            Found by this guard, and RULED A GENUINE UNCOVERED CLASS. F048 declares
+            primaryEnforcement conformance-engine — it claims to be proved HERE —
+            then fails on EVAL_SIMULATION_UNAVAILABLE and EVAL_TARGET_CODE_IDENTITY
+            and REVIEWs, which is an outage shape, not the failed-rule-that-blocks
+            shape D-030 describes. Nothing else covers it. OWES A FIXTURE at v1.1,
+            riding with the re-label per A-036.
+
+  1 GAP: conflicting-block-state
+  A GAP claims to be proved at this layer and is not. It OWES A FIXTURE — carried
+  so the ratchet can arm, not because the class is covered.
+
+corpus class coverage: pass on the ratchet; carried classes listed above
+
+[1m== vendor honesty (§7.5 Gate 5, D-008) ==[0m
+vendor honesty (§7.5 Gate 5, D-008) — mechanical conditions
+  ok    no artifact claims an executed or emulated vendor comparison (D-001, D-008(2))
+  ok    no named vendor appears in any measurement artifact (D-008(4))
+  ok    the ablation report carries §7.2's caveat verbatim, as §7.2 words it
+
+vendor honesty — D-008(1) and (3): John's to certify; agents may not clear these
+  ok    §2 capability table: 11 of 11 rows carry a marker resolving to a §13 entry
+        D-008(1)'s mechanical half: dated, and linked to a source that exists. A row
+        added later without [§13#N read YYYY-MM-DD] in its capability cell FAILS this
+        gate, as does one citing an entry §13 does not have. The count is a ratchet.
+  ok    §2 capability table: inference marking (D-008(3)) certified by record —
+        *Certified by John at the Gate 5 session, 2026-08-16 (D-038).*
+        The table hashes to the one certified. THIS SCRIPT DID NOT AND CANNOT CHECK
+        THAT THE CERTIFICATION IS RIGHT — it checks that a named certification exists
+        in §2 and that §2 has not changed since. Whether a sentence fairly describes
+        somebody else's product is John's, and no hash speaks to it.
+
+  Neither line above is this script deciding a public claim. The verification partition
+  gives those to John: public claims, autonomy none. docs/gate-5-vendor-audit.md holds the
+  per-row audit and the certification packet the Gate 5 session ruled from.
+
+vendor honesty: mechanical conditions pass; D-008(1) met and (3) certified by record
+
+[1m== solidity build + tests (profile: default) ==[0m
+  test/SentinelTypes.t.sol:SentinelTypesTest
+    [SUCCESS] testFuzz_actionHash_changesOnAnyBoundFieldMutation(uint8) (gas: 3792)
+    [SUCCESS] testFuzz_domainSeparator_isInjectiveOverChainAndVault(uint256,uint256,address,address) (gas: 5397)
+    [SUCCESS] testFuzz_mandateHash_changesOnAnyBoundFieldMutation(uint8) (gas: 5162)
+    [SUCCESS] test_allHashesAreDeterministic() (gas: 19967)
+    [SUCCESS] test_digest_isEip712Framed() (gas: 2261)
+    [SUCCESS] test_distinctPayloadTypesDoNotCollide() (gas: 15248)
+    [SUCCESS] test_domainSeparator_bindsChainAndVault() (gas: 4625)
+    [SUCCESS] test_mandateHash_bindsPurposeFieldsAPolicyEngineWouldMiss() (gas: 9609)
+    [SUCCESS] test_noPayloadTypeStringContainsASignatureField() (gas: 572884)
+    [SUCCESS] test_typehashes_matchGoldenDigests() (gas: 3963)
+    [SUCCESS] test_typehashes_matchIndependentTranscription() (gas: 2653)
+    [SUCCESS] test_zeroValuedEnumsAreFailClosed() (gas: 1802)
+  test/SentinelVault.backstops.t.sol:SentinelVaultBackstopsTest
+    [SUCCESS] test_LIMIT_nativeCeilingIsPerActionAndBoundsNoAggregate() (gas: 7996585)
+    [SUCCESS] test_LIMIT_receiptFromAFutureSignerGoesLiveOnRotation() (gas: 166037)
+    [SUCCESS] test_LIMIT_reinstatingARotatedOutSignerRevivesItsOldReceipts() (gas: 165008)
+    [SUCCESS] test_LIMIT_vaultCapsNativeValueOnlyAndNotTokenAuthority() (gas: 1612666)
+    [SUCCESS] test_aFailedExternalCallRevertsRatherThanConsumingTheNonce() (gas: 108113)
+    [SUCCESS] test_actionNamingADifferentVaultIsRejected() (gas: 53596)
+    [SUCCESS] test_calldataShorterThanASelectorIsRejected() (gas: 58621)
+    [SUCCESS] test_constructorRejectsAZeroOwnerOrSigner() (gas: 78915)
+    [SUCCESS] test_dataHashIsRecomputedFromTheBytesActuallyPassedOn() (gas: 59379)
+    [SUCCESS] test_executionEventReportsTheBoundNonceAndTheActualAmount() (gas: 116802)
+    [SUCCESS] test_expiredOverrideIsRejected() (gas: 83016)
+    [SUCCESS] test_nonceIsConsumedBeforeTheExternalCall() (gas: 1646089)
+    [SUCCESS] test_overrideAuthorizationIsLogged() (gas: 137236)
+    [SUCCESS] test_overrideCannotBeReusedForADifferentReviewReceipt() (gas: 82937)
+    [SUCCESS] test_overrideNamingADifferentMandateIsRejected() (gas: 141053)
+    [SUCCESS] test_overrideNamingADifferentNonceIsRejected() (gas: 82234)
+    [SUCCESS] test_receiptClaimingADifferentMandateIsRejected() (gas: 65114)
+    [SUCCESS] test_recoverEventReportsTheAmountItActuallyMoved() (gas: 51733)
+    [SUCCESS] test_recoverRejectsTheZeroAddress() (gas: 14326)
+    [SUCCESS] test_rotateSignerRejectsTheZeroAddress() (gas: 18857)
+    [SUCCESS] test_selectorOffTheVaultAllowlistIsRejected() (gas: 61169)
+    [SUCCESS] test_zeroPolicyHashDoesNotMatchAnUnsetPolicy() (gas: 1475065)
+  test/SentinelVault.invariants.t.sol:SentinelVaultInvariantTest
+    [SUCCESS] invariant_failedCallNeverCountsAsExecution() (gas: runs 256, calls 16384, reverts 9)
+    [SUCCESS] invariant_futureNonceNeverExecutes() (gas: runs 256, calls 16384, reverts 9)
+    [SUCCESS] invariant_noActionHashExecutesTwice() (gas: runs 256, calls 16384, reverts 9)
+    [SUCCESS] invariant_nonceEqualsSuccessfulExecutions() (gas: runs 256, calls 16384, reverts 9)
+    [SUCCESS] invariant_onlyAllowVerdictsExecuteOnTheAutomaticPath() (gas: runs 256, calls 16384, reverts 9)
+    [SUCCESS] invariant_onlyReviewVerdictsExecuteOnTheOverridePath() (gas: runs 256, calls 16384, reverts 9)
+    [SUCCESS] invariant_overrideMustNameTheExactAction() (gas: runs 256, calls 16384, reverts 9)
+    [SUCCESS] invariant_overrideRequiresTheOwnersOwnSignature() (gas: runs 256, calls 16384, reverts 9)
+    [SUCCESS] invariant_ownerAndCapsAreImmutableFromExecution() (gas: runs 256, calls 16384, reverts 9)
+    [SUCCESS] invariant_pausedNeverExecutes() (gas: runs 256, calls 16384, reverts 9)
+    [SUCCESS] invariant_tamperedAttemptsNeverExecute() (gas: runs 256, calls 16384, reverts 9)
+    [SUCCESS] test_everyHandlerActionIsRegisteredWithTheFuzzer() (gas: 63115)
+    [SUCCESS] test_nonVacuity_adversarialPathsAreReachedAndRejected() (gas: 439950)
+    [SUCCESS] test_nonVacuity_futureNonceAndFailingCallArmsAreReachable() (gas: 409000)
+    [SUCCESS] test_nonVacuity_overridePathExecutesAndItsAdversarialArmsDoNot() (gas: 497689)
+    [SUCCESS] test_nonVacuity_ownerControlsAreReachable() (gas: 307013)
+    [SUCCESS] test_nonVacuity_validPathActuallyExecutes() (gas: 452662)
+  test/SentinelVault.invariants.t.sol:SentinelVaultReentrancyTest
+    [SUCCESS] test_anAllowExecutionCannotBeReenteredThroughTheOverridePath() (gas: 1061640)
+    [SUCCESS] test_reentrantOverrideCannotExecuteInTheSameTransaction() (gas: 1085338)
+    [SUCCESS] test_reentrantSecondReceiptCannotExecuteInTheSameTransaction() (gas: 757547)
+  test/SentinelVault.t.sol:SentinelVaultTest
+    [SUCCESS] testFuzz_nonOwnerCannotTouchOwnerControls(address) (gas: 32755)
+    [SUCCESS] test_anyCallerMayRelayAValidReceipt() (gas: 117249)
+    [SUCCESS] test_blockReceiptNeverExecutes() (gas: 131214)
+    [SUCCESS] test_case1_allowReceiptExecutes() (gas: 116937)
+    [SUCCESS] test_expiredActionIsRejected() (gas: 53247)
+    [SUCCESS] test_expiredReceiptIsRejected() (gas: 65487)
+    [SUCCESS] test_overrideForADifferentActionIsRejected() (gas: 81378)
+    [SUCCESS] test_overrideSignedByNonOwnerIsRejected() (gas: 90120)
+    [SUCCESS] test_pausedExecutionAlwaysFails() (gas: 112714)
+    [SUCCESS] test_receiptFromNonActiveSignerIsRejected() (gas: 72832)
+    [SUCCESS] test_receiptNamingAStaleSignerIsRejected() (gas: 68456)
+    [SUCCESS] test_replay_sameReceiptCannotExecuteTwice() (gas: 139524)
+    [SUCCESS] test_replay_staleNonceIsRejected() (gas: 146444)
+    [SUCCESS] test_reviewPlusOwnerOverrideExecutes() (gas: 133163)
+    [SUCCESS] test_reviewReceiptDoesNotExecuteOnTheAutomaticPath() (gas: 72739)
+    [SUCCESS] test_revokedMandateBlocksExecution() (gas: 59058)
+    [SUCCESS] test_rotationInvalidatesOutstandingReceipts() (gas: 77057)
+    [SUCCESS] test_signerCannotReachOwnerControls() (gas: 20358)
+    [SUCCESS] test_tamper_anyBoundFieldMutationIsRejected() (gas: 430665)
+    [SUCCESS] test_uninitialisedVaultRejectsZeroHashes() (gas: 1450194)
+    [SUCCESS] test_valueOverHardCapIsRejectedEvenWithAValidReceipt() (gas: 57542)
+  75 tests: 75 passed, 0 failed, 0 skipped
+  foundry: 75 tests (floor 75)
+<TMP> line 304: erifier: command not found

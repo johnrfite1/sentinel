@@ -119,6 +119,10 @@ since="${SENTINEL_SCOPE_BASE:-a89c255~1}"
 preservation_only() {
     case "$1" in
         docs/review-2026-08-18-round-six/*) return 0 ;;
+        # The D-055(e) record. Preservation for the same reason: it is the review's own
+        # evidence, sanitized only for paths, and it repairs nothing. Its FINDINGS-LEDGER.tsv
+        # is data the checker in scripts/check-findings-ledger.sh reads, not behaviour.
+        docs/review-2026-08-18-d055e/*) return 0 ;;
         *) return 1 ;;
     esac
 }
