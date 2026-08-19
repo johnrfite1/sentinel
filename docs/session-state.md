@@ -3,8 +3,15 @@
 Rewritten at the end of each working session. **This file, not the conversation, is the
 memory.** If it disagrees with anything an agent remembers, this file wins.
 
-Last updated: **2026-08-19 (post-A-080; the D-055(e) review is RUN, ADJUDICATED and REMEDIATED —
-and its remediation is only PARTLY reverified)**. Branch `step-3/isolated-signer`.
+Last updated: **2026-08-19 (post-A-081; the targeted reverification RAN and EIGHT OF ELEVEN ITEMS
+FAILED — the defects it names are STILL IN THE TREE, unrepaired)**. Branch
+`step-3/isolated-signer`.
+
+> **READ THIS FIRST. THE REPAIR LOOP IS PAUSED AND THE DECISION IS JOHN'S.** D-052(b)'s reversal
+> condition (a) — *"if remediation performed under the new sibling-and-argument protocol itself
+> produces defects at the rate the last five repairs did, the protocol change has not worked and
+> it comes back to John rather than being iterated by an agent"* — **HAS FIRED.** A-081 is the
+> measurement. **Do not start repairing the A-081 failures.** An agent may not resume this loop.
 
 **WHAT "REVERIFIED" DOES AND DOES NOT COVER — READ THIS BEFORE ANY OTHER LINE IN THIS FILE.**
 A-079 said the review was "REMEDIATED and INDEPENDENTLY REVERIFIED", that "every repair has been
@@ -20,9 +27,12 @@ when written, and A-078's own commit message says so.** The accurate sequence is
 5. **THOSE POST-VERIFIER CORRECTIONS HAVE NOT BEEN INDEPENDENTLY REVERIFIED.** Nobody except
    their author has looked at them.
 
-**TARGETED INDEPENDENT REVERIFICATION OF THE `8990255` CORRECTIONS IS THEREFORE OUTSTANDING.**
-It is targeted, not another full round — D-055(e) is spent and a further round is John's to
-authorise (D-057(9)).
+**THAT TARGETED REVERIFICATION HAS NOW RUN (A-081) AND MOST OF IT FAILED.** Five independent
+reviewers against frozen `c8d15a7`: **11 scope items, 8 FAIL, 3 HOLD** — derived from
+`docs/review-2026-08-19-d057-targeted/VERDICT-LEDGER.tsv`, not counted by hand. **Two of the
+failures are A-080's own corrections, written hours earlier.** Six further findings were raised
+and are filed unadjudicated, including **`V3-N2`, which reaches a §7.5 GATE 5 condition**.
+**EVERY ONE OF THOSE DEFECTS IS STILL PRESENT. Nothing was repaired in A-081 — it is a record.**
 
 **DEEP-GATE PROVENANCE.** The deep gate ran from a clean isolated worktree at exactly `8990255`
 and PASSED. **Commits after it are documentation only**, so this pointer is EXPECTED to trail
@@ -217,10 +227,11 @@ instruction, the correct action is to report the state below and wait.
 |---|---|
 | Deep-verified commit | **`8990255`** — deep gate PASSED from a clean isolated worktree at that exact SHA |
 | Push status | **DATED CHECKPOINT FACT: John pushed through `254db64` on 2026-08-19** (authorized private backup, not publication — D-016 unchanged). **Everything after it is LOCAL and stays local pending his confirmation.** **Run `git log --oneline origin/step-3/isolated-signer..HEAD`; any count written here is stale the moment the next commit lands, which is how it was stale when this table was first drafted** |
-| Reverification | **PARTIAL.** `R1-F1` reverified at `497d1ce` and HOLDS. `R3-F6`/`R3-F7`/`R4-F4` FAILED it; `V3-N1` and the `R2-F6`/`R2-F4`/`R3-F4` residuals were found. **Corrections for all of those were made in `8990255` AFTER the verifiers finished and are NOT independently reverified** |
+| Reverification | **RUN AND MOSTLY FAILED (A-081).** `R1-F1` reverified at `497d1ce` and HOLDS. The `8990255` corrections were then reverified at frozen `c8d15a7` by five independent reviewers: **8 of 11 items FAIL** — `R3-F7`, `R4-F4`, `V3-N1`, `R2-F6`, `R4-F3`, `R2-F4`, and both A-080 corrections. HOLD: `R3-F6`, `R3-F4`, A-080's rejected-design correction. **Counts derived from `VERDICT-LEDGER.tsv`** |
+| Unrepaired defects | **ALL OF THEM.** `exit-criterion-packet.md` §7 carries a FALSE BLOCKER; §11.0 carries a false "FIVE OF THESE TEN"; three guards certify what they do not measure; the vault can log an override as not-an-override at 92/92 green. **See A-081(2) and A-081(4)** |
 | Suites | all three green with count floors ratcheted in the same edit as their suite — **run `./scripts/check-suite-floors.sh`; the numbers are deliberately not printed here** |
 | Guards | focused guards green; workspace guards passed **on ratcheted baseline debt**, which is not the same as clean |
-| D-055 exit | **NOT MET** — see below |
+| D-055 exit | **NOT MET, and FURTHER from met than before this cycle** — condition 4 now has MORE known-false claims against it, not fewer |
 
 **No suite number appears in that table, and that is deliberate.** This file published stale
 counts repeatedly, and the last instance was caught doing it again by an independent verifier
@@ -245,10 +256,13 @@ counts repeatedly, and the last instance was caught doing it again by an indepen
    token** (register §13.6 item 5), which is why a passing deep gate is evidence about the run,
    not proof the gate cannot be corrupted. **Read A-077's and A-078's RESIDUALS paragraphs in
    full before you treat any of them as closed.**
-5. **Whether the outstanding targeted reverification runs, and when.** The `8990255` corrections
-   have never been looked at by anyone but their author. **This is TARGETED reverification of
-   named items, NOT another review round** — D-055(e) is spent, and a further round is John's to
-   authorise (D-057(9)). An agent does not start either on its own.
+5. **THE BIG ONE — whether the repair loop continues at all, and in what form.** The targeted
+   reverification ran (A-081) and returned **8 of 11 FAILED**, two of them corrections written the
+   same day. **D-052(b)'s reversal condition (a) has fired**, and it reserves this to John
+   explicitly: the protocol change "has not worked and it comes back to John rather than being
+   iterated by an agent." **An agent may not resume repairing.** What John rules on is whether the
+   repair-then-claim loop continues as-is, changes shape, or stops — and what happens to the
+   defects listed in A-081(2) and A-081(4), which are all still in the tree.
 
 ### THE D-055 EXIT ASSESSMENT, as it stands
 
@@ -256,8 +270,8 @@ counts repeatedly, and the last instance was caught doing it again by an indepen
 |---|---|
 | One independent fixed-scope post-D-052 review on the repaired apparatus | **MET** — four reviewers, scope fixed by John BEFORE the run (D-056(d)) |
 | Passing deep gate and workspace guards | **MET** at `8990255` |
-| Zero unresolved confirmed Critical/High | **The CRITICAL (`R1-F1`) is REPAIRED and INDEPENDENTLY REVERIFIED at `497d1ce` — John's to confirm.** The three FAILED repairs and `V3-N1` were corrected in `8990255`, and **those corrections are NOT independently reverified** |
-| Zero known false or unsupported signed/certified claims | **John ruled NOT MET (D-057(1)); corrections now made — his to reassess** |
+| Zero unresolved confirmed Critical/High | **The CRITICAL (`R1-F1`) is REPAIRED and INDEPENDENTLY REVERIFIED at `497d1ce` — John's to confirm.** The `8990255` corrections HAVE now been reverified (A-081) and **8 of 11 items FAILED**; all are MEDIUM-and-below by their original adjudication, but none is repaired |
+| Zero known false or unsupported signed/certified claims | **NOT MET, and WORSE than at D-057(1).** A-081 confirmed known-false statements still standing in `exit-criterion-packet.md` §7 (a FALSE BLOCKER), `gate-s2-evidence.md` §11.0, `decisions.md` A-078(4), and this file. **None is repaired** |
 
 **A GREEN DEEP GATE IS NOT COVERAGE (T4).** The same run prints `gate immutability: 10/10` from
 an instrument whose PREVIOUS version reported 5/5 while blind to a CRITICAL. Carried and

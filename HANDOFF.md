@@ -16,8 +16,10 @@ terminating condition** with a bounded, risk-based exit; the one bounded review 
 as D-055(e) (four reviewers, scope fixed by John in advance, all deliverables on disk) and
 returned **23 findings including a CRITICAL in the certification gate itself**; John ruled on
 every one (D-057); A-077 repaired them and **A-078 independently reverified the repairs and sent
-three back as FAILED** before they were corrected. **THE CORRECTIONS MADE IN RESPONSE ARE NOT
-INDEPENDENTLY REVERIFIED; targeted reverification of them is OUTSTANDING.** **D-055's exit is still
+three back as FAILED** before they were corrected. **THOSE CORRECTIONS HAVE NOW BEEN INDEPENDENTLY
+REVERIFIED (A-081) AND 8 OF 11 SCOPE ITEMS FAILED** — two of them corrections written the same
+day — **and none of the resulting defects is repaired. D-052(b)'s reversal condition (a) has
+fired, so the repair loop is PAUSED and is John's to rule on; an agent may not resume it.** **D-055's exit is still
 NOT MET** — condition four is John's to reassess and the Critical's disposition is his to confirm. Nothing here changes
 the paragraph above: no gate is signed or reopened, no public claim is certified, **D-016 still
 blocks all publication**, and the §14.8 ladder is still not an agent's to start climbing. Start

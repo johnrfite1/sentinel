@@ -1,0 +1,8 @@
+# Findings raised DURING this cycle that were not in its fixed scope. NOT adjudicated.
+# id	source	severity_as_filed	surface	status
+V3-N2	V3	MEDIUM	scripts/check-vendor-honesty.sh (Gate 5 condition)	filed-not-adjudicated
+F7-R1	V1	unrated	contracts/src/SentinelVault.sol NatSpec	filed-not-adjudicated
+N-EVAL-ACTION-TARGET	V4	LOW	ts/test/evaluate.checks.test.ts	filed-not-adjudicated
+N-DECODE-E4	V4	unrated	ts/src/decode/index.ts	filed-not-adjudicated
+N-TESTSH-FLOORS	V5	unrated	scripts/test.sh coverage-boundary prose	filed-not-adjudicated
+N-SCOPE-CD	V2	MEDIUM	scripts/check-review-scope.sh line 47	filed-not-adjudicated

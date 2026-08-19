@@ -1,0 +1,13 @@
+# D-057(9) targeted reverification of c8d15a7. ONE ROW PER SCOPE ITEM. Authoritative.
+# item	reviewer	verdict	adjudicator_recheck	kind
+R3-F6	V1	HOLD	accepted-on-reviewer-evidence	repair
+R3-F7	V1	FAIL	reproduced	repair
+R4-F4	V2	FAIL	reproduced	repair
+V3-N1	V2	FAIL	reproduced	repair
+R2-F6	V3	FAIL	reproduced	repair
+R4-F3	V3	FAIL	reproduced	repair
+R2-F4	V4	FAIL	reproduced	repair
+R3-F4	V4	HOLD	spot-checked	accepted-limit
+A-080-count	V5	FAIL	reproduced	correction
+A-080-rejected-design	V5	HOLD	accepted-on-reviewer-evidence	correction
+A-080-handoff	V5	FAIL	reproduced	correction
