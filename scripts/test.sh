@@ -69,6 +69,16 @@ if [ "${SENTINEL_GATE_SNAPSHOT:-}" != "$_gate_self" ]; then
     # `exec` so there is no parent process still holding the mutable file open, and "$@" so
     # every original argument survives — a bootstrap that silently dropped `--gate` would
     # turn every deep run into a fast one while printing the deep banner.
+    #
+    # ONE OPERATIONAL CONSEQUENCE, recorded because it will surprise somebody mid-incident.
+    # After the exec this process is `bash /tmp/sentinel-gate.XXXXXXXX --gate`: the original
+    # path is GONE from the command line, so **`pkill -f "scripts/test.sh"` no longer finds a
+    # running gate.** Use `pkill -f sentinel-gate`. Found while killing a runaway deep run
+    # during A-076; deferred by John as operational documentation rather than a correctness
+    # defect. No executable consumer greps for the gate by name — but round five's `D-11` was
+    # FOUND with `pgrep -f scripts/test.sh` (see
+    # `docs/review-2026-08-17/lens-D-evaluator-and-decoders.json`), so a reviewer reusing that
+    # recorded technique would now see a quiet tree and be wrong.
     SENTINEL_GATE_SNAPSHOT="$_gate_snap" \
     SENTINEL_GATE_SOURCE="$_gate_src" \
     SENTINEL_GATE_SOURCE_SHA="$_gate_before" \
