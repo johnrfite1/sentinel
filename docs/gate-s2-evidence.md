@@ -520,7 +520,13 @@ baseline had five members. R4 found it anyway. The brief is preserved unaltered 
 `docs/review-2026-08-18-d055e/briefs/` as the historical record; this is the correction. The heading keeps its original number and this
 correction sits beside it rather than replacing it, because "ten accepted limits" is quoted in
 `docs/exit-criterion-packet.md` §3 and in `docs/session-state.md`, and silently restating it as
-nine would leave those citations pointing at a number that no longer appears anywhere.
+~~nine~~ **six** would leave those citations pointing at a number that no longer appears anywhere.
+
+**THE STRUCK `nine` WAS ITSELF STALE — a leftover from an earlier revision of this very paragraph,
+and the third wrong count inside a subsection whose entire subject is a wrong count.** It is struck
+rather than deleted so the drift stays visible. **The two citations it names are corrected in the
+same checkpoint** (`docs/exit-criterion-packet.md` §3, `docs/session-state.md`). Corrected
+2026-08-19 (A-080).
 
 **These are confirmed defects that John has decided not to fix.** Round five's reviewers found
 them, four independent adjudicators reproduced them, and each is real. They are listed here
@@ -542,8 +548,16 @@ re-report** — the same rule the review briefs carry.
 **FIVE OF THESE TEN ARE NO LONGER ACCEPTED LIMITS — THEY ARE FIXED (A-076, 2026-08-18, under
 D-056(a)). `D-09(c)`, `D-10`, `G-5`, `H-5` and `H-8` were repaired at John's direction in the
 bounded pre-review stabilization checkpoint.** Each carries its mutation evidence in A-076 and
-its status in `docs/v1-1-register.md` §13.4. **What remains accepted here is five: `D-07`,
-`D-09`(a),(b), `E5`, `F-VAULT-4` and `F-VAULT-5`.**
+its status in `docs/v1-1-register.md` §13.4. ~~**What remains accepted here is five: `D-07`,
+`D-09`(a),(b), `E5`, `F-VAULT-4` and `F-VAULT-5`.**~~
+
+**THAT SENTENCE IS FALSE AND IS SUPERSEDED. It is the SAME `R4-F1` defect this subsection already
+corrects thirty lines above it — the five-item list drops `G-3`.** The accepted set is **SIX**, and
+the derivation above is the ONE authoritative count in this subsection: `D-07`, `D-09`(a),(b),
+`E5`, `F-VAULT-4`, `F-VAULT-5` **and `G-3`**. **This sentence survived the first correction because
+that correction was written where the reader was not — `R2-F4`'s shape applied to `R4-F1`'s
+content, in the document both findings are about.** Struck rather than deleted so the drift stays
+visible. Corrected 2026-08-19 (A-080).
 
 **AND `D-10`'s T2 DISCREPANCY IS RESOLVED THE WAY D-055's T2 REQUIRES:** John adopted the
 adjudicator's MEDIUM for part (c) rather than leaving it at LOW through an undocumented

@@ -3,24 +3,49 @@
 Rewritten at the end of each working session. **This file, not the conversation, is the
 memory.** If it disagrees with anything an agent remembers, this file wins.
 
-Last updated: **2026-08-19 (post-A-078; the D-055(e) review is RUN, ADJUDICATED, REMEDIATED and
-INDEPENDENTLY REVERIFIED)**. Branch `step-3/isolated-signer`.
+Last updated: **2026-08-19 (post-A-080; the D-055(e) review is RUN, ADJUDICATED and REMEDIATED —
+and its remediation is only PARTLY reverified)**. Branch `step-3/isolated-signer`.
 
-**THE DEEP-VERIFIED COMMIT IS `8990255` (A-078).** The deep gate ran from a clean isolated
-worktree at exactly that SHA and PASSED. **The commit carrying THIS handoff comes after it and
-is documentation only**, so this pointer is EXPECTED to trail HEAD by one — check `git log`
-rather than treating a mismatch as a finding. That is the stale-pointer defect this file has
-now recorded four times, in the file that opens by declaring itself the memory.
+**WHAT "REVERIFIED" DOES AND DOES NOT COVER — READ THIS BEFORE ANY OTHER LINE IN THIS FILE.**
+A-079 said the review was "REMEDIATED and INDEPENDENTLY REVERIFIED", that "every repair has been
+INDEPENDENTLY REVERIFIED", and that "there is no agent work outstanding". **All three were false
+when written, and A-078's own commit message says so.** The accurate sequence is:
 
-**UNPUSHED.** Count with `git log origin/step-3/isolated-signer..HEAD`; do not quote a number
-from here. The repository is PRIVATE — `check-rename-gate.sh` checks this on every gate run —
-and **D-016 still blocks all publication**. Pushing to the private remote is backup, not
-publication; do not read a push as any relaxation of D-016.
+1. The bounded D-055(e) review COMPLETED — four reviewers, 23 finding IDs, all cross-adjudicated.
+2. **The CRITICAL repair (`R1-F1`) was independently reverified at `497d1ce` and HOLDS.**
+3. **THREE OTHER REPAIRS FAILED that reverification — `R3-F6`, `R3-F7`, `R4-F4`** — and a fourth
+   defect, **`V3-N1`**, was found by the verifiers unasked, together with the `R2-F6` and `R2-F4`
+   residuals and a fabricated `EVAL_VAULT_*` code name (`R3-F4`'s neighbourhood).
+4. **Corrections for all of those were then made in `8990255` — AFTER the verifiers had finished.**
+5. **THOSE POST-VERIFIER CORRECTIONS HAVE NOT BEEN INDEPENDENTLY REVERIFIED.** Nobody except
+   their author has looked at them.
+
+**TARGETED INDEPENDENT REVERIFICATION OF THE `8990255` CORRECTIONS IS THEREFORE OUTSTANDING.**
+It is targeted, not another full round — D-055(e) is spent and a further round is John's to
+authorise (D-057(9)).
+
+**DEEP-GATE PROVENANCE.** The deep gate ran from a clean isolated worktree at exactly `8990255`
+and PASSED. **Commits after it are documentation only**, so this pointer is EXPECTED to trail
+HEAD — check `git log` rather than treating a mismatch as a finding. That is the stale-pointer
+defect this file has now recorded four times, in the file that opens by declaring itself the
+memory.
+
+**PUSH STATUS — DATED CHECKPOINT FACT, NOT A STANDING CLAIM.** **On 2026-08-19 John pushed the
+branch to the private remote through `254db64`**, an authorized private backup he performed
+himself. **A-079's "nothing … pushed" was TRUE when that commit was written and became stale four
+minutes later**; it is history, not a false claim at the time of writing. **Everything committed
+after `254db64` is LOCAL and stays local until John explicitly confirms otherwise.** Never quote
+an ahead/behind number from this file — it is stale the moment the next commit lands; run
+`git log --oneline origin/step-3/isolated-signer..HEAD`. The repository is PRIVATE —
+`check-rename-gate.sh` checks this on every gate run — and **D-016 still blocks all publication.
+Pushing to the private remote is backup, not publication; do not read a push as any relaxation
+of D-016.**
 
 **READING ORDER FOR A FRESH INSTANCE. THE D-055(e) BOUNDED REVIEW HAS RUN.** Four reviewers,
-23 findings, all cross-adjudicated; every confirmed finding is now repaired, accepted as a
-documented limit, or refuted; and every repair has been INDEPENDENTLY REVERIFIED. **THERE IS NO
-AGENT WORK OUTSTANDING. THE NEXT MOVE IS JOHN'S.**
+23 findings, all cross-adjudicated; every confirmed finding is repaired, accepted as a documented
+limit, or refuted. **THE NEXT MOVE IS JOHN'S — but "no agent work outstanding" is NOT true**: the
+targeted reverification named above is outstanding, and A-077's and A-078's residuals are recorded
+and unrepaired. **Do not read this file as a completion notice.**
 
 Read, in this order:
 
@@ -31,9 +56,12 @@ Read, in this order:
    fixed the review's scope; D-057 is John's rulings on its findings and the authorization the
    last cycle ran under. **D-048 still binds unchanged:** a clean result is a PRECONDITION for
    pre-publication, never a trigger.
-4. **`docs/decisions.md`: A-077 then A-078.** What was repaired, and what the independent
-   reverification sent back as FAILED. **A-078 is the more useful of the two** — it is a list
-   of my own repairs being defeated hours after I claimed them.
+4. **`docs/decisions.md`: A-077, then A-078, then A-080.** What was repaired; what the
+   independent reverification sent back as FAILED; and what the A-080 correction checkpoint then
+   fixed in the documentation. **A-078 is the most useful of the three** — it is a list of my own
+   repairs being defeated hours after I claimed them. **A-080(1) is the second most useful**: it
+   is the handoff file itself caught claiming a reverification that had not happened, in the same
+   commit that added three new defect classes about exactly that.
 5. **`docs/review-2026-08-18-d055e/`** — the curated review record: brief, four reviewers'
    deliverables, cross-adjudications, and `ADJUDICATED-D055E.md`. `FINDINGS-LEDGER.tsv` is
    canonical; **run `./scripts/check-findings-ledger.sh` rather than counting by hand.**
@@ -72,8 +100,11 @@ agent in CI. D-041 carries an annotation naming what became known after it was s
 reproduced twice onchain.** Fixed, with regression tests. Read A-043 and A-044 before trusting
 anything about the signer. **`gate-s2-evidence.md` §11 is NOT empty** — this file once claimed it
 was, twenty-two lines after telling a fresh instance to read it (`B-7`). It carries the pack's
-stated limits plus, as of D-051(b), **§11.0: ten confirmed findings John has ACCEPTED as limits
-rather than fixed.**
+stated limits plus **§11.0: findings John has ACCEPTED as limits rather than fixed — ten when
+D-051(b) accepted them, and SIX today** (`D-07`, `D-09`(a),(b), `E5`, `F-VAULT-4`, `F-VAULT-5`,
+`G-3`), five having been FIXED by A-076. **Read the derivation in §11.0; do not re-count by hand
+and do not quote a count from here.** §11.0 twice mis-stated the remainder as five by dropping
+`G-3` (`R4-F1`, CONFIRMED; corrected A-080).
 
 **THE PATTERN, now the operating assumption rather than an observation. THIS IS THE PARAGRAPH A
 REVIEWER BRIEF HAS TO ENCODE.** The defects are *honesty* defects — a claim stronger than its
@@ -134,7 +165,8 @@ more.**
 **A-075 (2026-08-18) FINISHED D-055(d)'S FOUR PREREQUISITES.** `E3` is BUILT — the signer's reads
 are pinned to one block and the receipt's anchor bound to it, so an ALLOW anchored to a superseded
 block is now refused where pre-fix it was SIGNED. Register §13.4's status column is corrected —
-**22 of its 24 rows were wrong**, not the ~17 estimated. The ten accepted limits were T1-verified:
+**22 of its 24 rows were wrong**, not the ~17 estimated. The ten limits accepted at that time
+were T1-verified (**six remain accepted today** — see §11.0):
 **eight bases held, `D-09(c)`'s was REFUTED, `G-5`'s was narrower than it read, `D-10` carried a
 T2 severity discrepancy, and `H-5`/`H-8` were accepted with NO recorded reasoning at all.** Those
 five were then closed by **A-076**, together with the gate-mutation protection.
@@ -173,16 +205,19 @@ autonomy *none*).
 
 ### YOUR JOB: NOTHING, WITHOUT AN INSTRUCTION FROM JOHN. Say so and stop.
 
-**The D-055(e) review is complete through reverification. Three commits are UNPUSHED and John
-has not yet said what happens next.** If you arrived with no instruction, the correct action is
-to report the state below and wait.
+**The D-055(e) review is complete; its remediation is only PARTLY reverified, and the targeted
+independent reverification of the `8990255` corrections is OUTSTANDING.** John pushed the branch
+to the private remote through `254db64` on 2026-08-19 as an authorized private backup; **work
+committed after that stays LOCAL until he explicitly confirms otherwise.** If you arrived with no
+instruction, the correct action is to report the state below and wait.
 
 ### THE STATE, 2026-08-19
 
 | | |
 |---|---|
 | Deep-verified commit | **`8990255`** — deep gate PASSED from a clean isolated worktree at that exact SHA |
-| Unpushed | the D-057 cycle plus this handoff — **run `git log --oneline origin/step-3/isolated-signer..HEAD`; a count written here is stale the moment the next commit lands, which is how it was stale when this table was first drafted** |
+| Push status | **DATED CHECKPOINT FACT: John pushed through `254db64` on 2026-08-19** (authorized private backup, not publication — D-016 unchanged). **Everything after it is LOCAL and stays local pending his confirmation.** **Run `git log --oneline origin/step-3/isolated-signer..HEAD`; any count written here is stale the moment the next commit lands, which is how it was stale when this table was first drafted** |
+| Reverification | **PARTIAL.** `R1-F1` reverified at `497d1ce` and HOLDS. `R3-F6`/`R3-F7`/`R4-F4` FAILED it; `V3-N1` and the `R2-F6`/`R2-F4`/`R3-F4` residuals were found. **Corrections for all of those were made in `8990255` AFTER the verifiers finished and are NOT independently reverified** |
 | Suites | all three green with count floors ratcheted in the same edit as their suite — **run `./scripts/check-suite-floors.sh`; the numbers are deliberately not printed here** |
 | Guards | focused guards green; workspace guards passed **on ratcheted baseline debt**, which is not the same as clean |
 | D-055 exit | **NOT MET** — see below |
@@ -192,18 +227,28 @@ counts repeatedly, and the last instance was caught doing it again by an indepen
 (`R4-F4`) — after writing the sentence claiming the duplication had been removed. Run
 `./scripts/test.sh` and read its output, or `./scripts/check-suite-floors.sh` for the floors.
 
-### WHAT IS WAITING ON JOHN — all four are his, none is yours
+### WHAT IS WAITING ON JOHN — all five are his, none is yours
 
-1. **The push.** `git push origin step-3/isolated-signer`. Backup, not publication (D-016).
+1. **Whether local work is pushed.** John pushed through `254db64` himself on 2026-08-19 — done,
+   and it was backup, not publication (D-016). **Anything committed after that is his to release;
+   an agent does not push it.**
 2. **The Critical's disposition.** `R1-F1` was repaired and independently reverified, but
    whether that closes it is John's call, not an agent's.
 3. **Condition 4 of D-055(a).** John ruled it NOT MET (D-057(1)) pending the corrections, which
    are now made. Whether it is now met is his judgement.
-4. **The residuals, all recorded and none of them repaired.** A-078(b): `R4-F1`'s stale "nine"
-   and `R1-F4`'s un-struck rejected design survive as LOW. A-077(d): `R2-F4`'s `description` gap
-   (register §13.7, owed at v1.1). A-077(e): `R3-F1`'s stricter **11 of 20** against the gate's
-   ratcheted **14 of 20**, left unreconciled because reconciling it is a scope decision. **Read
-   A-077's and A-078's RESIDUALS paragraphs in full before you treat any of them as closed.**
+4. **The residuals.** **A-078(b)'s two LOWs are now CLOSED by A-080** — `R4-F1`'s stale "nine"
+   and `R1-F4`'s un-struck rejected design were both corrected in the A-080 checkpoint. **Still
+   open and unrepaired:** A-077(d), `R2-F4`'s `description` gap (register §13.7, owed at v1.1);
+   A-077(e), `R3-F1`'s stricter **11 of 20** against the gate's ratcheted **14 of 20**, left
+   unreconciled because reconciling it is a scope decision; and **A-077(b)'s threat-model
+   residual — a same-user actor who can READ the gate body's environment can forge the completion
+   token** (register §13.6 item 5), which is why a passing deep gate is evidence about the run,
+   not proof the gate cannot be corrupted. **Read A-077's and A-078's RESIDUALS paragraphs in
+   full before you treat any of them as closed.**
+5. **Whether the outstanding targeted reverification runs, and when.** The `8990255` corrections
+   have never been looked at by anyone but their author. **This is TARGETED reverification of
+   named items, NOT another review round** — D-055(e) is spent, and a further round is John's to
+   authorise (D-057(9)). An agent does not start either on its own.
 
 ### THE D-055 EXIT ASSESSMENT, as it stands
 
@@ -211,7 +256,7 @@ counts repeatedly, and the last instance was caught doing it again by an indepen
 |---|---|
 | One independent fixed-scope post-D-052 review on the repaired apparatus | **MET** — four reviewers, scope fixed by John BEFORE the run (D-056(d)) |
 | Passing deep gate and workspace guards | **MET** at `8990255` |
-| Zero unresolved confirmed Critical/High | **REPAIRED AND REVERIFIED — John's to confirm** |
+| Zero unresolved confirmed Critical/High | **The CRITICAL (`R1-F1`) is REPAIRED and INDEPENDENTLY REVERIFIED at `497d1ce` — John's to confirm.** The three FAILED repairs and `V3-N1` were corrected in `8990255`, and **those corrections are NOT independently reverified** |
 | Zero known false or unsupported signed/certified claims | **John ruled NOT MET (D-057(1)); corrections now made — his to reassess** |
 
 **A GREEN DEEP GATE IS NOT COVERAGE (T4).** The same run prints `gate immutability: 10/10` from

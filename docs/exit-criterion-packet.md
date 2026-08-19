@@ -92,7 +92,7 @@ requiring their removal.
 | Nonce guard is per-process, best-effort | D-013, restated D-053(b) |
 | Invariant campaign adds no measurable assurance | **D-054(b)** |
 | 14 of 20 corpus classes exercise the class they name | ratchet, printed every run |
-| Ten findings accepted as documented limits | D-051(b), §11.0 |
+| ~~Ten~~ **SIX** findings accepted as documented limits — `D-07`, `D-09`(a),(b), `E5`, `F-VAULT-4`, `F-VAULT-5`, `G-3` | D-051(b) accepted ten; **A-076 FIXED five**, and the remainder was mis-stated as five until `R4-F1` (D-055(e)) found `G-3` dropped. **Derived at `docs/gate-s2-evidence.md` §11.0 — do not re-count by hand.** Corrected 2026-08-19 (A-080) |
 | E4's signer half deliberately not built | D-014 |
 | Verdict correctness in general; no live agent in CI | §11 |
 

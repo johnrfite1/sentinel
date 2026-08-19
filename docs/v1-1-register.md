@@ -831,13 +831,24 @@ and is worthless. The second was killed and discarded unread.
 **Why this belongs in the register rather than in a habit.** The project's own house rule —
 read the output, not the exit code — is what caught it, and that is the right defence for a
 human. It is a weak defence for an agent driving the gate from a script, and there is a cheap
-mechanical one: **have the gate hash its own file at start and re-check at exit, failing loudly
-if it changed underneath itself.** Roughly four lines.
+mechanical one: ~~**have the gate hash its own file at start and re-check at exit, failing loudly
+if it changed underneath itself.** Roughly four lines.~~
+
+**THE STRUCK SENTENCE DIRECTLY ABOVE IS THE REJECTED DESIGN. DO NOT BUILD IT.** John rejected it on
+its merits *before* it was built — *"the ending check can itself be skipped or corrupted when bash
+resumes at a shifted byte offset"* — and his reason generalises past the demonstration: **a guard
+living inside the mutable body is precisely the code the attack makes unreachable.** It is struck
+rather than deleted so a reader can see what was rejected and why. **It was still un-struck as of
+2026-08-19, which is finding `R1-F4` (D-055(e)); struck here under A-080.**
 
 ~~**Not built, deliberately:** it is new tooling and outside D-055(d)'s four prerequisites…~~
 
 **SUPERSEDED TWICE. THIS SECTION'S PRESCRIBED DESIGN WAS BUILT, SHIPPED, AND FOUND BROKEN AT
-CRITICAL. DO NOT BUILD WHAT THE STRUCK TEXT DESCRIBES (`R1-F4`, D-055(e)).**
+CRITICAL.** **The rejected design is the struck "hash at start, re-check at exit" prescription
+above — NOT the struck "not built, deliberately" note beside it, which is merely spent.** The
+earlier wording said "do not build what the struck text describes" at a moment when the only
+struck text was that spent note, so it pointed a reader away from the live prescription and at a
+decision instead (`R1-F4`, D-055(e); pointer corrected 2026-08-19, A-080).
 
 1. **A-076 built a variant** — copy to a temp file and `exec` into it — and claimed the snapshot
    was "a private file nobody has a path to".
@@ -854,6 +865,14 @@ CRITICAL. DO NOT BUILD WHAT THE STRUCK TEXT DESCRIBES (`R1-F4`, D-055(e)).**
    success.** Verified: child gets EACCES/EINVAL, `ps` shows no backing path, and both real
    attack routes fail across 12 trials at 6 timings while an unprotected control is corrupted at
    every one.
+5. **THE ADOPTED DESIGN'S DECLARED THREAT-MODEL RESIDUAL, carried and NOT closed (A-077(b)).**
+   **A same-user actor able to READ the executing body's environment can forge the completion
+   token.** The nonce defends against CORRUPTION of the body, not against an attacker who already
+   has environment access, and A-077 states that rather than defending against it. Two
+   consequences a reader must carry: **a passing deep gate is evidence about the run that produced
+   it, NOT evidence that the gate cannot be corrupted**; and the immutability harness proves the
+   bootstrap's properties on SYNTHETIC bodies and defends only `scripts/test.sh` (A-077(a)).
+   Closing this residual is not authorised here. Recorded 2026-08-19 (A-080).
 
 ## 13.7 The human-readable description is compared to nothing (R2-F4, D-055(e))
 

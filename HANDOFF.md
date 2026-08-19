@@ -7,14 +7,18 @@ Status: Rulings ratified by John 2026-07-27 (canonical record: `docs/decisions.m
 
 **2026-08-16 (end of session) — GATE S2 IS SIGNED (PASS, John, D-041), so "authorized through Gate S2" has been spent.** Start at `docs/session-state.md` — §1 says what to do, and the answer is probably nothing without an instruction from John. After S2 was signed, the §9 steps 1–3 adversarial review it was signed WITHOUT was run at John's direction and found **A-043, a CRITICAL exploitable bypass** — a signed ALLOW obtainable for calldata nobody decoded, reproduced twice onchain — plus six further findings (A-044). All fixed or recorded; the S2 signature stands, annotated. Both of D-002's mid-build gates are behind the project and there is no next gate until pre-publication. **What comes after S2 is the §14.8 ladder "as John directs" — it is not an agent's call to start climbing it**, and D-003's scope-expansion stop condition applies with more force now, not less, because the obvious next move after a signed gate is to invent the next milestone. Remaining known work is v1.1 and is bounded by the re-label decision (`docs/v1-1-register.md`).
 
-**2026-08-19 — THE POST-S2 REVIEW ARC IS COMPLETE THROUGH REVERIFICATION, AND THE NEXT MOVE IS
-JOHN'S.** Rounds five and six ran and were adjudicated; **D-055(a) replaced D-047's open-ended
+**2026-08-19 — THE POST-S2 REVIEW ARC IS COMPLETE, ITS REMEDIATION IS ONLY PARTLY REVERIFIED, AND
+THE NEXT MOVE IS JOHN'S.** ~~"COMPLETE THROUGH REVERIFICATION"~~ — **corrected 2026-08-19 (A-080);
+that wording was false when written.** `R1-F1`'s repair was independently reverified; three others
+FAILED reverification and were corrected afterwards in `8990255`, **and those corrections have not
+been independently reverified by anyone but their author.** Rounds five and six ran and were adjudicated; **D-055(a) replaced D-047's open-ended
 terminating condition** with a bounded, risk-based exit; the one bounded review it calls for ran
 as D-055(e) (four reviewers, scope fixed by John in advance, all deliverables on disk) and
 returned **23 findings including a CRITICAL in the certification gate itself**; John ruled on
 every one (D-057); A-077 repaired them and **A-078 independently reverified the repairs and sent
-three back as FAILED** before they were corrected. **D-055's exit is still NOT MET** — condition
-four is John's to reassess and the Critical's disposition is his to confirm. Nothing here changes
+three back as FAILED** before they were corrected. **THE CORRECTIONS MADE IN RESPONSE ARE NOT
+INDEPENDENTLY REVERIFIED; targeted reverification of them is OUTSTANDING.** **D-055's exit is still
+NOT MET** — condition four is John's to reassess and the Critical's disposition is his to confirm. Nothing here changes
 the paragraph above: no gate is signed or reopened, no public claim is certified, **D-016 still
 blocks all publication**, and the §14.8 ladder is still not an agent's to start climbing. Start
 at `docs/session-state.md` §1.
