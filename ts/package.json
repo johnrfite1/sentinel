@@ -5,7 +5,7 @@
   "scripts": {
     "spike": "tsx src/spike/run.ts",
     "signer": "node src/signer/main.ts",
-    "test": "node --test --test-concurrency=1 \"test/**/*.test.ts\"",
+    "test": "node --test --test-concurrency=1 $SENTINEL_TEST_REPORTERS \"test/**/*.test.ts\"",
     "typecheck": "tsc --noEmit",
     "sample-check": "node src/tools/sample-check.ts",
     "emit-samples": "node src/tools/emit-samples.ts",

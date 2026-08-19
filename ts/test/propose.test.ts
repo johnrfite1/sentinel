@@ -440,6 +440,7 @@ describe("binding takes everything the agent does not control from the chain", (
         domainSeparator: keccak256(stringToBytes("domain")),
         targetCodeHash: keccak256(stringToBytes("code")),
         observedAtBlock: 99n,
+        observedBlockHash: keccak256(stringToBytes("block 99")),
     };
     const VAULT: Hex = "0x0000000000000000000000000000000000000abc";
 

@@ -98,6 +98,21 @@ export const REASON_SEVERITY = {
     /** The vault could not be read. Fail closed (§3.3(8)); an unread vault is not a green light. */
     SIGNER_VAULT_UNREACHABLE: "FATAL",
     /**
+     * The chain would not hold still long enough for the signer to observe one block.
+     *
+     * D-055(c). `readVaultState` pins every read to a single block and then confirms that
+     * block is still the head; if that never holds within `SNAPSHOT_ATTEMPTS`, there is no
+     * consistent state to attest against and the signer says so.
+     *
+     * FATAL, and it is a SEPARATE code from SIGNER_VAULT_UNREACHABLE on purpose. Both refuse
+     * everything, so the tiering does not distinguish them — the RECORD does. "The vault
+     * could not be read" and "the vault was read repeatedly and the chain moved each time"
+     * are different facts, and filing the second as the first would put a claim in the
+     * refusal record that the evidence does not support. That substitution is the honesty
+     * defect this project exists to study, so it is not made here to save a constant.
+     */
+    SIGNER_CHAIN_UNSTABLE: "FATAL",
+    /**
      * The domain separator the signer derived does not match the one the vault reports.
      * This is a live cross-language differential check between this TypeScript
      * implementation and the Solidity library, and a mismatch means every signature this
@@ -184,6 +199,27 @@ export const REASON_SEVERITY = {
      * unusable — a consumed nonce, a paused vault, a rotated-out signer.
      */
     SIGNER_SIMULATION_BLOCK_MISMATCH: "CONFORMANCE",
+    /**
+     * The receipt's anchor names a block that is not the one the signer read the vault at.
+     *
+     * D-055(c), the E3 repair, and the difference from the code above is the whole point.
+     * SIGNER_SIMULATION_BLOCK_MISMATCH asks "is this a real block?" — which any historical
+     * block answers yes to, which is why an ALLOW could be anchored arbitrarily far back,
+     * including to a block at which the vault had no code, and still execute. This asks "is
+     * this THE block whose state I just checked?", and only one block per request can be.
+     *
+     * D-055(c) chose that over a recency bound deliberately: a permitted-age number is a
+     * policy parameter nobody had reasoned about, whereas consistency needs no parameter and
+     * is the property that was actually missing — the signer attests against the state it
+     * read. An old anchor is refused as a CONSEQUENCE of disagreeing with the snapshot, not
+     * because a threshold declared it too old.
+     *
+     * CONFORMANCE, by the rule the code above states: the subject is EVIDENCE QUALITY, and
+     * §4.2 Case 4 lists "the anchored RPC state conflicts" as a REVIEW trigger. This is that
+     * sentence's condition read literally — the anchor and the signer's observation conflict
+     * — so ALLOW is refused and REVIEW remains reachable.
+     */
+    SIGNER_ANCHOR_NOT_OBSERVED: "CONFORMANCE",
     /** Policy vault/chain fields disagree with the action. */
     SIGNER_POLICY_SCOPE_MISMATCH: "CONFORMANCE",
     /** The policy's allowedOperation is not the action's operation. */

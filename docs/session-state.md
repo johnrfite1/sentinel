@@ -3,10 +3,12 @@
 Rewritten at the end of each working session. **This file, not the conversation, is the
 memory.** If it disagrees with anything an agent remembers, this file wins.
 
-Last updated: **2026-08-18 (post-D-055; exit criterion adopted)**. Branch
-`step-3/isolated-signer` (`caad4c1` at the time of writing, **9 commits UNPUSHED**; the commit that updates this file necessarily
-comes after, so expect the pointer to trail by one doc-only commit and check `git log` rather
-than treating a mismatch as a finding). Working tree clean. **This pointer names the last commit this file DESCRIBES, and the commit that updates
+Last updated: **2026-08-18 (post-A-075; all four D-055(d) prerequisites DONE)**. Branch
+`step-3/isolated-signer` (`a5e6d40` was HEAD when this rewrite began; A-075's own commit comes
+after, so **check `git log` rather than treating a mismatch with this pointer as a finding** —
+that is the same stale-pointer defect this file has now recorded three times, in the file that
+opens by declaring itself the memory). **UNPUSHED — count it with `git log origin/<branch>..HEAD`,
+do not quote a number from here.** Working tree clean at the time of writing. **This pointer names the last commit this file DESCRIBES, and the commit that updates
 it necessarily comes after — so expect it to trail by one doc-only commit, and check
 `git log` rather than treating a mismatch as a finding.** It read `f3308ea` while HEAD was two
 commits further on, which is the same stale-pointer defect A-045 and A-046 spent the session
@@ -15,8 +17,11 @@ D-016 still blocks all publication. **Pushing to the private remote is backup, n
 do not read the push as any relaxation of D-016.**
 
 **READING ORDER FOR A FRESH INSTANCE. ROUND SIX IS RUN AND ADJUDICATED. D-055 HAS REPLACED
-D-047'S TERMINATING CONDITION, SO THE LOOP IS BOUNDED NOW — but the review that closes it is
-John's to scope and trigger, not yours.** Read §1 first — it tells you
+D-047'S TERMINATING CONDITION, SO THE LOOP IS BOUNDED NOW — and as of A-075 (2026-08-18) ALL
+FOUR OF D-055(d)'S PRE-REVIEW PREREQUISITES ARE DONE. THERE IS NO AGENT WORK OUTSTANDING. What
+remains is ONE bounded review, and its SCOPE IS JOHN'S TO FIX BEFORE IT RUNS (T3) — not yours to
+scope and not yours to trigger.** Read **A-075** in `docs/decisions.md` for what was built and,
+more usefully, for the three things it RAISED and did not resolve. Read §1 first — it tells you
 what the state is and what is NOT yours. Then §0 for how this project fails. Then, in
 `docs/decisions.md`: **D-055 FIRST — it is the current governing ruling and it REPLACES D-047's
 terminating condition — then D-052, D-053 and D-054.**
@@ -99,6 +104,15 @@ terminating condition** with a bounded, risk-based one. **There is no open-ended
 more** — what remains is a finite list of repairs (§1) and then ONE bounded, John-scoped review.
 **§1 says what is yours and what is not.**
 
+**AND THEN A-075 (2026-08-18) FINISHED THE FOUR PREREQUISITES D-055(d) SET.** `E3` is BUILT —
+the signer's reads are pinned to one block and the receipt's anchor bound to it, so an ALLOW
+anchored to a superseded block is now refused where pre-fix it was SIGNED. Register §13.4's
+status column is corrected — **22 of its 24 rows were wrong**, not the ~17 estimated. The ten
+accepted limits are T1-verified: **eight bases hold, `D-09(c)`'s is REFUTED and it is REOPENED,
+`G-5`'s is narrower than it reads, `D-10` carries a T2 severity discrepancy, and `H-5`/`H-8`
+were accepted with NO recorded reasoning at all.** And the Foundry and TypeScript suites finally
+have count floors, so a shrinking suite is no longer invisible to the gate.
+
 **BOTH CORRECTIONS ARE NOW RATIFIED AND CERTIFIED BY JOHN (D-054, 2026-08-18)** — the D-053(a)
 atomic-drain correction to §7.1, superseding D-051(a) ONLY where the earlier wording is
 inconsistent with the atomic-drain boundary, and the A-073 Gate 6 correction. **The S2 signature
@@ -113,7 +127,12 @@ autonomy *none*).
 
 ## 1. What the next instance should do
 
-### YOUR JOB: finish D-055's remaining work, then STOP. The review after it is John's to scope.
+### YOUR JOB: ~~finish D-055's remaining work~~ **— IT IS FINISHED (A-075, 2026-08-18). STOP.**
+
+**ALL FOUR PRE-REVIEW PREREQUISITES ARE DONE.** What comes next is ONE bounded, four-reviewer
+review, and **T3 makes its scope JOHN'S TO FIX BEFORE IT RUNS.** Do not scope it, do not start
+it, and do not treat it as round seven of an open-ended loop. **If you arrived with no
+instruction from John, say so and stop** — there is no agent work outstanding on this list.
 
 **READ FIRST, in this order:** `docs/decisions.md` **D-055** (the current governing ruling — it
 REPLACES D-047's terminating condition), then **D-052** (why the loop paused), then **D-053** and
@@ -132,7 +151,7 @@ Critical/High lead is PENDING, not silently "unconfirmed"** — leaving leads un
 satisfy the criterion — and **a confirmed High stops blocking ONLY through verified repair or
 John's EXPLICIT acceptance as a documented product boundary.** An agent may do neither alone.
 
-**WHAT IS DONE (committed, `caad4c1` at the time of writing):**
+**WHAT IS DONE (A-070…A-075; verify the commit with `git log`, not with this line):**
 
 | | |
 |---|---|
@@ -143,8 +162,35 @@ John's EXPLICIT acceptance as a documented product boundary.** An agent may do n
 | A-074 | **the conformance comparison D-014 assigns to the D-010 verifier — it did not exist** |
 | D-053/D-054 | atomic drain accepted as a v1 boundary; nonce guard keyed by basis; both ratified |
 | D-055 | the exit criterion adopted; three blockers ruled; the E3 record conflict reconciled |
+| **A-075** | **all four D-055(d) prerequisites: E3 BUILT · register §13.4 corrected (22 of 24 rows wrong) · the ten accepted limits T1-verified and `D-09(c)` REOPENED · Foundry and TypeScript count floors**  |
 
-**WHAT REMAINS BEFORE THE REVIEW — this is your work, in John's order:**
+**ALL FOUR OF D-055(d)'S PRE-REVIEW PREREQUISITES ARE NOW DONE (A-075, 2026-08-18).** The list
+below is kept in John's original wording, with what was actually built recorded under each,
+because a list rewritten as "done" loses what was asked for. **WHAT IS LEFT IS NOT ON THIS LIST:
+it is the bounded four-reviewer review, and T3 makes its SCOPE JOHN'S TO FIX BEFORE IT RUNS.**
+
+| | Prerequisite | Status |
+|---|---|---|
+| 1 | E3 — pin signer reads to one block, bind the anchor to it | **DONE (A-075).** Pre-fix the signer SIGNS an ALLOW anchored to a superseded block; post-fix it refuses. 7 mutations + the end-to-end exploit, each failing the test that names it |
+| 2 | Correct register §13's status column | **DONE (A-075).** **22 of 24 rows were wrong, not ~17** |
+| 3 | T1-verify the ten accepted limits; reopen `D-09(c)` | **DONE (A-075).** 8 bases hold · `D-09(c)` REFUTED and REOPENED · `G-5` narrower than it reads · `D-10` T2 flag · `H-5`/`H-8` have NO recorded basis |
+| 4 | Foundry and TypeScript count floors | **DONE (A-075).** 75 / 507, both ratcheted in the same edit; 6 falsifications fire, including the A-048 stdout spoof |
+
+**THREE THINGS A-075 RAISED AND DID NOT RESOLVE, because they are not an agent's to close.**
+`G-5`'s accepted basis is TRUE of the reviewer's demonstration and does NOT cover the drift the
+finding names; `D-10`'s adjudicator asked for (c) to be raised to MEDIUM and the limit is
+accepted at LOW with no countersigned reasoning (a T2 discrepancy); and `H-5`/`H-8` were
+accepted with no recorded reasoning at all, so T1 cannot be satisfied for them by verification.
+**All three are recorded in `docs/gate-s2-evidence.md` §11.0 and are John's.**
+
+**AND ONE BEHAVIOUR CHANGE THE E3 REPAIR MAKES, stated because it is real:** a caller whose
+simulation is even one block stale is now REFUSED and must re-simulate. That is what "the signer
+attests against the state it actually read" means in practice, and it is the intended
+consequence of D-055(c) rather than a side effect.
+
+---
+
+**THE ORIGINAL LIST, in John's order:**
 
 1. **E3 — FIX IT, and do not invent a timeout.** John's mechanism, ruled at D-055(c): **pin all
    signer state and code reads to ONE block, and require the evidence anchor to match that exact
@@ -231,13 +277,20 @@ was decided, so the list was verified rather than assumed.
 **So round six is the first round in this loop whose outcome means something in either
 direction** — and that, not tidiness, is why the repairs came first.
 
-### The one thing still open that is JOHN'S, not yours
+### ~~The one thing still open that is JOHN'S, not yours~~ — `E3` IS CLOSED
 
-**`E3` — anchor recency.** The signer will attest an ALLOW anchored to ANY historical block,
-including one at which the vault had no code, and the vault executes it. Nothing bounds recency
-here or downstream. **The fork is whether the receipt should bind to the signer's own
-observation, and it changes what the product guarantees, so it is not an agent's to close.** The
-comment at `attest.ts` states the limit rather than implying it away; do not "fix" it.
+~~**`E3` — anchor recency.** … it is not an agent's to close … do not "fix" it.~~
+**SUPERSEDED TWICE AND NOW BUILT. DO NOT ACT ON THE STRUCK TEXT.** D-055(c) ruled E3 FIXED and
+gave the mechanism, and A-075 built it (2026-08-18): all signer state and code reads are pinned
+to ONE block, and the receipt's anchor must equal that exact block number AND hash.
+
+**IT IS NOT A RECENCY BOUND, and the distinction is the ruling.** No timeout was invented — a
+permitted age is a policy parameter nobody had reasoned about. An old anchor is refused because
+it DISAGREES with the state the signer read, not because a threshold called it old.
+
+**THE CONSEQUENCE, which is a real behaviour change:** a caller whose simulation is even one
+block stale is refused and must re-simulate. **The comment at `attest.ts` no longer states a
+limit, because there is no longer a limit there to state.**
 
 `E4`'s verifier half is built (A-069). Its signer half is deliberately NOT built — D-014 keeps
 conformance out of the signer, and building it would weaken the independence that makes the
@@ -297,13 +350,25 @@ design forks. Never sign a gate, never certify a public claim.
 
 ## 3. Where the build is
 
-**75/75 Foundry · 494/494 TypeScript · 198/198 verifier · 78 tamper cases over 30 modes ·
-50 corpus fixtures · 7 samples · gate green · workspace guards OK.**
-*(Measured 2026-08-18 at `caad4c1` by running `./scripts/test.sh` and reading its output, not by
-copying this line. Post-D-052 arc: A-070 moved 180→188 verifier, A-072 the 189th, **A-074 189→198**;
+**75/75 Foundry · 507/507 TypeScript · 198/198 verifier · 78 tamper cases over 30 modes ·
+50 corpus fixtures · 7 samples · gate green · workspace guards OK (0 NEW findings; 13 pre-existing
+baselined — it PASSES ON RATCHETED DEBT, which is not the same as clean).**
+*(TypeScript 494 → 507 under A-075, all thirteen from the E3 repair: 7 in `test/vault.anchor.test.ts`,
+4 in `reasoncodes.test.ts`, 2 in `signer.e2e.test.ts`.)*
+**AND AS OF A-075 THE FOUNDRY AND TYPESCRIPT FIGURES ARE FLOORS THIS GATE ASSERTS, which they
+have never been before** — `FOUNDRY_MIN_TESTS=75`, `TS_MIN_TESTS=507`, both ratcheted in the same
+edit as the suites, both falsified (a shrunk suite breaches; a `vm.skip`/`skip`/`todo` test is
+caught by a separate branch because the floor alone does NOT see it; an absent report fails
+closed). So the sentence below — "there are still NO floors on the Foundry or TypeScript counts"
+— **is no longer true and is struck.**
+*(Measured 2026-08-18 on the A-075 working tree by running `./scripts/test.sh` and reading its
+output, not by copying this line. Post-D-052 arc: A-070 moved 180→188 verifier, A-072 the 189th, **A-074 189→198**;
 A-072 moved 481→489 TypeScript and D-053 489→494. `VERIFIER_MIN_TESTS` was ratcheted in the SAME
-edit as the suite every time. **VERIFY BEFORE QUOTING — this line has been wrong four times, and
-there are still NO floors on the Foundry or TypeScript counts, which is item 4 of §1.**)*
+edit as the suite every time. **VERIFY BEFORE QUOTING — this line has been wrong four times.**
+~~there are still NO floors on the Foundry or TypeScript counts, which is item 4 of §1~~
+**— CLOSED BY A-075: all three suites now have count floors.** The instruction to verify before
+quoting still stands and always will; a floor stops a suite shrinking silently, it does not make
+this line true.)*
 *(A-059 moved 160→170 / 77→78 / 29→30; A-061 moved 405→407 TypeScript and 170→173 verifier;
 A-063 moved 73→74 Foundry; A-064 moved 74→75 Foundry and 407→409 TypeScript;
 A-067 moved 409→426 TypeScript and 173→176 verifier.

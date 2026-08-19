@@ -1,6 +1,7 @@
 import {domainSeparator, hashAction, hashCallData, hashMandate, hashPolicy, hashUtf8} from "./eip712.ts";
 import {decodeBySelector} from "../decode/index.ts";
 import type {Keystore} from "./keystore.ts";
+import {ChainUnstableError} from "./vault.ts";
 import type {ChainReader, VaultState} from "./vault.ts";
 import {
     canonicalReasonCodes,
@@ -370,11 +371,20 @@ export function createAttestor(config: AttestorConfig): Attestor {
             );
 
             // --- Chain state. An unreadable vault is FATAL, never a default (§3.3(8)).
+            //
+            // The two failures are recorded separately (D-055(c)). `readVaultState` now pins
+            // every read to one block and re-confirms that block is still the head, so it can
+            // fail in a second way — the chain never held still — and reporting that as
+            // "unreachable" would state something the evidence does not support.
             let state: VaultState;
             try {
                 state = await chain.readVaultState(vault, action.target, selector);
-            } catch {
-                findings.push("SIGNER_VAULT_UNREACHABLE");
+            } catch (error) {
+                findings.push(
+                    error instanceof ChainUnstableError
+                        ? "SIGNER_CHAIN_UNSTABLE"
+                        : "SIGNER_VAULT_UNREACHABLE",
+                );
                 return await refuse();
             }
 
@@ -400,20 +410,38 @@ export function createAttestor(config: AttestorConfig): Attestor {
             // simulated effects at a recorded block" from being a claim the evaluator can
             // simply assert.
             //
-            // WHAT THIS DOES NOT ESTABLISH, stated because the paragraph above reads as though
-            // it did (A-068, from round five's E3, adjudicated and confirmed). It checks that
-            // the named block EXISTS with the named hash — not that it is RECENT. Any
-            // historical block satisfies it, including one at which the vault had no code, so
-            // the signer will attest an ALLOW anchored arbitrarily far back and the vault will
-            // execute it. Anchor recency is bounded by nothing here and nothing downstream.
-            //
-            // Whether to bind the receipt to the signer's OWN observation — an `observedAtBlock`
-            // in the receipt, or a required proximity between the caller's anchor and the
-            // signer's — changes what the product guarantees, so it is John's fork and is open
-            // (v1.1 register). This comment states the limit rather than implying it away.
+            // This check alone establishes only that the named block EXISTS with the named
+            // hash, which ANY historical block satisfies. That was E3: an ALLOW anchored
+            // arbitrarily far back — including to a block at which the vault had no code —
+            // was attested and executed, because nothing here or downstream bounded the
+            // anchor. A-044(f) accepted it as a declared limit on the reasoning that a
+            // recency bound is a policy parameter nobody had reasoned about; A-068 later
+            // re-opened it as an unruled fork without citing that. D-055(c) supersedes both
+            // and rules it FIXED, by consistency rather than by a timeout.
             const simHash = await chain.blockHashAt(evaluation.simulationBlockNumber);
             if (simHash === null || simHash !== evaluation.simulationBlockHash) {
                 findings.push("SIGNER_SIMULATION_BLOCK_MISMATCH");
+            }
+
+            // THE E3 REPAIR (D-055(c)). The anchor must be the block the signer read the
+            // vault at — not a recent one, THE one. Every value checked below this line came
+            // from `state`, and `state` came from a single pinned, head-confirmed block; a
+            // verdict computed against any other block was computed against state the signer
+            // never saw, and saying otherwise is what the receipt would be doing.
+            //
+            // Both fields, not just the number: a number alone does not identify a block
+            // across a reorg, and the pair is what the snapshot committed to.
+            //
+            // This SUBSUMES the check above rather than replacing it — an anchor that equals
+            // the observed block trivially exists with the observed hash. The older code is
+            // kept because the two conditions are different diagnoses (a forged block versus
+            // a stale one), and a refusal record that says which is more useful than one that
+            // says neither. Stated rather than left to be rediscovered as redundancy.
+            if (
+                evaluation.simulationBlockNumber !== state.observedAtBlock ||
+                evaluation.simulationBlockHash !== state.observedBlockHash
+            ) {
+                findings.push("SIGNER_ANCHOR_NOT_OBSERVED");
             }
 
             // The basis is the vault's CURRENT active hashes, not the action's claimed ones:

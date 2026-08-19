@@ -17,6 +17,29 @@ import type {Hex} from "./protocol.ts";
  * SIGNER_VAULT_UNREACHABLE — a FATAL finding that refuses every verdict. §3.3(8) requires
  * that a critical dependency failure never produce an automatic allow; the cheapest way to
  * guarantee that is to have no code path in which unavailable state becomes a value.
+ *
+ * ONE BLOCK, NOT ELEVEN (D-055(c), the E3 repair).
+ *
+ * THE ARGUMENT this establishes, stated before the code as `docs/repair-protocol.md` step 1
+ * requires: **every state and code value the signer reasons about comes from ONE block, and
+ * that block is named in the returned snapshot** — so the signer can never attest to a
+ * combination of values that never simultaneously existed, and `attest.ts` can require the
+ * receipt's anchor to name the block the signer actually read.
+ *
+ * That is deliberately not a recency rule. D-055(c) rejected inventing a timeout: a number
+ * of blocks or seconds is a policy parameter nobody had reasoned about, and the answer that
+ * needs no parameter is CONSISTENCY — the signer attests against the state it read, and a
+ * verdict computed against any other block is refused because it disagrees, not because it
+ * is old. Recency falls out of that rather than being asserted.
+ *
+ * WHAT THE PREVIOUS VERSION DID, because it is the defect: ten `eth_call`s, a `getCode` and
+ * a `getBlockNumber`, all at "latest", each its own request, with a comment conceding they "could
+ * in principle straddle a block boundary" and arguing it away on the grounds that a local
+ * Anvil has no competing producer. Two things were wrong with that. The straddle made
+ * `observedAtBlock` a number no field was guaranteed to have been read at — and nothing
+ * consumed it, so the inconsistency was invisible. And the environment argument is exactly
+ * the kind this project has repeatedly paid for: it justifies a property from the deployment
+ * rather than from the code.
  */
 
 const VAULT_ABI = [
@@ -67,14 +90,47 @@ export interface VaultState {
     domainSeparator: Hex;
     /** keccak256 of the target's runtime code, at the block this read observed. */
     targetCodeHash: Hex;
+    /**
+     * The single block EVERY field above was read at (D-055(c)). Not "the block number
+     * around the time of the reads" — the pin passed to each one.
+     */
     observedAtBlock: bigint;
+    /**
+     * The hash of that block, taken from the same `getBlock` that supplied the number and
+     * re-confirmed after the reads completed. Named separately from the number because the
+     * number alone does not identify a block across a reorg, and the anchor check in
+     * `attest.ts` compares both.
+     */
+    observedBlockHash: Hex;
 }
 
 export interface ChainReader {
     chainId(): Promise<bigint>;
+    /**
+     * A consistent snapshot of the vault at one block, or a throw. Never a partial read and
+     * never a straddle: see the file header for why that distinction is the whole point.
+     */
     readVaultState(vault: Hex, target: Hex, selector: Hex): Promise<VaultState>;
     /** Block hash at a given height, or null when the chain has no such block. */
     blockHashAt(blockNumber: bigint): Promise<Hex | null>;
+}
+
+/**
+ * How many times to re-take the snapshot when the head moves underneath it.
+ *
+ * There is no timeout here and that is deliberate — this bounds WORK, not RECENCY. Each
+ * attempt is a fresh pin at the then-current head; exhausting them means the chain is
+ * producing blocks faster than the signer can observe one, which is a condition the signer
+ * reports (SIGNER_CHAIN_UNSTABLE) rather than one it papers over by accepting a stale pin.
+ */
+export const SNAPSHOT_ATTEMPTS = 5;
+
+/** Thrown when no attempt produced a snapshot whose block was still the head afterwards. */
+export class ChainUnstableError extends Error {
+    constructor(attempts: number) {
+        super(`no stable block after ${attempts} attempts`);
+        this.name = "ChainUnstableError";
+    }
 }
 
 /**
@@ -99,54 +155,84 @@ export function createChainReader(rpcUrl: string): ChainReader {
         },
 
         async readVaultState(vault: Hex, target: Hex, selector: Hex): Promise<VaultState> {
-            const call = <N extends string>(functionName: N, args: readonly unknown[] = []) =>
-                client.readContract({
-                    address: vault,
-                    abi: VAULT_ABI,
-                    functionName: functionName as never,
-                    args: args as never,
-                });
+            for (let attempt = 0; attempt < SNAPSHOT_ATTEMPTS; attempt += 1) {
+                // Number and hash from ONE response. Deriving the hash from a second request
+                // would reintroduce, in the identifier of the pin itself, exactly the
+                // straddle this function exists to remove.
+                const head = await client.getBlock();
+                if (head.hash === null) {
+                    // A pending block. It has no hash to anchor to and its contents are not
+                    // final; there is nothing here to attest against.
+                    continue;
+                }
+                const at = head.number;
+                const headHash = head.hash.toLowerCase() as Hex;
 
-            // One block number captured alongside the reads so the receipt can say what the
-            // signer actually observed. These are separate eth_call requests and could in
-            // principle straddle a block boundary; on a local Anvil with no competing
-            // producer that is not a live concern, and the vault re-checks every value that
-            // matters at execution time regardless. Recorded rather than papered over.
-            const [
-                blockNumber, owner, signer, activeMandateHash, activePolicyHash, actionNonce,
-                paused, maxNativeValueWei, targetAllowed, selectorAllowed, domainSeparator, code,
-            ] = await Promise.all([
-                client.getBlockNumber(),
-                call("owner"),
-                call("signer"),
-                call("activeMandateHash"),
-                call("activePolicyHash"),
-                call("actionNonce"),
-                call("paused"),
-                call("maxNativeValueWei"),
-                call("allowedTarget", [target]),
-                call("allowedSelector", [selector]),
-                call("domainSeparator"),
-                client.getCode({address: target}),
-            ]);
+                // EVERY read below carries `blockNumber: at`. That is the repair. A read
+                // added here without the pin is the defect returning, which is why the
+                // pin lives in this one helper rather than at each call site.
+                const call = <N extends string>(functionName: N, args: readonly unknown[] = []) =>
+                    client.readContract({
+                        address: vault,
+                        abi: VAULT_ABI,
+                        functionName: functionName as never,
+                        args: args as never,
+                        blockNumber: at,
+                    });
 
-            return {
-                owner: (owner as string).toLowerCase() as Hex,
-                signer: (signer as string).toLowerCase() as Hex,
-                activeMandateHash: (activeMandateHash as string).toLowerCase() as Hex,
-                activePolicyHash: (activePolicyHash as string).toLowerCase() as Hex,
-                actionNonce: actionNonce as bigint,
-                paused: paused as boolean,
-                maxNativeValueWei: maxNativeValueWei as bigint,
-                targetAllowed: targetAllowed as boolean,
-                selectorAllowed: selectorAllowed as boolean,
-                domainSeparator: (domainSeparator as string).toLowerCase() as Hex,
-                targetCodeHash:
-                    code === undefined || code === "0x"
-                        ? EMPTY_CODE_HASH
-                        : keccak256(toBytes(code)),
-                observedAtBlock: blockNumber,
-            };
+                const [
+                    owner, signer, activeMandateHash, activePolicyHash, actionNonce,
+                    paused, maxNativeValueWei, targetAllowed, selectorAllowed, domainSeparator,
+                    code,
+                ] = await Promise.all([
+                    call("owner"),
+                    call("signer"),
+                    call("activeMandateHash"),
+                    call("activePolicyHash"),
+                    call("actionNonce"),
+                    call("paused"),
+                    call("maxNativeValueWei"),
+                    call("allowedTarget", [target]),
+                    call("allowedSelector", [selector]),
+                    call("domainSeparator"),
+                    client.getCode({address: target, blockNumber: at}),
+                ]);
+
+                // The pin makes the snapshot internally consistent; this makes it CURRENT.
+                // One request covers both ways the pin can go stale: the head advancing past
+                // it, and a same-height reorg replacing it. A snapshot that fails either is
+                // discarded rather than returned with a caveat — the signer has no way to
+                // attest "this was true a moment ago".
+                const confirm = await client.getBlock();
+                if (
+                    confirm.hash === null ||
+                    confirm.number !== at ||
+                    confirm.hash.toLowerCase() !== headHash
+                ) {
+                    continue;
+                }
+
+                return {
+                    owner: (owner as string).toLowerCase() as Hex,
+                    signer: (signer as string).toLowerCase() as Hex,
+                    activeMandateHash: (activeMandateHash as string).toLowerCase() as Hex,
+                    activePolicyHash: (activePolicyHash as string).toLowerCase() as Hex,
+                    actionNonce: actionNonce as bigint,
+                    paused: paused as boolean,
+                    maxNativeValueWei: maxNativeValueWei as bigint,
+                    targetAllowed: targetAllowed as boolean,
+                    selectorAllowed: selectorAllowed as boolean,
+                    domainSeparator: (domainSeparator as string).toLowerCase() as Hex,
+                    targetCodeHash:
+                        code === undefined || code === "0x"
+                            ? EMPTY_CODE_HASH
+                            : keccak256(toBytes(code)),
+                    observedAtBlock: at,
+                    observedBlockHash: headHash,
+                };
+            }
+
+            throw new ChainUnstableError(SNAPSHOT_ATTEMPTS);
         },
 
         async blockHashAt(blockNumber: bigint): Promise<Hex | null> {

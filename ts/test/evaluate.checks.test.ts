@@ -137,6 +137,7 @@ function fixture(o: Overrides = {}) {
         domainSeparator: keccak256(stringToBytes("domain")),
         targetCodeHash: mandate.targetCodeHash,
         observedAtBlock: 100n,
+        observedBlockHash: keccak256(stringToBytes("block 100")),
         ...o.state,
     };
 

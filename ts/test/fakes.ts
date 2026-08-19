@@ -2,6 +2,7 @@ import {keccak256, stringToBytes, toBytes} from "viem";
 import {domainSeparator, hashMandate, hashPolicy} from "../src/signer/eip712.ts";
 import {decodablePurchaseCallData, evidenceStub} from "./harness.ts";
 import type {Keystore} from "../src/signer/keystore.ts";
+import {ChainUnstableError, SNAPSHOT_ATTEMPTS} from "../src/signer/vault.ts";
 import type {ChainReader, VaultState} from "../src/signer/vault.ts";
 import type {
     ActionPayload,
@@ -75,6 +76,13 @@ export interface FixtureOverrides {
     evidenceCanonical?: string;
     /** Makes every vault read throw, for the fail-closed path. */
     vaultUnreachable?: boolean;
+    /**
+     * Makes every vault read throw `ChainUnstableError`, for the D-055(c) path where the
+     * head moved on every attempt. Distinct from `vaultUnreachable` because the two produce
+     * different reason codes, and a fixture that could not tell them apart could not prove
+     * that the distinction is real.
+     */
+    chainUnstable?: boolean;
     /** Makes the chain report no block at the requested height. */
     blockMissing?: boolean;
 }
@@ -146,6 +154,9 @@ export function buildFixture(o: FixtureOverrides = {}): Fixture {
         domainSeparator: domainSeparator(CHAIN_ID, VAULT),
         targetCodeHash: mandate.targetCodeHash,
         observedAtBlock: SIM_BLOCK_NUMBER,
+        // D-055(c): the default fixture is CONSISTENT — the block the signer read is the
+        // block the evaluation anchored to. A test wanting a stale anchor states it.
+        observedBlockHash: SIM_BLOCK_HASH,
         ...o.state,
     };
 
@@ -171,6 +182,7 @@ export function buildFixture(o: FixtureOverrides = {}): Fixture {
         },
         async readVaultState() {
             if (o.vaultUnreachable === true) throw new Error("simulated RPC outage");
+            if (o.chainUnstable === true) throw new ChainUnstableError(SNAPSHOT_ATTEMPTS);
             return state;
         },
         async blockHashAt() {

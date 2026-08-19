@@ -726,40 +726,68 @@ measurement, its control and its falsification all in the tree.
 and told that ALREADY-CLOSED is as valuable a verdict as CONFIRMED, because the tree moved under
 these findings overnight. Their results, and what was done about them, follow this entry.
 
-**NOT STARTED — round six.** D-050(1) ratified A-060's nine-surface definition, so it is defined
-before it is briefed, which round five was not. It is John's to trigger.
+~~**NOT STARTED — round six.**~~ **SUPERSEDED 2026-08-18. ROUND SIX RAN, RETURNED 91 FINDINGS,
+AND JOHN RULED IT NOT CLEAN (D-052(a)).** The loop was paused (D-052(b)) and its terminating
+condition replaced (D-055(a)). What comes next is ONE bounded, John-scoped review, not round
+seven of an open-ended loop.
+
+**AND THIS WHOLE SECTION IS A SNAPSHOT OF 2026-08-17 THAT WAS NEVER REWRITTEN (A-075).** Its
+counts — "CLOSED — 20 of the 51", "AWAITING JOHN — one item", "UNDER ADJUDICATION — 24 leads" —
+were true when written and are not true now: §13.4 records what became of all 24, `F-VAULT-1`'s
+§7.1 correction was certified (D-051(a)) and then corrected again and re-certified (D-053(a),
+D-054(a)), and nine more of the 51 were fixed under A-068. **§13.4's status column, corrected
+today, is the current record; this prose is history.** Left standing rather than rewritten
+because the register is additive by house rule — but labelled, because an uncounted stale
+summary sitting above a corrected table is how the table gets mistrusted.
 ### 13.4 The 24 leads, adjudicated (A-067)
 
 Four independent adjudicators on frozen worktrees, told that ALREADY-CLOSED was as valuable a
 verdict as CONFIRMED and to assume each claim wrong until they had made its failure happen.
 **21 of 24 confirmed.** Evidence per finding is in `docs/review-2026-08-17/`.
 
+**THE STATUS COLUMN WAS CORRECTED 2026-08-18 (A-075, under D-055(d)). 22 OF THE 24 ROWS WERE
+WRONG** — every row bar `D-08` and `H-4` read `open`, including nine that had been FIXED, ten
+that John had ACCEPTED as documented limits, and three that adjudication had ruled were not
+defects at all.
+
+**WHY THAT MATTERED ENOUGH TO BE A PRE-REVIEW PREREQUISITE.** Every review brief names this
+table as the authority on what is already recorded, and tells reviewers that re-reporting a
+recorded item is not a new finding. A table saying `open` against a fixed item invites a
+reviewer to re-report it; a table saying `open` against an ACCEPTED limit invites the opposite
+and worse error — treating John's decision as an oversight. **D-055(d) made correcting it a
+condition of the final review for that reason, not for tidiness.**
+
+**READ THE DATE, NOT THE WORD.** This column is a snapshot verified on 2026-08-18 against the
+tree at that commit. It is exactly the kind of hand-maintained status field that goes stale
+silently — which is what it just did — and nothing mechanical asserts it. Verify a row before
+relying on it, and prefer the entry it cites (`A-06x`, `D-05x`) to this cell.
+
 | | Verdict | Severity after adjudication | Status |
 |---|---|---|---|
-| `C-3` | CONFIRMED | Keep MEDIUM | open |
-| `D-04` | CONFIRMED | Keep MEDIUM, but note the reach is one step wider than the claim states: the deep-profile corpu | open |
-| `D-05` | CONFIRMED | Keep MEDIUM as an instrument defect (the receipt is the product and it would state conformance  | open |
-| `D-06` | CONFIRMED | Keep MEDIUM, and note the claim UNDER-states its own scope in one place: it hedged that only th | open |
-| `D-07` | CONFIRMED | Consider MEDIUM → LOW | open |
+| `C-3` | CONFIRMED | Keep MEDIUM | **FIXED (A-068)**, and pinned end to end by **A-072** — the pure walk, the tracer name, and the mapping into `SimulationResult` |
+| `D-04` | CONFIRMED | Keep MEDIUM, but note the reach is one step wider than the claim states: the deep-profile corpu | **FIXED (A-068)** — every non-PASS row asserted to reach the receipt, plus a conforming-baseline control |
+| `D-05` | CONFIRMED | Keep MEDIUM as an instrument defect (the receipt is the product and it would state conformance  | **FIXED (A-068)** — a check row per HALF of the conjunction |
+| `D-06` | CONFIRMED | Keep MEDIUM, and note the claim UNDER-states its own scope in one place: it hedged that only th | **FIXED** — A-068 pinned four of five and said 'all five'; **A-072 closed all ten comparison edges** |
+| `D-07` | CONFIRMED | Consider MEDIUM → LOW | **ACCEPTED as a documented limit (D-051(b), §11.0)** · T1 basis VERIFIED 2026-08-18 |
 | `D-08` | CONFIRMED | Raise MEDIUM → HIGH | **FIXED (A-067)** |
-| `D-09` | CONFIRMED | LOW stands for (a) and (b) | open |
-| `D-10` | CONFIRMED | LOW is right for (a) and (b) — inert mutants over a corpus that happens to be single-case | open |
-| `E2` | CONFIRMED | Keep MEDIUM | open |
-| `E3` | CONFIRMED | MEDIUM is right, arguably light | **RULED FIXED (D-055)** — was a declared limit under A-044(f); A-068 wrongly re-opened it as a fork |
-| `E4` | CONFIRMED | Keep MEDIUM, raise confidence from the finding's own 'medium' to high — it is now reproduced wi | open |
-| `E5` | CONFIRMED | LOW is correct | open |
-| `F-VAULT-3` | CONFIRMED | MEDIUM stands, and would be MEDIUM even framed as document-only | open |
-| `F-VAULT-4` | CONFIRMED | LOW stands | open |
-| `F-VAULT-5` | CONFIRMED | LOW stands, but I would raise the confidence above the finding's own 'medium' | open |
-| `G-3` | CONFIRMED | MEDIUM -> LOW | open |
-| `G-4` | CONFIRMED | MEDIUM stands, but for a different reason than the finding gives | open |
-| `G-5` | CONFIRMED | LOW stands | open |
+| `D-09` | CONFIRMED | LOW stands for (a) and (b) | **(a),(b) ACCEPTED (D-051(b), §11.0)** · **(c) REOPENED 2026-08-18 (D-055(d)) — its stated basis is REFUTED by F006** |
+| `D-10` | CONFIRMED | LOW is right for (a) and (b) — inert mutants over a corpus that happens to be single-case | **ACCEPTED (D-051(b), §11.0)** · T1 basis VERIFIED · **the adjudicator's 'raise (c) to MEDIUM' is NOT reflected in the accepted severity — T2 flag** |
+| `E2` | CONFIRMED | Keep MEDIUM | **FIXED (A-068)** — both `uint256` wire fields brought inside `bounded()` |
+| `E3` | CONFIRMED | MEDIUM is right, arguably light | **FIXED (A-075, this session)** — signer reads pinned to ONE block and the anchor bound to it, per D-055(c). Was a declared limit (A-044(f)); A-068 wrongly re-opened it as a fork |
+| `E4` | CONFIRMED | Keep MEDIUM, raise confidence from the finding's own 'medium' to high — it is now reproduced wi | **VERIFIER HALF BUILT (A-069, absence-is-agreement repaired by A-070)** · **SIGNER HALF DELIBERATELY NOT BUILT (D-014)** — not an open defect |
+| `E5` | CONFIRMED | LOW is correct | **ACCEPTED (D-051(b), §11.0)** · T1 basis VERIFIED 2026-08-18 |
+| `F-VAULT-3` | CONFIRMED | MEDIUM stands, and would be MEDIUM even framed as document-only | **FIXED (A-068)**, and its 'the campaign corroborates' clause WITHDRAWN by **A-073** (marginal power measured ZERO), ratified D-054(b) |
+| `F-VAULT-4` | CONFIRMED | LOW stands | **ACCEPTED (D-051(b), §11.0)** · T1 basis VERIFIED, and now stronger than when accepted (D-054(b)) |
+| `F-VAULT-5` | CONFIRMED | LOW stands, but I would raise the confidence above the finding's own 'medium' | **ACCEPTED (D-051(b), §11.0)** · T1 basis VERIFIED — the docstring is intact at `SentinelVault.sol:39-45` |
+| `G-3` | CONFIRMED | MEDIUM -> LOW | **ACCEPTED (D-051(b), §11.0)** · T1 basis VERIFIED and MEASURED — exactly two classes are credited only on UNRESOLVED |
+| `G-4` | CONFIRMED | MEDIUM stands, but for a different reason than the finding gives | **FIXED (A-068)** — a sample-size floor, and the caveat derived from the sample |
+| `G-5` | CONFIRMED | LOW stands | **ACCEPTED (D-051(b), §11.0)** · **T1: the basis is NARROWER than it reads — see §11.0** |
 | `H-4` | CONFIRMED | unchanged | **FIXED (A-067)** |
-| `H-5` | CONFIRMED | unchanged | open |
-| `H-8` | CONFIRMED | unchanged | open |
-| `A-3` | UNPROVEN | unchanged | open |
-| `C-5` | REFUTED | unchanged | open |
-| `H-6` | ALREADY-CLOSED | unchanged | open |
+| `H-5` | CONFIRMED | unchanged | **ACCEPTED (D-051(b), §11.0)** · **T1: NO adjudicator reasoning was recorded — there is no stated basis to verify** |
+| `H-8` | CONFIRMED | unchanged | **ACCEPTED (D-051(b), §11.0)** · **T1: NO adjudicator reasoning was recorded.** Mechanism reproduced 2026-08-18 |
+| `A-3` | UNPROVEN | unchanged | **NOT A DEFECT — UNPROVEN, and it is about the review harness, not this repository.** Nothing to fix or track |
+| `C-5` | REFUTED | unchanged | **NOT A DEFECT — REFUTED by adjudication.** Nothing to fix or track |
+| `H-6` | ALREADY-CLOSED | unchanged | **NOT A DEFECT — ALREADY-CLOSED at adjudication.** Nothing to fix or track |
 
 ### 13.5 A fixture gap named by A-069, and worth more than the check that found it
 
@@ -791,6 +819,24 @@ spec finding a case the corpus does not exercise — and it is the second time t
 **Owed at v1.1:** a fixture whose mandate and policy native ceilings differ, so the intersection
 rule is exercised by the corpus rather than only by the verifier's own tests. Small, and it adds
 a fixture rather than moving a label — so it does NOT fire D-043(b)'s re-label trigger.
+
+## 13.6 A gate run can be silently corrupted by editing the gate script (A-075)
+
+**Found twice in one session, both times by the agent doing it to itself.** `scripts/test.sh` is
+read by bash incrementally, by byte offset. Editing it while a run is in flight shifts the
+offsets and the shell resumes mid-token. **The first occurrence threw a syntax error, never
+printed `GATE PASSED`, and EXITED 0** — a run that looks green to anything checking the status
+and is worthless. The second was killed and discarded unread.
+
+**Why this belongs in the register rather than in a habit.** The project's own house rule —
+read the output, not the exit code — is what caught it, and that is the right defence for a
+human. It is a weak defence for an agent driving the gate from a script, and there is a cheap
+mechanical one: **have the gate hash its own file at start and re-check at exit, failing loudly
+if it changed underneath itself.** Roughly four lines.
+
+**Not built, deliberately:** it is new tooling and outside D-055(d)'s four prerequisites, so it
+is raised rather than absorbed. It sits beside the repair protocol's own missing mechanical half
+as a second instance of the same gap — a durable rule that is currently prose.
 
 ## 14. Round six residuals — stated by the repairs that did NOT close them (D-052(b), A-070/A-071/A-072)
 

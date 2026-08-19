@@ -383,6 +383,101 @@ describe("independent checks", () => {
         });
     });
 
+    /**
+     * E3, THE EXPLOIT ITSELF (D-055(c)).
+     *
+     * The test above proves the anchor names a REAL block. That was the whole of the old
+     * check, and it is what made E3 possible: every historical block is real. An ALLOW
+     * anchored arbitrarily far back — including to a block at which the vault had no code —
+     * was attested and executed, because nothing here or downstream bounded the anchor.
+     *
+     * The anchor used below is a genuine block with its genuine hash, so
+     * SIGNER_SIMULATION_BLOCK_MISMATCH cannot fire and is asserted ABSENT. If this test
+     * passed while that code was the one blocking, it would be proving the old check works,
+     * not the new one — the "rejected by a different check" failure the A-074 probe hit.
+     */
+    it("refuses ALLOW anchored to a real but SUPERSEDED block (E3)", async () => {
+        await withRig(async ({stack, client}) => {
+            const scenario = await buildCase1(stack);
+            await activate(stack, scenario.mandateHash, scenario.policyHash);
+
+            const stale = await currentBlock(stack);
+
+            // Move the chain by REAL transactions rather than a cheat code, so the head
+            // advances the way it would in production. Pause and unpause leaves the vault
+            // exactly as it was and mines two blocks doing it.
+            for (const paused of [true, false]) {
+                const hash = await stack.walletClient.writeContract({
+                    address: stack.vault,
+                    abi: stack.vaultAbi,
+                    functionName: "setPaused",
+                    args: [paused],
+                    account: OWNER,
+                    chain: anvil,
+                });
+                await stack.publicClient.waitForTransactionReceipt({hash});
+            }
+
+            const head = await currentBlock(stack);
+            assert.notEqual(head.number, stale.number, "the chain must actually have moved");
+
+            const result = await client.evaluateAndSign(
+                await request(stack, scenario, "ALLOW", [], {
+                    simulationBlockNumber: stale.number,
+                    simulationBlockHash: stale.hash,
+                }),
+            );
+            assertRefused(result, "SIGNER_ANCHOR_NOT_OBSERVED");
+
+            // The discrimination that makes the assertion above mean something.
+            const codes = result.blocking.map((b) => b.code);
+            assert.ok(
+                !codes.includes("SIGNER_SIMULATION_BLOCK_MISMATCH"),
+                `the stale anchor is a real block, so the existence check must NOT be what ` +
+                    `rejected it; got ${codes.join(", ")}`,
+            );
+
+            // THE CONTROL. Same scenario, same moved chain, anchored at the head: signed.
+            // Without this, every assertion above is also satisfied by a signer that has
+            // simply stopped signing anything.
+            assertSigned(await client.evaluateAndSign(await request(stack, scenario, "ALLOW")));
+        });
+    });
+
+    it("still signs a REVIEW on a superseded anchor, keeping Case 4 reachable (E3)", async () => {
+        // SIGNER_ANCHOR_NOT_OBSERVED is CONFORMANCE, not EXECUTABILITY, because §4.2 Case 4
+        // names "the anchored RPC state conflicts" as a REVIEW trigger. Tiering it one step
+        // stricter would have made half of a ratified demonstration case unreachable — the
+        // exact mistake SIGNER_SIMULATION_BLOCK_MISMATCH made and an adversarial review
+        // caught. Asserted here rather than left to the unit tier because this is the tier
+        // whose consequence is visible only against the real signer process.
+        await withRig(async ({stack, client}) => {
+            const scenario = await buildCase1(stack);
+            await activate(stack, scenario.mandateHash, scenario.policyHash);
+
+            const stale = await currentBlock(stack);
+            const hash = await stack.walletClient.writeContract({
+                address: stack.vault,
+                abi: stack.vaultAbi,
+                functionName: "setPaused",
+                args: [false],
+                account: OWNER,
+                chain: anvil,
+            });
+            await stack.publicClient.waitForTransactionReceipt({hash});
+
+            const reviewed = await client.evaluateAndSign(
+                await request(stack, scenario, "REVIEW", [], {
+                    simulationBlockNumber: stale.number,
+                    simulationBlockHash: stale.hash,
+                }),
+            );
+            assertSigned(reviewed);
+            assert.equal(reviewed.receipt.verdict, 1n);
+            assert.ok(reviewed.reasonCodes.includes("SIGNER_ANCHOR_NOT_OBSERVED"));
+        });
+    });
+
     it("refuses ALLOW on a stale nonce but still signs a BLOCK receipt", async () => {
         await withRig(async ({stack, client}) => {
             const scenario = await buildCase1(stack, {action: {actionNonce: 99n}});

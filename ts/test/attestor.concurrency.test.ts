@@ -97,6 +97,7 @@ const state: VaultState = {
     domainSeparator: domainSeparator(CHAIN_ID, VAULT),
     targetCodeHash: mandate.targetCodeHash,
     observedAtBlock: 100n,
+    observedBlockHash: BLOCK_HASH,
 };
 
 const chain: ChainReader = {

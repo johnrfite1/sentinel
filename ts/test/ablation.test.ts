@@ -112,6 +112,7 @@ const vaultState: VaultState = {
     domainSeparator: keccak256(stringToBytes("d")),
     targetCodeHash: keccak256(stringToBytes("code")),
     observedAtBlock: 1n,
+    observedBlockHash: keccak256(stringToBytes("block 1")),
 };
 
 function input(overrides: {

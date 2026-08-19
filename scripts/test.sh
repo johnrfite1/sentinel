@@ -56,9 +56,137 @@ step "corpus class coverage (A-036)"
 step "vendor honesty (§7.5 Gate 5, D-008)"
 ./scripts/check-vendor-honesty.sh || fail=1
 
+# COUNT FLOORS FOR THE OTHER TWO SUITES (round six L8-14; authorised by John at D-055(d)).
+#
+# WHY THESE EXIST AT ALL. Until now only the verifier had a floor. The Foundry and TypeScript
+# counts were quoted in `docs/session-state.md` §3 beside it as though the gate asserted all
+# three; it asserted one. A SHRINKING TypeScript or Solidity suite was invisible here — delete
+# a test file and the gate stays green — which is exactly the defect A-047 closed for the
+# verifier and did not generalise. Generalising it is the whole of this change.
+#
+# RAISE A FLOOR IN THE SAME EDIT AS THE SUITE IT BOUNDS. NEVER LOWER ONE TO MAKE A RUN PASS.
+#
+# 75 (Foundry) and 507 (TypeScript) measured at this commit. TypeScript 494 -> 507 in this same
+# edit: +13 for the E3 repair (7 in `test/vault.anchor.test.ts`, 2 in `signer.e2e.test.ts`,
+# 4 in `reasoncodes.test.ts`).
+#
+# WHAT A FLOOR IS AND IS NOT, carried over verbatim in spirit from the verifier's: this is a
+# ratchet against ACCIDENT, not against intent. It catches a suite that shrinks. It says
+# nothing about whether the tests that remain assert anything — `test/reasoncodes.test.ts`
+# exists because 22 of 31 signer checks once had no test at all while the count looked healthy.
+FOUNDRY_MIN_TESTS=75
+TS_MIN_TESTS=507
+
 step "solidity build + tests (profile: $PROFILE)"
 if command -v forge >/dev/null 2>&1; then
-    (cd contracts && FOUNDRY_PROFILE="$PROFILE" forge test -vv) || fail=1
+    # `--json` RATHER THAN `-vv`, AND THE REASON IS A-051'S, NOT A PREFERENCE.
+    #
+    # The verifier stage records three defeated versions of "count the tests", each beaten
+    # because the thing under test also wrote the report the gate read. `forge test -vv`
+    # prints `75 tests passed ... (75 total tests)`; parsing that line asks the suite for its
+    # own alibi. `--json` emits a structured object per test — status, kind, reason — and a
+    # Solidity test cannot write into it: `console.log` output is captured INTO the object as
+    # `decoded_logs`, not interleaved with it.
+    #
+    # ONE RUN, NOT TWO. Keeping `-vv` for humans and adding a second `--json` run for the
+    # count was measured at +62s (the fuzz and invariant campaigns re-run; compilation is
+    # cached and is not what costs). So the per-test lines below are reconstructed from the
+    # JSON instead. They carry the same name, status and gas the `-vv` output did.
+    #
+    # THE COST, STATED BECAUSE IT IS A REAL REGRESSION AND NOT A FREE WIN. `-vv` STREAMED its
+    # [PASS] lines as tests finished; `--json` buffers everything until the run ends. Under the
+    # gate profile that is several minutes of SILENCE, during which a watcher cannot tell a slow
+    # fuzz campaign from a hang. Nothing is lost from the final record — every line is
+    # reconstructed below — but live observability is. Recorded rather than discovered.
+    #
+    # NO WALL-CLOCK FIGURE IS QUOTED HERE ON PURPOSE. The only deep-profile timing this
+    # repository has measured is 447s, and that was the `-vv` run — `forge test --json` under
+    # the gate profile has NOT been separately timed. Quoting 447s beside a `--json` invocation
+    # would be a number that was true once about a different command, which is the exact defect
+    # `docs/session-state.md` §3 exists to warn about. Time it before quoting it.
+    f_json="$(mktemp)"; f_res="$(mktemp)"
+    (cd contracts && FOUNDRY_PROFILE="$PROFILE" forge test --json) >"$f_json" 2>&1 || fail=1
+
+    if python3 - "$f_json" "$f_res" <<'FORGEREPORT'
+import json, sys
+
+raw = open(sys.argv[1]).read()
+# forge writes build diagnostics before the JSON object when anything is stale, so take the
+# object rather than assuming the file is pure JSON. FAIL CLOSED if there is no object at all:
+# a build that never produced results must never read as a suite that passed.
+start = raw.find("{")
+if start < 0:
+    print("  FORGE PRODUCED NO JSON REPORT — treating as failure, not as clean.")
+    print("  " + "\n  ".join(raw.strip().splitlines()[-15:]))
+    sys.exit(1)
+try:
+    suites = json.loads(raw[start:])
+except json.JSONDecodeError as exc:
+    print(f"  FORGE JSON UNPARSEABLE ({exc}) — treating as failure, not as clean.")
+    sys.exit(1)
+
+def gas_of(kind):
+    if not isinstance(kind, dict):
+        return None
+    if "Unit" in kind:
+        return kind["Unit"].get("gas")
+    if "Fuzz" in kind:
+        return kind["Fuzz"].get("mean_gas")
+    if "Invariant" in kind:
+        inv = kind["Invariant"]
+        return f"runs {inv.get('runs')}, calls {inv.get('calls')}, reverts {inv.get('reverts')}"
+    return None
+
+total = passed = failed = skipped = 0
+for suite_name in sorted(suites):
+    results = suites[suite_name].get("test_results", {})
+    print(f"  {suite_name}")
+    for test_name in sorted(results):
+        r = results[test_name]
+        status = r.get("status", "Unknown")
+        total += 1
+        if status == "Success":
+            passed += 1
+        elif status == "Skipped":
+            skipped += 1
+        else:
+            failed += 1
+        gas = gas_of(r.get("kind"))
+        detail = f" (gas: {gas})" if gas is not None else ""
+        line = f"    [{status.upper()}] {test_name}{detail}"
+        if status != "Success":
+            line += f"  <- {r.get('reason')}"
+        print(line)
+
+print(f"  {total} tests: {passed} passed, {failed} failed, {skipped} skipped")
+open(sys.argv[2], "w").write(f"{total} {passed} {failed} {skipped}\n")
+FORGEREPORT
+    then :; else fail=1; fi
+
+    f_total=""; f_pass=""; f_fail=""; f_skip=""
+    read -r f_total f_pass f_fail f_skip < "$f_res" 2>/dev/null || true
+    rm -f "$f_json" "$f_res"
+
+    if [ -z "${f_total:-}" ]; then
+        echo "  FOUNDRY SUITE PRODUCED NO REPORT — treating as failure, not as clean."
+        fail=1
+    else
+        echo "  foundry: $f_total tests (floor $FOUNDRY_MIN_TESTS)"
+        # SKIPPED IS ASSERTED SEPARATELY, because the floor alone does not catch it: a
+        # `vm.skip(true)` leaves the test COUNTED and asserting nothing, which is the
+        # `Ran 146 / OK (skipped=146)` defeat the verifier stage records, in Solidity.
+        if [ "${f_skip:-0}" -ne 0 ] 2>/dev/null; then
+            echo "  SUITE NOT CLEAN — $f_skip Solidity test(s) skipped. A skipped test RAN"
+            echo "    without asserting what it names. Argue for it here, in the open."
+            fail=1
+        fi
+        if ! [ "$f_total" -ge "$FOUNDRY_MIN_TESTS" ] 2>/dev/null; then
+            echo "  FLOOR BREACHED — foundry tests: $f_total, floor $FOUNDRY_MIN_TESTS."
+            echo "    THE SOLIDITY SUITE SHRANK. A count nothing asserts is a count that"
+            echo "    shrinks silently."
+            fail=1
+        fi
+    fi
 else
     echo "forge not found. Install with: curl -L https://foundry.paradigm.xyz | bash && foundryup"
     fail=1
@@ -76,7 +204,50 @@ elif ! command -v anvil >/dev/null 2>&1; then
     fail=1
 else
     npm --prefix ts run typecheck || fail=1
-    npm --prefix ts test || fail=1
+
+    # THE COUNT COMES FROM A REPORT THE SUITE DOES NOT SHARE A STREAM WITH.
+    #
+    # `node --test` prints `ℹ tests 507` to stdout, and so can any test file — that is
+    # literally the A-048 defeat the verifier stage records (a `print("OK")` beat a check that
+    # parsed the runner's own verdict line). So a SECOND reporter writes TAP to a private file
+    # while the human-readable `spec` output still goes to stdout. A test can write to stdout;
+    # it cannot write into another reporter's destination.
+    #
+    # `$SENTINEL_TEST_REPORTERS` is interpolated by the `test` script in `ts/package.json`, and
+    # that indirection is deliberate: the gate runs the SAME npm script a developer runs, so
+    # the flags and the test glob cannot drift apart. Node ignores reporter flags placed after
+    # the pattern, which is why they cannot simply be appended here.
+    ts_tap="$(mktemp)"
+    SENTINEL_TEST_REPORTERS="--test-reporter=spec --test-reporter-destination=stdout --test-reporter=tap --test-reporter-destination=$ts_tap" \
+        npm --prefix ts test || fail=1
+
+    ts_tests="$(sed -n 's/^# tests \([0-9][0-9]*\)$/\1/p' "$ts_tap" | tail -1)"
+    ts_skipped="$(sed -n 's/^# skipped \([0-9][0-9]*\)$/\1/p' "$ts_tap" | tail -1)"
+    ts_todo="$(sed -n 's/^# todo \([0-9][0-9]*\)$/\1/p' "$ts_tap" | tail -1)"
+    rm -f "$ts_tap"
+
+    if [ -z "${ts_tests:-}" ]; then
+        echo "  TYPESCRIPT SUITE PRODUCED NO TAP REPORT — treating as failure, not as clean."
+        fail=1
+    else
+        echo "  typescript: $ts_tests tests (floor $TS_MIN_TESTS)"
+        # Same reason as the Foundry stage: `skipped` and `todo` are COUNTED in the total, so
+        # the floor alone is satisfied by a suite whose assertions have all been disabled.
+        for probe in "skipped:${ts_skipped:-0}" "todo:${ts_todo:-0}"; do
+            p_name="${probe%%:*}"; p_n="${probe##*:}"
+            if [ "${p_n:-0}" -ne 0 ] 2>/dev/null; then
+                echo "  SUITE NOT CLEAN — $p_name: $p_n. A test that is skipped or marked todo"
+                echo "    RAN without asserting what it names. Argue for it here, in the open."
+                fail=1
+            fi
+        done
+        if ! [ "$ts_tests" -ge "$TS_MIN_TESTS" ] 2>/dev/null; then
+            echo "  FLOOR BREACHED — typescript tests: $ts_tests, floor $TS_MIN_TESTS."
+            echo "    THE TYPESCRIPT SUITE SHRANK. A count nothing asserts is a count that"
+            echo "    shrinks silently."
+            fail=1
+        fi
+    fi
 
     # OBSERVATION, NOT A STAGE. D-007's canary "never fails CI", so this prints its recorded
     # history and cannot set `fail`. It is here because the other half of that ruling —

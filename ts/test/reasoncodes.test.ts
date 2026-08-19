@@ -72,6 +72,7 @@ const CASES: {code: ReasonCode; overrides: FixtureOverrides}[] = [
     {code: "SIGNER_WRONG_VAULT", overrides: {action: {vault: OTHER_ADDRESS}}},
     {code: "SIGNER_WRONG_CHAIN", overrides: {action: {chainId: 999n}}},
     {code: "SIGNER_VAULT_UNREACHABLE", overrides: {vaultUnreachable: true}},
+    {code: "SIGNER_CHAIN_UNSTABLE", overrides: {chainUnstable: true}},
     {
         code: "SIGNER_DOMAIN_SEPARATOR_MISMATCH",
         overrides: {state: {domainSeparator: domainSeparator(CHAIN_ID, OTHER_ADDRESS)}},
@@ -100,6 +101,11 @@ const CASES: {code: ReasonCode; overrides: FixtureOverrides}[] = [
 
     // --- CONFORMANCE ---
     {code: "SIGNER_SIMULATION_BLOCK_MISMATCH", overrides: {blockMissing: true}},
+    // D-055(c). ONE dimension: the anchor names a different HEIGHT. The fake reports the
+    // fixture hash at every height, so `blockHashAt` still agrees and
+    // SIGNER_SIMULATION_BLOCK_MISMATCH does NOT fire — which is the point. This block is
+    // real; it is simply not the one the signer read.
+    {code: "SIGNER_ANCHOR_NOT_OBSERVED", overrides: {simulationBlockNumber: SIM_BLOCK_NUMBER - 1n}},
     {
         code: "SIGNER_MANDATE_NOT_ACTIVE",
         overrides: {state: {activeMandateHash: keccak256(stringToBytes("another mandate"))}},
@@ -211,6 +217,37 @@ describe("severity tiers are honoured per verdict", () => {
         // The specific regression that motivated the tier-wide assertion above.
         assert.equal(severityOf("SIGNER_TARGET_CODEHASH_MISMATCH"), "CONFORMANCE");
         assert.equal(severityOf("SIGNER_SIMULATION_BLOCK_MISMATCH"), "CONFORMANCE");
+    });
+
+    it("compares the anchor's HASH, not only its height (D-055(c))", async () => {
+        // The half no end-to-end route can reach. A superseded block differs from the head
+        // in both number and hash, so the e2e exploit passes against a signer that compares
+        // heights alone — and that signer accepts a same-height reorg, which is precisely
+        // the case the pair exists for.
+        //
+        // ONE dimension: the number still agrees, and `blockHashAt` still reports the
+        // fixture hash at every height, so SIGNER_SIMULATION_BLOCK_MISMATCH cannot be what
+        // fires. Asserted absent below for that reason.
+        const result = await run({
+            state: {observedBlockHash: keccak256(stringToBytes("a different block, same height"))},
+        });
+        assert.equal(result.refused, true);
+        const codes = findingsOf(result);
+        assert.ok(codes.includes("SIGNER_ANCHOR_NOT_OBSERVED"));
+        assert.ok(!codes.includes("SIGNER_SIMULATION_BLOCK_MISMATCH"));
+    });
+
+    it("SIGNER_CHAIN_UNSTABLE is not filed as SIGNER_VAULT_UNREACHABLE (D-055(c))", async () => {
+        // Both are FATAL and both refuse everything, so the tiering cannot tell them apart.
+        // The RECORD is what distinguishes them, and a refusal that reported the wrong one
+        // would state something the evidence does not support.
+        const unstable = findingsOf(await run({chainUnstable: true}));
+        assert.ok(unstable.includes("SIGNER_CHAIN_UNSTABLE"));
+        assert.ok(!unstable.includes("SIGNER_VAULT_UNREACHABLE"));
+
+        const unreachable = findingsOf(await run({vaultUnreachable: true}));
+        assert.ok(unreachable.includes("SIGNER_VAULT_UNREACHABLE"));
+        assert.ok(!unreachable.includes("SIGNER_CHAIN_UNSTABLE"));
     });
 });
 

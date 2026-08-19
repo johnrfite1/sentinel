@@ -489,7 +489,14 @@ code-unit-ordering paths are untested by anything (REPORT.md F-6).
 
 ## 11. What is NOT in evidence
 
-### 11.0 Ten findings ACCEPTED as limits, not fixed (D-051(b), 2026-08-18)
+### 11.0 Ten findings ACCEPTED as limits, not fixed (D-051(b), 2026-08-18) — NOW NINE AND A HALF
+
+**COUNT CORRECTION, 2026-08-18 (A-075).** This heading said TEN and the list still shows ten
+entries. **`D-09(c)` has been REOPENED because its stated basis is refuted, so what is accepted
+today is nine limits plus `D-09`(a),(b).** The heading keeps its original number and this
+correction sits beside it rather than replacing it, because "ten accepted limits" is quoted in
+`docs/exit-criterion-packet.md` §3 and in `docs/session-state.md`, and silently restating it as
+nine would leave those citations pointing at a number that no longer appears anywhere.
 
 **These are confirmed defects that John has decided not to fix.** Round five's reviewers found
 them, four independent adjudicators reproduced them, and each is real. They are listed here
@@ -506,11 +513,77 @@ same set were fixed (A-068) rather than accepted.
 **If any of these is later shown to be worse than recorded, that is a new finding, not a
 re-report** — the same rule the review briefs carry.
 
+---
+
+**T1 APPLIED RETROACTIVELY — EACH LIMIT'S STATED FACTUAL BASIS INDEPENDENTLY VERIFIED,
+2026-08-18 (A-075, required by D-055(a) T1 and D-055(d)).**
+
+**WHY.** D-055's first tightening exists because `D-09(c)` was accepted on the premise "no
+corpus fixture has divergent ceilings" — and `F006` refutes it. **An adjudication can be
+accurate in form and false in basis**, and every one of these ten was accepted on a stated
+reason rather than on a proof. Each reason is now checked against the tree and the check is
+recorded beside it, so a reader can see WHAT was verified rather than that somebody says it was.
+
+**RESULT: eight bases hold, one is REFUTED, one is narrower than it reads, and two limits have
+no recorded basis at all.**
+
+- **`D-09(c)` — REFUTED, and REOPENED** (D-055(d)). Measured across all 50 corpus fixtures:
+  `F006` carries mandate `1e18` against policy `2e15`, and **exactly one of 50 diverges** while
+  49 do not. The premise was false. It is no longer an accepted limit.
+- **`G-5` — the basis is NARROWER than its wording.** "The demonstration route is detected by
+  A-062" is true and was measured: changing the literal `50` to `49` in `ts/src/ablation/report.ts`
+  regenerates a report that differs from the committed one in exactly that line, so A-062 fails.
+  **But that is the route the REVIEWER used, not the drift the FINDING names.** The literal is a
+  `w("describe 50 fixtures …")` string with no connection to any computed count — the generator
+  derives no fixture total anywhere — so if the corpus itself changed size, generator and
+  committed report would still agree and A-062 would stay green. **The basis covers the
+  demonstration and not the argument, which is the shape `docs/repair-protocol.md` exists to
+  catch.** Recorded, not re-decided: whether that changes the acceptance is John's.
+- **`D-10` — basis verified, but a T2 discrepancy.** The corpus IS single-case: 9 distinct
+  addresses across all 50 fixtures, zero non-lowercase occurrences. **However the adjudicator
+  wrote "For (c) I would raise to MEDIUM", and the limit is accepted at LOW.** Under D-055's T2
+  severity is the adjudicator's to assign and a downgrade must be recorded with reasoning and
+  countersigned. **No such reasoning is recorded here.** Raised, not resolved.
+- **`H-5` and `H-8` — NO ADJUDICATOR REASONING WAS EVER RECORDED.** Both entries read
+  *"Adjudicated CONFIRMED."* and stop. **There is no stated basis to verify**, so T1 cannot be
+  satisfied for them by verification — only by John deciding on the mechanism itself. Both
+  mechanisms were reproduced today and are real (below). This is the "§11.0 truncated
+  adjudicator reasoning" item the exit-criterion packet listed at §3b, now attributable to
+  specific limits.
+
+**Verified 2026-08-18, each against the tree rather than against the note:**
+
+| Limit | Stated basis | Verification |
+|---|---|---|
+| `D-07` | D-026 says the classification "changes no verdict, no schema change, no receipt hash changes" | **HOLDS.** `docs/decisions.md:53` carries that sentence verbatim. And the guard really is one-sided: `ablation.test.ts`'s only lower bound is `assert.ok(EVAL_EXECUTABILITY_CODES.size > 0)`, so the set can shrink to one member with the suite green. |
+| `D-09` (a),(b) | LOW stands | **HOLDS** for (a),(b). **(c) REFUTED — see above.** |
+| `D-10` | "inert mutants over a corpus that happens to be single-case" | **HOLDS** — measured: 9 distinct addresses, 0 non-lowercase occurrences across 50 fixtures. **T2 flag above.** |
+| `E5` | "no value substitution was found" | **HOLDS, and the divergence is real.** The comment says "the bundle carries decimal strings (the §5.6 schema has no JSON numbers)"; the comparison is `String(got).toLowerCase()`, and `String(86400) === "86400"` — a JSON number is silently accepted where the comment asserts none can occur. No value substitution follows from it. |
+| `F-VAULT-4` | "both fields are write-once; no gate claim rests on this invariant" | **HOLDS, with one nuance and one strengthening.** `maxNativeValueWei` is `immutable`; `owner` is a plain storage variable assigned only in the constructor — write-once by inspection, not by the type system. **And the basis is now STRONGER than when accepted:** A-073 measured the whole invariant campaign's marginal contribution at ZERO and D-054(b) certified it, so no gate claim rests on any invariant, not merely this one. |
+| `F-VAULT-5` | "its withdrawal costs nothing" | **HOLDS.** The docstring is intact at `contracts/src/SentinelVault.sol:39-45` and still argues "a relayer can only cause what the owner already authorized, exactly once". It is a comment; withdrawing it changes no behaviour. |
+| `G-3` | MEDIUM → LOW; the security framing is refuted by the engine's outcome taxonomy | **HOLDS, and the mechanism is now MEASURED rather than asserted.** `failingCodes` is `outcome !== "PASS"`, so UNRESOLVED counts as failing; walking all 50 committed results, **exactly two classes are credited only on UNRESOLVED outcomes — `conflicting-block-state` and `runtime-code-change-or-proxy-target`** — which is the finding's claim reproduced independently. |
+| `G-5` | "the demonstration route is detected by A-062" | **NARROWER THAN IT READS — see above.** |
+| `H-5` | *(none recorded)* | Mechanism present: the string "no meta.json/index.json to cross-check against" is emitted at `verifier/verify.py:673` and `:1905`. **No basis to verify.** |
+| `H-8` | *(none recorded)* | **Mechanism reproduced today:** `verify.py --domain … --all <empty dir>` prints `0/0 sample(s) verified` and **exits 0**. **No basis to verify.** |
+
+**WHAT THIS VERIFICATION DOES NOT ESTABLISH.** It checks that each stated reason is TRUE of the
+tree. It does not re-decide whether a true reason is a SUFFICIENT reason to accept the finding —
+that was John's call at D-051(b) and remains his. Nor does it re-adjudicate severity.
+
 - **`D-07` — EVAL_EXECUTABILITY_CODES — D-026's remedy classification — is guarded against growing wrong and not against shrinking; members can be deleted silently**
   *Adjudicated CONFIRMED.* Consider MEDIUM → LOW. The mechanism is fully confirmed, but D-026's own text in docs/decisions.md:53 is explicit that this classification "changes no verdict, no schema change, no receipt hash changes" — it makes the REMEDY derivable. A silently shrunk set th
 
 - **`D-09` — Three evidence-bundle fields are read by no assertion and can be made to state the opposite of what the engine computed**
   *Adjudicated CONFIRMED.* LOW stands for (a) and (b). Downgrade (c) from 'mutation survives the oracle' to 'no fixture distinguishes the two ceilings' — same remedy family, but it should not be counted as a third surviving mutant, because it could not have failed.
+  **(c) IS REOPENED, 2026-08-18 (D-055(d), A-075). ITS BASIS IS FALSE AND WAS FALSE WHEN
+  WRITTEN.** The downgrade rests on "no fixture distinguishes the two ceilings". **`F006` does:
+  mandate `1e18` against policy `2e15`, a factor of 500**, and its declared intent says so in
+  words. Measured across all 50 committed fixtures: exactly one diverges, 49 do not. **So the
+  reason it "could not have failed" does not hold, and (c) returns to the open list as a
+  surviving mutant** — `docs/v1-1-register.md` §13.4. (a) and (b) are unaffected and remain
+  accepted. **What is owed is a divergent SAMPLE, not a fixture** — the corpus already has one;
+  it is the seven committed sample bundles the D-010 verifier reads that do not, which is the
+  correction already recorded at register §13.5.
 
 - **`D-10` — Address case-normalisation in the binding checks is unpinned in both directions**
   *Adjudicated CONFIRMED.* LOW is right for (a) and (b) — inert mutants over a corpus that happens to be single-case. For (c) I would raise to MEDIUM: the substantive defect is not the beneficiary/principal swap (which no fixture distinguishes) but that EVAL_APPROVAL_SPENDER can be made
