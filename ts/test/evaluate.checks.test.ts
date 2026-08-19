@@ -1,6 +1,6 @@
 import {describe, it} from "node:test";
 import assert from "node:assert/strict";
-import {keccak256, stringToBytes, toBytes} from "viem";
+import {getAddress, keccak256, stringToBytes, toBytes} from "viem";
 import {decodeCall, buildRegistry, type DecodeResult} from "../src/decode/index.ts";
 import {EVAL_CODES, evaluate, runChecks, type CheckOutcome} from "../src/evaluate/index.ts";
 import {hashCallData, hashMandate, hashPolicy} from "../src/evaluate/hashes.ts";
@@ -410,6 +410,44 @@ describe("the receipt STATES the reason it was reached for", () => {
     });
 });
 
+describe("an unavailable call trace does not record a PASS (R2-F5)", () => {
+    /**
+     * R2-F5, D-055(e), CONFIRMED at MEDIUM. Repaired under D-057(4).
+     *
+     * THE ARGUMENT: **an empty list of observed internal calls means "none were seen", which
+     * is the same value whether none occurred or nothing looked.** With the tracer
+     * unavailable, `internalCalls` is `[]` and the check recorded a POSITIVE
+     * `EVAL_CALL_GRAPH_EXPECTED: PASS` — signed into the receipt as though §3.3(11)'s defence
+     * had been evaluated — on a run where it never was.
+     *
+     * The verdict was always protected; the RECORD was not. Both are asserted here, because
+     * fixing the record while silently changing the verdict would be a different defect.
+     */
+    it("records UNRESOLVED, not PASS, when the trace is unavailable", () => {
+        assert.equal(
+            outcomeOf({simulation: {callTrace: null, internalCalls: [],
+                                    unresolvedChecks: ["SIM_CALL_TRACE_UNAVAILABLE"]}},
+                      "EVAL_CALL_GRAPH_EXPECTED"),
+            "UNRESOLVED",
+        );
+    });
+
+    it("still PASSes when the trace IS available and the graph is genuinely empty", () => {
+        // The control. Without it, "always UNRESOLVED" satisfies the row above and the check
+        // stops detecting anything.
+        assert.equal(outcomeOf({}, "EVAL_CALL_GRAPH_EXPECTED"), "PASS");
+    });
+
+    it("still VIOLATES on a real unexpected internal call", () => {
+        // The second control: the check must keep doing its actual job.
+        assert.equal(
+            outcomeOf({simulation: {internalCalls: [{from: VAULT, to: OTHER, type: "CALL"}]}},
+                      "EVAL_CALL_GRAPH_EXPECTED"),
+            "VIOLATION",
+        );
+    });
+});
+
 describe("binding comparisons are case- and field-pinned (D-10)", () => {
     /**
      * D-10, adjudicated CONFIRMED and accepted as a limit at LOW — **re-classified MEDIUM for
@@ -424,7 +462,7 @@ describe("binding comparisons are case- and field-pinned (D-10)", () => {
      * THE ARGUMENT: **a binding comparison must be pinned to the FIELD it names and to the
      * VALUE it names, independently of how the corpus happens to spell either.** The corpus is
      * single-case throughout — measured: 9 distinct addresses across all 50 fixtures, zero
-     * non-lowercase occurrences — and every fixture sets `principal === beneficiary`. So the
+     * non-lowercase occurrences — and ~~every fixture sets `principal === beneficiary`~~ **— FALSE, and `F024` is the counterexample (R3-F8). The corpus DOES distinguish them.** So the
      * corpus cannot distinguish a normalised comparison from an unnormalised one, nor the
      * beneficiary from the principal, and neither could anything else in the suite.
      *
@@ -434,8 +472,20 @@ describe("binding comparisons are case- and field-pinned (D-10)", () => {
      * repaired for exactly this reason once.
      */
 
-    /** Upper-case the hex body: same value, different spelling. */
+    /**
+     * Two different "same value, different spelling" transforms, because addresses and raw
+     * hex are not interchangeable here.
+     *
+     * `upper` is for NON-ADDRESS hex — bytes32 and selectors — where any case is valid.
+     *
+     * `checksum` is for ADDRESSES. Upper-casing an address produces a string viem REJECTS as
+     * failing EIP-55, so a probe built on it fails for the wrong reason and proves nothing
+     * about case handling. The realistic mixed-case address IS the checksummed one, which is
+     * what an EIP-55 wallet and an LLM-produced proposal both emit — and it is what `attest.ts`
+     * had to be repaired for once already.
+     */
     const upper = (a: Hex): Hex => ("0x" + a.slice(2).toUpperCase()) as Hex;
+    const checksum = (a: Hex): Hex => getAddress(a) as Hex;
 
     /**
      * An address containing hex LETTERS, because the repository's own constants do not.
@@ -453,7 +503,7 @@ describe("binding comparisons are case- and field-pinned (D-10)", () => {
         assert.notEqual(upper(LETTERY), LETTERY, "the probe must actually change the spelling");
         assert.equal(
             outcomeOf(
-                {action: {target: upper(LETTERY)}, mandate: {target: LETTERY}},
+                {action: {target: checksum(LETTERY)}, mandate: {target: LETTERY}},
                 "EVAL_TARGET_BOUND",
             ),
             "PASS",
@@ -468,6 +518,99 @@ describe("binding comparisons are case- and field-pinned (D-10)", () => {
         assert.equal(
             outcomeOf({mandate: {selector: upper(SEL)}}, "EVAL_SELECTOR_BOUND"),
             "PASS",
+        );
+    });
+
+    /**
+     * ALL NINE CASE-NORMALISATION SITES (R3-F8, D-055(e), CONFIRMED).
+     *
+     * The A-076 repair pinned **2 of 9** and recorded a premise that is FALSE: *"every fixture
+     * sets `principal === beneficiary`"*. **`F024` is the counterexample** — principal
+     * `0x0000…` against beneficiary `0xf39f…` — so the corpus DOES distinguish the two fields,
+     * and a repair reasoning from "it cannot" was reasoning from a measurement nobody made.
+     * That is `D-09(c)`'s refuted-basis defect, committed inside the fix for it.
+     *
+     * Each row upper-cases ONE side of ONE comparison. Same value, different spelling, so the
+     * check must still PASS; a mutant dropping `.toLowerCase()` on either side fails the row
+     * that names it.
+     */
+    const CASE_SITES: {code: string; note: string; overrides: Overrides}[] = [
+        {code: "EVAL_MANDATE_PRINCIPAL_IS_OWNER", note: "principal vs vault owner",
+         overrides: {mandate: {principal: checksum(LETTERY)}, state: {owner: LETTERY}}},
+        {code: "EVAL_VAULT_BOUND", note: "action vault vs mandate vault",
+         overrides: {action: {vault: checksum(LETTERY)}, mandate: {vault: LETTERY}}},
+        {code: "EVAL_TARGET_BOUND", note: "action target vs mandate target",
+         overrides: {action: {target: checksum(LETTERY)}, mandate: {target: LETTERY}}},
+        {code: "EVAL_TARGET_CODE_IDENTITY", note: "mandate code hash vs observed code hash",
+         // BOTH sides stated: the fixture derives `state.targetCodeHash` from the mandate, so
+         // overriding only the mandate made both sides the SAME uppercase string and the probe
+         // measured nothing. Caught by the mutation sweep, not by the test passing.
+         overrides: {mandate: {targetCodeHash: upper(CODE_HASH)}, state: {targetCodeHash: CODE_HASH}}},
+        {code: "EVAL_SELECTOR_BOUND", note: "decoded selector vs mandate selector",
+         overrides: {mandate: {selector: upper("0xc188528b" as Hex)}}},
+        {code: "EVAL_PURCHASE_RESOURCE", note: "decoded resource vs mandate resource",
+         overrides: {mandate: {resourceId: upper(RESOURCE)}}},
+        {code: "EVAL_PURCHASE_BENEFICIARY", note: "decoded beneficiary vs mandate beneficiary",
+         // LETTERY, not OWNER: `OWNER` is 0x4444… — all digits — so checksumming it is a no-op
+         // and the probe changed nothing. Three rows had this defect and all three survived
+         // their mutation until the sweep exposed them.
+         overrides: {callData: purchaseCalldata(RESOURCE, LETTERY),
+                     mandate: {beneficiary: checksum(LETTERY)}}},
+    ];
+
+    // THE PROBE MUST MOVE SOMETHING. Four of these rows originally used all-digit constants
+    // (`OWNER` is 0x4444…, `VAULT` is 0x1111…) where upper-casing and checksumming are both
+    // no-ops, so the row passed while testing nothing and its mutant survived. This guard is
+    // asserted per row rather than trusted.
+    assert.notEqual(upper(CODE_HASH), CODE_HASH, "upper() must change a bytes32");
+    assert.notEqual(checksum(LETTERY), LETTERY, "checksum() must change a letter-bearing address");
+
+    for (const c of CASE_SITES) {
+        it(`matches mixed case: ${c.note}`, () => {
+            assert.equal(outcomeOf(c.overrides, c.code), "PASS",
+                `${c.code} must be insensitive to how the same value is spelled`);
+        });
+    }
+
+    it("matches a mixed-case approval spender against the mandate beneficiary", () => {
+        assert.notEqual(checksum(LETTERY), LETTERY, "the probe must change the spelling");
+        assert.equal(
+            outcomeOf({target: DEMO_ERC20, callData: approveCalldata(LETTERY, 0n),
+                       mandate: {target: DEMO_ERC20, selector: "0x095ea7b3" as Hex,
+                                 beneficiary: checksum(LETTERY)}},
+                      "EVAL_APPROVAL_SPENDER"),
+            "PASS",
+        );
+    });
+
+    it("matches a mixed-case native-delta address against the action vault", () => {
+        // The ninth site: the observed balance delta is matched to the vault by address.
+        // `action.vault` must be the letter-bearing address too, or both sides are 0x1111…
+        // and the row proves nothing.
+        assert.equal(
+            outcomeOf({action: {vault: LETTERY}, mandate: {vault: LETTERY},
+                       simulation: {nativeBalanceDeltas: [
+                {address: checksum(LETTERY), before: 1000n, after: 0n, delta: -1000n}]}},
+                      "EVAL_NATIVE_DELTA_MATCHES_VALUE"),
+            "PASS",
+        );
+    });
+
+    it("compares the PURCHASE beneficiary to the beneficiary, not the principal (R3-F8)", () => {
+        // THE SECOND FIELD SWAP, thirty lines above the one A-076 fixed and left standing.
+        // F024 is the corpus counterexample that makes it observable at all.
+        const m = {principal: OWNER, beneficiary: OTHER};
+        assert.equal(
+            outcomeOf({callData: purchaseCalldata(RESOURCE, OTHER), mandate: m, state: {owner: OWNER}},
+                      "EVAL_PURCHASE_BENEFICIARY"),
+            "PASS",
+            "a purchase for the mandate's beneficiary must conform",
+        );
+        assert.equal(
+            outcomeOf({callData: purchaseCalldata(RESOURCE, OWNER), mandate: m, state: {owner: OWNER}},
+                      "EVAL_PURCHASE_BENEFICIARY"),
+            "VIOLATION",
+            "a purchase for the PRINCIPAL, who is not the beneficiary, must not conform",
         );
     });
 

@@ -350,9 +350,20 @@ design forks. Never sign a gate, never certify a public claim.
 
 ## 3. Where the build is
 
-**75/75 Foundry · 507/507 TypeScript · 198/198 verifier · 78 tamper cases over 30 modes ·
-50 corpus fixtures · 7 samples · gate green · workspace guards OK (0 NEW findings; 13 pre-existing
-baselined — it PASSES ON RATCHETED DEBT, which is not the same as clean).**
+**DO NOT READ A SUITE COUNT FROM THIS FILE. RUN `./scripts/test.sh` AND READ ITS OUTPUT, OR RUN
+`./scripts/check-suite-floors.sh` (R4-F4, D-055(e), CONFIRMED).**
+
+This line published `507/507 TypeScript · 198/198 verifier` while the gate's own floors were
+**513** and **209** — and it quoted `TS_MIN_TESTS=507` where the constant was 513, so a
+maintainer reconciling the two would have LOWERED a floor, the one action `scripts/test.sh`
+repeatedly forbids. **The figures are no longer duplicated here.** The gate constants are the
+only copy, and `scripts/check-suite-floors.sh` prints them from the script itself, so this file
+cannot drift from them again. That is the mechanical binding John required rather than a fifth
+hand-correction of a line whose own text already said it "has been wrong four times".
+
+**What is stable and worth stating: 50 corpus fixtures · 7 samples · 78 tamper cases over 30
+modes · workspace guards 0 NEW findings with 13 pre-existing baselined — it PASSES ON RATCHETED
+DEBT, which is not the same as clean.**
 *(TypeScript 494 → 507 under A-075, all thirteen from the E3 repair: 7 in `test/vault.anchor.test.ts`,
 4 in `reasoncodes.test.ts`, 2 in `signer.e2e.test.ts`.)*
 **AND AS OF A-075 THE FOUNDRY AND TYPESCRIPT FIGURES ARE FLOORS THIS GATE ASSERTS, which they

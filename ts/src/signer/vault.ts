@@ -127,10 +127,24 @@ export const SNAPSHOT_ATTEMPTS = 5;
 
 /** Thrown when no attempt produced a snapshot whose block was still the head afterwards. */
 export class ChainUnstableError extends Error {
-    constructor(attempts: number) {
-        super(`no stable block after ${attempts} attempts`);
+    /**
+     * `pendingOnly` distinguishes the two conditions this error covers (R2-F6). Every attempt
+     * saw a hashless (pending) head, versus the head actually moving under the reads. Same
+     * tier and same remedy, different fact — and reporting one as the other is the substitution
+     * this project exists to study.
+     */
+    constructor(attempts: number, pendingOnly = false) {
+        super(
+            pendingOnly
+                ? `no finalised head after ${attempts} attempts: every observation returned a ` +
+                      "pending block with no hash, so there was nothing to anchor to"
+                : `no stable block after ${attempts} attempts: the head moved or was replaced ` +
+                      "under each pinned read",
+        );
         this.name = "ChainUnstableError";
+        this.pendingOnly = pendingOnly;
     }
+    readonly pendingOnly: boolean = false;
 }
 
 /**
@@ -155,6 +169,8 @@ export function createChainReader(rpcUrl: string): ChainReader {
         },
 
         async readVaultState(vault: Hex, target: Hex, selector: Hex): Promise<VaultState> {
+            // Tracks whether EVERY attempt failed for the pending-head reason (R2-F6).
+            let pendingOnly = true;
             for (let attempt = 0; attempt < SNAPSHOT_ATTEMPTS; attempt += 1) {
                 // Number and hash from ONE response. Deriving the hash from a second request
                 // would reintroduce, in the identifier of the pin itself, exactly the
@@ -162,7 +178,7 @@ export function createChainReader(rpcUrl: string): ChainReader {
                 const head = await client.getBlock();
                 if (head.hash === null) {
                     // A pending block. It has no hash to anchor to and its contents are not
-                    // final; there is nothing here to attest against.
+                    // final; there is nothing here to attest against. `pendingOnly` stays true.
                     continue;
                 }
                 const at = head.number;
@@ -209,6 +225,8 @@ export function createChainReader(rpcUrl: string): ChainReader {
                     confirm.number !== at ||
                     confirm.hash.toLowerCase() !== headHash
                 ) {
+                    // The head moved or was replaced: a different condition from (b) above.
+                    pendingOnly = false;
                     continue;
                 }
 
@@ -232,7 +250,7 @@ export function createChainReader(rpcUrl: string): ChainReader {
                 };
             }
 
-            throw new ChainUnstableError(SNAPSHOT_ATTEMPTS);
+            throw new ChainUnstableError(SNAPSHOT_ATTEMPTS, pendingOnly);
         },
 
         async blockHashAt(blockNumber: bigint): Promise<Hex | null> {

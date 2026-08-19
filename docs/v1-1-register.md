@@ -834,9 +834,53 @@ human. It is a weak defence for an agent driving the gate from a script, and the
 mechanical one: **have the gate hash its own file at start and re-check at exit, failing loudly
 if it changed underneath itself.** Roughly four lines.
 
-**Not built, deliberately:** it is new tooling and outside D-055(d)'s four prerequisites, so it
-is raised rather than absorbed. It sits beside the repair protocol's own missing mechanical half
-as a second instance of the same gap — a durable rule that is currently prose.
+~~**Not built, deliberately:** it is new tooling and outside D-055(d)'s four prerequisites…~~
+
+**SUPERSEDED TWICE. THIS SECTION'S PRESCRIBED DESIGN WAS BUILT, SHIPPED, AND FOUND BROKEN AT
+CRITICAL. DO NOT BUILD WHAT THE STRUCK TEXT DESCRIBES (`R1-F4`, D-055(e)).**
+
+1. **A-076 built a variant** — copy to a temp file and `exec` into it — and claimed the snapshot
+   was "a private file nobody has a path to".
+2. **`R1-F1` proved that false at CRITICAL.** The path was exported to every child and visible in
+   `ps`; both routes rewrote the running body; **6 of 8 real-gate trials corrupted, three exiting
+   0 with no `GATE PASSED`**, and the corruption is **non-deterministic** (2 of 8 clean).
+3. **John rejected the four-line "hash at start, re-check at end" design on its merits** before
+   it was built: *"the ending check can itself be skipped or corrupted when bash resumes at a
+   shifted byte offset."* A guard inside the mutable body is the code the attack makes
+   unreachable.
+4. **A-077 replaced it under D-057(3):** the body is copied, opened read-only, and **unlinked**,
+   so it has no filesystem pathname at all; it executes as `/dev/fd/N`; and an **external
+   supervisor** refuses success unless the body emits a completion token — **exit 0 alone is not
+   success.** Verified: child gets EACCES/EINVAL, `ps` shows no backing path, and both real
+   attack routes fail across 12 trials at 6 timings while an unprotected control is corrupted at
+   every one.
+
+## 13.7 The human-readable description is compared to nothing (R2-F4, D-055(e))
+
+**A-074's residual (c) states this is "Recorded in the register, not fixed here". IT WAS NOT.
+No such entry existed until this one** (`R2-F4`, CONFIRMED at MEDIUM). A residual citing a record
+that does not exist is worse than an unrecorded residual: it tells the next reader the item is
+tracked, so nobody goes looking. The reviewer demonstrated the cost on itself — it wrote the gap
+up as a fresh finding and demoted it only after reading a 5,000-word decision entry that the
+review rules do not point reviewers at.
+
+**The item.** `evidence.decodedSelectorAndParameters.description` — the human-readable line
+§7.5's Gate 8 will be graded on — is compared to nothing. A-074 built the conformance comparison
+for the STRUCTURED fields (resource, beneficiary, duration, recurrence, spender, ceiling); the
+prose line beside them is committed to by `evidenceHash` and therefore tamper-evident, but
+**nothing checks that it describes the parameters it sits next to.** Round six's `L3-04` showed
+it can state the opposite of them.
+
+**Owed at v1.1.** Either DERIVE the description from the decoded parameters so it cannot
+disagree, or compare it. Deriving is the stronger shape and is what `G-5` established for the
+ablation prose.
+
+**AND A STALE STATEMENT CORRECTED.** The exit-criterion packet's §3b carried
+*"`decodedSelectorAndParameters` is compared to nothing"* with
+`grep -c decodedSelectorAndParameters verifier/verify.py` = **0**. True when written, **false
+now**: A-074 built the comparison (the grep returns **2**) and the signer checks the field as
+well (`attest.ts`, 1 occurrence). **What remains uncompared is the `description` sub-field
+only.**
 
 ## 14. Round six residuals — stated by the repairs that did NOT close them (D-052(b), A-070/A-071/A-072)
 

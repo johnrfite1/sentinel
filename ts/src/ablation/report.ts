@@ -1,4 +1,5 @@
 import {existsSync, readFileSync, writeFileSync} from "node:fs";
+import {MANDATE_CONFORMANCE_CODES} from "./layers.ts";
 import {join} from "node:path";
 import {LAYERS, LAYER_DESCRIPTIONS, type LayerName} from "./layers.ts";
 
@@ -374,16 +375,18 @@ export function buildReport(inputs: AblationInputs): string {
     // §7.2 names exactly what the baseline lacks. Splitting the L3-only set by whether a
     // fixture turns on one of those fields is derived from the results rather than asserted,
     // so the two numbers cannot drift apart in prose.
-    const WITHHELD = new Set([
-        "EVAL_PURCHASE_RESOURCE",
-        "EVAL_PURCHASE_BENEFICIARY",
-        "EVAL_PURCHASE_DURATION",
-        "EVAL_PURCHASE_RECURRENCE",
-        "EVAL_ENTITLEMENT_ADVANCED",
-        "EVAL_ENTITLEMENT_RECURRENCE",
-        "EVAL_ENTITLEMENT_UNOBSERVED",
-        "EVAL_APPROVAL_SPENDER",
-    ]);
+    // DERIVED FROM THE GENERATOR'S ACTUAL INPUT, not re-typed (R3-F2, D-055(e), CONFIRMED).
+    //
+    // THE ARGUMENT: **a check on a partition must read the partition, not a copy of it.**
+    // This was a hand-typed duplicate of `MANDATE_CONFORMANCE_CODES` — the set `runLayer`
+    // actually withholds — with no import and nothing asserting the two agreed. So the "CHECK
+    // ON THE PARTITION" checked one hand-maintained list against another:
+    //   * deleting a code from the copy printed `← DRIFT` and a diagnosis naming a set the
+    //     probe had never touched; and
+    //   * adding a code that D-034 puts in L2 changed nothing at all.
+    // It is the same shape as `G-5` — prose that cannot disagree with the data it describes —
+    // in the same generator, one section apart.
+    const WITHHELD = MANDATE_CONFORMANCE_CODES;
     const l3Failing = (id: string): string[] =>
         results.find((r) => r.fixtureId === id)?.layers.find((l) => l.layer === "L3_full_conformance")
             ?.failing ?? [];

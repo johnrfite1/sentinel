@@ -17,6 +17,29 @@ set -uo pipefail
 
 ROOT="$(git rev-parse --show-toplevel)"
 SPEC="$ROOT/Sentinel_Protocol_Lab_Proposal_v0_2.md"
+
+# SCOPED TO §5.8, THE SECTION THIS GUARD NAMES (R4-F3, D-055(e), CONFIRMED).
+#
+# THE ARGUMENT: **a guard that says "published in §5.8" must read §5.8.** This searched the
+# whole 84 KB document and took `head -1`. Because the file's section order is NOT monotonic
+# (§5.9 precedes §5.8), an earlier matching line anywhere above §5.8 wins — so a reviewer
+# demonstrated the guard printing "6/6 published in §5.8 match eip712.ts exactly" while §5.8
+# published a transposed `EIP712Domain` whose typehash differs. The guard's own header calls
+# that outcome "worse than an absent one".
+#
+# NOT CURRENTLY LIVE: each type string occurs exactly once today, inside §5.8, so the guard has
+# been reading the right lines. It took two edits — the transposition plus a decoy earlier in
+# the file — to produce the defeat. This is an instrument defect, not a live false claim, and
+# the distinction is recorded rather than blurred.
+SPEC_SECTION="$(mktemp)"
+trap 'rm -f "$SPEC_SECTION"' EXIT
+awk '/^### 5\.8 /{f=1;next} f && /^#{1,4} /{exit} f' "$SPEC" > "$SPEC_SECTION"
+if [ ! -s "$SPEC_SECTION" ]; then
+    echo "type strings: COULD NOT ISOLATE §5.8 from the proposal."
+    echo "  Refusing to certify a section this guard could not find — an empty scope would"
+    echo "  make every comparison vacuously fail, or worse, pass against nothing."
+    exit 1
+fi
 SRC="$ROOT/ts/src/signer/eip712.ts"
 
 fail=0
@@ -25,7 +48,7 @@ checked=0
 for name in EIP712Domain MandatePayload PolicyPayload ActionPayload \
             DecisionReceiptPayload OverrideAuthorizationPayload; do
     # The spec publishes each as an indented literal line; the source as a quoted string.
-    spec_line="$(grep -oE "^ {4}${name}\([^)]*\)$" "$SPEC" | head -1 | sed 's/^ *//')"
+    spec_line="$(grep -oE "^ {4}${name}\([^)]*\)$" "$SPEC_SECTION" | head -1 | sed 's/^ *//')"
     src_line="$(grep -oE "\"${name}\([^\"]*\)\"" "$SRC" | head -1 | sed 's/^"//; s/"$//')"
 
     if [ -z "$spec_line" ]; then

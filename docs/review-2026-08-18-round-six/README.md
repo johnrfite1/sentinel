@@ -35,7 +35,7 @@ citation in the adjudication can be resolved against the archive without the byt
 | `briefs/COMMON-BRIEF.md` | one line sanitized: an absolute repository path became `<REPO>`. Nothing else changed |
 | `reviewer-indexes/lens1-00-INDEX.txt` | reviewer-authored, worktree paths sanitized |
 | `reviewer-indexes/lens4-L4-INDEX.txt` | reviewer-authored, worktree paths sanitized |
-| `EVIDENCE-MANIFEST.txt` | relative paths + SHA-256 for all 971 preserved files |
+| `EVIDENCE-MANIFEST.txt` | relative paths + SHA-256 for all 971 preserved files. **SANITIZED AND HEADER-PREFIXED** — the symlink row's absolute repository path became `<REPO>`, and four header lines naming the archive and its digest were prepended. Disclosed here from 2026-08-19 (R4-F2, D-055(e), CONFIRMED): the earlier table listed three sanitizations and omitted this one, **while the scope manifest designated this README the authority on which files were altered** — and these 15 files were de-scoped from review on the strength of that disclosure being complete. |
 
 ## PROVENANCE GAP — the reviewers' final reports do not exist as files
 

@@ -1,54 +1,43 @@
 #!/usr/bin/env bash
-# The gate's immutable-snapshot bootstrap, falsified (D-056(b), A-076).
+# The gate's supervisor + unlinked-body design, falsified (D-057(3), A-077).
 #
-# WHAT IS BEING PROTECTED. `scripts/test.sh` was twice corrupted mid-run by an agent editing
-# it while bash was still reading it. Bash reads a script incrementally BY BYTE OFFSET, so an
-# insertion shifts everything after it and the shell resumes mid-token. The first occurrence
-# produced the worst possible artifact: a syntax error, no `GATE PASSED` line, and **exit 0**.
-# A run that looks green to anything checking the status and is worthless.
+# WHAT IS BEING PROTECTED. `scripts/test.sh` was twice corrupted mid-run by an in-place rewrite
+# while bash was reading it. Bash reads a script incrementally BY BYTE OFFSET, so an insertion
+# shifts everything after it and the shell resumes mid-token. The worst artifact it produced was
+# a syntax error, no `GATE PASSED`, and **exit 0**.
 #
-# WHY THE OBVIOUS GUARD WAS REJECTED, because it is the thing a reader will propose again.
-# "Hash the script at the start and re-check at the end" fails for the reason John gave: **the
-# ending check can itself be skipped or corrupted when bash resumes at a shifted offset.** A
-# guard that lives in the mutable body is exactly the code the attack can make unreachable.
+# TWO PREVIOUS DESIGNS FAILED AND BOTH ARE RECORDED, because each will be proposed again:
+#   1. Hash at start, re-check at end — rejected by John before it was built. The ending check
+#      lives in the mutable body and is the code an edit makes unreachable.
+#   2. Copy to a temp file and `exec` into it (A-076). It claimed the snapshot was "a private
+#      file nobody has a path to". FALSE: the path was exported to every child in
+#      `SENTINEL_GATE_SNAPSHOT` and visible to any same-user sibling in `ps`. **R1/R3 rewrote
+#      the running snapshot through BOTH routes — 6 of 8 real-gate trials corrupted, three of
+#      them exit 0 with no GATE PASSED — while the in-body trap certified "source unchanged".**
 #
-# THE ARGUMENT THIS HARNESS FALSIFIES, and it is deliberately not "an edit is detected":
+# THIS FILE ALSO FAILED ONCE, AND THAT IS WHY IT NOW CARRIES CONTROLS. Its first version edited
+# the original with `mv`, which renames a NEW inode and leaves the running shell on the old one.
+# **That test passes against a script with no protection whatsoever** — measured from 442 bytes
+# to 1.5 MB. It reported 4/4 with the protection removed. Every dangerous probe below therefore
+# runs against an UNPROTECTED CONTROL first: if the control is not corrupted, the probe has
+# stopped being dangerous and every pass after it is meaningless.
 #
-#     **The running gate never reads the mutable file after the bootstrap, so an edit cannot
-#     corrupt the running parser AT ALL — and a run whose source changed is refused a
-#     zero exit even though the run itself was sound.**
+# THE ARGUMENT NOW BEING FALSIFIED, in the shape D-057(3) requires:
 #
-# Detection is the weaker second half. The first half — that the corruption is IMPOSSIBLE
-# rather than caught — is what makes this different from the design that was rejected.
+#   1. After bootstrap the body has NO writable filesystem pathname reachable by a child or a
+#      same-user sibling.
+#   2. No writable backing path is exported in the environment or exposed in `ps`.
+#   3. A supervisor OUTSIDE the body refuses success unless the body reaches explicit
+#      completion. **EXIT STATUS 0 IS NOT SUCCESS.**
+#   4. The supervisor — not a trap inside the possibly-damaged body — detects source change.
+#   5. Arguments are preserved and temporary state is cleaned up.
+#   6. Operator cancellation still works.
 #
-# HOW THIS AVOIDS TESTING A COPY THAT CAN DRIFT. The bootstrap is EXTRACTED VERBATIM from
-# `scripts/test.sh` between its two markers and pasted into a synthetic one-line script. This
-# harness therefore exercises the shipped bytes, not a paraphrase of them. If the markers stop
-# matching, this fails loudly rather than silently testing nothing — which is the dead-probe
-# failure mode this repository has recorded five times.
-#
-# WHY A SYNTHETIC SCRIPT RATHER THAN THE REAL GATE: the real gate takes minutes and would have
-# to be mutated mid-run to test property 2. The bootstrap is independent of the body it
-# protects, so a body that sleeps and echoes exercises it exactly as well, in under a second.
-#
-# THE EDIT SHAPE IS LOAD-BEARING, AND THE FIRST VERSION OF THIS FILE GOT IT WRONG.
-# Property 2 originally replaced the original with `mv`. **That test passes against a script
-# with NO protection whatsoever**, because `mv` renames a NEW inode into place and the running
-# shell keeps reading the old one — measured across bodies from 442 bytes to 1.5 MB, every one
-# completed cleanly. It was caught by mutating the bootstrap to remove its `exec`: the harness
-# still reported 4/4, i.e. it was blind to the one property it exists to establish.
-#
-# **The hazard is an IN-PLACE rewrite — truncate and write the same inode — which is what
-# Python's `open(path,"w")` and most editors do, and is what corrupted two real gate runs.**
-# Under that edit the unprotected control dies with a shell error and exit 127 at every size.
-# So this file now edits in place, and runs an UNPROTECTED control through the identical probe
-# first: if the control is NOT corrupted, the probe has stopped being dangerous and any pass
-# it reports afterwards is meaningless.
-#
-# WHAT THIS DOES NOT ESTABLISH (residual). It proves the bootstrap's four properties on a
-# synthetic body. It does NOT prove the real gate's stages are correct, and it does not defend
-# any other file — a reviewer editing `verifier/verify.py` mid-run is out of scope here and is
-# covered by the frozen review worktree, which is the broader protection.
+# WHAT THIS DOES NOT ESTABLISH (residual). It exercises the bootstrap on SYNTHETIC bodies. It
+# does not prove the gate's stages are correct, and it defends only `scripts/test.sh`. A
+# reviewer editing `verifier/verify.py` mid-run is out of scope and is covered by the frozen
+# review worktree. It also cannot rule out a same-user actor that can READ the body's
+# environment forging the completion token; that is stated rather than defended against.
 set -uo pipefail
 
 ROOT="$(git rev-parse --show-toplevel)"
@@ -60,58 +49,27 @@ fail=0
 note() { printf '  %s\n' "$1"; }
 bad() { printf '  FAIL  %s\n' "$1"; fail=1; }
 
-# --- Extract the shipped bootstrap, and refuse to run on a miss -------------------------
 BOOTSTRAP="$WORK/bootstrap.sh"
 awk '/^# >>> GATE BOOTSTRAP/{f=1} f{print} /^# <<< GATE BOOTSTRAP/{f=0}' "$GATE" > "$BOOTSTRAP"
-
-if [ ! -s "$BOOTSTRAP" ] || ! grep -q "SENTINEL_GATE_SNAPSHOT" "$BOOTSTRAP"; then
+if [ ! -s "$BOOTSTRAP" ] || ! grep -q "SENTINEL_GATE_TOKEN" "$BOOTSTRAP"; then
     echo "gate immutability: COULD NOT EXTRACT the bootstrap from scripts/test.sh."
-    echo "  The markers '# >>> GATE BOOTSTRAP' / '# <<< GATE BOOTSTRAP' did not yield a block."
     echo "  Refusing to report a pass on an empty probe — that is the dead-probe failure mode."
     exit 1
 fi
 note "extracted $(grep -c '' "$BOOTSTRAP") lines of bootstrap verbatim from scripts/test.sh"
 
-# --- Build a synthetic gate carrying that exact bootstrap -------------------------------
-# The body sleeps so property 2 has a window to edit the original in, and echoes its args so
-# property 3 is observable. `git rev-parse` is not used: the synthetic script must not depend
-# on being inside the repository.
+# A subject that completes properly, and one that does not.
 make_subject() {
-    local path="$1"
-    {
-        echo '#!/usr/bin/env bash'
-        echo 'set -euo pipefail'
-        cat "$BOOTSTRAP"
-        echo 'echo "ARGS:[$*]"'
-        echo 'sleep "${SUBJECT_SLEEP:-0}"'
-        echo 'echo "BODY COMPLETED"'
-    } > "$path"
-    chmod +x "$path"
+    { echo '#!/usr/bin/env bash'; echo 'set -euo pipefail'; cat "$BOOTSTRAP"
+      echo 'echo "ARGS:[$*]"'; echo 'sleep "${SUBJ_SLEEP:-0}"'
+      echo 'echo "BODY COMPLETED"'; echo '_gate_complete'; } > "$1"
+    chmod +x "$1"
 }
-
-# ---------------------------------------------------------------------------------------
-# 1. Unchanged source succeeds.
-# ---------------------------------------------------------------------------------------
-printf '\n1. unchanged source\n'
-SUBJ="$WORK/subject1.sh"; make_subject "$SUBJ"
-out1="$("$SUBJ" 2>&1)"; rc1=$?
-if [ "$rc1" -eq 0 ] && printf '%s' "$out1" | grep -q "BODY COMPLETED"; then
-    note "exit 0 and the body ran"
-else
-    bad "an untouched script must succeed; got rc=$rc1 out=[$out1]"
-fi
-
-# ---------------------------------------------------------------------------------------
-# 2. Editing the original DURING execution: the parser must not be corrupted, and the run
-#    must not be allowed a zero exit.
-#
-#    THE INSERTION IS AT THE TOP ON PURPOSE. Appending to the end is the easy case; the
-#    corruption this exists to stop comes from INSERTING lines ABOVE the execution point,
-#    which is what shifts every later byte offset. This reproduces the real incident.
-# ---------------------------------------------------------------------------------------
-# Rewrite `$1` IN PLACE, prepending 40 lines so every later byte offset shifts. Same inode,
-# which is the whole point: a rename would leave the running shell on the old inode and prove
-# nothing. This is byte-for-byte the operation that corrupted the two real runs.
+make_unprotected() {
+    { echo '#!/usr/bin/env bash'; echo 'set -euo pipefail'; echo 'echo "ARGS:[$*]"'
+      echo 'sleep "${SUBJ_SLEEP:-0}"'; echo 'echo "BODY COMPLETED"'; } > "$1"
+    chmod +x "$1"
+}
 edit_in_place() {
     python3 -c '
 import sys
@@ -122,135 +80,178 @@ with open(target, "w") as fh:
 ' "$1" "$2"
 }
 
-printf '\n2a. CONTROL: the probe must actually be dangerous to an unprotected script\n'
-CTRL="$WORK/control.sh"
-{ echo '#!/usr/bin/env bash'; echo 'set -euo pipefail'; echo 'echo "ARGS:[$*]"'
-  echo 'sleep "${SUBJECT_SLEEP:-0}"'; echo 'echo "BODY COMPLETED"'; } > "$CTRL"
-chmod +x "$CTRL"
-cp "$CTRL" "$WORK/control.pristine"
-SUBJECT_SLEEP=3 "$CTRL" > "$WORK/outc.txt" 2>&1 &
-ctrl_pid=$!
+# --- 1. unchanged source and body ------------------------------------------------------
+printf '\n1. unchanged source and body\n'
+S1="$WORK/s1.sh"; make_subject "$S1"
+out1="$("$S1" 2>&1)"; rc1=$?
+[ "$rc1" -eq 0 ] && printf '%s' "$out1" | grep -q "BODY COMPLETED" \
+    && note "exit 0, body ran, completion token accepted" \
+    || bad "an untouched subject must succeed; rc=$rc1 out=[$out1]"
+
+# --- 2. the ORIGINAL source edited during execution -------------------------------------
+printf '\n2a. CONTROL: an unprotected script must be corrupted by this probe\n'
+C="$WORK/ctrl.sh"; make_unprotected "$C"; cp "$C" "$WORK/ctrl.pristine"
+SUBJ_SLEEP=3 "$C" >"$WORK/outc.txt" 2>&1 & cp_pid=$!
+sleep 1; edit_in_place "$C" "$WORK/ctrl.pristine"; wait $cp_pid; rcc=$?
+if [ "$rcc" -ne 0 ] && ! grep -q "BODY COMPLETED" "$WORK/outc.txt"; then
+    note "unprotected control corrupted (exit $rcc) — the probe is dangerous"
+else
+    bad "THE PROBE IS NOT DANGEROUS (control rc=$rcc); everything below would pass falsely"
+fi
+
+printf '\n2b. the protected subject under the same edit\n'
+S2="$WORK/s2.sh"; make_subject "$S2"; cp "$S2" "$WORK/s2.pristine"
+SUBJ_SLEEP=3 "$S2" >"$WORK/out2.txt" 2>&1 & s2_pid=$!
+sleep 1; edit_in_place "$S2" "$WORK/s2.pristine"; wait $s2_pid; rc2=$?
+grep -q "BODY COMPLETED" "$WORK/out2.txt" \
+    && note "body ran to completion — the edit could not reach it" \
+    || bad "the running body was disturbed: $(cat "$WORK/out2.txt")"
+grep -qiE "syntax error|unexpected token|command not found" "$WORK/out2.txt" \
+    && bad "shell-level corruption appeared" || note "no shifted-offset damage"
+[ "$rc2" -ne 0 ] && note "exit $rc2 — a changed source is refused a zero exit" \
+    || bad "a run whose source changed exited 0"
+
+# --- 3. a CHILD trying to recover and rewrite the body via inherited environment ---------
+printf '\n3. child attacks the body through inherited environment\n'
+S3="$WORK/s3.sh"
+{ echo '#!/usr/bin/env bash'; echo 'set -euo pipefail'; cat "$BOOTSTRAP"
+  echo 'bash -c '"'"'
+    hit=0
+    for v in $(env | grep -oE "^SENTINEL_[A-Z_]*"); do
+      p="$(printenv "$v")"
+      [ -f "$p" ] && { echo "CHILD-FOUND-PATH:$v"; hit=1; }
+    done
+    for fd in 9 10 11; do
+      if [ -e /dev/fd/$fd ] && : > /dev/fd/$fd 2>/dev/null; then echo "CHILD-WROTE-FD:$fd"; hit=1; fi
+    done
+    python3 - <<PY 2>/dev/null || true
+import os
+for fd in (9,10,11):
+    try:
+        os.ftruncate(fd,0); print(f"CHILD-TRUNCATED:{fd}")
+    except OSError: pass
+PY
+    [ "$hit" = 0 ] && echo "CHILD-FOUND-NOTHING"
+  '"'"''
+  echo 'echo "BODY COMPLETED"'; echo '_gate_complete'; } > "$S3"
+chmod +x "$S3"
+out3="$("$S3" 2>&1)"; rc3=$?
+printf '%s' "$out3" | grep -qE "CHILD-FOUND-PATH|CHILD-WROTE-FD|CHILD-TRUNCATED" \
+    && bad "a child reached a writable handle on the body: $(printf '%s' "$out3" | grep -E 'CHILD-' | tr '\n' ' ')" \
+    || note "child found no writable path and no writable descriptor"
+[ "$rc3" -eq 0 ] && note "and the run still completed normally" || bad "child probe broke the run (rc=$rc3)"
+
+# --- 4. a SIBLING trying to recover the body from ps -------------------------------------
+printf '\n4. sibling attacks the body through ps\n'
+S4="$WORK/s4.sh"; make_subject "$S4"
+SUBJ_SLEEP=3 "$S4" >"$WORK/out4.txt" 2>&1 & s4_pid=$!
 sleep 1
-edit_in_place "$CTRL" "$WORK/control.pristine"
-wait "$ctrl_pid"; rcc=$?
-outc="$(cat "$WORK/outc.txt")"
-if [ "$rcc" -ne 0 ] && ! printf '%s' "$outc" | grep -q "BODY COMPLETED"; then
-    note "an unprotected script IS corrupted by this edit (exit $rcc, body never completed)"
+sib_paths="$(ps -o command= | grep -oE '/[^ ]*sentinel-gate\.[A-Za-z0-9]+' | sort -u)"
+wrote=0
+for p in $sib_paths; do [ -f "$p" ] && { : > "$p" 2>/dev/null && wrote=1; }; done
+wait $s4_pid; rc4=$?
+if [ -n "$sib_paths" ]; then
+    bad "a sibling recovered a snapshot path from ps: $sib_paths"
+elif [ "$wrote" -ne 0 ]; then
+    bad "a sibling wrote to a recovered path"
 else
-    bad "THE PROBE IS NOT DANGEROUS — an unprotected script survived it (rc=$rcc). Everything"
-    bad "  below would pass for the wrong reason. Fix the probe before trusting property 2."
+    note "ps exposes no writable backing path (body appears only as /dev/fd/N)"
 fi
+grep -q "BODY COMPLETED" "$WORK/out4.txt" && [ "$rc4" -eq 0 ] \
+    && note "and the run completed normally under sibling inspection" \
+    || bad "sibling probe disturbed the run (rc=$rc4)"
 
-printf '\n2b. the protected script under the SAME edit\n'
-SUBJ2="$WORK/subject2.sh"; make_subject "$SUBJ2"
-cp "$SUBJ2" "$WORK/subject2.pristine"
-SUBJECT_SLEEP=3 "$SUBJ2" > "$WORK/out2.txt" 2>&1 &
-subj_pid=$!
-sleep 1
-edit_in_place "$SUBJ2" "$WORK/subject2.pristine"
-wait "$subj_pid"; rc2=$?
-out2="$(cat "$WORK/out2.txt")"
+# --- 5. a body that exits 0 WITHOUT reaching completion ----------------------------------
+printf '\n5. body exits 0 without completing — EXIT 0 IS NOT SUCCESS\n'
+S5="$WORK/s5.sh"
+{ echo '#!/usr/bin/env bash'; echo 'set -euo pipefail'; cat "$BOOTSTRAP"
+  echo 'echo "silently skipping the completion protocol"'; echo 'exit 0'; } > "$S5"
+chmod +x "$S5"
+out5="$("$S5" 2>&1)"; rc5=$?
+[ "$rc5" -ne 0 ] && note "refused with exit $rc5" || bad "a body that exited 0 without completing was ACCEPTED"
+printf '%s' "$out5" | grep -q "DID NOT REACH COMPLETION" \
+    && note "and says so, rather than failing for an unrelated reason" \
+    || bad "no completion diagnostic: [$out5]"
 
-if printf '%s' "$out2" | grep -q "BODY COMPLETED"; then
-    note "the body ran to completion — the mid-run edit did NOT corrupt the parser"
-else
-    bad "the running parser was disturbed by an edit to the original: [$out2]"
-fi
-if printf '%s' "$out2" | grep -qiE "syntax error|unexpected token|command not found"; then
-    bad "shell-level corruption appeared in the output: [$out2]"
-else
-    note "no syntax error or shifted-offset damage in the output"
-fi
-if [ "$rc2" -ne 0 ]; then
-    note "exit $rc2 — a changed source is refused a zero exit"
-else
-    bad "a run whose source changed exited 0; this is the exact defect (rc=$rc2)"
-fi
-if printf '%s' "$out2" | grep -q "GATE SOURCE CHANGED DURING EXECUTION"; then
-    note "and it says so, rather than failing for an unrelated reason"
-else
-    bad "no 'gate source changed' diagnostic; a bare nonzero could be anything: [$out2]"
-fi
+# --- 6. arguments preserved --------------------------------------------------------------
+printf '\n6. arguments preserved across the supervisor boundary\n'
+S6="$WORK/s6.sh"; make_subject "$S6"
+out6="$("$S6" --gate second "third arg" 2>&1)" || true
+printf '%s' "$out6" | grep -q 'ARGS:\[--gate second third arg\]' \
+    && note "all three arguments arrived, including the one with a space" \
+    || bad "arguments altered: [$out6]"
 
-# ---------------------------------------------------------------------------------------
-# 3. Arguments survive the exec.
-#    A bootstrap that dropped `--gate` would turn every deep run into a fast one while the
-#    banner still said "profile: gate" — a silent downgrade of the evidence.
-# ---------------------------------------------------------------------------------------
-printf '\n3. arguments preserved across the exec\n'
-SUBJ3="$WORK/subject3.sh"; make_subject "$SUBJ3"
-out3="$("$SUBJ3" --gate second "third arg" 2>&1)" || true
-if printf '%s' "$out3" | grep -q 'ARGS:\[--gate second third arg\]'; then
-    note "all three arguments arrived, including the one containing a space"
-else
-    bad "arguments were altered by the bootstrap: [$out3]"
-fi
-
-# ---------------------------------------------------------------------------------------
-# 4. Temporary state is removed — on the success path AND on the failure path.
-#    Checking only the success path would miss the case that actually leaks: a run that
-#    aborts is exactly when a stale snapshot would be left behind.
-# ---------------------------------------------------------------------------------------
-printf '\n4. snapshot cleanup\n'
+# --- 7. temporary state cleaned up -------------------------------------------------------
+printf '\n7. cleanup on success and on failure\n'
 before="$(find "${TMPDIR:-/tmp}" -maxdepth 1 -name 'sentinel-gate.*' 2>/dev/null | wc -l | tr -d ' ')"
-SUBJ4="$WORK/subject4.sh"; make_subject "$SUBJ4"
-"$SUBJ4" >/dev/null 2>&1 || true
-SUBJ5="$WORK/subject5.sh"
-{ echo '#!/usr/bin/env bash'; echo 'set -euo pipefail'; cat "$BOOTSTRAP"; echo 'exit 9'; } > "$SUBJ5"
-chmod +x "$SUBJ5"
-"$SUBJ5" >/dev/null 2>&1; rc5=$?
+S7="$WORK/s7.sh"; make_subject "$S7"; "$S7" >/dev/null 2>&1 || true
+S8="$WORK/s8.sh"
+{ echo '#!/usr/bin/env bash'; echo 'set -euo pipefail'; cat "$BOOTSTRAP"; echo 'exit 9'; } > "$S8"
+chmod +x "$S8"; "$S8" >/dev/null 2>&1; rc8=$?
 after="$(find "${TMPDIR:-/tmp}" -maxdepth 1 -name 'sentinel-gate.*' 2>/dev/null | wc -l | tr -d ' ')"
-if [ "$before" = "$after" ]; then
-    note "no snapshot left behind by either the passing or the failing run ($before before, $after after)"
+[ "$before" = "$after" ] && note "no temp file left behind ($before before, $after after)" \
+    || bad "temp state leaked: $before -> $after"
+[ "$rc8" -ne 0 ] && note "a failing body is refused (exit $rc8), not silently accepted" \
+    || bad "a body exiting 9 was accepted"
+
+# --- 8. operator cancellation -------------------------------------------------------------
+printf '\n8. operator cancellation\n'
+S9="$WORK/cancelme.sh"; make_subject "$S9"
+SUBJ_SLEEP=10 "$S9" >/dev/null 2>&1 & c_pid=$!
+sleep 1
+if pgrep -f "cancelme.sh" >/dev/null 2>&1; then
+    note "the supervisor is findable by its own script name (pkill -f <script> works again)"
 else
-    bad "snapshot files leaked: $before before, $after after"
+    bad "no process matches the script name — operator cancellation by name is broken"
 fi
-if [ "$rc5" -eq 9 ]; then
-    note "and the body's own exit code survives the trap (9 preserved, not overwritten)"
+kill "$c_pid" 2>/dev/null
+sleep 0.5
+pgrep -f "cancelme.sh" >/dev/null 2>&1 \
+    && bad "supervisor survived SIGTERM" || note "SIGTERM stopped the run"
+wait "$c_pid" 2>/dev/null
+
+# --- 9. concurrent gates ------------------------------------------------------------------
+printf '\n9. two gates concurrently\n'
+SA="$WORK/sa.sh"; SB="$WORK/sb.sh"; make_subject "$SA"; make_subject "$SB"
+SUBJ_SLEEP=2 "$SA" >"$WORK/outa.txt" 2>&1 & pa=$!
+SUBJ_SLEEP=2 "$SB" >"$WORK/outb.txt" 2>&1 & pb=$!
+wait $pa; ra=$?; wait $pb; rb=$?
+if [ "$ra" -eq 0 ] && [ "$rb" -eq 0 ] \
+   && grep -q "BODY COMPLETED" "$WORK/outa.txt" && grep -q "BODY COMPLETED" "$WORK/outb.txt"; then
+    note "both completed independently — no shared process state"
 else
-    bad "the exit trap changed a failing body's exit code: expected 9, got $rc5"
+    bad "concurrent gates interfered (rc $ra/$rb)"
 fi
 
-# ---------------------------------------------------------------------------------------
-# 5. A SIBLING INVOCATION SHAPE, and it is here because it caught a live defect.
+# --- 10. A SUBJECT INVOKED BY A RUNNING GATE (the inheritance route, twice now) ----------
 #
-#    `SENTINEL_GATE_SNAPSHOT` is EXPORTED, so every child of a running gate inherits it. The
-#    first bootstrap skipped its work whenever that variable was merely SET, which meant any
-#    script carrying this block and invoked BY the gate decided it was already a snapshot and
-#    ran unprotected from its own mutable file. Found by wiring this harness in as a gate
-#    stage and watching it get corrupted.
-#
-#    The fix compares the variable to the path actually executing. This asserts that: with the
-#    variable set to somebody else's snapshot, the subject must STILL protect itself.
-# ---------------------------------------------------------------------------------------
-printf '\n5. inherited SENTINEL_GATE_SNAPSHOT from a parent (sibling invocation shape)\n'
-SUBJ6="$WORK/subject6.sh"; make_subject "$SUBJ6"
-cp "$SUBJ6" "$WORK/subject6.pristine"
-SENTINEL_GATE_SNAPSHOT="$WORK/some-other-parents-snapshot" \
-SENTINEL_GATE_SOURCE="$WORK/some-other-parents-source" \
-SENTINEL_GATE_SOURCE_SHA="0000000000000000000000000000000000000000000000000000000000000000" \
-SUBJECT_SLEEP=3 "$SUBJ6" > "$WORK/out6.txt" 2>&1 &
-subj6_pid=$!
+#     `SENTINEL_GATE_TOKEN` is exported. A gate STAGE carrying this same bootstrap would see it
+#     already set, conclude it was itself the body, and run UNPROTECTED from its own mutable
+#     file. That is exactly the defect A-076 shipped with `SENTINEL_GATE_SNAPSHOT`, which
+#     R1-F1 confirmed at CRITICAL — and it was reintroduced here with the new variable name.
+#     It was caught only because this harness runs AS a gate stage and failed there while
+#     passing standalone. This case makes that catch deliberate instead of lucky.
+printf '\n10. subject invoked with a parent gate token in the environment\n'
+S10="$WORK/s10.sh"; make_subject "$S10"; cp "$S10" "$WORK/s10.pristine"
+SENTINEL_GATE_TOKEN="a-parent-gates-token" SUBJ_SLEEP=3 "$S10" >"$WORK/out10.txt" 2>&1 & s10_pid=$!
 sleep 1
-edit_in_place "$SUBJ6" "$WORK/subject6.pristine"
-wait "$subj6_pid"; rc6=$?
-out6="$(cat "$WORK/out6.txt")"
-if printf '%s' "$out6" | grep -q "BODY COMPLETED"; then
-    note "protected itself despite the inherited variable — the body survived the edit"
+edit_in_place "$S10" "$WORK/s10.pristine"
+wait $s10_pid; rc10=$?
+if grep -q "BODY COMPLETED" "$WORK/out10.txt"; then
+    note "protected itself despite the inherited token — the edit could not reach it"
 else
-    bad "a child of a running gate ran UNPROTECTED and was corrupted: [$out6]"
+    bad "a subject invoked by a running gate ran UNPROTECTED: $(cat "$WORK/out10.txt")"
 fi
-if [ "$rc6" -ne 0 ]; then
-    note "and still refused a zero exit (exit $rc6)"
-else
-    bad "a child whose own source changed exited 0 (rc=$rc6)"
-fi
+[ "$rc10" -ne 0 ] && note "and still refused a zero exit (exit $rc10)" \
+    || bad "a child whose own source changed exited 0"
 
 printf '\n'
 if [ "$fail" -ne 0 ]; then
-    echo "gate immutability: FAILED — the bootstrap does not hold its five properties."
+    echo "gate immutability: FAILED — the supervisor design does not hold its ten properties."
     exit 1
 fi
-echo "gate immutability: 5/5 — unchanged run passes · mid-run edit cannot corrupt the parser"
-echo "  and is refused a zero exit · arguments preserved · snapshot cleaned up on both paths"
-echo "  · a child inheriting a parent gate's snapshot variable still protects itself"
+echo "gate immutability: 10/10 — unchanged run · mid-run source edit cannot reach the body"
+echo "  · child finds no writable path or descriptor · ps exposes no backing path"
+echo "  · EXIT 0 WITHOUT COMPLETION IS REFUSED · arguments preserved · cleanup on both paths"
+echo "  · operator cancellation works · concurrent gates independent"
+echo "  · a subject invoked by a running gate still protects itself"

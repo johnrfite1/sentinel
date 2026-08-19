@@ -104,6 +104,18 @@ export const REASON_SEVERITY = {
      * block is still the head; if that never holds within `SNAPSHOT_ATTEMPTS`, there is no
      * consistent state to attest against and the signer says so.
      *
+     * IT COVERS TWO CONDITIONS, NOT ONE (R2-F6, D-055(e), CONFIRMED at INFO). The earlier
+     * wording named only chain movement. The retry loop `continue`s on EITHER of:
+     *   (a) the head MOVED — a different block, or the same height with a different hash
+     *       (a reorg), so the pin went stale; or
+     *   (b) the head had NO HASH — a pending block, which cannot be anchored to at all and
+     *       which no amount of retrying will change if the node keeps serving one.
+     * Exhausting the attempts on (b) is not "the chain is moving too fast"; it is "the node
+     * never offered a finalised head". **A record naming one cause for two conditions is the
+     * shape this project keeps paying for**, so the refusal detail now distinguishes them.
+     * No reason-code split: the tiering and the remedy are identical, and splitting a public
+     * code to carry a diagnostic belongs in the detail, not in the enum (D-057(4)).
+     *
      * FATAL, and it is a SEPARATE code from SIGNER_VAULT_UNREACHABLE on purpose. Both refuse
      * everything, so the tiering does not distinguish them — the RECORD does. "The vault
      * could not be read" and "the vault was read repeatedly and the chain moved each time"
@@ -335,6 +347,29 @@ export interface MandatePayload {
     policyHash: Hex;
 }
 
+/**
+ * INERT SIGNED FIELDS, named exhaustively (R3-F4, D-055(e); accepted at D-057(6)).
+ *
+ * Four fields across the §5 payloads are SIGNED, HASHED and CONSULTED BY NOTHING. Measured,
+ * not inferred: `ts/src/evaluate/checks.ts` reads each of them zero times, and
+ * `contracts/src/SentinelVault.sol` reads each of them zero times.
+ *
+ *   - `PolicyPayload.allowedCallGraphHash`  — ALREADY DISCLOSED (D-025 reserved it; the class
+ *                                             coverage guard states it is read by nothing)
+ *   - `PolicyPayload.allowedTargetsHash`    — NEWLY DISCLOSED 2026-08-19
+ *   - `PolicyPayload.allowedSelectorsHash`  — NEWLY DISCLOSED 2026-08-19
+ *   - `MandatePayload.purposeKind`          — NEWLY DISCLOSED 2026-08-19
+ *
+ * **They are COMMITTED/RESERVED METADATA, not enforced policy.** Being in the payload hash
+ * makes them tamper-evident: a bundle cannot change them without changing the hash the receipt
+ * commits to. It does NOT make them enforced, and no implementation should be read as
+ * consulting them.
+ *
+ * **WHAT ACTUALLY ENFORCES TARGETS AND SELECTORS**, so the hashes are not mistaken for it: the
+ * vault's own onchain `allowedTarget` / `allowedSelector` mappings, surfaced as
+ * `EVAL_VAULT_TARGET_NOT_ALLOWED` and `EVAL_VAULT_SELECTOR_NOT_ALLOWED`. The hashes commit to a
+ * list; the mappings are what refuses an action.
+ */
 export interface PolicyPayload {
     schemaVersion: bigint;
     policyVersion: bigint;

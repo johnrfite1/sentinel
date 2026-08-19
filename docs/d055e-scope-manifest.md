@@ -107,10 +107,11 @@ told:
 
 ## One operational note every reviewer needs
 
-**To check whether another gate run is in flight, use `pgrep -f sentinel-gate`, not
-`pgrep -f scripts/test.sh`.** Since A-076 the gate executes an immutable snapshot, so after its
-bootstrap the process is `bash /tmp/sentinel-gate.XXXXXXXX --gate` and the old pattern matches
-nothing.
+**To check whether another gate run is in flight, use `pgrep -f scripts/test.sh` — the
+original pattern.** ~~use `pgrep -f sentinel-gate`~~ **A-076's design, which made that necessary,
+was replaced under D-057(3): the supervisor now stays in the process table under the script's own
+name and only the body appears as `bash /dev/fd/N`.** Killing the supervisor stops the body with
+it, which under A-076 it did not — the body was orphaned and kept running.
 
 This is called out because **round five's `D-11` — four reviewers clobbering one shared
 baseline log — was FOUND with `pgrep -f scripts/test.sh`**, and that technique is recorded in

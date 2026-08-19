@@ -489,12 +489,35 @@ code-unit-ordering paths are untested by anything (REPORT.md F-6).
 
 ## 11. What is NOT in evidence
 
-### 11.0 Ten findings ACCEPTED as limits, not fixed (D-051(b), 2026-08-18) — NOW FIVE
+### 11.0 Ten findings ACCEPTED as limits, not fixed (D-051(b), 2026-08-18) — NOW SIX
+
+> **SIGNATURE STATUS OF THIS SECTION, stated first because the header above it is false about
+> it (R4-F1, D-055(e), CONFIRMED; corrected under D-057(5)).**
+>
+> **Gate S2 was signed by John on 2026-08-16 (D-041). Everything in this §11.0 subsection
+> post-dates that signature** — it was written on 2026-08-18 (A-075) and revised on 2026-08-18
+> and 2026-08-19 (A-076, A-077). **John's signature of 2026-08-16 does NOT cover it.**
+>
+> §11's own header asserts that its content was part of what was signed. **That assertion is
+> false for this subsection, and a document claiming retrospective signature for text added
+> after signing is a false signed claim in its own right — independent of whether the numbers
+> inside it are correct.** John ruled it corrected rather than accepted (D-057(1), D-057(5)).
+> **This text is authorised at D-057; it is not retrospectively signed by anything.**
 
 **COUNT CORRECTION, 2026-08-18 (A-075, then A-076).** This heading said TEN and the list still
-shows ten entries. A-075 reopened `D-09(c)`; **A-076 then FIXED five of them outright —
-`D-09(c)`, `D-10`, `G-5`, `H-5`, `H-8` — so what is accepted today is FIVE: `D-07`,
-`D-09`(a),(b), `E5`, `F-VAULT-4`, `F-VAULT-5`.** The heading keeps its original number and this
+shows ten entries. A-075 reopened `D-09(c)`; A-076 then FIXED five of them outright —
+`D-09(c)`, `D-10`, `G-5`, `H-5`, `H-8`. ~~so what is accepted today is FIVE: `D-07`,
+`D-09`(a),(b), `E5`, `F-VAULT-4`, `F-VAULT-5`.~~
+
+**THAT LIST WAS WRONG AND DROPPED `G-3` ENTIRELY (R4-F1, CONFIRMED). WHAT IS ACCEPTED TODAY IS
+SIX: `D-07`, `D-09`(a),(b), `E5`, `F-VAULT-4`, `F-VAULT-5` AND `G-3`.** Ten minus the five
+fixed leaves six, not five. `G-3` appears **zero** times in the whole A-076 entry, D-056(a)'s
+authorised scope did not include it, and register §13.4 has carried it as ACCEPTED throughout —
+so the register was right and both prose ledgers were wrong.
+
+**The error propagated into this review's own COMMON-BRIEF**, which told all four reviewers the
+baseline had five members. R4 found it anyway. The brief is preserved unaltered in
+`docs/review-2026-08-18-d055e/briefs/` as the historical record; this is the correction. The heading keeps its original number and this
 correction sits beside it rather than replacing it, because "ten accepted limits" is quoted in
 `docs/exit-criterion-packet.md` §3 and in `docs/session-state.md`, and silently restating it as
 nine would leave those citations pointing at a number that no longer appears anywhere.
@@ -572,6 +595,31 @@ no recorded basis at all.**
   adjudicator reasoning" item the exit-criterion packet listed at §3b, now attributable to
   specific limits.
 
+**THREE FURTHER LIMITATIONS ACCEPTED BY JOHN AT D-057(6), each with its factual basis
+INDEPENDENTLY VERIFIED as T1 requires. These are bounded product boundaries, not open defects.**
+
+| Accepted limitation | Verified basis (2026-08-19) | Bound |
+|---|---|---|
+| **`R2-F1` — the simulator can straddle blocks** | **CONFIRMED, and the mitigation is real.** `simulate/index.ts:189` takes the anchor from an unpinned `getBlock()` and every state read below it carries no `blockNumber`, so a block boundary crossed mid-simulation makes the anchor name a block the effects were not measured at. **But the anchor is taken BEFORE every read (`:189` precedes `:207`) and the signer runs after the revert, so anchor ≤ effects ≤ signer; E3's equality then forces all three to coincide.** A straddled simulation is refused with `SIGNER_ANCHOR_NOT_OBSERVED` and **no receipt is issued.** Verified independently by the adjudicator with its own probe driving the real `simulateAction`. | **A bounded LIVENESS / FALSE-REFUSAL limitation, NOT an authorization defect.** No receipt can attest to straddled effects. The cost is that a caller whose simulation crossed a block must re-simulate. |
+| **`R2-F3` — `expectedEffects.maxNativeValueWei` omits the vault's cap** | **CONFIRMED STATICALLY, which is stronger than a probe.** `minOf` takes exactly two arguments — the mandate's and the policy's ceilings — and `vaultState` is not one of them, so the field provably cannot reflect the vault cap for any input. | **The field records the MANDATE/POLICY-AUTHORIZED ceiling. That is its meaning, now stated.** The vault's immutable cap remains separately enforced onchain and separately recorded: `EVAL_VALUE_WITHIN_VAULT_CAP`'s outcome IS in the bundle's `policyChecks`. **No payload-schema change (D-057(6)).** |
+| **`R3-F4` — three signed fields are consulted by nothing** | **CONFIRMED BY DIRECT MEASUREMENT.** `checks.ts` reads `allowedTargetsHash`, `allowedSelectorsHash`, `purposeKind` and `allowedCallGraphHash` **zero** times each; `SentinelVault.sol` reads all four **zero** times. Only `allowedCallGraphHash` carries a disclosure, in `check-class-coverage.sh` ("RESERVED in v1 and read by nothing"). | **All four are COMMITTED/RESERVED METADATA, not enforced policy.** They are bound into the payload hashes and are therefore tamper-evident; **nothing consults them and no implementation should be read as doing so.** |
+
+**NAMING EVERY INERT FIELD, and distinguishing the already-disclosed from the newly disclosed
+(D-057(6)):**
+
+- **Already disclosed:** `policy.allowedCallGraphHash` — D-025 reserved it and
+  `scripts/check-class-coverage.sh` states it is read by nothing.
+- **NEWLY DISCLOSED HERE:** `policy.allowedTargetsHash`, `policy.allowedSelectorsHash`, and
+  `mandate.purposeKind`. **Each is signed, hashed and inert.** Nothing in the engine, the vault
+  or the D-010 verifier consults them, and until this entry nothing said so.
+
+**What the target and selector allowlists ACTUALLY are, so the inert fields are not mistaken for
+them:** enforcement uses the **vault's own onchain `allowedTarget`/`allowedSelector` mappings**
+(`EVAL_VAULT_TARGET_NOT_ALLOWED`, `EVAL_VAULT_SELECTOR_NOT_ALLOWED`), not the policy's hashes.
+The hashes commit to a list; the mappings are what refuses an action.
+
+---
+
 **Verified 2026-08-18, each against the tree rather than against the note:**
 
 | Limit | Stated basis | Verification |
@@ -582,7 +630,7 @@ no recorded basis at all.**
 | `E5` | "no value substitution was found" | **HOLDS, and the divergence is real.** The comment says "the bundle carries decimal strings (the §5.6 schema has no JSON numbers)"; the comparison is `String(got).toLowerCase()`, and `String(86400) === "86400"` — a JSON number is silently accepted where the comment asserts none can occur. No value substitution follows from it. |
 | `F-VAULT-4` | "both fields are write-once; no gate claim rests on this invariant" | **HOLDS, with one nuance and one strengthening.** `maxNativeValueWei` is `immutable`; `owner` is a plain storage variable assigned only in the constructor — write-once by inspection, not by the type system. **And the basis is now STRONGER than when accepted:** A-073 measured the whole invariant campaign's marginal contribution at ZERO and D-054(b) certified it, so no gate claim rests on any invariant, not merely this one. |
 | `F-VAULT-5` | "its withdrawal costs nothing" | **HOLDS.** The docstring is intact at `contracts/src/SentinelVault.sol:39-45` and still argues "a relayer can only cause what the owner already authorized, exactly once". It is a comment; withdrawing it changes no behaviour. |
-| `G-3` | MEDIUM → LOW; the security framing is refuted by the engine's outcome taxonomy | **HOLDS, and the mechanism is now MEASURED rather than asserted.** `failingCodes` is `outcome !== "PASS"`, so UNRESOLVED counts as failing; walking all 50 committed results, **exactly two classes are credited only on UNRESOLVED outcomes — `conflicting-block-state` and `runtime-code-change-or-proxy-target`** — which is the finding's claim reproduced independently. |
+| `G-3` | MEDIUM → LOW; the security framing is refuted by the engine's outcome taxonomy | ~~HOLDS… exactly two classes… `conflicting-block-state` and `runtime-code-change-or-proxy-target`~~ **WRONG ON THE COUNT AND ON A CLASS NAME. CORRECTED 2026-08-19 (R3-F1, D-055(e), CONFIRMED).** The A-075 measurement counted ANY failing code, but the guard credits a class only for a failing check drawn from the set that class is ABOUT. Re-measured with the guard's own `ABOUT` map: **THREE classes are credited only by UNRESOLVED — `malformed-calldata-or-unknown-selector`, `rpc-simulator-or-context-outage`, `runtime-code-change-or-proxy-target`. `conflicting-block-state` is NOT among them; it was named by a measurement that used the wrong denominator.** Strict reading: **10 classes credited by a VIOLATION plus 1 CONFORMING = 11 of 20, not 14 of 20.** Round six lens 5 had already reported the count half of this and it reached neither §11.0 nor register §13.4. |
 | `G-5` | "the demonstration route is detected by A-062" | **NARROWER THAN IT READS — see above.** |
 | `H-5` | *(none recorded)* | Mechanism present: the string "no meta.json/index.json to cross-check against" is emitted at `verifier/verify.py:673` and `:1905`. **No basis to verify.** |
 | `H-8` | *(none recorded)* | **Mechanism reproduced today:** `verify.py --domain … --all <empty dir>` prints `0/0 sample(s) verified` and **exits 0**. **No basis to verify.** |

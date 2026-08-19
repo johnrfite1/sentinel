@@ -9,9 +9,22 @@
 # boundary, session-state §3).
 #
 # So the partition is executable. Every tracked file is matched against the reviewer patterns
-# below, and **this exits non-zero if any tracked file is assigned to NO reviewer.** A file
-# added between now and dispatch turns this red rather than sliding into a gap. That is the
-# difference between a manifest and a claim about one.
+# below, and **this exits non-zero if any tracked file is assigned to NO reviewer** — WHEN IT IS
+# RUN.
+#
+# WHAT INVOKES IT, stated exactly because the previous wording did not (R1-F3, D-055(e)).
+# **Nothing runs this automatically.** It is not a stage of `scripts/test.sh`, not a git hook,
+# and not called by any other script. It is a DISPATCH-TIME check: run by hand before a review
+# is scoped and before reviewers are provisioned, which is the only moment its answer means
+# anything. The earlier header said a newly added file "turns this red rather than sliding into
+# a gap", which described a mechanism that does not exist — nothing would have turned red until
+# somebody typed the command.
+#
+# **It is deliberately NOT wired into the gate (D-057(4)).** This manifest belongs to ONE
+# bounded, now-spent review; making the permanent product gate depend on a spent review's
+# scope would be wiring history into the build to make a sentence true. John ruled that
+# explicitly. `docs/d055e-scope-manifest.md` says "do not trust that line — run
+# `./scripts/check-review-scope.sh`", and running it is the whole contract.
 #
 # WHAT IT DOES NOT DO, corrected 2026-08-18 because the first version of this header claimed
 # it. **It does not detect OVERLAPPING patterns.** `assign()` is a `case`, and a `case` returns
@@ -106,7 +119,35 @@ fi
 # Stated separately because "every tracked file is assigned" is satisfiable by a partition that
 # nobody checked against the actual remediation, and the remediation is what has not been
 # independently reviewed at all.
-since="${SENTINEL_SCOPE_BASE:-a89c255~1}"
+# R1-F2 (D-055(e), CONFIRMED; HIGH -> MEDIUM countersigned by John at D-057(2)).
+#
+# THE ARGUMENT: **a coverage instrument must never report coverage it did not measure.** This
+# block printed "0 file(s) changed since A-070, all assigned" and exited 0 whenever the base ref
+# failed to resolve — `git diff`'s stderr was discarded and its exit status was unreachable
+# through process substitution, so measuring NOTHING was indistinguishable from measuring a
+# clean tree. Absence read as agreement, in the one instrument standing behind this review's
+# coverage claim.
+#
+# A FULL IMMUTABLE BASE, not an abbreviated one. `a89c255~1` was both abbreviated (ambiguous as
+# the repository grows) and relative (`~1` silently re-resolves if history is rewritten). This
+# is the full 40-character object name of A-070's parent, pinned.
+SCOPE_BASE_DEFAULT="140c59e5aa8feab72831534886fda4048cff8fe7"
+since="${SENTINEL_SCOPE_BASE:-$SCOPE_BASE_DEFAULT}"
+
+# FAIL CLOSED, in two separate ways, because they are two separate failures.
+if ! git rev-parse --verify --quiet "${since}^{commit}" >/dev/null; then
+    echo "  FAIL  scope base '$since' does not resolve to a commit."
+    echo "    Refusing to print a remediation surface measured against nothing. A base that"
+    echo "    cannot be resolved is not an empty diff."
+    exit 1
+fi
+
+scope_diff="$(git diff --name-only "$since"..HEAD 2>&1)"
+if [ $? -ne 0 ]; then
+    echo "  FAIL  git diff against '$since' failed:"
+    printf '    %s\n' "$scope_diff"
+    exit 1
+fi
 
 # PRESERVATION IS NOT REMEDIATION, and conflating them would overstate what needs reviewing.
 # The round-six record is historical evidence, faithfully preserved with disclosed path
@@ -138,7 +179,7 @@ while IFS= read -r f; do
         exit 1
     fi
     if preservation_only "$f"; then preserved=$((preserved+1)); else touched=$((touched+1)); fi
-done < <(git diff --name-only "$since"..HEAD 2>/dev/null)
+done <<< "$scope_diff"
 echo "  remediation surface: $touched file(s) changed since A-070, all assigned"
 if [ "$preserved" -gt 0 ]; then
     echo "  preservation-only:   $preserved file(s) (round-six record; faithfully preserved with"

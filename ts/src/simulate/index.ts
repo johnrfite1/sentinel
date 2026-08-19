@@ -182,10 +182,25 @@ async function runSimulation(args: SimulateArgs): Promise<SimulationResult> {
     const control = args.control ?? createAnvilControl(client);
     const unresolvedChecks: string[] = [];
 
-    // The anchor is recorded BEFORE anything mutates, so it names the state the verdict is
-    // computed against (§3.2 step 8). Executing mines a block; reverting returns here, so
-    // this block and its hash still exist afterwards — which is what lets the isolated
-    // signer independently re-check `simulationBlockHash` against the chain.
+    // The anchor is recorded BEFORE anything mutates (§3.2 step 8). Executing mines a block;
+    // reverting returns here, so this block and its hash still exist afterwards — which is
+    // what lets the isolated signer independently re-check `simulationBlockHash`.
+    //
+    // WHAT THIS DOES **NOT** ESTABLISH, corrected 2026-08-19 (R2-F1, D-055(e), CONFIRMED;
+    // accepted as a bounded limitation at D-057(6)). The earlier wording said the anchor
+    // "names the state the verdict is computed against". **It does not, locally.** This
+    // `getBlock()` is unpinned and every state read below carries no `blockNumber`, so if the
+    // head advances mid-simulation the anchor names one block and the effects were measured at
+    // another. **This module cannot establish the property on its own.**
+    //
+    // WHAT MAKES THIS SOUND LIVES IN ANOTHER COMPONENT, and that dependency is now recorded rather
+    // than left implicit: the anchor is taken before every read and the signer runs after the
+    // revert, so anchor <= effects <= signer, and the signer's E3 check requires its own
+    // observed block to EQUAL this anchor. A straddled simulation therefore fails that equality
+    // and is REFUSED — `SIGNER_ANCHOR_NOT_OBSERVED`, no receipt issued.
+    //
+    // So the residual is a LIVENESS one, not an authorization one: a caller whose simulation
+    // crossed a block boundary must re-simulate. Nothing can attest to straddled effects.
     const anchorBlock = await client.getBlock();
     const anchor: Anchor = {
         blockNumber: anchorBlock.number,

@@ -41,7 +41,7 @@
         }
       ],
       "failing": [],
-      "micros": 2.875
+      "micros": 3.167
     },
     {
       "layer": "L2_policy_plus_effects",
@@ -159,8 +159,8 @@
         },
         {
           "code": "EVAL_CALL_GRAPH_EXPECTED",
-          "outcome": "PASS",
-          "detail": ""
+          "outcome": "UNRESOLVED",
+          "detail": "the call trace was unavailable, so the call graph was not evaluated; an empty observed call list is not evidence of an empty call graph"
         },
         {
           "code": "EVAL_SIM_CALL_TRACE_UNAVAILABLE",
@@ -169,10 +169,11 @@
         }
       ],
       "failing": [
+        "EVAL_CALL_GRAPH_EXPECTED",
         "EVAL_SIMULATION_SUCCEEDS",
         "EVAL_SIM_CALL_TRACE_UNAVAILABLE"
       ],
-      "micros": 119.083
+      "micros": 128.25
     },
     {
       "layer": "L3_full_conformance",
@@ -310,8 +311,8 @@
         },
         {
           "code": "EVAL_CALL_GRAPH_EXPECTED",
-          "outcome": "PASS",
-          "detail": ""
+          "outcome": "UNRESOLVED",
+          "detail": "the call trace was unavailable, so the call graph was not evaluated; an empty observed call list is not evidence of an empty call graph"
         },
         {
           "code": "EVAL_SIM_CALL_TRACE_UNAVAILABLE",
@@ -320,10 +321,11 @@
         }
       ],
       "failing": [
+        "EVAL_CALL_GRAPH_EXPECTED",
         "EVAL_SIMULATION_SUCCEEDS",
         "EVAL_SIM_CALL_TRACE_UNAVAILABLE"
       ],
-      "micros": 104.292
+      "micros": 106.25
     }
   ]
 }

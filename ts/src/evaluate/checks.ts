@@ -408,12 +408,46 @@ export function runChecks(input: ConformanceInput): CheckResult[] {
 
         // Unexpected internal calls (§3.3(11)). DemoPay makes no external calls, so the
         // conforming call graph is empty.
+        //
+        // ABSENCE IS NOT AGREEMENT (R2-F5, D-055(e), CONFIRMED at MEDIUM).
+        //
+        // THE ARGUMENT: **an empty list of observed internal calls means "none were seen",
+        // which is the same value whether none occurred or nothing looked.** When the tracer
+        // is unavailable `internalCalls` is `[]`, so this check recorded
+        // `EVAL_CALL_GRAPH_EXPECTED: PASS` — a POSITIVE assertion, signed into the receipt,
+        // that §3.3(11)'s unexpected-internal-call defence had been evaluated and satisfied,
+        // on a run where it was never evaluated at all.
+        //
+        // The overall VERDICT was already protected: `SIM_CALL_TRACE_UNAVAILABLE` reaches the
+        // engine as its own UNRESOLVED check, and any UNRESOLVED forces REVIEW or fail-closed
+        // by `policy.failureMode`. **The verdict was right and the RECORD was false**, which is
+        // this project's characteristic defect rather than an exception to it.
+        //
+        // This is an INTERNAL OUTCOME CORRECTION, not a schema change: the code is unchanged,
+        // the bundle's `policyChecks` shape is unchanged, and `EVAL_SIM_CALL_TRACE_UNAVAILABLE`
+        // was already a declared code. D-057(4)'s stop condition — bring John the fork if a
+        // PUBLIC payload-schema change is required — therefore does not fire.
+        // KEYED ON THE SIMULATOR'S OWN REPORT, not on `callTrace === null`, and the difference
+        // matters. `callTrace` is null in shapes that are not failures, so keying on it turned
+        // the CONFORMING BASELINE unresolved — caught immediately by the baseline control.
+        // `simulate/index.ts` pushes `SIM_CALL_TRACE_UNAVAILABLE` on BOTH paths where a trace
+        // is not obtained (the tracer throwing, and the tracer not being asked), so the
+        // simulator is the authority on whether the graph was observed. Verified by reading
+        // both branches rather than assumed.
+        const traceUnavailable =
+            simulation.unresolvedChecks.includes("SIM_CALL_TRACE_UNAVAILABLE");
         results.push(
-            require_(
-                simulation.internalCalls.length === 0,
-                "EVAL_CALL_GRAPH_EXPECTED",
-                `${simulation.internalCalls.length} unexpected internal call(s)`,
-            ),
+            traceUnavailable
+                ? unresolved(
+                      "EVAL_CALL_GRAPH_EXPECTED",
+                      "the call trace was unavailable, so the call graph was not evaluated; " +
+                          "an empty observed call list is not evidence of an empty call graph",
+                  )
+                : require_(
+                      simulation.internalCalls.length === 0,
+                      "EVAL_CALL_GRAPH_EXPECTED",
+                      `${simulation.internalCalls.length} unexpected internal call(s)`,
+                  ),
         );
 
         // Every unresolved check from the pipeline travels into the verdict rather than

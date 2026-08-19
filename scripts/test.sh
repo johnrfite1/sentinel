@@ -11,109 +11,151 @@
 
 set -euo pipefail
 
-# >>> GATE BOOTSTRAP (D-056(b)) >>>
-# Everything between these markers is extracted VERBATIM by
-# scripts/check-gate-immutability.sh and exercised against a synthetic script. Editing it
-# without running that guard is editing an unfalsified protection.
+# >>> GATE BOOTSTRAP (D-057(3)) >>>
+# Extracted VERBATIM by scripts/check-gate-immutability.sh and exercised against synthetic
+# subjects. Editing it without running that guard is editing an unfalsified protection.
 #
-# THE ARGUMENT (repair-protocol step 1): **a gate result is a statement about a specific
-# script body, so the body that produced it must be immutable for the whole run** — otherwise
-# the result cannot be attributed to anything and a PASS means nothing.
+# THE ARGUMENT: **a gate result is a statement about a specific script body, so that body must
+# be unreachable and unwritable for the whole run, and a supervisor OUTSIDE it must refuse
+# success unless the body reaches explicit completion.**
 #
-# WHY NOT THE OBVIOUS DESIGN. The first proposal was "hash the script at the start and
-# re-check at the end". **John rejected it on its merits and the reason is the whole
-# difficulty: the ending check can itself be skipped or corrupted when bash resumes at a
-# shifted byte offset.** Bash reads a script incrementally BY OFFSET; inserting lines shifts
-# everything after them, so a guard living in the mutable body is exactly the code an edit
-# can make unreachable. A check that the attack can delete is not a check.
+# TWO DESIGNS WERE TRIED AND BOTH FAILED. Recorded because the next person will propose them.
+#   1. Hash at start, re-check at end (rejected by John before it was built): the ending check
+#      lives in the mutable body and is exactly the code an edit makes unreachable.
+#   2. Copy to a temp file and `exec` into it (A-076, SHIPPED AND BROKEN). It claimed the
+#      snapshot was "a private file nobody has a path to". **False.** The path was exported in
+#      `SENTINEL_GATE_SNAPSHOT` to every child AND visible in `ps` to any same-user sibling.
+#      R1/R3 rewrote the running snapshot through both routes: 6 of 8 real-gate trials
+#      corrupted, three of them **exit 0 with no GATE PASSED and no diagnostic** — the very
+#      incident the design existed to prevent — while the in-body trap certified "source
+#      unchanged" because it was watching the original, which nothing had touched.
+#      **The corruption was NON-DETERMINISTIC: 2 of 8 trials ran clean with the edit applied.**
 #
-# WHAT THIS DOES INSTEAD. The mutable file's only job is to copy itself to a snapshot and
-# `exec` into it. From the `exec` onward bash is reading a private file nobody else has a
-# path to, so **an edit to the original cannot corrupt the running parser at all** — the
-# failure mode is removed rather than detected. The original is still re-hashed at exit, and
-# THAT check lives in the snapshot, where no edit can reach it.
+# WHAT THIS DOES INSTEAD. The body is copied to a temp file, opened READ-ONLY on a descriptor,
+# and **immediately unlinked**. From that moment the body has NO filesystem pathname at all:
+# nothing to open, nothing to rewrite, nothing to race. It is executed as `/dev/fd/N`, which is
+# a per-process descriptor reference, not a path — measured on this platform: a child inheriting
+# the descriptor gets EACCES opening it for write and EINVAL on `ftruncate`, and `ps` shows only
+# `bash /dev/fd/N`. **The failure mode is removed rather than detected.**
 #
-# THE COPY ITSELF IS THE ONE RACE LEFT, so it is checked rather than assumed: the source is
-# hashed BEFORE and AFTER the copy and the copy is hashed too. A write landing mid-copy moves
-# one of the three and the run refuses to start. A torn read that happened to leave the file
-# byte-identical is indistinguishable from no write at all, which is the honest bound.
+# AND EXIT 0 IS NOT SUCCESS. The supervisor generates a nonce, passes it to the body, and
+# requires the body to echo it on fd 3 as its final act. A body corrupted mid-execution cannot
+# reach that line, so it cannot produce the token, so the supervisor fails closed — regardless
+# of what exit status the damaged shell happened to return. The source-change check also lives
+# in the supervisor, which no edit to the body can reach.
+# THE BODY IS IDENTIFIED STRUCTURALLY, NOT BY A BARE ENVIRONMENT FLAG.
 #
-# THE RE-EXEC IS KEYED ON THIS SCRIPT'S OWN PATH, NOT ON A BARE ENVIRONMENT FLAG, AND THAT
-# CORRECTION CAME FROM A REAL FAILURE. The first version skipped the bootstrap whenever
-# `SENTINEL_GATE_SNAPSHOT` was merely SET. But it is EXPORTED to every child process, so the
-# moment the gate ran another script carrying this same block, the child saw the parent's
-# variable, concluded it was already a snapshot, and **ran unprotected straight from its own
-# mutable file** — which the immutability harness then caught by being corrupted. Comparing
-# the variable to the path actually executing makes the decision about THIS file rather than
-# about whether any gate anywhere is running.
-_gate_self="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
-if [ "${SENTINEL_GATE_SNAPSHOT:-}" != "$_gate_self" ]; then
-    _gate_src="$_gate_self"
+# "Am I the body?" is answered by WHERE THIS EXECUTION CAME FROM: the body is always executed
+# as `/dev/fd/N`, a descriptor reference no ordinary invocation has. Keying on the token alone
+# was the A-076 inheritance defect wearing a new variable name — a gate STAGE carrying this
+# bootstrap inherited the token, concluded it was the body, and ran unprotected from its own
+# mutable file. Caught by the immutability harness, which fails on exactly that case.
+#
+# Both conditions are required, so an inherited or stray `SENTINEL_GATE_TOKEN` cannot disable
+# anyone's protection: a script invoked from a real path supervises itself regardless.
+_gate_from_fd=0
+case "${BASH_SOURCE[0]}" in /dev/fd/*) _gate_from_fd=1 ;; esac
+if [ -z "${SENTINEL_GATE_TOKEN:-}" ] || [ "$_gate_from_fd" -eq 0 ]; then
+    # ---- SUPERVISOR. Stays outside the executing body for the whole run. ----
+    _gate_src="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
     _gate_before="$(shasum -a 256 <"$_gate_src" | cut -d' ' -f1)"
-    _gate_snap="$(mktemp "${TMPDIR:-/tmp}/sentinel-gate.XXXXXXXX")"
-    # RESOLVED THE SAME WAY `_gate_self` IS, and this is not a nicety. On macOS `$TMPDIR` sits
-    # under `/var`, which is a symlink to `/private/var`; `$(cd … && pwd)` resolves it and
-    # `mktemp` does not. Comparing the two unresolved put the snapshot's own path permanently
-    # unequal to itself, so the snapshot re-exec'd forever — an infinite loop, caught by the
-    # harness hanging. Both sides now go through the identical resolution.
-    _gate_snap="$(cd "$(dirname "$_gate_snap")" && pwd)/$(basename "$_gate_snap")"
-    cat <"$_gate_src" >"$_gate_snap"
-    _gate_copy="$(shasum -a 256 <"$_gate_snap" | cut -d' ' -f1)"
+
+    _gate_tmp="$(mktemp "${TMPDIR:-/tmp}/sentinel-gate.XXXXXXXX")"
+    cat <"$_gate_src" >"$_gate_tmp"
+    _gate_copy="$(shasum -a 256 <"$_gate_tmp" | cut -d' ' -f1)"
     _gate_after="$(shasum -a 256 <"$_gate_src" | cut -d' ' -f1)"
     if [ "$_gate_before" != "$_gate_after" ] || [ "$_gate_copy" != "$_gate_before" ]; then
-        rm -f "$_gate_snap"
-        echo "GATE SOURCE CHANGED WHILE BEING SNAPSHOTTED — refusing to start." >&2
-        echo "  Nothing ran. Re-run once the tree is settled." >&2
+        rm -f "$_gate_tmp"
+        echo "GATE SOURCE CHANGED WHILE BEING SNAPSHOTTED — refusing to start. Nothing ran." >&2
         exit 3
     fi
-    # `exec` so there is no parent process still holding the mutable file open, and "$@" so
-    # every original argument survives — a bootstrap that silently dropped `--gate` would
-    # turn every deep run into a fast one while printing the deep banner.
+
+    # Read-only descriptor, then UNLINK. After this line the body is nameless.
+    exec 9<"$_gate_tmp"
+    rm -f "$_gate_tmp"
+
+    _gate_token="$(head -c 32 /dev/urandom | shasum -a 256 | cut -d' ' -f1)"
+
+    # THE BODY RUNS IN BACKGROUND SO THE SUPERVISOR HOLDS ITS PID, and that is not a style
+    # choice: with the body inside a command substitution the supervisor has no handle on it,
+    # so killing the supervisor ORPHANED the body and the gate kept running. The immutability
+    # harness caught exactly that — `pkill` matched the supervisor, reported success, and the
+    # work continued. Cancellation that does not cancel is worse than none, because the
+    # operator believes the tree is quiet.
     #
-    # ONE OPERATIONAL CONSEQUENCE, recorded because it will surprise somebody mid-incident.
-    # After the exec this process is `bash /tmp/sentinel-gate.XXXXXXXX --gate`: the original
-    # path is GONE from the command line, so **`pkill -f "scripts/test.sh"` no longer finds a
-    # running gate.** Use `pkill -f sentinel-gate`. Found while killing a runaway deep run
-    # during A-076; deferred by John as operational documentation rather than a correctness
-    # defect. No executable consumer greps for the gate by name — but round five's `D-11` was
-    # FOUND with `pgrep -f scripts/test.sh` (see
-    # `docs/review-2026-08-17/lens-D-evaluator-and-decoders.json`), so a reviewer reusing that
-    # recorded technique would now see a quiet tree and be wrong.
-    SENTINEL_GATE_SNAPSHOT="$_gate_snap" \
-    SENTINEL_GATE_SOURCE="$_gate_src" \
-    SENTINEL_GATE_SOURCE_SHA="$_gate_before" \
-        exec bash "$_gate_snap" "$@"
+    # fd 3 carries the completion token through a private FIFO. A FIFO rather than a captured
+    # substitution because the supervisor must be able to wait on the child by PID.
+    _gate_fifo="$(mktemp -u "${TMPDIR:-/tmp}/sentinel-gate-tok.XXXXXXXX")"
+    mkfifo -m 600 "$_gate_fifo"
+    _gate_tok_out="$(mktemp "${TMPDIR:-/tmp}/sentinel-gate-tok.XXXXXXXX")"
+    chmod 600 "$_gate_tok_out"
+
+    _gate_cancel() {
+        kill -TERM "$_gate_child" 2>/dev/null
+        kill -TERM "$_gate_reader" 2>/dev/null
+        rm -f "$_gate_fifo" "$_gate_tok_out"
+        echo "gate: cancelled; the body was stopped with it." >&2
+        exit 143
+    }
+    trap _gate_cancel INT TERM
+
+    # THE SUPERVISOR MUST BLOCK IN `wait`, NOT IN `cat`, AND THIS COST A REAL DEFECT.
+    # The first version read the FIFO directly in a command substitution. Bash runs traps
+    # BETWEEN commands, so a supervisor blocked in a never-returning `cat` never reached its
+    # own signal handler: `kill` left BOTH the supervisor and the body running, and the
+    # immutability harness caught it. `wait` is interruptible, so the reader is backgrounded
+    # and the supervisor waits on PIDs it can actually act on.
+    cat "$_gate_fifo" > "$_gate_tok_out" &
+    _gate_reader=$!
+    SENTINEL_GATE_TOKEN="$_gate_token" bash /dev/fd/9 "$@" 3>"$_gate_fifo" &
+    _gate_child=$!
+    _gate_rc=0
+    wait "$_gate_child" || _gate_rc=$?
+    wait "$_gate_reader" 2>/dev/null || true
+    trap - INT TERM
+    _gate_seen="$(cat "$_gate_tok_out" 2>/dev/null || true)"
+    rm -f "$_gate_fifo" "$_gate_tok_out"
+    exec 9<&-
+
+    _gate_now="$(shasum -a 256 <"$_gate_src" 2>/dev/null | cut -d' ' -f1 || true)"
+    [ -n "$_gate_now" ] || _gate_now="ABSENT-OR-UNREADABLE"
+
+    if [ "$_gate_now" != "$_gate_before" ]; then
+        printf '\n\033[31mGATE SOURCE CHANGED DURING EXECUTION\033[0m\n' >&2
+        echo "  The run executed an unlinked body and was NOT corrupted, but its result" >&2
+        echo "  describes a script that no longer exists. DISCARD IT and re-run." >&2
+        exit 4
+    fi
+    if [ "$_gate_seen" != "$_gate_token" ]; then
+        printf '\n\033[31mGATE DID NOT REACH COMPLETION\033[0m\n' >&2
+        echo "  The body exited $_gate_rc without emitting its completion token." >&2
+        echo "  EXIT STATUS 0 IS NOT SUCCESS: a body damaged mid-run can still exit 0, and" >&2
+        echo "  that is precisely what this check exists to refuse. DISCARD THIS RUN." >&2
+        exit 5
+    fi
+    exit "$_gate_rc"
 fi
 
-# ---- From here down we ARE the snapshot. This code cannot be edited by anything. ----
-
-_gate_source_unchanged() {
-    local now
-    now="$(shasum -a 256 <"$SENTINEL_GATE_SOURCE" 2>/dev/null | cut -d' ' -f1 || true)"
-    [ -n "$now" ] || now="ABSENT-OR-UNREADABLE"
-    [ "$now" = "$SENTINEL_GATE_SOURCE_SHA" ]
-}
-
-# ONE trap covers both duties, and it fires on EVERY exit path — success, a failed stage, or
-# `set -e` aborting midway. Putting the source check only beside "GATE PASSED" would let an
-# edit ride along with an early exit, and putting the cleanup anywhere else would leave a
-# snapshot behind on exactly the runs that go wrong.
-_gate_exit() {
-    local rc=$?
-    if ! _gate_source_unchanged; then
-        printf '\n\033[31mGATE SOURCE CHANGED DURING EXECUTION\033[0m\n' >&2
-        echo "  ${SENTINEL_GATE_SOURCE} is not the file this run started from." >&2
-        echo "  The run itself was NOT corrupted — it executed an immutable snapshot — but its" >&2
-        echo "  result describes a script that no longer exists. DISCARD IT and re-run." >&2
-        rc=4
-    fi
-    rm -f "$SENTINEL_GATE_SNAPSHOT"
-    exit "$rc"
-}
-# INT and TERM as well as EXIT: a gate that is interrupted — Ctrl-C, a harness timeout, a
-# `pkill` — would otherwise leave its snapshot behind, and those are precisely the runs a
-# person is not watching the cleanup of. Measured: without this, an interrupted run leaked.
-trap _gate_exit EXIT INT TERM
+# ---- From here down we ARE the body, running from an unlinked descriptor. ----
+#
+# THE TOKEN IS READ AND THEN REMOVED FROM THE ENVIRONMENT, and this is not tidiness. An
+# exported variable is inherited by every child, so a gate STAGE that carries this same
+# bootstrap would see `SENTINEL_GATE_TOKEN` already set, conclude it was itself the body, and
+# **run unprotected from its own mutable file** — which is precisely the inheritance defect
+# A-076 shipped with `SENTINEL_GATE_SNAPSHOT` and R1-F1 confirmed at CRITICAL. It was
+# reintroduced here with a new variable name and caught by the immutability harness failing
+# when run AS a gate stage while passing standalone.
+#
+# Un-exporting also shrinks the forging surface: a child can no longer read the completion
+# token out of its environment.
+_gate_token_local="$SENTINEL_GATE_TOKEN"
+unset SENTINEL_GATE_TOKEN
+#
+# `_gate_complete` is the ONLY way this run can be believed. It is called on the success path
+# only; every early exit, and every corruption, leaves the token unsent and the supervisor
+# refuses. Deliberately NOT an EXIT trap: a trap fires on failure paths too, which would make
+# it a liveness signal rather than a completion one.
+_gate_complete() { printf '%s' "$_gate_token_local" >&3; }
 # <<< GATE BOOTSTRAP <<<
 
 cd "$(git rev-parse --show-toplevel)"
@@ -176,16 +218,19 @@ step "vendor honesty (§7.5 Gate 5, D-008)"
 #
 # RAISE A FLOOR IN THE SAME EDIT AS THE SUITE IT BOUNDS. NEVER LOWER ONE TO MAKE A RUN PASS.
 #
-# 75 (Foundry) and 507 (TypeScript) measured at A-075. TypeScript 494 -> 507 there: +13 for the
-# E3 repair. **507 -> 513 under A-076 (D-056(a)): +3 for `D-09(c)`'s intersected ceiling and +3
-# for `D-10`'s case- and field-pinning.** Foundry is unchanged at 75.
+# 75 (Foundry) and 507 (TypeScript) measured at A-075: TypeScript 494 -> 507 for the E3 repair.
+# 507 -> 513 under A-076 (D-056(a)): +3 `D-09(c)`, +3 `D-10`.
+# **A-077 (D-057(4)): Foundry 75 -> 89 (+14 for `R3-F5`/`F6`/`F7` — the receipt-binding policy
+# half, both directions of every timestamp boundary, and truth tests for all five unasserted
+# events); TypeScript 513 -> 526 (+3 `R2-F5` call-graph absence, +10 `R3-F8`'s nine case sites
+# and both field swaps).** Ratcheted in the SAME edit as the suites they bound.
 #
 # WHAT A FLOOR IS AND IS NOT, carried over verbatim in spirit from the verifier's: this is a
 # ratchet against ACCIDENT, not against intent. It catches a suite that shrinks. It says
 # nothing about whether the tests that remain assert anything — `test/reasoncodes.test.ts`
 # exists because 22 of 31 signer checks once had no test at all while the count looked healthy.
-FOUNDRY_MIN_TESTS=75
-TS_MIN_TESTS=513
+FOUNDRY_MIN_TESTS=89
+TS_MIN_TESTS=526
 
 step "solidity build + tests (profile: $PROFILE)"
 if command -v forge >/dev/null 2>&1; then
@@ -784,6 +829,8 @@ fi
 printf '\n'
 if [ "$fail" -ne 0 ]; then
     echo -e "\033[31mGATE FAILED\033[0m"
+    # No completion token: a failed gate is not a completed one. The supervisor will report
+    # BOTH the failure and the missing token, which is accurate -- this run did not finish.
     exit 1
 fi
 
@@ -1138,5 +1185,24 @@ WHAT IS NOT COVERED:
 A green run means the mechanism runs end to end. It does not mean Sentinel decides
 correctly. Those are different claims and only the first is in evidence here.
 
-For gate evidence use the deep profile — ./scripts/test.sh --gate — not this default.
 COVERAGE
+
+# R1-F5 (D-055(e), CONFIRMED at LOW). The line above used to read "For gate evidence use the
+# deep profile — not this default" and was printed by EVERY run, including deep ones. A reader
+# of a deep-gate log was told the run they were holding was the fast profile and instructed to
+# go and run what they had just run. The coverage boundary is the block this project says to
+# read INSTEAD of the pass count, so a false statement about which profile produced it is a
+# false statement about what the whole block covers.
+if [ "$PROFILE" = "gate" ]; then
+    echo "This IS the deep profile (--gate): fuzz 20000, the corpus executed and its committed"
+    echo "views verified file by file, and the D-010 verifier suite run. That is what the"
+    echo "boundary above describes."
+else
+    echo "This is the FAST profile. The corpus was NOT executed and the committed views were"
+    echo "NOT verified. For gate evidence run ./scripts/test.sh --gate."
+fi
+
+# THE COMPLETION TOKEN, and its position is the point: the last statement of the success path.
+# Anything that stops the body before here -- a corrupted parse, a `set -e` abort, a signal --
+# leaves it unsent, and the supervisor refuses the run no matter what status the shell returned.
+_gate_complete

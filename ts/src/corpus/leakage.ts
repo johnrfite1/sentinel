@@ -142,6 +142,43 @@ function isDeclaredAt(key: string, depth: number, inEnvironment: boolean): boole
     return false;
 }
 
+/**
+ * The typed §5.1-§5.3 payload containers, declared field by field (R3-F3, D-055(e)).
+ *
+ * THE ARGUMENT: **an allowlist that stops one level above the leak is a denylist.**
+ * `ALLOWED_VIEW_KEYS` declared `mandate`, `policy` and `action` as permitted CONTAINERS and
+ * said nothing about what may be inside them, so a field carrying evaluator output under an
+ * innocuous name — `calldataDecodedByASupportedSchema` was the real one (A-028 F-3) — passed
+ * the shape check at depth 1 and met only the denylist, which by construction cannot catch a
+ * name containing no forbidden word.
+ *
+ * A-032 recorded this as a HYPOTHESIS and closed the denylist half. R3 DEMONSTRATED it: the
+ * exact route A-028 F-3 used is still open one level down. This closes it.
+ *
+ * These are the §5 payload fields and nothing else — measured from all 50 committed views, not
+ * transcribed from the spec. Adding a field to a payload container is now a deliberate act that
+ * fails the corpus run until it is declared, which is the point at which somebody has to ask
+ * whether it leaks.
+ */
+export const ALLOWED_PAYLOAD_KEYS: Readonly<Record<string, readonly string[]>> = {
+    mandate: [
+        "schemaVersion", "mandateId", "principal", "vault", "chainId", "target",
+        "targetCodeHash", "selector", "maxNativeValueWei", "purposeKind", "resourceId",
+        "beneficiary", "durationSeconds", "recurringAllowed", "validAfter", "validUntil",
+        "policyHash",
+    ],
+    policy: [
+        "schemaVersion", "policyVersion", "vault", "chainId", "allowedOperation",
+        "allowedTargetsHash", "allowedSelectorsHash", "maxNativeValueWei",
+        "maxAllowanceIncreaseBaseUnits", "allowedCallGraphHash", "validAfter", "validUntil",
+        "failureMode",
+    ],
+    action: [
+        "schemaVersion", "chainId", "vault", "actionNonce", "target", "valueWei", "dataHash",
+        "operation", "mandateHash", "policyHash", "deadline", "callData",
+    ],
+};
+
 
 /**
  * The labeller view's DECLARED SHAPE — the half a denylist structurally cannot provide.
@@ -225,5 +262,18 @@ export function assertViewShape(view: Record<string, unknown>, fixtureId: string
             (k) => !(ALLOWED_ENVIRONMENT_KEYS as readonly string[]).includes(k),
         );
         if (extra.length > 0) throw new ViewShapeError(fixtureId, "observedEnvironment", extra);
+    }
+
+    // THE TYPED PAYLOAD CONTAINERS (R3-F3). Without this the allowlist declared `mandate`,
+    // `policy` and `action` as permitted containers and said nothing about their contents, so
+    // an innocuously-named field carrying evaluator output sat one level below the boundary
+    // and met only the denylist — which cannot catch a name containing no forbidden word.
+    // That is the exact route A-028 F-3 used, left open by the repair that closed the other
+    // half. Demonstrated by an independent reviewer rather than hypothesised.
+    for (const [container, allowed] of Object.entries(ALLOWED_PAYLOAD_KEYS)) {
+        const payload = view[container];
+        if (typeof payload !== "object" || payload === null || Array.isArray(payload)) continue;
+        const extra = Object.keys(payload).filter((k) => !allowed.includes(k));
+        if (extra.length > 0) throw new ViewShapeError(fixtureId, container, extra);
     }
 }

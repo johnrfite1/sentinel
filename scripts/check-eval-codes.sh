@@ -20,6 +20,20 @@ set -uo pipefail
 
 ROOT="$(git rev-parse --show-toplevel)"
 SPEC="$ROOT/Sentinel_Protocol_Lab_Proposal_v0_2.md"
+
+# SCOPED TO §5.7.1, THE SECTION THIS GUARD NAMES (R4-F3, D-055(e), CONFIRMED).
+#
+# Same defect as check-type-strings.sh: this grepped the WHOLE 84 KB document while printing
+# "documented in §5.7.1", so a check documented only in §6 — or anywhere else — was certified
+# as documented in a section that never mentioned it. Demonstrated by a reviewer.
+SPEC_SECTION="$(mktemp)"
+trap 'rm -f "$SPEC_SECTION"' EXIT
+awk '/^#### 5\.7\.1 /{f=1;next} f && /^#{1,4} /{exit} f' "$SPEC" > "$SPEC_SECTION"
+if [ ! -s "$SPEC_SECTION" ]; then
+    echo "eval codes: COULD NOT ISOLATE §5.7.1 from the proposal."
+    echo "  Refusing to report coverage against a section this guard could not find."
+    exit 1
+fi
 CHECKS="$ROOT/ts/src/evaluate/checks.ts"
 
 # The declared surface, taken from the engine's own EVAL_CODES array.
@@ -35,7 +49,7 @@ missing=""
 total=0
 for code in $codes; do
     total=$((total + 1))
-    grep -q "$code" "$SPEC" || missing="$missing $code"
+    grep -q "$code" "$SPEC_SECTION" || missing="$missing $code"
 done
 
 if [ -n "$missing" ]; then

@@ -132,6 +132,18 @@ function buildEvidenceBundle(
 
         // What the mandate authorised, stated separately from what was observed so a reader
         // can compare the two without recomputing the mandate.
+        //
+        // `maxNativeValueWei` IS THE MANDATE/POLICY-AUTHORIZED CEILING AND NOTHING ELSE
+        // (R2-F3, D-055(e); accepted as a bounded limitation at D-057(6)). It is the §5.2
+        // intersection of the two SIGNED ceilings. **It deliberately does NOT include the
+        // vault's immutable `maxNativeValueWei` cap** — `minOf` takes two arguments and
+        // `vaultState` is not one of them, so it provably cannot for any input.
+        //
+        // That is not an omission being excused: the vault's cap is a DIFFERENT KIND of bound.
+        // It is enforced onchain regardless of what any bundle says, and it is separately
+        // recorded here — `EVAL_VALUE_WITHIN_VAULT_CAP`'s outcome is in `policyChecks` above.
+        // A reader asking "what could execute?" must read both; a reader asking "what did the
+        // mandate and policy authorise?" reads this. The payload schema is unchanged.
         expectedEffects: {
             maxNativeValueWei: minOf(mandate.maxNativeValueWei, policy.maxNativeValueWei).toString(),
             target: mandate.target,
