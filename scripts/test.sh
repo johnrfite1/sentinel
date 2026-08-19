@@ -220,17 +220,19 @@ step "vendor honesty (§7.5 Gate 5, D-008)"
 #
 # 75 (Foundry) and 507 (TypeScript) measured at A-075: TypeScript 494 -> 507 for the E3 repair.
 # 507 -> 513 under A-076 (D-056(a)): +3 `D-09(c)`, +3 `D-10`.
-# **A-077 (D-057(4)): Foundry 75 -> 89 (+14 for `R3-F5`/`F6`/`F7` — the receipt-binding policy
+# **A-077 (D-057(4)): Foundry 75 -> 92 (+17 for `R3-F5`/`F6`/`F7` — the receipt-binding policy
 # half, both directions of every timestamp boundary, and truth tests for all five unasserted
-# events); TypeScript 513 -> 526 (+3 `R2-F5` call-graph absence, +10 `R3-F8`'s nine case sites
+# events, plus the THIRD timestamp boundary and `MandateRevoked` that the D-057(5) verifier
+# found still unpinned); TypeScript 513 -> 527 (+3 `R2-F5` call-graph absence, +10 `R3-F8`'s nine case sites, +1
+# for `R2-F6`'s two-message diagnostic, which the D-057(5) verifier found pinned by nothing
 # and both field swaps).** Ratcheted in the SAME edit as the suites they bound.
 #
 # WHAT A FLOOR IS AND IS NOT, carried over verbatim in spirit from the verifier's: this is a
 # ratchet against ACCIDENT, not against intent. It catches a suite that shrinks. It says
 # nothing about whether the tests that remain assert anything — `test/reasoncodes.test.ts`
 # exists because 22 of 31 signer checks once had no test at all while the count looked healthy.
-FOUNDRY_MIN_TESTS=89
-TS_MIN_TESTS=526
+FOUNDRY_MIN_TESTS=92
+TS_MIN_TESTS=527
 
 step "solidity build + tests (profile: $PROFILE)"
 if command -v forge >/dev/null 2>&1; then

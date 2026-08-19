@@ -93,6 +93,29 @@ assign() {
     esac
 }
 
+# THE SIBLING OF R1-F2, AND IT WAS MISSED BY R1-F2's OWN REPAIR (V3-N1, D-057(5)).
+#
+# R1-F2's argument is "a coverage instrument must never report coverage it did not measure".
+# That repair guarded the `git diff` path and left this one — `git ls-files` in the identical
+# unguarded process-substitution shape, one block above it. A verifier failed `ls-files` with a
+# PATH shim and got `assigned 0 of 0 tracked files` plus, byte-identical to the sentence R1-F2
+# was filed against, `0 file(s) changed since A-070, all assigned`, exit 0.
+#
+# **Fixing the branch a reviewer demonstrated and leaving its sibling is the exact defect this
+# repository has now recorded more times than any other**, committed inside the repair for it.
+tracked="$(git ls-files 2>&1)"
+if [ $? -ne 0 ]; then
+    echo "  FAIL  git ls-files failed:"
+    printf '    %s\n' "$tracked"
+    echo "    Refusing to report a partition measured against nothing."
+    exit 1
+fi
+if [ -z "$tracked" ]; then
+    echo "  FAIL  git ls-files returned NO tracked files."
+    echo "    A repository with nothing in it is not a repository whose every file is assigned."
+    exit 1
+fi
+
 declare -a unassigned=()
 r1=0; r2=0; r3=0
 while IFS= read -r f; do
@@ -102,10 +125,10 @@ while IFS= read -r f; do
         R3) r3=$((r3+1)) ;;
         *)  unassigned+=("$f") ;;
     esac
-done < <(git ls-files)
+done <<< "$tracked"
 
 total=$((r1 + r2 + r3))
-echo "review scope: R1=$r1  R2=$r2  R3=$r3  (assigned $total of $(git ls-files | wc -l | tr -d ' ') tracked files)"
+echo "review scope: R1=$r1  R2=$r2  R3=$r3  (assigned $total of $(printf '%s\n' "$tracked" | wc -l | tr -d ' ') tracked files)"
 
 if [ ${#unassigned[@]} -ne 0 ]; then
     echo "  FAIL  ${#unassigned[@]} tracked file(s) assigned to NO reviewer:"
@@ -180,7 +203,12 @@ while IFS= read -r f; do
     fi
     if preservation_only "$f"; then preserved=$((preserved+1)); else touched=$((touched+1)); fi
 done <<< "$scope_diff"
-echo "  remediation surface: $touched file(s) changed since A-070, all assigned"
+# NAME THE BASE ACTUALLY USED, not a fixed label. The line said "since A-070" whatever
+# `SENTINEL_SCOPE_BASE` was set to, so an override produced a true count under a false label
+# (V3-N1, LOW).
+_scope_label="A-070's parent"
+[ "$since" = "$SCOPE_BASE_DEFAULT" ] || _scope_label="$since"
+echo "  remediation surface: $touched file(s) changed since $_scope_label, all assigned"
 if [ "$preserved" -gt 0 ]; then
     echo "  preservation-only:   $preserved file(s) (round-six record; faithfully preserved with"
     echo "                       disclosed path sanitization, no behaviour)"

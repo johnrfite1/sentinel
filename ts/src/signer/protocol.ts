@@ -367,7 +367,10 @@ export interface MandatePayload {
  *
  * **WHAT ACTUALLY ENFORCES TARGETS AND SELECTORS**, so the hashes are not mistaken for it: the
  * vault's own onchain `allowedTarget` / `allowedSelector` mappings, surfaced as
- * `EVAL_VAULT_TARGET_NOT_ALLOWED` and `EVAL_VAULT_SELECTOR_NOT_ALLOWED`. The hashes commit to a
+ * `SIGNER_VAULT_TARGET_NOT_ALLOWED` and `SIGNER_VAULT_SELECTOR_NOT_ALLOWED` — the SIGNER_
+ * prefix is the real one. This comment first cited an `EVAL_` spelling that exists nowhere
+ * in the codebase, caught by the D-057(5) verifier: a disclosure whose enforcement pointer
+ * names a fictitious code is a claim nobody can follow. The hashes commit to a
  * list; the mappings are what refuses an action.
  */
 export interface PolicyPayload {

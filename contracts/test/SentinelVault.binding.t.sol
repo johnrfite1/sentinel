@@ -20,10 +20,16 @@ import {DemoPay} from "../src/demo/DemoPay.sol";
 ///               at once and therefore reports CAUGHT, masking it.
 ///        R3-F6  all three of the vault's `block.timestamp` comparisons were unpinned in BOTH
 ///               directions (6 surviving mutants), while the value ceiling is pinned in both.
+///               **The first version of this file pinned TWO of the three and said "every".
+///               `executeWithOverride`'s `auth.expiresAt` was found still surviving by an
+///               independent verifier (D-057(5)) and is pinned below.**
 ///               This is `D-06` — a boundary pinned only from outside — closed for the engine's
 ///               ten comparison edges and never carried to the vault's.
 ///        R3-F7  five of the vault's eight events could be made to state something false with
 ///               75/75 green: exactly the five D-043 did not touch.
+///               **The first version of this file asserted the WRONG five — it included
+///               `Recovered`, already covered by D-043, and omitted `MandateRevoked`, which
+///               nothing anywhere asserted. Both are covered below.**
 ///
 ///      COVERAGE BOUNDARY. Every test here asserts an INSTRUMENT, not a behaviour change. The
 ///      vault was correct before this file and is correct after it; what changes is that a
@@ -111,6 +117,24 @@ contract SentinelVaultBindingTest is Test {
         bytes32 digest = T.digest(T.domainSeparator(block.chainid, address(vault)), structHash);
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(pk, digest);
         return abi.encodePacked(r, s, v);
+    }
+
+    function _override(T.ActionPayload memory a, T.DecisionReceiptPayload memory r)
+        internal
+        view
+        returns (T.OverrideAuthorizationPayload memory)
+    {
+        return T.OverrideAuthorizationPayload({
+            schemaVersion: 1,
+            reviewReceiptHash: T.hashReceipt(r),
+            actionHash: T.hashAction(a),
+            mandateHash: a.mandateHash,
+            policyHash: a.policyHash,
+            actionNonce: a.actionNonce,
+            reasonHash: keccak256("owner accepted the residual risk"),
+            issuedAt: uint64(block.timestamp),
+            expiresAt: uint64(block.timestamp + 10 minutes)
+        });
     }
 
     function _signedReceipt(T.ActionPayload memory a)
@@ -230,6 +254,45 @@ contract SentinelVaultBindingTest is Test {
         vault.executeWithReceipt(a, data, r, sig);
     }
 
+    /// @dev THE THIRD TIMESTAMP BOUNDARY — `executeWithOverride`'s `auth.expiresAt`.
+    ///
+    ///      **THIS WAS MISSED BY THE FIRST VERSION OF THIS FILE, WHICH CLAIMED "every timestamp
+    ///      boundary" AND "all three" WHILE PINNING TWO.** An independent verifier re-derived
+    ///      from R3-F6's own mutant set instead of from this file's description of it and found
+    ///      `auth.expiresAt` surviving in BOTH directions with 89/89 green. It is the override
+    ///      path — the second route by which funds move, on a REVIEW verdict — so it is the
+    ///      boundary least covered and most consequential.
+    ///
+    ///      That is the same defect this file exists to close, committed inside the closing of
+    ///      it: the repair generalised the demonstration and not the argument.
+    function test_overrideExpiry_atTheBoundaryIsStillValid() public {
+        bytes memory data = _callData();
+        T.ActionPayload memory a = _action(data);
+        T.DecisionReceiptPayload memory r = _receipt(a, T.Verdict.REVIEW);
+        r.expiresAt = uint64(block.timestamp + 2 hours);
+        bytes memory sig = _sign(SIGNER_PK, T.hashReceipt(r));
+        T.OverrideAuthorizationPayload memory auth = _override(a, r);
+        bytes memory ownerSig = _sign(OWNER_PK, T.hashOverride(auth));
+
+        vm.warp(auth.expiresAt); // exactly AT the override's expiry
+        vault.executeWithOverride(a, data, r, sig, auth, ownerSig);
+        assertEq(vault.actionNonce(), 1);
+    }
+
+    function test_overrideExpiry_oneSecondPastIsRejected() public {
+        bytes memory data = _callData();
+        T.ActionPayload memory a = _action(data);
+        T.DecisionReceiptPayload memory r = _receipt(a, T.Verdict.REVIEW);
+        r.expiresAt = uint64(block.timestamp + 2 hours);
+        bytes memory sig = _sign(SIGNER_PK, T.hashReceipt(r));
+        T.OverrideAuthorizationPayload memory auth = _override(a, r);
+        bytes memory ownerSig = _sign(OWNER_PK, T.hashOverride(auth));
+
+        vm.warp(uint256(auth.expiresAt) + 1);
+        vm.expectRevert(SentinelVault.OverrideExpired.selector);
+        vault.executeWithOverride(a, data, r, sig, auth, ownerSig);
+    }
+
     /// @dev The value ceiling, pinned in both directions ALREADY, kept here as the control
     ///      R3-F6 names: it is the comparison that was correctly pinned, so if these two ever
     ///      fail the harness itself is wrong rather than the boundary.
@@ -262,7 +325,10 @@ contract SentinelVaultBindingTest is Test {
     ///      erases the only record of signer epochs — and `PausedSet` is second, because a
     ///      monitor keys on it.
     ///
-    ///      All five are asserted, not the two sharpest, per D-057(4).
+    ///      SIX are asserted below, not five: the five D-043 left untouched
+    ///      (`SignerRotated`, `PausedSet`, `MandateActivated`, `PolicyActivated`,
+    ///      `MandateRevoked`) plus `Recovered`, which D-043 already covers and which is kept
+    ///      as a second, independent witness rather than removed.
 
     function test_SignerRotated_statesBothEpochsTruthfully() public {
         address newSigner = vm.addr(0xC0FFEE);
@@ -304,6 +370,23 @@ contract SentinelVaultBindingTest is Test {
         vm.prank(owner);
         vault.activatePolicy(h);
         assertEq(vault.activePolicyHash(), h);
+    }
+
+    /// @dev `MandateRevoked` — THE EVENT THE FIRST VERSION OF THIS FILE MISSED WHILE CLAIMING
+    ///      "All five are asserted". It picked `Recovered`, which D-043 had ALREADY covered
+    ///      (`test_recoverEventReportsTheAmountItActuallyMoved` in the backstops suite), and
+    ///      left `MandateRevoked` — a genuine survivor in the adjudication — asserted by
+    ///      NOTHING anywhere in the repository. Every revocation could log the zero hash
+    ///      instead of the mandate it revoked, 89/89 green.
+    ///
+    ///      Rotation and revocation history exist nowhere else in state, which is why these two
+    ///      matter more than the hashes readable from storage.
+    function test_MandateRevoked_statesTheRevokedHash() public {
+        vm.expectEmit(true, false, false, false, address(vault));
+        emit SentinelVault.MandateRevoked(MANDATE_HASH);
+        vm.prank(owner);
+        vault.revokeMandate();
+        assertEq(vault.activeMandateHash(), bytes32(0));
     }
 
     function test_Recovered_statesRecipientAndAmount() public {

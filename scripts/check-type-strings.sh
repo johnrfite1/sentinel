@@ -48,6 +48,20 @@ checked=0
 for name in EIP712Domain MandatePayload PolicyPayload ActionPayload \
             DecisionReceiptPayload OverrideAuthorizationPayload; do
     # The spec publishes each as an indented literal line; the source as a quoted string.
+    # EXACTLY ONE PUBLICATION PER TYPE, not the first of several (R4-F3 residual, D-057(5)).
+    #
+    # Scoping to §5.8 closed the cross-section decoy. It did NOT close a decoy placed INSIDE
+    # §5.8 above the real line, because `head -1` still silently picks a winner. A section that
+    # publishes two different strings for one type is itself the defect — there is no correct
+    # way to choose between them — so this refuses rather than choosing.
+    spec_hits="$(grep -cE "^ {4}${name}\([^)]*\)$" "$SPEC_SECTION")"
+    if [ "$spec_hits" -gt 1 ]; then
+        echo "type strings: §5.8 publishes ${spec_hits} different lines for ${name}."
+        echo "  A section cannot publish a type string twice and have both be normative."
+        echo "  Refusing to pick one. Remove the duplicate."
+        fail=1
+        continue
+    fi
     spec_line="$(grep -oE "^ {4}${name}\([^)]*\)$" "$SPEC_SECTION" | head -1 | sed 's/^ *//')"
     src_line="$(grep -oE "\"${name}\([^\"]*\)\"" "$SRC" | head -1 | sed 's/^"//; s/"$//')"
 

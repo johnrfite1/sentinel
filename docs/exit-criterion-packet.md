@@ -100,7 +100,7 @@ requiring their removal.
 
 | Item | Why it is not a boundary |
 |---|---|
-| **`decodedSelectorAndParameters` is compared to nothing** | **`docs/gate-s1-evidence.md:124` and `:152` — a SIGNED pack — say the D-010 verifier "does the conformance comparison". It does not: `grep -c decodedSelectorAndParameters verifier/verify.py` = **0**. This is a known false claim in signed text and is UNFIXED.** |
+| ~~**`decodedSelectorAndParameters` is compared to nothing**~~ **— FALSE SINCE A-074; CORRECTED 2026-08-19 (`R2-F4`, D-055(e))** | **`docs/gate-s1-evidence.md:124` and `:152` — a SIGNED pack — say the D-010 verifier "does the conformance comparison". It does not: `grep -c decodedSelectorAndParameters verifier/verify.py` = **0**. This is a known false claim in signed text and is UNFIXED.** **CORRECTION: A-074 BUILT the comparison — the grep now returns 2, not 0 — and the signer checks the field too. This row was true when written and is not true now. What remains is the `description` sub-field only, recorded at `docs/v1-1-register.md` §13.7.** |
 | **`E3` — anchor recency** | An OPEN DESIGN FORK John holds, not a ruled boundary. Until ruled it is unresolved. |
 | No gate floor on Foundry/TypeScript counts | round 6 `L8-14`; a shrinking suite is invisible to the gate |
 | Register §13 status column stale for ~17 of 24 rows | the file reviewers are told to trust |

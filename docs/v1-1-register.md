@@ -906,11 +906,17 @@ recorded rather than fixed, and the reason is given for each.
   key-shaped. One bracket level is covered, arbitrary nesting is not, and chasing it with a regex
   would trade a real false-negative for a worse false-positive rate across a repository full of
   `bytes32` literals.
-- **`decodedSelectorAndParameters` is still compared to nothing** (A-070). The §5.6 projections
-  now run on both paths and fail on absence, but the field D-014's justification actually rests on
-  is checked by neither the signer nor the verifier. **This is the larger finding, it sits inside
-  the SIGNED Gate S1 pack, and it is not an agent's to close** — it changes what the product
-  guarantees.
+- ~~**`decodedSelectorAndParameters` is still compared to nothing** (A-070). … the field
+  D-014's justification actually rests on is checked by neither the signer nor the verifier.~~
+  **SUPERSEDED AND FALSE SINCE A-074 — CORRECTED IN PLACE 2026-08-19 (`R2-F4`, D-055(e)).**
+  A-074 built the conformance comparison in the D-010 verifier (`grep -c
+  decodedSelectorAndParameters verifier/verify.py` returns **2**, not 0) and the signer checks
+  the field as well (`attest.ts:638`). **BOTH halves of the struck sentence are now false.**
+  **What actually remains is narrower and is recorded at §13.7: the `description` SUB-FIELD is
+  compared to nothing.** This bullet is annotated rather than deleted, per the convention §13.3
+  and §11.0 already use — but the annotation is the point: the D-057(5) verifier found the
+  correction had been recorded at §13.7 **where the reader is not**, and this text standing
+  uncorrected 51 lines below it is the original finding moved rather than closed.
 - **The repair protocol has no mechanical half** (A-070). `check-label-prompt.sh`'s header states
   the project's own standard: *"a durable project rule gets a mechanical guard rather than
   prose."* By that standard `docs/repair-protocol.md` is incomplete. A gate stage asserting that

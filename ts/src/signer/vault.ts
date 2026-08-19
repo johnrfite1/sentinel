@@ -220,12 +220,15 @@ export function createChainReader(rpcUrl: string): ChainReader {
                 // discarded rather than returned with a caveat — the signer has no way to
                 // attest "this was true a moment ago".
                 const confirm = await client.getBlock();
-                if (
-                    confirm.hash === null ||
-                    confirm.number !== at ||
-                    confirm.hash.toLowerCase() !== headHash
-                ) {
-                    // The head moved or was replaced: a different condition from (b) above.
+                if (confirm.hash === null) {
+                    // A PENDING CONFIRMATION. Nothing moved — the node simply had no finalised
+                    // head to confirm against, which is condition (b), not (a). Attributing it
+                    // to movement is the same substitution R2-F6 was raised about, one level
+                    // in; found by the D-057(5) verifier after the first repair.
+                    continue;
+                }
+                if (confirm.number !== at || confirm.hash.toLowerCase() !== headHash) {
+                    // The head genuinely moved or was replaced: condition (a).
                     pendingOnly = false;
                     continue;
                 }

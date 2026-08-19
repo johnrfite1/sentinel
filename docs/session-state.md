@@ -364,14 +364,18 @@ hand-correction of a line whose own text already said it "has been wrong four ti
 **What is stable and worth stating: 50 corpus fixtures · 7 samples · 78 tamper cases over 30
 modes · workspace guards 0 NEW findings with 13 pre-existing baselined — it PASSES ON RATCHETED
 DEBT, which is not the same as clean.**
-*(TypeScript 494 → 507 under A-075, all thirteen from the E3 repair: 7 in `test/vault.anchor.test.ts`,
-4 in `reasoncodes.test.ts`, 2 in `signer.e2e.test.ts`.)*
-**AND AS OF A-075 THE FOUNDRY AND TYPESCRIPT FIGURES ARE FLOORS THIS GATE ASSERTS, which they
-have never been before** — `FOUNDRY_MIN_TESTS=75`, `TS_MIN_TESTS=507`, both ratcheted in the same
-edit as the suites, both falsified (a shrunk suite breaches; a `vm.skip`/`skip`/`todo` test is
-caught by a separate branch because the floor alone does NOT see it; an absent report fails
-closed). So the sentence below — "there are still NO floors on the Foundry or TypeScript counts"
-— **is no longer true and is struck.**
+**AND SINCE A-075 THE FOUNDRY AND TYPESCRIPT FIGURES ARE FLOORS THIS GATE ASSERTS, which they
+had never been before** — ratcheted in the same edit as the suites, and falsified (a shrunk suite
+breaches; a `vm.skip`/`skip`/`todo` test is caught by a separate branch because the floor alone
+does NOT see it; an absent report fails closed). So the sentence below — "there are still NO
+floors on the Foundry or TypeScript counts" — **is no longer true and is struck.**
+
+**THE FLOOR VALUES ARE DELIBERATELY NOT REPRINTED HERE.** This passage previously quoted
+`FOUNDRY_MIN_TESTS=75, TS_MIN_TESTS=507` in present tense while the constants were 89 and 526 —
+**eleven lines below its own claim that the figures are no longer duplicated in this file.** The
+D-057(5) verifier found it and correctly ruled `R4-F4` REPAIR-FAILS: I had removed one copy and
+left another in the same section. **Run `./scripts/check-suite-floors.sh`**, which reads them
+from `scripts/test.sh`, the only copy.
 *(Measured 2026-08-18 on the A-075 working tree by running `./scripts/test.sh` and reading its
 output, not by copying this line. Post-D-052 arc: A-070 moved 180→188 verifier, A-072 the 189th, **A-074 189→198**;
 A-072 moved 481→489 TypeScript and D-053 489→494. `VERIFIER_MIN_TESTS` was ratcheted in the SAME

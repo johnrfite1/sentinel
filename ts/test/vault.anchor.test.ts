@@ -301,6 +301,51 @@ describe("a head that moves is retried, never accepted (D-055(c))", () => {
         }
     });
 
+    it("names the CONDITION it failed on, not a generic one (R2-F6)", async () => {
+        // R2-F6, D-055(e), and the follow-up the D-057(5) verifier found: the error covers TWO
+        // conditions and must say which. It was ALSO pinned by nothing — the verifier collapsed
+        // both messages into one visibly-broken string and 526/526 stayed green, which is the
+        // `F-VAULT-2` shape: correct today, protected tomorrow by nothing.
+        //
+        // (b) every observation was a PENDING head — nothing moved, there was simply never a
+        // finalised head to anchor to.
+        const pending = await mockNode(
+            Array.from({length: SNAPSHOT_ATTEMPTS * 4}, () => ({number: 30n, hash: null})),
+        );
+        try {
+            await createChainReader(pending.url).readVaultState(VAULT, TARGET, SELECTOR);
+            assert.fail("expected ChainUnstableError");
+        } catch (error) {
+            assert.ok(error instanceof ChainUnstableError);
+            assert.equal(error.pendingOnly, true);
+            assert.match(error.message, /pending block with no hash/);
+            assert.doesNotMatch(error.message, /head moved/,
+                "a never-finalised head must NOT be reported as movement");
+        } finally {
+            await pending.stop();
+        }
+
+        // (a) the head genuinely MOVED under every pinned read.
+        const moving = await mockNode(
+            Array.from({length: SNAPSHOT_ATTEMPTS * 4}, (_, i) => ({
+                number: BigInt(100 + i),
+                hash: keccak256(stringToBytes(`moving:${i}`)),
+            })),
+        );
+        try {
+            await createChainReader(moving.url).readVaultState(VAULT, TARGET, SELECTOR);
+            assert.fail("expected ChainUnstableError");
+        } catch (error) {
+            assert.ok(error instanceof ChainUnstableError);
+            assert.equal(error.pendingOnly, false);
+            assert.match(error.message, /head moved or was replaced/);
+            assert.doesNotMatch(error.message, /pending block/,
+                "a moving head must NOT be reported as a never-finalised one");
+        } finally {
+            await moving.stop();
+        }
+    });
+
     it("ABSENCE IS NOT AGREEMENT: a head with no hash produces no snapshot", async () => {
         // `docs/repair-protocol.md` step 4. A pending block has `hash: null`. The failure to
         // avoid is a snapshot returned with a null or undefined `observedBlockHash`, because

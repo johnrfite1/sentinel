@@ -615,7 +615,7 @@ INDEPENDENTLY VERIFIED as T1 requires. These are bounded product boundaries, not
 
 **What the target and selector allowlists ACTUALLY are, so the inert fields are not mistaken for
 them:** enforcement uses the **vault's own onchain `allowedTarget`/`allowedSelector` mappings**
-(`EVAL_VAULT_TARGET_NOT_ALLOWED`, `EVAL_VAULT_SELECTOR_NOT_ALLOWED`), not the policy's hashes.
+(`SIGNER_VAULT_TARGET_NOT_ALLOWED`, `SIGNER_VAULT_SELECTOR_NOT_ALLOWED` — the `EVAL_` spelling this line first carried exists nowhere in the codebase), not the policy's hashes.
 The hashes commit to a list; the mappings are what refuses an action.
 
 ---
