@@ -4,8 +4,8 @@ Rewritten at the end of each working session. **This file, not the conversation,
 memory.** If it disagrees with anything an agent remembers, this file wins.
 
 Last updated: **2026-08-18 (post-A-075; all four D-055(d) prerequisites DONE)**. Branch
-`step-3/isolated-signer` (`a5e6d40` was HEAD when this rewrite began; A-075's own commit comes
-after, so **check `git log` rather than treating a mismatch with this pointer as a finding** —
+`step-3/isolated-signer` (**A-075 is `3308403`**; the commit that updates THIS line comes after it,
+so **check `git log` rather than treating a mismatch with this pointer as a finding** —
 that is the same stale-pointer defect this file has now recorded three times, in the file that
 opens by declaring itself the memory). **UNPUSHED — count it with `git log origin/<branch>..HEAD`,
 do not quote a number from here.** Working tree clean at the time of writing. **This pointer names the last commit this file DESCRIBES, and the commit that updates
