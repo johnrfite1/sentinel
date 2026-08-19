@@ -489,11 +489,12 @@ code-unit-ordering paths are untested by anything (REPORT.md F-6).
 
 ## 11. What is NOT in evidence
 
-### 11.0 Ten findings ACCEPTED as limits, not fixed (D-051(b), 2026-08-18) — NOW NINE AND A HALF
+### 11.0 Ten findings ACCEPTED as limits, not fixed (D-051(b), 2026-08-18) — NOW FIVE
 
-**COUNT CORRECTION, 2026-08-18 (A-075).** This heading said TEN and the list still shows ten
-entries. **`D-09(c)` has been REOPENED because its stated basis is refuted, so what is accepted
-today is nine limits plus `D-09`(a),(b).** The heading keeps its original number and this
+**COUNT CORRECTION, 2026-08-18 (A-075, then A-076).** This heading said TEN and the list still
+shows ten entries. A-075 reopened `D-09(c)`; **A-076 then FIXED five of them outright —
+`D-09(c)`, `D-10`, `G-5`, `H-5`, `H-8` — so what is accepted today is FIVE: `D-07`,
+`D-09`(a),(b), `E5`, `F-VAULT-4`, `F-VAULT-5`.** The heading keeps its original number and this
 correction sits beside it rather than replacing it, because "ten accepted limits" is quoted in
 `docs/exit-criterion-packet.md` §3 and in `docs/session-state.md`, and silently restating it as
 nine would leave those citations pointing at a number that no longer appears anywhere.
@@ -512,6 +513,26 @@ same set were fixed (A-068) rather than accepted.
 
 **If any of these is later shown to be worse than recorded, that is a new finding, not a
 re-report** — the same rule the review briefs carry.
+
+---
+
+**FIVE OF THESE TEN ARE NO LONGER ACCEPTED LIMITS — THEY ARE FIXED (A-076, 2026-08-18, under
+D-056(a)). `D-09(c)`, `D-10`, `G-5`, `H-5` and `H-8` were repaired at John's direction in the
+bounded pre-review stabilization checkpoint.** Each carries its mutation evidence in A-076 and
+its status in `docs/v1-1-register.md` §13.4. **What remains accepted here is five: `D-07`,
+`D-09`(a),(b), `E5`, `F-VAULT-4` and `F-VAULT-5`.**
+
+**AND `D-10`'s T2 DISCREPANCY IS RESOLVED THE WAY D-055's T2 REQUIRES:** John adopted the
+adjudicator's MEDIUM for part (c) rather than leaving it at LOW through an undocumented
+downgrade — his words, and it is his own earlier acceptance he is correcting.
+
+**ONE OF THE REPAIRS FOUND THE ACCEPTED LIMIT UNDERSTATED, WHICH IS THE OUTCOME T1 EXISTS TO
+MAKE POSSIBLE.** `G-5` was recorded as latent inconsistency debt — prose that *could* drift from
+the data. Deriving it showed the prose had **already** drifted: it named `F057` as a fixture the
+conformance engine does not primarily enforce, when `F057`'s `primaryEnforcement` is
+`conformance-engine`, and it omitted the five that do qualify. The attribution note eight lines
+below it had been listing the correct six the whole time. **A live false statement in a
+generated evidence document, sitting under an accepted "latent" label.**
 
 ---
 

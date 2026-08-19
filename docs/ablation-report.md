@@ -195,8 +195,8 @@ a positive case in v1 — but that ruling lives in the decision log, and this re
 printed the class as an ordinary scored row without repeating it, so a reader of the
 table alone would have counted it. Found by an independent review of §9 step 8.
 
-The same caution applies to `F035` and `F057`, whose enforcement is the isolated signer
-and the vault rather than the conformance engine — see the attribution note below.
+The same caution applies to `F028`, `F029`, `F035`, `F054`, `F055` and `F056`, whose
+primary enforcement is not the conformance engine — see the attribution note below.
 
 ## Attribution note
 

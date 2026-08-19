@@ -770,8 +770,8 @@ relying on it, and prefer the entry it cites (`A-06x`, `D-05x`) to this cell.
 | `D-06` | CONFIRMED | Keep MEDIUM, and note the claim UNDER-states its own scope in one place: it hedged that only th | **FIXED** — A-068 pinned four of five and said 'all five'; **A-072 closed all ten comparison edges** |
 | `D-07` | CONFIRMED | Consider MEDIUM → LOW | **ACCEPTED as a documented limit (D-051(b), §11.0)** · T1 basis VERIFIED 2026-08-18 |
 | `D-08` | CONFIRMED | Raise MEDIUM → HIGH | **FIXED (A-067)** |
-| `D-09` | CONFIRMED | LOW stands for (a) and (b) | **(a),(b) ACCEPTED (D-051(b), §11.0)** · **(c) REOPENED 2026-08-18 (D-055(d)) — its stated basis is REFUTED by F006** |
-| `D-10` | CONFIRMED | LOW is right for (a) and (b) — inert mutants over a corpus that happens to be single-case | **ACCEPTED (D-051(b), §11.0)** · T1 basis VERIFIED · **the adjudicator's 'raise (c) to MEDIUM' is NOT reflected in the accepted severity — T2 flag** |
+| `D-09` | CONFIRMED | LOW stands for (a) and (b) | **FIXED (A-076)** — (c)'s intersected-ceiling regression added; the min→max mutation survived pre-test and is killed post-test. (a),(b) remain ACCEPTED (D-051(b)) |
+| `D-10` | CONFIRMED | LOW is right for (a) and (b) — inert mutants over a corpus that happens to be single-case | **FIXED (A-076)** — **(c) re-classified MEDIUM by John (D-056(a)) rather than kept at LOW by an undocumented downgrade**; all three recorded mutations survived pre-test and are killed post-test |
 | `E2` | CONFIRMED | Keep MEDIUM | **FIXED (A-068)** — both `uint256` wire fields brought inside `bounded()` |
 | `E3` | CONFIRMED | MEDIUM is right, arguably light | **FIXED (A-075, this session)** — signer reads pinned to ONE block and the anchor bound to it, per D-055(c). Was a declared limit (A-044(f)); A-068 wrongly re-opened it as a fork |
 | `E4` | CONFIRMED | Keep MEDIUM, raise confidence from the finding's own 'medium' to high — it is now reproduced wi | **VERIFIER HALF BUILT (A-069, absence-is-agreement repaired by A-070)** · **SIGNER HALF DELIBERATELY NOT BUILT (D-014)** — not an open defect |
@@ -781,10 +781,10 @@ relying on it, and prefer the entry it cites (`A-06x`, `D-05x`) to this cell.
 | `F-VAULT-5` | CONFIRMED | LOW stands, but I would raise the confidence above the finding's own 'medium' | **ACCEPTED (D-051(b), §11.0)** · T1 basis VERIFIED — the docstring is intact at `SentinelVault.sol:39-45` |
 | `G-3` | CONFIRMED | MEDIUM -> LOW | **ACCEPTED (D-051(b), §11.0)** · T1 basis VERIFIED and MEASURED — exactly two classes are credited only on UNRESOLVED |
 | `G-4` | CONFIRMED | MEDIUM stands, but for a different reason than the finding gives | **FIXED (A-068)** — a sample-size floor, and the caveat derived from the sample |
-| `G-5` | CONFIRMED | LOW stands | **ACCEPTED (D-051(b), §11.0)** · **T1: the basis is NARROWER than it reads — see §11.0** |
+| `G-5` | CONFIRMED | LOW stands | **FIXED (A-076)** — count and fixture caveats now derived from the result records. **The repair found the prose was ALREADY FALSE: it named `F057`, whose enforcement is the conformance engine, and omitted the five that qualify** |
 | `H-4` | CONFIRMED | unchanged | **FIXED (A-067)** |
-| `H-5` | CONFIRMED | unchanged | **ACCEPTED (D-051(b), §11.0)** · **T1: NO adjudicator reasoning was recorded — there is no stated basis to verify** |
-| `H-8` | CONFIRMED | unchanged | **ACCEPTED (D-051(b), §11.0)** · **T1: NO adjudicator reasoning was recorded.** Mechanism reproduced 2026-08-18 |
+| `H-5` | CONFIRMED | unchanged | **FIXED (A-076)** — three states told apart on BOTH the receipt and refusal paths; the genuinely-absent-metadata control is preserved |
+| `H-8` | CONFIRMED | unchanged | **FIXED (A-076)** — `--all` over zero discovered bundles now exits 2 with a diagnostic; empty dir, non-bundle files, unenumerable path and one-empty-root-among-several all swept |
 | `A-3` | UNPROVEN | unchanged | **NOT A DEFECT — UNPROVEN, and it is about the review harness, not this repository.** Nothing to fix or track |
 | `C-5` | REFUTED | unchanged | **NOT A DEFECT — REFUTED by adjudication.** Nothing to fix or track |
 | `H-6` | ALREADY-CLOSED | unchanged | **NOT A DEFECT — ALREADY-CLOSED at adjudication.** Nothing to fix or track |

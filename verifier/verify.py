@@ -656,22 +656,65 @@ def _locate_refusal(sample_dir, receipt_doc):
     return located, errors
 
 
-def _refusal_label_check(sample_dir):
-    """Cross-check the fixture label, the way _verdict_check does for a receipt."""
-    expected = None
+def _case_label(sample_dir, field):
+    """Look a case label up, and report WHICH of the three states was found (H-5).
+
+    Returns ``(value, sources)`` where ``sources`` names the metadata files that
+    actually EXIST -- not the ones that carried the field.
+
+    WHY THE SECOND RETURN VALUE EXISTS. Both callers previously collapsed two
+    different situations into one sentence: "no meta.json/index.json to
+    cross-check against". That sentence is TRUE when no metadata is present and
+    FALSE when metadata is present but silent about this particular field --
+    and the second is the case that actually occurs, so the verifier printed a
+    false statement about a bundle that carries a meta.json. Distinguishing the
+    two is the whole of the H-5 repair, and it has to be done HERE rather than
+    at the call sites because the identical construction appears twice: fixing
+    one and leaving its sibling is the defect A-066 shipped.
+    """
+    sources = []
+    value = None
     meta_path = os.path.join(sample_dir, "meta.json")
     if os.path.isfile(meta_path):
-        expected = _read_json(meta_path).get("signerRefused")
-    if expected is None:
+        sources.append("meta.json")
+        value = _read_json(meta_path).get(field)
+    if value is None:
         index_path = os.path.join(os.path.dirname(sample_dir), "index.json")
         if os.path.isfile(index_path):
+            sources.append("index.json")
             for entry in _read_json(index_path):
                 if entry.get("id") == os.path.basename(sample_dir):
-                    expected = entry.get("signerRefused")
-    if expected is None:
-        return Check("the case label records a signer refusal", True,
-                     "no meta.json/index.json to cross-check against",
+                    value = entry.get(field)
+    return value, sources
+
+
+def _no_label_check(title, field, sources):
+    """The two absence states, told apart (H-5).
+
+    NOTHING PRESENT is a legitimate shape: a bundle need not carry a case label,
+    there is nothing to cross-check, and the check is honestly skipped.
+
+    PRESENT BUT SILENT is not. The artifact claims to be labelled and the label
+    does not state the thing being verified, so the cross-check cannot be
+    performed and saying "nothing to check against" would misdescribe the
+    bundle. It FAILS, on A-067's rule: absence is not agreement.
+    """
+    if not sources:
+        return Check(title, True, "no meta.json/index.json to cross-check against",
                      skipped=True)
+    present = " and ".join(sources)
+    return Check(
+        title, False,
+        f"{present} present but carries no {field!r} field, so the case label "
+        "cannot be cross-checked -- this is NOT the same as an unlabelled bundle")
+
+
+def _refusal_label_check(sample_dir):
+    """Cross-check the fixture label, the way _verdict_check does for a receipt."""
+    expected, sources = _case_label(sample_dir, "signerRefused")
+    if expected is None:
+        return _no_label_check(
+            "the case label records a signer refusal", "signerRefused", sources)
     return Check(
         "the case label records a signer refusal", expected is True,
         "" if expected is True else
@@ -1890,19 +1933,10 @@ def _verdict_check(sample_dir, receipt):
         return Check("verdict decodes to a known enum member", False,
                      f"verdict {verdict_num} is outside 0..2")
 
-    expected = None
-    meta_path = os.path.join(sample_dir, "meta.json")
-    if os.path.isfile(meta_path):
-        expected = _read_json(meta_path).get("verdict")
+    expected, sources = _case_label(sample_dir, "verdict")
     if expected is None:
-        index_path = os.path.join(os.path.dirname(sample_dir), "index.json")
-        if os.path.isfile(index_path):
-            for entry in _read_json(index_path):
-                if entry.get("id") == os.path.basename(sample_dir):
-                    expected = entry.get("verdict")
-    if expected is None:
-        return Check(f"verdict {verdict_num} decodes to {name}", True,
-                     "no meta.json/index.json to cross-check against", skipped=True)
+        return _no_label_check(
+            f"verdict {verdict_num} decodes to {name}", "verdict", sources)
     ok = expected == name
     return Check(
         f"verdict {verdict_num} decodes to {name}, matching the case label",
@@ -2257,16 +2291,55 @@ def main(argv=None):
     # instead of the ARGUMENT — caught here only because the exploit was re-run against BOTH
     # invocation shapes rather than the one that produced it. Do not reintroduce a second
     # source; if certification needs a root, the verifying party names it.
+    # H-8 (round five), closed under D-056(a).
+    #
+    # THE ARGUMENT: **"verified nothing" must never be reported as "verified
+    # everything".** `--all` discovers its own work, so a mistyped path, a corpus
+    # that failed to generate, or a directory holding files instead of bundles all
+    # yielded ZERO targets -- and the run printed `0/0 sample(s) verified` and
+    # exited 0. In a gate that reads exit status, an empty corpus was
+    # indistinguishable from a passing one. This is the project's recurring shape:
+    # a probe that measured nothing, whose silence reads exactly like a pass.
+    #
+    # EVERY DISCOVERY SHAPE IS SWEPT, not just the empty directory a reviewer
+    # happened to try: a path that cannot be enumerated at all (missing, or a file
+    # rather than a directory) previously died with a bare Python traceback, which
+    # is a nonzero exit for the wrong reason and not a diagnostic anybody can act on.
+    #
+    # Reported PER PATH. `--all` accepts several roots, and a run naming five
+    # directories where one silently contributed nothing is the case most likely to
+    # go unnoticed -- an aggregate "some targets were found" check would pass it.
     targets = []
+    empty_roots = []
     for path in args.sample:
         if args.all:
-            targets.extend(
-                (os.path.join(path, entry), args.domain)
-                for entry in sorted(os.listdir(path))
+            try:
+                entries = sorted(os.listdir(path))
+            except OSError as exc:
+                print(f"--all: cannot enumerate {path}: {exc.strerror}", file=sys.stderr)
+                print("  Nothing was verified. This is a nonzero exit because an "
+                      "unreadable target is not an empty one.", file=sys.stderr)
+                return 2
+            found = [
+                os.path.join(path, entry) for entry in entries
                 if os.path.isdir(os.path.join(path, entry))
-            )
+            ]
+            if not found:
+                empty_roots.append(path)
+            targets.extend((t, args.domain) for t in found)
         else:
             targets.append((path, args.domain))
+
+    if empty_roots:
+        for path in empty_roots:
+            print(f"--all: NO BUNDLE DIRECTORIES FOUND under {path}", file=sys.stderr)
+        print("  A bundle is a SUBDIRECTORY of the path named under --all; files "
+              "directly inside it are not bundles.", file=sys.stderr)
+        print("  Nothing was verified, so nothing is certified. Exiting nonzero "
+              "rather than printing 0/0 and exiting 0.", file=sys.stderr)
+        # 2, not 1, so "there was nothing to check" stays distinguishable from
+        # "something was checked and failed" for anything reading the status.
+        return 2
 
     if args.tamper == "all":
         oks = [run_tamper_suite(t, root, verbose=False) for t, root in targets]

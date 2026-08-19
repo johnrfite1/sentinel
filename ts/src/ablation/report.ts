@@ -54,6 +54,30 @@ function readJson<T>(path: string): T {
     return JSON.parse(readFileSync(path, "utf8")) as T;
 }
 
+/** Greedy fill at the width the rest of this document is hand-wrapped to. */
+function wrap(text: string, width = 88): string[] {
+    const out: string[] = [];
+    let line = "";
+    for (const word of text.split(" ")) {
+        if (line === "") line = word;
+        else if (line.length + 1 + word.length <= width) line += ` ${word}`;
+        else {
+            out.push(line);
+            line = word;
+        }
+    }
+    if (line !== "") out.push(line);
+    return out;
+}
+
+/** "`A`", "`A` and `B`", "`A`, `B` and `C`" — the shape the surrounding prose already used. */
+function nameList(ids: string[]): string {
+    const q = ids.map((id) => `\`${id}\``);
+    if (q.length === 0) return "no fixtures";
+    if (q.length === 1) return q[0]!;
+    return `${q.slice(0, -1).join(", ")} and ${q[q.length - 1]!}`;
+}
+
 function percentile(sorted: number[], p: number): number {
     if (sorted.length === 0) return 0;
     const idx = Math.min(sorted.length - 1, Math.floor((p / 100) * sorted.length));
@@ -251,7 +275,11 @@ export function buildReport(inputs: AblationInputs): string {
     w("configuration perfect by construction, which is the circularity D-006 exists to break.");
     w();
     w("**§7.3, verbatim: do not claim general transaction-safety accuracy.** These numbers");
-    w("describe 50 fixtures over two demo contracts and two call schemas. They are not an");
+    // DERIVED, not asserted (G-5, D-056(a)). This read `50` as a literal, unconnected to any
+    // input, so the corpus could grow or shrink and the sentence would go on claiming 50 —
+    // and the A-062 regeneration check would not notice, because it compares the generator's
+    // output to itself and the literal is part of the generator.
+    w(`describe ${results.length} fixtures over two demo contracts and two call schemas. They are not an`);
     w("accuracy claim about EVM transactions, and nothing here is a comparison with any named");
     w("vendor — D-001 cut executed vendor comparisons from v1 entirely.");
     w();
@@ -446,6 +474,27 @@ export function buildReport(inputs: AblationInputs): string {
 
     w("## Dependency-failure behaviour (§7.3)");
     w();
+    // --- G-5 (D-056(a)): the two fixture sets the caveat prose below used to hardcode. ---
+    //
+    // THE ARGUMENT: **a caveat that names fixtures must be derived from the same records the
+    // tables are derived from, so it cannot survive the fixtures it names changing.** Both
+    // sets come from the committed result records, which is exactly what the class table and
+    // the attribution note are built from.
+    //
+    // `unexpected-internal-call` is D-025's reserved class: it cannot be driven to a positive
+    // case in v1, so its rows are structurally inert rather than measured. Keyed on the CLASS
+    // rather than on the fixture id, because the class is what D-025 ruled about.
+    const inertClassFixtures = results
+        .filter((r) => r.class === "unexpected-internal-call")
+        .map((r) => r.fixtureId)
+        .sort();
+    // Fixtures the conformance engine is not the primary enforcement for. Same field, same
+    // records, as the attribution note further down — which is the point: one source.
+    const delegatedFixtures = results
+        .filter((r) => r.primaryEnforcement !== "conformance-engine")
+        .map((r) => r.fixtureId)
+        .sort();
+
     const depFixtures = results.filter((r) => !r.simulated);
     w(`${depFixtures.length} fixtures ran with no simulation available — the §3.3(8) critical-`);
     w("dependency path. Their verdicts by layer:");
@@ -486,7 +535,17 @@ export function buildReport(inputs: AblationInputs): string {
     w("vacuous and the report disclosed it instead of closing it. D-025 set the precedent for");
     w("caveating a class that cannot be driven to a positive case; this one could be, and now is.");
     w();
-    w("**`F051` is INERT and its row in the class table should not be read as a measurement.**");
+    // ABSENCE IS NOT AGREEMENT, and the first draft got this wrong: with the set empty it
+    // printed "**no fixtures are INERT and their rows…**", which is not a sentence and reads
+    // as a generator fault rather than as the real state. An empty reserved class is a
+    // meaningful thing to report, so it gets its own wording.
+    if (inertClassFixtures.length === 0) {
+        w("**No fixture sits in the reserved `unexpected-internal-call` class, so no row in the**");
+        w("**class table is structurally inert.**");
+    } else {
+        const one = inertClassFixtures.length === 1;
+        w(`**${nameList(inertClassFixtures)} ${one ? "is" : "are"} INERT and ${one ? "its row" : "their rows"} in the class table should not be read as a measurement.**`);
+    }
     w("Its only distinguishing knob is `policy.allowedCallGraphHash`, which D-025 reserves and");
     w("which nothing outside the payload hash reads; deleting the override leaves its three");
     w("layer verdicts unchanged, and `EVAL_CALL_GRAPH_EXPECTED` is never non-PASS anywhere in");
@@ -495,8 +554,32 @@ export function buildReport(inputs: AblationInputs): string {
     w("printed the class as an ordinary scored row without repeating it, so a reader of the");
     w("table alone would have counted it. Found by an independent review of §9 step 8.");
     w();
-    w("The same caution applies to `F035` and `F057`, whose enforcement is the isolated signer");
-    w("and the vault rather than the conformance engine — see the attribution note below.");
+    // DERIVED from `primaryEnforcement` (G-5, D-056(a)), which is the same field the
+    // attribution note below is built from — so the two can no longer disagree.
+    //
+    // THEY DID DISAGREE. The hardcoded sentence named `F035` and `F057`. `F057`'s
+    // `primaryEnforcement` is `conformance-engine`, so it did NOT belong; and `F028`, `F029`,
+    // `F054`, `F055` and `F056` DID belong and were omitted. The attribution note eight lines
+    // below listed the correct six the whole time. This is what "prose that cannot disagree
+    // with the table it sits above" turns into when nobody checks: prose that DOES disagree.
+    if (delegatedFixtures.length > 0) {
+        // WRAPPED PROGRAMMATICALLY because the content is now variable. The rest of this
+        // report is hand-wrapped at the same width; a dynamic sentence cannot be, and a
+        // 300-character line the day the corpus grows would be a real regression in a
+        // document people read.
+        for (const line of wrap(
+            `The same caution applies to ${nameList(delegatedFixtures)}, whose primary ` +
+                "enforcement is not the conformance engine — see the attribution note below.",
+        )) {
+            w(line);
+        }
+    } else {
+        // ABSENCE IS NOT AGREEMENT. An empty set is a real state — every fixture enforced by
+        // the engine — and it gets a sentence rather than a silently missing one, so a reader
+        // can tell "none" from "the generator forgot".
+        w("Every fixture's primary enforcement is the conformance engine, so no attribution");
+        w("caution applies — see the attribution note below.");
+    }
     w();
 
     w("## Attribution note");

@@ -410,6 +410,170 @@ describe("the receipt STATES the reason it was reached for", () => {
     });
 });
 
+describe("binding comparisons are case- and field-pinned (D-10)", () => {
+    /**
+     * D-10, adjudicated CONFIRMED and accepted as a limit at LOW — **re-classified MEDIUM for
+     * part (c) by John (D-056(a)) rather than left at LOW through an undocumented downgrade,
+     * which is D-055's T2 applied to his own earlier acceptance.** Closed here.
+     *
+     * THE EVIDENCE STANDARD IS UNUSUAL AND JOHN STATED IT EXPLICITLY: *"The implementation is
+     * currently correct, so the evidence here is that each mutation survived before the new
+     * tests and is killed afterward — not that the clean implementation previously failed."*
+     * All three mutations below passed the full 510-test suite before these tests existed.
+     *
+     * THE ARGUMENT: **a binding comparison must be pinned to the FIELD it names and to the
+     * VALUE it names, independently of how the corpus happens to spell either.** The corpus is
+     * single-case throughout — measured: 9 distinct addresses across all 50 fixtures, zero
+     * non-lowercase occurrences — and every fixture sets `principal === beneficiary`. So the
+     * corpus cannot distinguish a normalised comparison from an unnormalised one, nor the
+     * beneficiary from the principal, and neither could anything else in the suite.
+     *
+     * WHY MIXED CASE IS NOT A CONTRIVANCE. EIP-55 checksummed addresses are mixed case by
+     * construction and are what an LLM-produced proposal routinely contains — this
+     * repository's own injection fixtures carry them, and `attest.ts` already had to be
+     * repaired for exactly this reason once.
+     */
+
+    /** Upper-case the hex body: same value, different spelling. */
+    const upper = (a: Hex): Hex => ("0x" + a.slice(2).toUpperCase()) as Hex;
+
+    /**
+     * An address containing hex LETTERS, because the repository's own constants do not.
+     *
+     * `DEMO_PAY` is `0x2222…` — all digits — so upper-casing it is a no-op and a probe built
+     * on it changes nothing while looking like it does. The first version of this test did
+     * exactly that and asserted a difference that was not there; it failed loudly only because
+     * the "did the probe move anything" guard below was written first. Keeping that guard.
+     */
+    const LETTERY: Hex = "0xabcdefabcdefabcdefabcdefabcdefabcdefabcd";
+
+    it("matches a mixed-case TARGET against the mandate (mutation: drop normalisation)", () => {
+        // The action names the target upper-cased, the mandate lower-cased. Same address, so
+        // `EVAL_ACTION_TARGET_MATCHES_MANDATE` must PASS.
+        assert.notEqual(upper(LETTERY), LETTERY, "the probe must actually change the spelling");
+        assert.equal(
+            outcomeOf(
+                {action: {target: upper(LETTERY)}, mandate: {target: LETTERY}},
+                "EVAL_TARGET_BOUND",
+            ),
+            "PASS",
+        );
+    });
+
+    it("matches a mixed-case SELECTOR against the mandate (mutation: drop normalisation)", () => {
+        // The decoded selector comes from the calldata bytes and is lower case; the mandate
+        // names the same selector upper-cased.
+        const SEL: Hex = "0xc188528b";
+        assert.notEqual(upper(SEL), SEL, "the probe must actually change the spelling");
+        assert.equal(
+            outcomeOf({mandate: {selector: upper(SEL)}}, "EVAL_SELECTOR_BOUND"),
+            "PASS",
+        );
+    });
+
+    it("compares the approval spender to the BENEFICIARY, not the principal (D-10(c))", () => {
+        // The substantive half, and the one the adjudicator raised to MEDIUM. Every corpus
+        // fixture sets principal === beneficiary, so `mandate.beneficiary` could be swapped
+        // for `mandate.principal` with the whole suite green — the check would then be
+        // enforcing the wrong field while still reporting EVAL_APPROVAL_SPENDER.
+        //
+        // Here they DIFFER, which is what makes the swap observable: an approval to the
+        // beneficiary conforms, and an approval to the principal does not.
+        const approvalMandate = {
+            target: DEMO_ERC20,
+            selector: "0x095ea7b3" as Hex,
+            principal: OWNER,
+            beneficiary: OTHER,
+        };
+        assert.equal(
+            outcomeOf(
+                {target: DEMO_ERC20, callData: approveCalldata(OTHER, 0n), mandate: approvalMandate,
+                 state: {owner: OWNER}},
+                "EVAL_APPROVAL_SPENDER",
+            ),
+            "PASS",
+            "an approval to the mandate's beneficiary must conform",
+        );
+        // The paired negative. Without it, a check that always PASSes satisfies the row above.
+        assert.equal(
+            outcomeOf(
+                {target: DEMO_ERC20, callData: approveCalldata(OWNER, 0n), mandate: approvalMandate,
+                 state: {owner: OWNER}},
+                "EVAL_APPROVAL_SPENDER",
+            ),
+            "VIOLATION",
+            "an approval to the PRINCIPAL, who is not the beneficiary, must not conform",
+        );
+    });
+});
+
+describe("the evidence bundle records the INTERSECTED ceiling (D-09(c))", () => {
+    /**
+     * D-09(c), reopened 2026-08-18 and closed here (D-056(a)).
+     *
+     * THE ARGUMENT: **`expectedEffects.maxNativeValueWei` is what the bundle CLAIMS was
+     * authorised, and §5.2 says "mandate and policy constraints are intersected" — so it must
+     * be the LOWER of the two ceilings whichever side is lower, not whichever side the code
+     * happens to name.**
+     *
+     * WHY THIS WAS ABLE TO GO MISSING. `evaluate/index.ts`'s `minOf` could be inverted to a
+     * max and the entire suite stayed green: measured, 507/507 passing with the intersection
+     * reversed. Neither committed corpus artifact catches it either — the labeller views omit
+     * `expectedEffects` by construction, and the result files do not carry it — so the deep
+     * gate's byte-for-byte comparisons are blind to it too. The field was read by nothing.
+     *
+     * THE CONSEQUENCE IS A FALSE STATEMENT IN THE PRODUCT, not a cosmetic one. Under the
+     * inversion a bundle whose policy caps spending at 2e15 would attest that 1e18 was
+     * authorised — five hundred times the real limit — and the D-010 verifier compares
+     * `expectedEffects` to exactly this value.
+     *
+     * BOTH DIRECTIONS ARE ASSERTED, and that is what makes the test more than a restatement
+     * of `minOf`. A test pinning only "mandate lower" passes against `return a` — the argument
+     * needs the binding side to change places while the answer stays the lower one.
+     *
+     * NO CORPUS FIXTURE IS ADDED OR RELABELLED (D-056(a)). `F006` already supplies the
+     * divergent case at the corpus level — mandate 1e18 against policy 2e15, verified by
+     * walking all 50 committed fixtures: exactly one diverges. What was missing is an
+     * assertion, not a fixture.
+     */
+    const LOW = 2n * 10n ** 15n;
+    const HIGH = 10n ** 18n;
+
+    /**
+     * Read the value out of the CANONICAL BYTES rather than the in-memory bundle.
+     *
+     * Deliberate: `evidenceCanonical` is what `evidenceHash` commits to, what the signer
+     * attests, and what the D-010 verifier parses. Asserting the object would leave a
+     * serialisation that dropped or reshaped the field undetected.
+     */
+    const ceilingOf = (r: ReturnType<typeof evaluate>): unknown =>
+        (JSON.parse(r.evidenceCanonical) as {expectedEffects: {maxNativeValueWei: unknown}})
+            .expectedEffects.maxNativeValueWei;
+
+    it("takes the POLICY ceiling when the policy is the tighter of the two (F006's shape)", () => {
+        assert.equal(ceilingOf(evaluate(fixture({
+            mandate: {maxNativeValueWei: HIGH},
+            policy: {maxNativeValueWei: LOW},
+        }))), LOW.toString());
+    });
+
+    it("takes the MANDATE ceiling when the mandate is the tighter of the two", () => {
+        // The mirror. Without it, `maxNativeValueWei: policy.maxNativeValueWei` — a plausible
+        // wrong implementation that ignores the mandate entirely — passes the row above.
+        assert.equal(ceilingOf(evaluate(fixture({
+            mandate: {maxNativeValueWei: LOW},
+            policy: {maxNativeValueWei: HIGH},
+        }))), LOW.toString());
+    });
+
+    it("reports the shared value when the two agree, which is the 49-of-50 corpus case", () => {
+        assert.equal(ceilingOf(evaluate(fixture({
+            mandate: {maxNativeValueWei: HIGH},
+            policy: {maxNativeValueWei: HIGH},
+        }))), HIGH.toString());
+    });
+});
+
 describe("the check table is exhaustive", () => {
     /**
      * WHAT THIS GUARD PROVES, STATED HONESTLY AFTER A D-017 REVIEWER NARROWED IT.

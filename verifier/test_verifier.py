@@ -10,6 +10,7 @@ Stdlib unittest only, no third-party test runner:
 import json
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -1491,6 +1492,203 @@ class TestAbsenceIsNotAgreement(unittest.TestCase):
         self.assertFalse(ok, "a receipt bound to nothing presented was certified")
         self.assertIn("§3.3(4) chain and vault binding",
                       [c.name for c in checks if not c.ok])
+
+
+class TestAllOverZeroBundles(unittest.TestCase):
+    """H-8 (round five), closed under D-056(a).
+
+    THE ARGUMENT: **"verified nothing" must never be reported as "verified
+    everything".** `--all` discovers its own work, so zero discovered bundles used
+    to print `0/0 sample(s) verified` and exit 0 -- and in a gate that reads exit
+    status, an empty corpus was indistinguishable from a passing one.
+
+    THE WHOLE DISCOVERY SURFACE IS SWEPT, not the one shape a reviewer tried: an
+    empty directory, a directory holding only files, and a path that cannot be
+    enumerated at all. The last previously died with a bare traceback -- nonzero,
+    but for the wrong reason and with no usable diagnostic.
+
+    `subprocess` rather than calling `main()` in-process, deliberately: the defect
+    is about the EXIT STATUS a caller observes, and asserting on a return value
+    inside this process would not exercise what the gate actually reads.
+    """
+
+    def _run(self, *args):
+        proc = subprocess.run(
+            [sys.executable, os.path.join(REPO, "verifier", "verify.py"),
+             "--domain", os.path.join(SAMPLES, "domain.json"), "--all", *args],
+            capture_output=True, text=True)
+        return proc.returncode, proc.stdout + proc.stderr
+
+    def test_a_nonempty_corpus_still_verifies_and_exits_zero(self):
+        # THE CONTROL John asked to preserve. Without it, "always fail" satisfies
+        # every assertion below.
+        rc, out = self._run(SAMPLES)
+        self.assertEqual(rc, 0, out)
+        self.assertIn("7/7 sample(s) verified", out)
+
+    def test_an_empty_directory_exits_nonzero(self):
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp)
+        rc, out = self._run(tmp)
+        self.assertNotEqual(rc, 0, "zero discovered bundles must not read as success")
+        self.assertIn("NO BUNDLE DIRECTORIES FOUND", out)
+        self.assertNotIn("0/0 sample(s) verified", out)
+
+    def test_a_directory_of_non_bundle_files_exits_nonzero(self):
+        # The sibling shape. A corpus whose generation wrote files but no bundle
+        # directories is the realistic version of this, and it discovers zero
+        # targets exactly as an empty directory does.
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp)
+        for name in ("readme.txt", "index.json", "domain.json"):
+            with open(os.path.join(tmp, name), "w") as fh:
+                fh.write("{}")
+        rc, out = self._run(tmp)
+        self.assertNotEqual(rc, 0)
+        self.assertIn("NO BUNDLE DIRECTORIES FOUND", out)
+
+    def test_an_unenumerable_path_gives_a_diagnostic_not_a_traceback(self):
+        rc, out = self._run(os.path.join(tempfile.gettempdir(), "sentinel-no-such-dir-xyz"))
+        self.assertNotEqual(rc, 0)
+        self.assertIn("cannot enumerate", out)
+        self.assertNotIn("Traceback", out,
+                         "a missing path is a user error, not an internal fault")
+
+    def test_a_file_named_under_all_is_reported_rather_than_crashing(self):
+        # `--all path/to/file.json` is a plausible typo and is not enumerable.
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp)
+        path = os.path.join(tmp, "not-a-directory.json")
+        with open(path, "w") as fh:
+            fh.write("{}")
+        rc, out = self._run(path)
+        self.assertNotEqual(rc, 0)
+        self.assertIn("cannot enumerate", out)
+        self.assertNotIn("Traceback", out)
+
+    def test_one_empty_root_among_several_is_still_reported(self):
+        # The case an aggregate "did we find ANY targets" check would pass: a real
+        # corpus plus an empty directory. The empty one contributed nothing and
+        # saying so is the whole point.
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp)
+        rc, out = self._run(SAMPLES, tmp)
+        self.assertNotEqual(rc, 0)
+        self.assertIn("NO BUNDLE DIRECTORIES FOUND", out)
+        self.assertIn(tmp, out)
+
+
+class TestCaseLabelDiagnosticIsTrue(unittest.TestCase):
+    """H-5 (round five), closed under D-056(a).
+
+    THE ARGUMENT: **a diagnostic must describe the bundle it is about.** Both label
+    cross-checks collapsed two different situations into one sentence -- "no
+    meta.json/index.json to cross-check against" -- which is true when no metadata
+    exists and FALSE when metadata exists but is silent about the field. The
+    second is the case that occurs, so the verifier printed a false statement
+    about a bundle that carries a meta.json.
+
+    Three states are now told apart: metadata absent (skip, honestly), metadata
+    present but silent (FAIL -- absence is not agreement, A-067), and usable
+    metadata (the real cross-check).
+
+    BOTH PATHS ARE PINNED. The receipt path reads `verdict` and the refusal path
+    reads `signerRefused` through the same helper. The identical construction
+    appeared twice, and repairing one occurrence while its sibling stands is the
+    A-066 defect this repository has already paid for.
+    """
+
+    def staged_receipt(self):
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp)
+        return stage(os.path.join(SAMPLES, "case-1-allow"), tmp)
+
+    def staged_refusal(self):
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp)
+        return stage(os.path.join(SAMPLES, "refusal-vault-paused"), tmp)
+
+    @staticmethod
+    def _detail(checks, needle):
+        for c in checks:
+            if needle in c.name:
+                return c
+        return None
+
+    def test_intact_bundles_still_verify(self):
+        # The control, for both paths. Without it a rule that fails everything
+        # satisfies every assertion below.
+        ok, _ = _verify(self.staged_receipt())
+        self.assertTrue(ok)
+        ok, _ = _verify(self.staged_refusal())
+        self.assertTrue(ok)
+
+    def test_genuinely_absent_metadata_is_still_skipped_and_still_says_so(self):
+        # THE PRESERVED CONTROL John asked for by name. A bundle carrying no case
+        # label at all is a legitimate shape: there is nothing to cross-check, the
+        # check is skipped, and the original sentence is the TRUE one here.
+        target = self.staged_receipt()
+        os.remove(os.path.join(target, "meta.json"))
+        index = os.path.join(os.path.dirname(target), "index.json")
+        if os.path.isfile(index):
+            os.remove(index)
+        ok, checks = _verify(target)
+        self.assertTrue(ok, "an unlabelled bundle must still verify")
+        c = self._detail(checks, "decodes to")
+        self.assertIsNotNone(c)
+        self.assertTrue(c.skipped)
+        self.assertIn("no meta.json/index.json", c.detail)
+
+    def test_receipt_path_metadata_present_but_silent_is_not_reported_as_absent(self):
+        # THE FALSE DIAGNOSTIC, in its exact shape. meta.json exists and carries no
+        # `verdict`; index.json is removed so nothing else supplies it. Pre-fix this
+        # printed "no meta.json/index.json to cross-check against" -- about a
+        # directory containing a meta.json -- and PASSED.
+        target = self.staged_receipt()
+        meta = read_json(target, "meta.json")
+        del meta["verdict"]
+        write_json(os.path.join(target, "meta.json"), meta)
+        index = os.path.join(os.path.dirname(target), "index.json")
+        if os.path.isfile(index):
+            os.remove(index)
+        ok, checks = _verify(target)
+        c = self._detail(checks, "decodes to")
+        self.assertIsNotNone(c)
+        self.assertNotIn(
+            "no meta.json/index.json", c.detail,
+            "the bundle HAS a meta.json; saying otherwise is the false diagnostic")
+        self.assertIn("meta.json", c.detail)
+        self.assertIn("verdict", c.detail)
+        self.assertFalse(ok, "an uncheckable label must not pass silently")
+
+    def test_refusal_path_metadata_present_but_silent_is_not_reported_as_absent(self):
+        # The sibling. Same construction, different field, and it was equally wrong.
+        target = self.staged_refusal()
+        meta = read_json(target, "meta.json")
+        del meta["signerRefused"]
+        write_json(os.path.join(target, "meta.json"), meta)
+        index = os.path.join(os.path.dirname(target), "index.json")
+        if os.path.isfile(index):
+            os.remove(index)
+        ok, checks = _verify(target)
+        c = self._detail(checks, "records a signer refusal")
+        self.assertIsNotNone(c)
+        self.assertNotIn("no meta.json/index.json", c.detail)
+        self.assertIn("signerRefused", c.detail)
+        self.assertFalse(ok)
+
+    def test_a_usable_label_still_performs_the_real_cross_check(self):
+        # The third state. Without this, "always fail when the field is missing"
+        # would satisfy the rows above while the actual comparison rotted.
+        target = self.staged_receipt()
+        meta = read_json(target, "meta.json")
+        meta["verdict"] = "BLOCK"          # the receipt decodes to ALLOW
+        write_json(os.path.join(target, "meta.json"), meta)
+        ok, checks = _verify(target)
+        self.assertFalse(ok)
+        c = self._detail(checks, "matching the case label")
+        self.assertIsNotNone(c)
+        self.assertIn("case label says BLOCK", c.detail)
 
 
 class TestTheTrustRootMustBeAsserted(unittest.TestCase):
