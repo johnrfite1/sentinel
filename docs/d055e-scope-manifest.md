@@ -17,9 +17,30 @@ exits non-zero if any is assigned to none.** Adding a file turns it red rather t
 slide into a gap. Verified against a probe: a new tracked file in an uncovered directory fails
 it.
 
-Current state at the administrative commit: **R1=160 · R2=46 · R3=150 — 356 of 356 tracked
-files assigned**, and all **35 files changed since A-070** are assigned. **Do not trust that
-line — run `./scripts/check-review-scope.sh`.** It is a count in a document, which is the
+**What "exactly one" means here, stated precisely because the script's own header once
+overstated it.** `assign()` is a shell `case`, and a `case` returns on its FIRST match. So each
+file gets exactly one reviewer **by construction**, not by a check — **the script does NOT
+detect overlapping patterns**, it resolves them by order. That is deliberate: first-match
+precedence is what lets `ts/src/corpus/*` beat `ts/src/*` and it is how the seams below are
+expressed. **The ordering is part of the specification.** Reordering the arms silently
+reassigns files, and nothing but review catches that.
+
+Current state at the provenance checkpoint, from the script's actual output:
+**R1=175 · R2=46 · R3=150 — 371 of 371 tracked files assigned · 37 remediation files changed
+since A-070 · 15 preservation-only files**, all assigned. **Do not trust that line — run
+`./scripts/check-review-scope.sh`.**
+
+**Preservation is counted apart from remediation deliberately.** The 15 files under
+`docs/review-2026-08-18-round-six/` are round six's record, **faithfully preserved with
+disclosed path sanitization**: they change no behaviour and repair nothing. Folding them into
+"the remediation surface" would inflate the number needing scrutiny with documents nobody is
+being asked to review as work.
+
+**"Verbatim" would overstate it for the set as a whole, and that directory's README is the
+authority on which is which.** `ADJUDICATED-ROUND-SIX.md` and the nine lens briefs ARE
+byte-identical; `COMMON-BRIEF.md` and the two reviewer indexes had machine-specific paths
+replaced, each disclosed there. They are still assigned — R1's, and R1 should read them — just
+counted separately. It is a count in a document, which is the
 species of claim this file exists to stop relying on, and it went stale once already while
 being written: adding this manifest itself made it 355 of 356 until the script failed and the
 gap was assigned.
@@ -43,7 +64,10 @@ records — both signed gate packs, `decisions.md`, `session-state.md`, `HANDOFF
 target, no preferred direction, no surface hints", so assigning it files would defeat it.
 Coverage means R1–R3 partition the tree; R4 ranges over all of it.
 
-## The remediation surface — 35 files changed since A-070
+## The remediation surface — 37 files changed since A-070
+
+Thirty-five at A-076, plus `scripts/check-review-scope.sh` and this manifest from the
+administrative commit. **Excludes the 15 preservation-only files.**
 
 This is the half a whole-tree partition does not by itself establish, and it is the half that
 matters most: **four of the five repairs *preceding* A-070 were defeated within 48 hours, and
@@ -51,7 +75,7 @@ A-070 through A-076 have had no independent review at all.**
 
 | Reviewer | Files changed since A-070 |
 |---|---|
-| **R1** | `scripts/test.sh` · `scripts/check-secrets.sh` · `scripts/check-gate-immutability.sh` · `verifier/verify.py` · `verifier/test_verifier.py` · `docs/decisions.md` · `docs/session-state.md` · `docs/gate-s1-evidence.md` · `docs/gate-s2-evidence.md` · `docs/v1-1-register.md` · `docs/repair-protocol.md` · `docs/exit-criterion-packet.md` |
+| **R1** | `scripts/test.sh` · `scripts/check-secrets.sh` · `scripts/check-gate-immutability.sh` · `scripts/check-review-scope.sh` · `docs/d055e-scope-manifest.md` · `verifier/verify.py` · `verifier/test_verifier.py` · `docs/decisions.md` · `docs/session-state.md` · `docs/gate-s1-evidence.md` · `docs/gate-s2-evidence.md` · `docs/v1-1-register.md` · `docs/repair-protocol.md` · `docs/exit-criterion-packet.md` |
 | **R2** | `ts/src/signer/{attest,protocol,vault,socket-path}.ts` · `ts/test/{vault.anchor,signer.e2e,reasoncodes,evaluate.checks,fakes,attestor.concurrency,propose,simulate}.ts` · `ts/src/tools/{sample-check,emit-samples}.ts` · `ts/package.json` · `Sentinel_Protocol_Lab_Proposal_v0_2.md` |
 | **R3** | `contracts/foundry.toml` · `contracts/src/SentinelVault.sol` · `contracts/test/SentinelVault.backstops.t.sol` · `ts/src/corpus/run.ts` · `ts/src/ablation/report.ts` · `ts/test/ablation.test.ts` · `docs/ablation-report.md` |
 

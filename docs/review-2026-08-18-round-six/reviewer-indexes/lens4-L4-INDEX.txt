@@ -1,0 +1,52 @@
+LENS 4 EVIDENCE INDEX — round six, frozen commit 140c59e
+worktree: /private/tmp/.../scratchpad/round6/w4      forge 1.7.1, solc 0.8.28
+
+BASELINE
+  L4-baseline-forge-default.txt      first baseline (taken before the coordinator's symlink fix)
+  L4-baseline2-build.txt             forge build --force, post-fix                    exit 0
+  L4-baseline2-forge-default.txt     forge test, post-fix    75/75 PASS               exit 0
+
+L4-01  a certified claim still stands uncorrected at two sites
+  L4-F1-uncorrected-sites.txt        proposal:238 + SentinelVault.sol:12-16 verbatim,
+                                     beside A-063's "no fifth site" and F-VAULT-1's naming of 238
+
+L4-02  no rate bound; the whole drain is one transaction
+  L4-probe1-atomic-drain.txt         6/6 PASS. 100 actions, one tx, 7,527,390 gas,
+                                     vault 1 ether -> 0, block/timestamp unchanged.
+                                     CONTROL A cap live, CONTROL B guard live, CONTROL C pause works
+  L4-F2-per-transaction-claims.txt   the three shipped "per transaction" assertion messages,
+                                     the reentrancy-guard comment, and 3.3(8) vs 3.3(11)
+  L4Probe.t.sol                      the probe source (removed from the worktree)
+
+L4-03  pause and recover are inert against the token gap
+  L4-probe2-rerun.txt                5/5 PASS incl. P9 and its control
+  L4-probe2.txt                      the FIRST run: P9 DEAD (vm.prank consumed by balanceOf)
+  L4Probe2.t.sol                     the probe source (removed from the worktree)
+
+L4-05  signed constraints with no onchain counterpart
+  L4-F5-schema-vs-vault.txt          field-by-field table + the vault's complete storage list
+
+CERTIFIED LIMIT TESTS ARE LIVE (null result)
+  L4-falsify-V1-cumulative-bound.txt add a cumulative ceiling -> the aggregate LIMIT test goes RED
+  L4-falsify-V2-token-bound.txt      add a token ceiling      -> the token LIMIT test goes RED
+
+CAMPAIGN POWER (25 mutations x 2 arms)
+  L4-sweep.py                        the driver
+  L4-sweep-log.txt                   full log + summary
+  L4-sweep-<ID>-campaign.txt         per-mutation invariants-only run
+  L4-sweep-<ID>-deterministic.txt    per-mutation deterministic-only run
+  L4-sweep-baseline-*.txt            both arms green before any mutation
+
+L4-06  A-064's registration guard, and Z1
+  L4-arm-patch.py                    adds a 15th arm + invariant; modes unregistered/registered
+  L4-armprobe-B1-deterministic.txt   arm UNREGISTERED -> 64/64 green, the guard PASSES
+  L4-armprobe-B2-campaign.txt        arm unregistered + ValueOverCap deleted -> 12/12 invariants PASS
+  L4-armprobe-B3-campaign.txt        CONTROL, arm registered -> invariant_overCapNeverExecutes FAILS
+  L4-Z1-campaign.txt                 vault that can never execute -> 11/11 invariants PASS
+  L4-Z1-deterministic.txt            the same vault -> 42 deterministic failures
+  L4-phase2.sh / L4-phase2-console.txt
+
+RESTORE
+  SentinelVault.sol.ORIG                    sha256 804a4936...596c
+  SentinelVault.invariants.t.sol.ORIG       sha256 edb4fb0a...606b
+  L4-final-restore-check.txt                75/75 on the restored tree

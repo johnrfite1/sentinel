@@ -1,0 +1,24 @@
+LENS 1 — scripts/**: the guards and the gate. Evidence index.
+Commit 140c59e5aa8feab72831534886fda4048cff8fe7
+Worktree <SCRATCHPAD>/round6/w1
+
+00-env-symlink-defect.txt          harness left contracts/lib/* as symlinks nested one level too deep
+01-baseline-gate.txt               BASELINE #1, ./scripts/test.sh --gate  -> EXIT 1 (NOT GREEN). L1-F10.
+05a-corpus-run-stdout.txt          corpus run + the targetCodeHash diff that caused it
+06-baseline-gate-green.txt         BASELINE #2 after the environment repair -> GATE PASSED, exit 0
+02-probe-label-integrity.txt       L1-F2  check-label-integrity.sh failure mode 3 defeated
+03-verifier-figures.txt            NULL: verifier figures 180/7/78/30 measured, boundary current
+04-probe-secret-guard.txt          L1-F1  check-secrets.sh, four evasion families, with controls
+07-probe-vendor-honesty.txt        L1-F5 + L1-F6
+08-probe-failclosed-branch.txt     L1-F8  dead fail-closed branch under set -e
+09-probe-untracked-scope.txt       L1-F1(e) tracked-only scan vs the vendor guard's tracked+untracked
+10-probe-micros-stagelevel.txt     L1-F4  stage-level, with a verdict-flip control
+11-gate-with-fabricated-latency.txt L1-F4 full deep gate on the tampered tree
+12-probe-class-coverage-gap.txt    L1-F7  ruled D-039 GAP erased by one word
+13-vendor-exclusion-criterion.txt  L1-F5 supporting (superseded by 14, which used /usr/bin/grep)
+14-recheck-with-real-grep.txt      DEAD PROBE correction: my shell aliases grep to ugrep
+15-stage-count.txt                 L1-F9  "TEN mechanical stages" vs the eight the same line lists
+16-processes.txt                   leaked signer processes from w3/w5/w7 — reported, not killed
+17-revert-verification.txt         final revert proof
+18-probe-label-pin-scope.txt       L1-F3  subdirectory / non-.json / the unpinned D-011(c) sampling files
+19-probe-secret-guard-repo-spellings.txt  L1-F1 in this repository's own key-variable names
