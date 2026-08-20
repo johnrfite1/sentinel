@@ -550,6 +550,10 @@ S="$(subject c7c)"
 DOM="$(section_of "$S/$PROP_REL" "$H58" '^#{1,6} ' | $GREP -E '^ {4}EIP712Domain\(' | head -1)"
 edit_at "$S/$PROP_REL" after "$DOM" ""
 edit_at "$S/$PROP_REL" after "$DOM" "##### 5.8.0.1 A deeper subsection still"
+below="$(awk -v a='##### 5.8.0.1 A deeper subsection still' '$0==a{f=1;next} f && /^#{1,5} /{exit} f' "$S/$PROP_REL" | $GREP -cE '^ {4}[A-Za-z]+Payload\(')"
+check CONTROL  7c-mut "$([ "$($GREP -c -x -F '##### 5.8.0.1 A deeper subsection still' "$S/$PROP_REL")" = 1 ] && \
+      [ "$below" = 5 ] && echo 0 || echo 1)" \
+      "mutation applied: a ##### heading sits inside §5.8 with 5 publications below it"
 o="$(run_ts "$S")"
 check CONTROL  7c "$(has "$o" "$TS_OK" && echo 0 || echo 1)" \
       "paired control: a ##### subsection inside §5.8 already does not end it — so 7a is about depth, not about headings"
@@ -570,6 +574,10 @@ S="$(subject c8a)"
 DOM="$(section_of "$S/$PROP_REL" "$H58" '^#{1,6} ' | $GREP -E '^ {4}EIP712Domain\(' | head -1)"
 edit_at "$S/$PROP_REL" after "$DOM" ""
 edit_at "$S/$PROP_REL" after "$DOM" "### 5.8bis An interposed same-depth heading"
+below="$(awk -v a='### 5.8bis An interposed same-depth heading' '$0==a{f=1;next} f && /^### /{exit} f' "$S/$PROP_REL" | $GREP -cE '^ {4}[A-Za-z]+Payload\(')"
+check CONTROL  8a-mut "$([ "$($GREP -c -x -F '### 5.8bis An interposed same-depth heading' "$S/$PROP_REL")" = 1 ] && \
+      [ "$below" = 5 ] && echo 0 || echo 1)" \
+      "mutation applied: a ### heading sits inside §5.8 with 5 publications below it"
 o="$(run_ts "$S")"
 check REQUIRED 8a "$(refuses "$o" "$TS_OK" "MandatePayload" "$MISSING_WHY" && echo 0 || echo 1)" \
       "TS ends §5.8 at an interposed ### heading and reports the publications below it absent"
@@ -578,6 +586,10 @@ S="$(subject c8b)"
 DOM="$(section_of "$S/$PROP_REL" "$H58" '^#{1,6} ' | $GREP -E '^ {4}EIP712Domain\(' | head -1)"
 edit_at "$S/$PROP_REL" after "$DOM" ""
 edit_at "$S/$PROP_REL" after "$DOM" "## 5bis A shallower heading"
+below="$(awk -v a='## 5bis A shallower heading' '$0==a{f=1;next} f && /^#{1,3} /{exit} f' "$S/$PROP_REL" | $GREP -cE '^ {4}[A-Za-z]+Payload\(')"
+check CONTROL  8b-mut "$([ "$($GREP -c -x -F '## 5bis A shallower heading' "$S/$PROP_REL")" = 1 ] && \
+      [ "$below" = 5 ] && echo 0 || echo 1)" \
+      "mutation applied: a ## heading sits inside §5.8 with 5 publications below it"
 o="$(run_ts "$S")"
 check REQUIRED 8b "$(refuses "$o" "$TS_OK" "MandatePayload" "$MISSING_WHY" && echo 0 || echo 1)" \
       "TS ends §5.8 at an interposed shallower ## heading"
@@ -630,6 +642,8 @@ AP="$(section_of "$S/$PROP_REL" "$H58" '^#{1,6} ' | $GREP -E '^ {4}ActionPayload
 AP_BAD="$(printf '%s' "$AP" | sed 's/bytes32 mandateHash,bytes32 policyHash/bytes32 policyHash,bytes32 mandateHash/;s/^ *//')"
 edit_at "$S/$PROP_REL" after "$AP" ""
 edit_at "$S/$PROP_REL" after "$AP" "    \`$AP_BAD\`"
+check CONTROL  9b-mut "$([ "$(section_of "$S/$PROP_REL" "$H58" '^#{1,6} ' | $GREP -cE '^ {4}`ActionPayload\(')" = 1 ] && echo 0 || echo 1)" \
+      "mutation applied: §5.8 carries an indented BACKTICKED ActionPayload line beside the real publication"
 o="$(run_ts "$S")"
 check REQUIRED 9b "$(has "$o" "$TS_OK" && echo 0 || echo 1)" \
       "TS still reports success: an indented BACKTICKED line is not a normative publication"
@@ -771,6 +785,8 @@ S="$(subject c13a)"
 DOM="$(section_of "$S/$PROP_REL" "$H58" '^#{1,6} ' | $GREP -E '^ {4}EIP712Domain\(' | head -1)"
 edit_at "$S/$PROP_REL" after "$DOM" ""
 edit_at "$S/$PROP_REL" after "$DOM" "#### 5.8.1 Domain field values"
+check CONTROL  13a-mut "$([ "$($GREP -c -x -F '#### 5.8.1 Domain field values' "$S/$PROP_REL")" = 1 ] && echo 0 || echo 1)" \
+      "mutation applied: the #### subsection is present inside §5.8"
 ts_ok="$(has "$(run_ts "$S")" "$TS_OK" && echo yes || echo no)"
 vp_ok="$(has_re "$(run_vp "$S")" "$VP_OK_RE" && echo yes || echo no)"
 check REQUIRED 13a "$(agree "$S" && echo 0 || echo 1)" \
@@ -791,6 +807,10 @@ S="$(subject c13d)"
 DOM="$(section_of "$S/$PROP_REL" "$H58" '^#{1,6} ' | $GREP -E '^ {4}EIP712Domain\(' | head -1)"
 edit_at "$S/$PROP_REL" after "$DOM" ""
 edit_at "$S/$PROP_REL" after "$DOM" "---"
+rules_now="$(section_of "$S/$PROP_REL" "$H58" '^#{1,6} ' | $GREP -c -x -- '---')"
+rules_base="$(section_of "$P0/$PROP_REL" "$H58" '^#{1,6} ' | $GREP -c -x -- '---')"
+check CONTROL  13d-mut "$([ "$rules_now" = "$((rules_base + 1))" ] && echo 0 || echo 1)" \
+      "mutation applied: §5.8 now carries $rules_now horizontal rules where the base carries $rules_base"
 ts_ok="$(has "$(run_ts "$S")" "$TS_OK" && echo yes || echo no)"
 vp_ok="$(has_re "$(run_vp "$S")" "$VP_OK_RE" && echo yes || echo no)"
 check REQUIRED 13d "$(agree "$S" && echo 0 || echo 1)" \

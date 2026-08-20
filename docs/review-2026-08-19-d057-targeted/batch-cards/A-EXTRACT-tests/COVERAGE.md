@@ -157,8 +157,8 @@ STOPS and has the disagreement independently confirmed — it does not edit the 
 ## 6. Known weaknesses of the harness itself
 
 - **`sec_sub` and `edit_at` key on exact line text.** If a fixture line moves or is rewrapped in
-  a future proposal, the mutation silently does nothing — which is why **every case has a
-  `*-mut` control that counts the fixture after mutating it.** This is not theoretical: the
+  a future proposal, the mutation silently does nothing — which is why **every falsification has
+  a `*-mut` control that counts the fixture after mutating it.** This is not theoretical: the
   first version of this harness passed a multi-line string through `awk -v`, awk errored to
   stderr, the mutation did not apply, and case 11b reported PASS against an unmutated fixture.
   The `*-mut` controls exist because of that, and they caught it.
@@ -171,3 +171,8 @@ STOPS and has the disagreement independently confirmed — it does not edit the 
   about whatever was measured; the harness records what that was instead of refusing to run.
 - **The `§2` capability-cell mutation in `14c` appends one space to a table row.** It is enough
   to move the hash, which is all case 14 needs, and it is deliberately not a semantic edit.
+- **`14d` has no control in the LIVE repository, and cannot have one.** Its paired opposite
+  outcome (`14c`) is measured on the snapshot, because proving the pin is live in the live tree
+  would mean editing `§2` there. **Stated rather than implied:** `14d` is a same-value
+  comparison against a constant recorded in this card, and the evidence that the comparison can
+  fail at all lives one directory away, in the snapshot.

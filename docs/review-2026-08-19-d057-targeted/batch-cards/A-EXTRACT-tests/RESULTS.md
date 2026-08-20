@@ -1,7 +1,7 @@
 # A-EXTRACT — the measured pre-repair run at `bb664c6`
 
 **Base SHA:** `bb664c626d592d86391f644bf014e76f2bbf7db4`, tree clean at the time of measurement.
-**Harness sha256:** `8031e73284ef68d84d48347aa8c411d2e44a625f93e4ef035d55df660910519d`
+**Harness sha256:** `e8e370f56965850542b166afe426c45876f002ed4944273efaefed4a6a5a26d6`
 (`a-extract.sh`; the harness prints this itself at preflight case `P0`).
 **Environment, printed by preflight `P2`:** git 2.50.1 (Apple Git-155); bash 3.2.57; Python
 3.9.6; `/usr/bin/grep` with a matched canary.
@@ -16,7 +16,7 @@ docs/review-2026-08-19-d057-targeted/batch-cards/A-EXTRACT-tests/a-extract.sh
 
 ```
   REQUIRED : 19 of 34 held      (15 REQUIRED failures)
-  CONTROL  : 46 of 46 held      (0 control failures)
+  CONTROL  : 52 of 52 held      (0 control failures)
   exit 1   — REQUIRED FAILURES with every control holding: the defects are observed.
 ```
 
@@ -67,14 +67,14 @@ opposite outcome actually behave oppositely?
 | 6-ctl | C | PASS | TS | one definition, success reported |
 | 7a-mut | C | PASS | — | 5 publications below the interposed `####` |
 | **7a** | R | **FAIL** | TS | yes — `7c` (a `#####` at the same place does NOT truncate) |
-| 7c | C | PASS | TS | the depth-paired control |
+| 7c-mut, 7c | C | PASS | TS | the depth-paired control |
 | **7b** | R | **PASS** | EC | yes — `8c` (a `####` at §5.7.1 DOES end it) |
-| 8a-mut … | C | PASS | — | see `8c-mut` |
+| 8a-mut, 8b-mut | C | PASS | — | 5 publications below each interposed heading |
 | **8a**, **8b** | R | **PASS** | TS | yes — `8-ctl` |
 | 8c-mut | C | PASS | — | `EVAL_CHAIN_BOUND` above, `EVAL_MANDATE_WINDOW` below |
 | **8c**, **8d** | R | **PASS** | EC | yes — `8-ctl` |
 | 8-ctl | C | PASS | TS+EC | the opposite outcome |
-| 9a-mut | C | PASS | — | the backticked mention is present |
+| 9a-mut, 9b-mut | C | PASS | — | the backticked mentions are present |
 | **9a**, **9b** | R | **PASS** | TS | yes — `9c` refuses the SAME text unbackticked |
 | 9c | C | PASS | TS | the opposite outcome |
 | 10a-mut | C | PASS | — | decoy at line 608, §7.2 at line 665 |
@@ -92,9 +92,11 @@ opposite outcome actually behave oppositely?
 | 12suffix-mut, 12prefix-mut | C | PASS | — | 0 exact-token hits, 1 substring hit |
 | **12suffix**, **12prefix** | R | **FAIL** | EC | yes — `12-ctl` names it undocumented when replaced by an unrelated token |
 | 12-ctl | C | PASS | EC | the opposite outcome |
+| 13a-mut | C | PASS | — | the `#### 5.8.1` subsection is present |
 | **13a** | R | **FAIL** | VP vs TS | yes — `13-ctl` |
 | **13b-before** | R | **FAIL** | VP | yes — `13-ctl` |
 | **13b-after** | R | **PASS** | VP | yes — `13-ctl` |
+| 13d-mut | C | PASS | — | §5.8 carries 2 horizontal rules where the base carries 1 |
 | **13d** | R | **FAIL** | VP vs TS | yes — `13-ctl` |
 | 13-ctl | C | PASS | VP+TS | both succeed unmutated, so agreement is not vacuous |
 | 13-patch | O | recorded | — | the verifier-side half is `TESTS.patch`, NOT applied |
@@ -102,7 +104,11 @@ opposite outcome actually behave oppositely?
 | **14d** | R | **PASS** | — | the live repository still carries the certified value |
 | Z-* (5) | C | PASS | — | four consumers byte-identical to `bb664c6`; boundary unmodified |
 
-**Totals:** 46 CONTROL PASS · 19 REQUIRED PASS · **15 REQUIRED FAIL** · 10 OBSERVED.
+**Every falsification carries its own `*-mut` proof-of-mutation control.** The six added last
+(`7c-mut`, `8a-mut`, `8b-mut`, `9b-mut`, `13a-mut`, `13d-mut`) closed the only cases that had
+been relying on the consumer's own output as evidence that the fixture had changed.
+
+**Totals:** 52 CONTROL PASS · 19 REQUIRED PASS · **15 REQUIRED FAIL** · 10 OBSERVED.
 
 ---
 
