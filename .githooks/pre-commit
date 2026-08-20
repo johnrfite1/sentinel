@@ -26,6 +26,14 @@ fi
 # git environment, and it must be read BEFORE that environment is cleared (D-061, 12-F2).
 INVOKING_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || INVOKING_ROOT=""
 if [ -n "$INVOKING_ROOT" ]; then INVOKING_ROOT="$(cd -- "$INVOKING_ROOT" 2>/dev/null && pwd -P)"; fi
+# CAPTURE THE HOOK-PROVIDED INDEX TOO, FOR THE SAME REASON AND WITH THE SAME TIMING (D-062).
+# GIT_INDEX_FILE is not purely a caller override: for `git commit -a` and
+# `git commit -- <path>` git hands the hook a TEMPORARY index holding what is about to be
+# committed (.git/index.lock and .git/next-index-<pid>.lock on git 2.50.1), and .git/index
+# does NOT hold it. A1 attempt two cleared this unconditionally, so the guard read an index
+# that did not contain the staged content and printed a clean line while a credential landed
+# in HEAD. Captured here, validated below, and never honoured unvalidated.
+HOOK_INDEX="${GIT_INDEX_FILE:-}"
 # NOW clear it, so nothing downstream — including the guard this hook execs — can be
 # redirected by a caller-supplied override.
 unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_PREFIX
@@ -39,4 +47,79 @@ if [ "$INVOKING_ROOT" != "$HOOK_ROOT" ]; then
     exit 2
 fi
 
+# --- D-062: validate the hook-provided temporary index ------------------------
+# ONLY reached once invoking-root equality holds, so "this worktree" below is a repository
+# whose identity is already established rather than one the caller asserted.
+#
+# THE PRINCIPLE, because the two A1 attempts sit one on each side of it: an arbitrary caller
+# git environment stays UNTRUSTED, and what makes this particular value usable is not that it
+# arrived in the environment but that it survives validation against the canonical index
+# directory of the repository we have already proven we are committing in. Attempt one
+# deferred to the environment and let a foreign repository be measured; attempt two scrubbed
+# it and let a credential reach HEAD. Deference is not the axis — validation is.
+#
+# SCOPE OF THE PROTECTION, stated so nobody reads more into it: this defends against
+# ACCIDENTAL and ENVIRONMENTAL redirection. A hostile process running as this user can
+# replace git's temporary index between validation and scan, and nothing here prevents that;
+# such a process can also edit this hook. That is the honest bound.
+_d062_dir_of() {   # prints the PHYSICAL directory of $1, resolved relative to $2; fails if unresolvable
+    local _p="$1" _base="$2" _d
+    case "$_p" in /*) ;; *) _p="$_base/$_p" ;; esac
+    _d="$(dirname -- "$_p")"
+    (cd -- "$_d" 2>/dev/null && pwd -P) || return 1
+}
+_d062_refuse() {
+    echo "  FAIL  pre-commit: the index git handed this hook is not acceptable; refusing." >&2
+    echo "        reason        : $1" >&2
+    echo "        GIT_INDEX_FILE: $HOOK_INDEX" >&2
+    echo "    A guard that cannot establish WHICH index is being committed must not report a" >&2
+    echo "    result it did not establish (D-062)." >&2
+    exit 2
+}
+
+VALIDATED_INDEX=""
+if [ -n "$HOOK_INDEX" ]; then
+    # The canonical index is asked of GIT rather than assumed to be "$root/.git/index":
+    # `--git-path` is correct for a linked worktree (.git/worktrees/<name>/index) and for a
+    # separate-gitdir checkout, neither of which the harness exercises. Hardcoding .git/index
+    # would generalise the DEMONSTRATION instead of the ARGUMENT.
+    CANON_INDEX="$(cd -- "$HOOK_ROOT" 2>/dev/null && git rev-parse --git-path index 2>/dev/null)" || CANON_INDEX=""
+    [ -n "$CANON_INDEX" ] || _d062_refuse "cannot resolve this worktree's canonical index path"
+    CANON_DIR="$(_d062_dir_of "$CANON_INDEX" "$HOOK_ROOT")" || CANON_DIR=""
+    [ -n "$CANON_DIR" ] || _d062_refuse "cannot resolve this worktree's canonical index directory"
+    CANON_BASE="$(basename -- "$CANON_INDEX")"
+
+    # Resolving the DIRECTORY physically is what closes traversal and directory symlinks in one
+    # step: any `..` or symlinked component collapses before the comparison below.
+    CAND_DIR="$(_d062_dir_of "$HOOK_INDEX" "$INVOKING_ROOT")" || CAND_DIR=""
+    [ -n "$CAND_DIR" ] || _d062_refuse "the supplied path does not resolve to an existing directory"
+    CAND_BASE="$(basename -- "$HOOK_INDEX")"
+    CAND_ABS="$CAND_DIR/$CAND_BASE"
+
+    [ "$CAND_DIR" = "$CANON_DIR" ] || _d062_refuse "outside this worktree's index directory ($CANON_DIR)"
+
+    # Git's next-index form is next-index-<pid>.lock. The PID is the committing git's, not this
+    # hook's, so the digits cannot be checked against anything live — the FORM is what is
+    # accepted, and the containing-directory test above is what makes that safe.
+    case "$CAND_BASE" in
+        "$CANON_BASE"|index.lock) ;;
+        next-index-*.lock)
+            _d="${CAND_BASE#next-index-}"; _d="${_d%.lock}"
+            case "$_d" in ''|*[!0-9]*) _d062_refuse "malformed next-index temporary name" ;; esac ;;
+        *) _d062_refuse "unexpected basename '$CAND_BASE'" ;;
+    esac
+
+    # -L FIRST: -f follows a symlink, so a link pointing into the canonical directory would
+    # otherwise pass both tests while the bytes scanned live somewhere else entirely.
+    [ ! -L "$CAND_ABS" ] || _d062_refuse "is a symlink"
+    [ -f "$CAND_ABS" ]   || _d062_refuse "is not an existing regular file at scan time"
+
+    VALIDATED_INDEX="$CAND_ABS"
+fi
+
+# Passed EXPLICITLY as an argument, never re-exported: the guard re-validates it, and every
+# other git call in this process tree still runs against the canonical index.
+if [ -n "$VALIDATED_INDEX" ]; then
+    exec "$HOOK_ROOT/scripts/check-secrets.sh" --staged --index-file "$VALIDATED_INDEX"
+fi
 exec "$HOOK_ROOT/scripts/check-secrets.sh" --staged

@@ -76,7 +76,87 @@ cd "$SENTINEL_ROOT" || { echo "  FAIL  cannot enter the Sentinel repository root
 unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_PREFIX
 
 STAGED=0
-[ "${1:-}" = "--staged" ] && STAGED=1
+STAGED_INDEX=""
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --staged) STAGED=1 ;;
+    # --- D-062: the narrow internal staged-index input ------------------------
+    # NOT a general "scan this index" feature and not part of the manual interface. The
+    # pre-commit hook is the only component that knows it was invoked by git and therefore
+    # the only one that can distinguish git's own temporary-index hand-off from a value some
+    # caller put in the environment. The hook validates and passes it here EXPLICITLY; the
+    # unset above means an inherited GIT_INDEX_FILE reaches nothing, so a manual --staged run
+    # still scans Sentinel's canonical index no matter what the caller exported.
+    --index-file)
+      shift
+      if [ "$#" -eq 0 ]; then
+        echo "  FAIL  --index-file requires a path; refusing." >&2; exit 2
+      fi
+      STAGED_INDEX="$1" ;;
+    *) ;;   # unknown arguments continue to be ignored, as before
+  esac
+  shift
+done
+
+# RE-VALIDATED HERE RATHER THAN TRUSTED FROM THE HOOK. The hook already checked it; this guard
+# is also reachable directly, and a check that exists only in the caller is a check this script
+# cannot claim. The two validations are deliberately the same rule applied twice.
+if [ -n "$STAGED_INDEX" ]; then
+  _cs_refuse_idx() {
+    echo "  FAIL  --index-file is not acceptable; refusing." >&2
+    echo "        reason    : $1" >&2
+    echo "        path      : $STAGED_INDEX" >&2
+    echo "    An index this guard cannot establish is not an index it may report on (D-062)." >&2
+    exit 2
+  }
+  [ "$STAGED" -eq 1 ] || _cs_refuse_idx "only meaningful with --staged"
+  _cs_dir_of() {
+    local _p="$1" _d
+    case "$_p" in /*) ;; *) _p="$SENTINEL_ROOT/$_p" ;; esac
+    _d="$(dirname -- "$_p")"
+    (cd -- "$_d" 2>/dev/null && pwd -P) || return 1
+  }
+  # `--git-path` rather than "$SENTINEL_ROOT/.git/index": correct for a linked worktree and a
+  # separate-gitdir checkout, neither of which the D-062 harness exercises.
+  _cs_canon="$(git rev-parse --git-path index 2>/dev/null)" || _cs_canon=""
+  [ -n "$_cs_canon" ] || _cs_refuse_idx "cannot resolve this repository's canonical index path"
+  _cs_canon_dir="$(_cs_dir_of "$_cs_canon")" || _cs_canon_dir=""
+  [ -n "$_cs_canon_dir" ] || _cs_refuse_idx "cannot resolve this repository's canonical index directory"
+  _cs_cand_dir="$(_cs_dir_of "$STAGED_INDEX")" || _cs_cand_dir=""
+  [ -n "$_cs_cand_dir" ] || _cs_refuse_idx "does not resolve to an existing directory"
+  _cs_base="$(basename -- "$STAGED_INDEX")"
+  _cs_canon_base="$(basename -- "$_cs_canon")"
+  _cs_abs="$_cs_cand_dir/$_cs_base"
+  [ "$_cs_cand_dir" = "$_cs_canon_dir" ] || _cs_refuse_idx "outside the canonical index directory ($_cs_canon_dir)"
+  case "$_cs_base" in
+    "$_cs_canon_base"|index.lock) ;;
+    next-index-*.lock)
+      _cs_d="${_cs_base#next-index-}"; _cs_d="${_cs_d%.lock}"
+      case "$_cs_d" in ''|*[!0-9]*) _cs_refuse_idx "malformed next-index temporary name" ;; esac ;;
+    *) _cs_refuse_idx "unexpected basename '$_cs_base'" ;;
+  esac
+  [ ! -L "$_cs_abs" ] || _cs_refuse_idx "is a symlink"
+  [ -f "$_cs_abs" ]   || _cs_refuse_idx "is not an existing regular file at scan time"
+  STAGED_INDEX="$_cs_abs"
+fi
+
+# THE ONLY PLACE GIT_INDEX_FILE IS EVER SET, AND IT IS SET PER-COMMAND. Scoping it to the
+# individual invocation — rather than exporting it — is what keeps the blast radius to the
+# three reads that must consult the index being committed. Every other git call in this
+# script, in both modes, still runs against the canonical index.
+#
+# WHAT THIS PROTECTS AGAINST, AND WHAT IT DOES NOT: accidental and environmental redirection —
+# an inherited or mistaken GIT_INDEX_FILE, a stale value, a path pointing at another
+# repository. It is NOT a defence against a hostile process running as this same user, which
+# can replace git's temporary index between validation and scan, and can equally well edit
+# this file. Stated here rather than left for a reviewer to infer.
+_cs_git() {
+  if [ -n "$STAGED_INDEX" ]; then
+    GIT_INDEX_FILE="$STAGED_INDEX" git "$@"
+  else
+    git "$@"
+  fi
+}
 
 RED=$'\033[31m'; YEL=$'\033[33m'; RST=$'\033[0m'
 [ -t 1 ] || { RED=""; YEL=""; RST=""; }
@@ -110,7 +190,7 @@ _sec_cleanup() { rm -f "$_sec_err" "$_sec_idx" "$_sec_lst"; }
 
 # The index census. `-s` yields "<mode> <object> <stage>\t<path>"; mode 160000 is a GITLINK,
 # which is a submodule pointer and not a regular file to scan.
-if ! git ls-files -s -z >"$_sec_idx" 2>"$_sec_err"; then
+if ! _cs_git ls-files -s -z >"$_sec_idx" 2>"$_sec_err"; then
   echo "${RED}FAIL${RST} git ls-files -s failed; refusing to report a clean scan:"
   printf '    %s\n' "$(cat "$_sec_err")"
   _sec_cleanup; exit 1
@@ -148,7 +228,7 @@ if [ "$STAGED" -eq 1 ]; then
   # `C` (copy) was always inside ACM and is unchanged; only R and T were being dropped.
   # A GENUINE STAGED DELETION IS STILL NEVER ENUMERATED and cannot become a false failure
   # (D-059(3), D-061(1), Batch A1 case 7).
-  if ! git diff --cached --raw -z --diff-filter=d >"$_sec_lst" 2>"$_sec_err"; then
+  if ! _cs_git diff --cached --raw -z --diff-filter=d >"$_sec_lst" 2>"$_sec_err"; then
     echo "${RED}FAIL${RST} git diff --cached --raw failed; refusing to report a clean scan:"
     printf '    %s\n' "$(cat "$_sec_err")"
     _sec_cleanup; exit 1
@@ -223,7 +303,7 @@ _sec_content() {
   local hix="${sec_hasidx[$i]}"
   [ "$knd" = "gitlink" ] && return 2
   if [ "$STAGED" -eq 1 ]; then
-    git show ":$pth" 2>/dev/null && return 0
+    _cs_git show ":$pth" 2>/dev/null && return 0
     return 1
   fi
   if [ -f "$pth" ]; then cat -- "$pth" 2>/dev/null && return 0; return 1; fi
