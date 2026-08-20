@@ -1,0 +1,861 @@
+#!/usr/bin/env bash
+# BATCH A-EXTRACT — falsification harness for named-scope extraction, exact membership,
+# and publication/definition uniqueness.
+#
+# AUTHORITY: D-058(1) (test-first separation), D-058(6) (no generic prose checker; logical
+# Markdown paragraphs must be normalized across hard line wraps), D-059(2) (a sibling
+# enumeration identifies candidates, it does not adjudicate them), D-059(8) (section
+# extraction and source uniqueness are TWO properties, not one primitive), D-060(1) (batch
+# cards; completeness is claimed only inside the declared boundary).
+#
+# THIS FILE IS A TEST. It makes no production repair. It modifies nothing in the repository
+# it is run from: every case operates on a private snapshot of the base commit, extracted
+# into a scratch directory this script created and removes on exit.
+#
+# THE ONE INVARIANT UNDER TEST
+#
+#   A checker naming a section, publication, or identifier must inspect that exact scope and
+#   require the exact value. It must not pass through a prefix, outside-section decoy,
+#   duplicate publication, incorrect heading boundary, or first-match tie-break.
+#
+# THE BOUNDARY — four consumers, and only their named-scope / exact-membership / uniqueness
+# blocks:
+#
+#   TS  scripts/check-type-strings.sh      §5.8 extraction, per-type publication uniqueness,
+#                                          and the eip712.ts source-definition lookup
+#   EC  scripts/check-eval-codes.sh        §5.7.1 extraction and per-code membership
+#   VH  scripts/check-vendor-honesty.sh    the §7.2 caveat extraction and the ablation-report
+#                                          comparison, plus the §2 pinned-table control
+#   VP  verifier/test_verifier.py          TestPublishedTypeStrings — the §5.8 consumer
+#
+# Nothing else in those files is in scope, and no other script is touched.
+#
+# HOW TO READ THE OUTPUT. Every scored line is one of
+#   REQUIRED  — an assertion of the required behaviour. Several of these FAIL at the
+#               pre-repair base commit; that is the point of the exercise. A REQUIRED line
+#               that cannot fail is worthless.
+#   CONTROL   — the paired opposite outcome, or evidence that a mutation really applied.
+#               A failing CONTROL means the harness is measuring nothing and NO conclusion
+#               may be drawn beside it.
+#   OBSERVED  — a recorded fact. Asserts nothing and counts toward neither tally.
+#
+# EXIT STATUS — a control failure is a DIFFERENT exit path from a required-case failure.
+#   0  every REQUIRED and every CONTROL held
+#   1  REQUIRED failures, all CONTROLs held      (the expected pre-repair shape)
+#   2  a CONTROL failed, or a preflight failed   (the harness is untrustworthy — fix it first)
+#
+# EXIT STATUS IS NOT A VALID DISCRIMINATOR FOR ANY INDIVIDUAL CASE and this harness never
+# uses it as one. Three of the four consumers exit 1 for every finding they have, so a
+# non-zero exit says nothing about WHICH finding fired. Every assertion here is on the
+# consumer's OUTPUT: the success line must be absent, and the finding must be NAMED — the
+# type string, the identifier, the section, or the artifact it is about.
+#
+# HEADING DEPTH IS DERIVED FROM THE ANCHOR, NOT FROM A FIXED CLASS. `check-type-strings.sh`
+# anchors on a `###` heading and `check-eval-codes.sh` on a `####` one, and both terminate
+# their scan on `^#{1,4} `. Cases 7 and 8 exercise the SAME `####` depth against BOTH
+# anchors: below a `###` anchor it is a deeper subsection that must stay INSIDE, and at a
+# `####` anchor it is a same-depth heading that must END the section. A fixed class cannot
+# satisfy both, which is what makes the pair the evidence rather than either one alone.
+#
+# METHOD NOTES, recorded so the next author does not re-pay for them:
+#   * /usr/bin/grep, never the shell's grep — the wrapper on this workstation honours
+#     --ignore-files and can return a clean-looking zero. Preflight P1 plants a canary.
+#   * bash 3.2: no mapfile, no associative arrays, and "${arr[@]}" on an EMPTY array is an
+#     unbound-variable error under `set -u`. No arrays are used here.
+#   * A LINE-ORIENTED GREP IS DISALLOWED for a Markdown paragraph check (D-058(6)). Case 11
+#     is that rule made into a probe: the same sentence is hard-wrapped on the proposal side
+#     and on the report side, and the consumer must find it in both.
+#   * Refusal vocabulary is matched as a SET OF ALTERNATIVES, never as one exact sentence.
+#     A repair chooses its own wording; what it may not choose is to stay silent, to report
+#     success, or to name something other than the finding.
+#   * No credential-shaped fixture is needed by any case here, so none is assembled. The
+#     mutations are Markdown headings, type strings and identifier tokens.
+
+set -uo pipefail
+
+# ---------------------------------------------------------------------------- preamble ------
+# The commit this harness was authored and demonstrated against. A different SHA is not an
+# error; it is recorded and warned about, because every outcome below is evidence about
+# whatever was actually measured and nothing else.
+BASE_SHA="bb664c626d592d86391f644bf014e76f2bbf7db4"
+
+SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT="${1:-$(cd "$SELF_DIR/../../../.." && pwd)}"
+
+PROP_REL="Sentinel_Protocol_Lab_Proposal_v0_2.md"
+SRC_REL="ts/src/signer/eip712.ts"
+RPT_REL="docs/ablation-report.md"
+
+# The exact anchors the four consumers name. Written here once so that a case which needs to
+# duplicate, delete or shadow one cannot drift from what the consumer actually looks for.
+H58="### 5.8 EIP-712 Type Strings (normative)"
+H59="### 5.9 Enumerations (normative)"
+H56="### 5.6 EvidenceBundle"
+H571="#### 5.7.1 Check coverage (auditable; the identifiers are not normative)"
+H6="## 6. AI and Context Scope"
+H72="### 7.2 Fair Baselines"
+
+CAVEAT_PHRASE='is not evidence that current vendors miss Case 3'
+CAVEAT_SENTENCE='This baseline makes the demo reproducible but is not evidence that current vendors miss Case 3.'
+
+# The Gate 5 constant this batch must leave alone (case 14). Read from the script under test
+# rather than trusted from here; this is the value expected, and a mismatch is reported.
+GATE5_PINNED="c9034750e56b8801be7cd31cce33c42caad209013a61ed7082155db33903959c"
+
+req_fail=0
+ctl_fail=0
+MATRIX_TSV=""
+
+hdr() { printf '\n\033[1m== %s ==\033[0m\n' "$1"; }
+say() { printf '        %s\n' "$*"; }
+
+check() {   # KIND CASE HELD DESC   — HELD is 0 when the asserted behaviour was observed.
+    local kind case_id held desc status; kind="$1"; case_id="$2"; held="$3"; desc="$4"
+    if [ "$kind" = "OBSERVED" ]; then status="...."
+    elif [ "$held" -eq 0 ]; then status="PASS"; else status="FAIL"; fi
+    printf '  case %-10s %-8s %s  %s\n' "$case_id" "$kind" "$status" "$desc"
+    MATRIX_TSV="${MATRIX_TSV}${case_id}	${kind}	${status}	${desc}
+"
+    if [ "$held" -ne 0 ] && [ "$kind" != "OBSERVED" ]; then
+        if [ "$kind" = "REQUIRED" ]; then req_fail=$((req_fail + 1)); else ctl_fail=$((ctl_fail + 1)); fi
+    fi
+}
+
+die() { printf '\n  PREFLIGHT FAILED: %s\n' "$1"; exit 2; }
+
+# ---------------------------------------------------------------------------- isolation -----
+# HOME, XDG and the global / system git configuration are redirected into the scratch area for
+# the whole run. Nothing here writes git configuration into a repository it did not create,
+# and no repository outside the scratch area is written to at all.
+WORK="$(mktemp -d "${TMPDIR:-/tmp}/a-extract.XXXXXX")" || die "cannot create a scratch directory"
+cleanup() { [ -n "${WORK:-}" ] && rm -rf "$WORK"; }
+trap cleanup EXIT
+
+export HOME="$WORK/home";               mkdir -p "$HOME"
+export XDG_CONFIG_HOME="$WORK/xdg";     mkdir -p "$XDG_CONFIG_HOME"
+export GIT_CONFIG_GLOBAL="$WORK/gitconfig-global"; : > "$GIT_CONFIG_GLOBAL"
+export GIT_CONFIG_SYSTEM="$WORK/gitconfig-system"; : > "$GIT_CONFIG_SYSTEM"
+export GIT_CONFIG_NOSYSTEM=1
+export GIT_TERMINAL_PROMPT=0
+export GIT_AUTHOR_NAME="a-extract" GIT_AUTHOR_EMAIL="a-extract@invalid"
+export GIT_COMMITTER_NAME="a-extract" GIT_COMMITTER_EMAIL="a-extract@invalid"
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_PREFIX 2>/dev/null || true
+
+GREP=/usr/bin/grep
+
+# ---------------------------------------------------------------------------- primitives ----
+# Every mutation is a whole-line operation keyed on the EXACT line text, never on a line
+# number and never on a regular expression, so a fixture that has moved fails to mutate
+# rather than mutating something else. Each case then proves its mutation applied.
+
+# THE INSERTED TEXT TRAVELS THROUGH A FILE, NOT THROUGH `awk -v`.
+#
+# `awk -v t="line1<newline>line2"` is a hard error — "newline in string" — and the first
+# version of this harness carried it. awk printed the diagnostic to stderr, the mutation did
+# NOT apply, and the case beside it reported PASS against an unmutated fixture. That is the
+# recorded "a falsification probe can be dead and its silence reads exactly like a pass"
+# class, reproduced inside a harness written to probe for it. Every insertion is now
+# multi-line-capable by construction, and every case proves its own mutation applied.
+edit_at() {  # FILE MODE MATCHLINE TEXT      MODE = before | after | replace | delete
+    local f mode m t tf
+    f="$1"; mode="$2"; m="$3"; t="$4"
+    tf="$WORK/.edit-block"
+    printf '%s\n' "$t" > "$tf"
+    edit_at_file "$f" "$mode" "$m" "$tf"
+    rm -f "$tf"
+}
+
+edit_at_file() {  # FILE MODE MATCHLINE BLOCKFILE
+    local f mode m bf
+    f="$1"; mode="$2"; m="$3"; bf="$4"
+    awk -v mode="$mode" -v m="$m" -v bf="$bf" '
+        function emit(   line) { while ((getline line < bf) > 0) print line; close(bf) }
+        $0 == m {
+            if (mode == "before")  { emit(); print; next }
+            if (mode == "after")   { print; emit(); next }
+            if (mode == "replace") { emit(); next }
+            if (mode == "delete")  { next }
+        }
+        { print }
+    ' "$f" > "$f.a-extract.tmp" && mv "$f.a-extract.tmp" "$f"
+}
+
+sec_sub() {  # FILE ANCHORLINE ENDRE OLD NEW — literal substring substitution, in-section only
+    local f="$1"
+    awk -v a="$2" -v e="$3" -v old="$4" -v new="$5" '
+        $0 == a { f = 1; print; next }
+        f && $0 ~ e { f = 0 }
+        f {
+            out = ""; rest = $0
+            while ((p = index(rest, old)) > 0) {
+                out = out substr(rest, 1, p - 1) new
+                rest = substr(rest, p + length(old))
+            }
+            $0 = out rest
+        }
+        { print }
+    ' "$f" > "$f.a-extract.tmp" && mv "$f.a-extract.tmp" "$f"
+}
+
+section_of() {  # FILE ANCHORLINE ENDRE  -> the section body on stdout
+    awk -v a="$2" -v e="$3" '$0 == a { f = 1; next } f && $0 ~ e { exit } f' "$1"
+}
+
+# COUNTING IS NORMALIZED, NOT LINE-ORIENTED (D-058(6)). Every "is the sentence there?" answer
+# this harness computes for itself collapses newlines and runs of blanks first, so the harness
+# cannot fall into the wrap trap it exists to probe in the consumers.
+norm_count() {  # FILE PHRASE -> number of normalized occurrences
+    tr '\n' ' ' < "$1" | tr -s ' ' | $GREP -o -F "$2" | wc -l | tr -d ' '
+}
+
+# ---------------------------------------------------------------------------- subjects ------
+PRISTINE_TAR="$WORK/pristine.tar"
+
+subject() {  # TAG [git-add]  -> prints the subject root
+    local tag add d
+    tag="$1"; add="${2:-}"; d="$WORK/s-$tag"
+    rm -rf "$d"; mkdir -p "$d"
+    tar -xf "$PRISTINE_TAR" -C "$d" || return 1
+    ( cd "$d" && git init -q . >/dev/null 2>&1 ) || return 1
+    if [ "$add" = "add" ]; then ( cd "$d" && git add -A >/dev/null 2>&1 ) || return 1; fi
+    printf '%s' "$d"
+}
+
+# EVERY CONSUMER INVOCATION IS LOGGED WHEN AN EVIDENCE DIRECTORY IS REQUESTED, keyed by the
+# subject directory, which is named for the case. The verdicts below are assertions ON THIS
+# OUTPUT; preserving it is what lets a later reader check the assertion rather than trust it.
+_log() {  # SUBJECT CONSUMER COMMAND OUTPUT
+    [ -n "${A_EXTRACT_EVIDENCE_DIR:-}" ] || return 0
+    { printf '\n===== subject=%s consumer=%s\n----- command: %s\n%s\n' \
+        "$(basename "$1")" "$2" "$3" "$4"
+    } >> "$A_EXTRACT_EVIDENCE_DIR/consumer-output.txt"
+}
+run_ts() { local o; o="$( cd "$1" && ./scripts/check-type-strings.sh 2>&1 )"
+           _log "$1" TS "./scripts/check-type-strings.sh" "$o"; printf '%s' "$o"; }
+run_ec() { local o; o="$( cd "$1" && ./scripts/check-eval-codes.sh 2>&1 )"
+           _log "$1" EC "./scripts/check-eval-codes.sh" "$o"; printf '%s' "$o"; }
+run_vh() { local o; o="$( cd "$1" && git add -A >/dev/null 2>&1; ./scripts/check-vendor-honesty.sh 2>&1 )"
+           _log "$1" VH "./scripts/check-vendor-honesty.sh" "$o"; printf '%s' "$o"; }
+run_vp() { local o; o="$( cd "$1/verifier" && python3 -m unittest test_verifier.TestPublishedTypeStrings 2>&1 )"
+           _log "$1" VP "python3 -m unittest test_verifier.TestPublishedTypeStrings" "$o"; printf '%s' "$o"; }
+
+TS_OK='published in §5.8 match eip712.ts exactly'
+EC_OK='engine checks documented in §5.7.1'
+VH_OK="the ablation report carries §7.2's caveat verbatim"
+VP_OK_RE='^OK$'
+
+has()    { printf '%s' "$1" | $GREP -qF -- "$2"; }
+has_re() { printf '%s' "$1" | $GREP -qEi -- "$2"; }
+
+# A REFUSAL is: the success line is ABSENT, the finding's SUBJECT is named, and the output
+# carries refusal vocabulary from a set of alternatives rather than one dictated sentence.
+refuses() {  # OUTPUT SUCCESSLINE SUBJECT REASON_ALTERNATIVES
+    local out ok subj why; out="$1"; ok="$2"; subj="$3"; why="$4"
+    has "$out" "$ok" && return 1
+    has "$out" "$subj" || return 1
+    has_re "$out" "$why" || return 1
+    return 0
+}
+
+DUP_WHY='duplicat|twice|two |more than one|ambigu|cannot choose|refus|conflict'
+MISSING_WHY='absent|missing|does not publish|not found|no home|undocumented|not documented'
+
+# ============================================================================ preflight ======
+hdr "PREFLIGHT"
+
+SELF_SHA="$(shasum -a 256 "${BASH_SOURCE[0]}" | awk '{print $1}')"
+check OBSERVED P0 0 "harness sha256 $SELF_SHA"
+
+[ -x "$GREP" ] || die "$GREP is not executable; this harness will not use a PATH-resolved grep"
+printf 'a-extract-canary\n' > "$WORK/canary.txt"
+[ "$($GREP -c a-extract-canary "$WORK/canary.txt")" = "1" ] || die "the /usr/bin/grep canary did not match"
+check OBSERVED P1 0 "/usr/bin/grep is used for every search; canary matched"
+
+GIT_V="$(git --version 2>/dev/null)"; BASH_V="$($GREP -o 'version [0-9.]*' <<<"$(bash --version | head -1)")"
+check OBSERVED P2 0 "$GIT_V ; bash ${BASH_V#version } ; $(python3 --version 2>&1)"
+
+[ -d "$ROOT/.git" ] || die "no repository at the resolved root"
+HEAD_SHA="$(cd "$ROOT" && git rev-parse HEAD 2>/dev/null)"
+if [ "$HEAD_SHA" != "$BASE_SHA" ]; then
+    check OBSERVED P3 0 "WARNING: HEAD is $HEAD_SHA, not the demonstrated base $BASE_SHA"
+else
+    check OBSERVED P3 0 "HEAD is the demonstrated base commit $BASE_SHA"
+fi
+
+( cd "$ROOT" && git archive --format=tar "$BASE_SHA" ) > "$PRISTINE_TAR" 2>/dev/null \
+    || die "cannot build a snapshot of $BASE_SHA"
+[ -s "$PRISTINE_TAR" ] || die "the snapshot of $BASE_SHA is empty"
+
+P0="$(subject p0 add)" || die "cannot build the pristine subject"
+for f in "$PROP_REL" "$SRC_REL" "$RPT_REL" scripts/check-type-strings.sh \
+         scripts/check-eval-codes.sh scripts/check-vendor-honesty.sh verifier/test_verifier.py; do
+    [ -f "$P0/$f" ] || die "the snapshot is missing $f"
+done
+check OBSERVED P4 0 "snapshot of $BASE_SHA built; four consumers present"
+
+for h in "$H58" "$H59" "$H56" "$H571" "$H6" "$H72"; do
+    n="$($GREP -c -x -F -- "$h" "$P0/$PROP_REL")"
+    [ "$n" = "1" ] || die "anchor is not unique in the proposal ($n occurrences): $h"
+done
+check OBSERVED P5 0 "all six anchor headings occur exactly once in the base proposal"
+
+command -v python3 >/dev/null 2>&1 || die "python3 is required for the §5.8 verifier consumer"
+_p0ts="$(run_ts "$P0")"; _p0ec="$(run_ec "$P0")"; _p0vp="$(run_vp "$P0")"
+has "$_p0ts" "$TS_OK" || die "the base subject does not pass check-type-strings.sh: $_p0ts"
+has "$_p0ec" "$EC_OK" || die "the base subject does not pass check-eval-codes.sh: $_p0ec"
+has_re "$_p0vp" "$VP_OK_RE" || die "the base subject does not pass the verifier §5.8 consumer"
+check OBSERVED P6 0 "the unmutated snapshot passes TS, EC and the verifier §5.8 consumer"
+
+# ============================================================================ case 1 =========
+hdr "CASE 1 — the named section is ABSENT"
+say "Required: refuse, naming the section. A checker may not report a result for a scope it"
+say "could not find, and may not fall back to the whole document."
+
+S="$(subject c1)"; edit_at "$S/$PROP_REL" delete "$H58" ""
+n_after="$($GREP -c -x -F -- "$H58" "$S/$PROP_REL")"
+n_before="$($GREP -c -x -F -- "$H58" "$P0/$PROP_REL")"
+check CONTROL  1-mut "$([ "$n_before" = 1 ] && [ "$n_after" = 0 ] && echo 0 || echo 1)" \
+      "mutation applied: the §5.8 heading is present once in the base and absent in the fixture"
+o="$(run_ts "$S")"
+check REQUIRED 1a "$(refuses "$o" "$TS_OK" "5.8" 'could not (isolate|find)|refus|cannot' && echo 0 || echo 1)" \
+      "TS refuses when §5.8 is absent, naming the section"
+o="$(run_vp "$S")"
+check REQUIRED 1c "$(has_re "$o" "$VP_OK_RE" && echo 1 || echo 0)" \
+      "the verifier §5.8 consumer does not report success when §5.8 is absent"
+check OBSERVED 1c-how 0 "verifier refusal shape at base: $(printf '%s' "$o" | $GREP -oE '(IndexError|AssertionError|FAILED.*)' | head -1)"
+
+S="$(subject c1b)"; edit_at "$S/$PROP_REL" delete "$H571" ""
+check CONTROL  1b-mut "$([ "$($GREP -c -x -F -- "$H571" "$S/$PROP_REL")" = 0 ] && echo 0 || echo 1)" \
+      "mutation applied: the §5.7.1 heading is absent from the fixture"
+o="$(run_ec "$S")"
+check REQUIRED 1b "$(refuses "$o" "$EC_OK" "5.7.1" 'could not (isolate|find)|refus|cannot' && echo 0 || echo 1)" \
+      "EC refuses when §5.7.1 is absent, naming the section"
+
+check CONTROL  1-ctl "$(has "$_p0ts" "$TS_OK" && has "$_p0ec" "$EC_OK" && echo 0 || echo 1)" \
+      "opposite outcome: with the sections present both checkers report success"
+
+# ============================================================================ case 2 =========
+hdr "CASE 2 — the exact value is ABSENT but a value sharing its prefix is present"
+say "Required: exact membership. A token of which the required value is a proper prefix is a"
+say "DIFFERENT token and must not satisfy the requirement."
+
+S="$(subject c2)"
+sec_sub "$S/$PROP_REL" "$H571" '^#{1,6} ' 'EVAL_POLICY_WINDOW' 'EVAL_POLICY_WINDOW_STRICT'
+body="$(section_of "$S/$PROP_REL" "$H571" '^#{1,6} ')"
+exact="$(printf '%s' "$body" | $GREP -cE '\bEVAL_POLICY_WINDOW\b')"
+supers="$(printf '%s' "$body" | $GREP -c 'EVAL_POLICY_WINDOW_STRICT')"
+check CONTROL  2-mut "$([ "$exact" = 0 ] && [ "$supers" -ge 1 ] && echo 0 || echo 1)" \
+      "mutation applied: §5.7.1 carries EVAL_POLICY_WINDOW_STRICT and no exact EVAL_POLICY_WINDOW"
+o="$(run_ec "$S")"
+check REQUIRED 2a "$(refuses "$o" "$EC_OK" "EVAL_POLICY_WINDOW" "$MISSING_WHY" && echo 0 || echo 1)" \
+      "EC reports EVAL_POLICY_WINDOW absent although a superstring of it is documented"
+
+S="$(subject c2b)"
+sec_sub "$S/$PROP_REL" "$H58" '^#{1,6} ' 'PolicyPayload(' 'PolicyPayloadV2('
+body="$(section_of "$S/$PROP_REL" "$H58" '^#{1,6} ')"
+check CONTROL  2b-mut "$([ "$(printf '%s' "$body" | $GREP -cE '^ {4}PolicyPayload\(')" = 0 ] && \
+      [ "$(printf '%s' "$body" | $GREP -cE '^ {4}PolicyPayloadV2\(')" = 1 ] && echo 0 || echo 1)" \
+      "mutation applied: §5.8 publishes PolicyPayloadV2 and no exact PolicyPayload"
+o="$(run_ts "$S")"
+check REQUIRED 2b "$(refuses "$o" "$TS_OK" "PolicyPayload" "$MISSING_WHY" && echo 0 || echo 1)" \
+      "TS reports PolicyPayload not published although PolicyPayloadV2 is"
+
+S="$(subject c2c)"
+sec_sub "$S/$PROP_REL" "$H571" '^#{1,6} ' 'EVAL_POLICY_WINDOW' 'EVAL_UNRELATED_TOKEN'
+o="$(run_ec "$S")"
+check CONTROL  2-ctl "$(refuses "$o" "$EC_OK" "EVAL_POLICY_WINDOW" "$MISSING_WHY" && echo 0 || echo 1)" \
+      "paired control: with the token wholly removed EC does name it missing, so the path is live"
+
+# ============================================================================ case 3 =========
+hdr "CASE 3 — the value is present ONLY OUTSIDE the named section"
+say "Required: a value published elsewhere in the document does not satisfy a claim about"
+say "this section, in either direction of the file."
+
+S="$(subject c3)"
+CODE_LINE="$(section_of "$S/$PROP_REL" "$H571" '^#{1,6} ' | $GREP -F 'EVAL_VAULT_NOT_PAUSED' | head -1)"
+sec_sub "$S/$PROP_REL" "$H571" '^#{1,6} ' 'EVAL_VAULT_NOT_PAUSED' 'EVAL_MOVED_AWAY'
+edit_at "$S/$PROP_REL" after "$H6" "Relocated for this probe: \`EVAL_VAULT_NOT_PAUSED\`."
+inside="$(section_of "$S/$PROP_REL" "$H571" '^#{1,6} ' | $GREP -c 'EVAL_VAULT_NOT_PAUSED')"
+whole="$($GREP -c 'EVAL_VAULT_NOT_PAUSED' "$S/$PROP_REL")"
+check CONTROL  3-mut "$([ "$inside" = 0 ] && [ "$whole" -ge 1 ] && echo 0 || echo 1)" \
+      "mutation applied: EVAL_VAULT_NOT_PAUSED is outside §5.7.1 and inside the document"
+o="$(run_ec "$S")"
+check REQUIRED 3a "$(refuses "$o" "$EC_OK" "EVAL_VAULT_NOT_PAUSED" "$MISSING_WHY" && echo 0 || echo 1)" \
+      "EC reports the code absent from §5.7.1 although the document carries it elsewhere"
+
+S="$(subject c3b)"
+OV="$(section_of "$S/$PROP_REL" "$H58" '^#{1,6} ' | $GREP -E '^ {4}OverrideAuthorizationPayload\(' | head -1)"
+[ -n "$OV" ] || die "cannot read the OverrideAuthorizationPayload publication from §5.8"
+edit_at "$S/$PROP_REL" delete "$OV" ""
+edit_at "$S/$PROP_REL" after "$H56" ""
+edit_at "$S/$PROP_REL" after "$H56" "$OV"
+inside="$(section_of "$S/$PROP_REL" "$H58" '^#{1,6} ' | $GREP -cE '^ {4}OverrideAuthorizationPayload\(')"
+outside="$(section_of "$S/$PROP_REL" "$H56" '^#{1,6} ' | $GREP -cE '^ {4}OverrideAuthorizationPayload\(')"
+check CONTROL  3b-mut "$([ "$inside" = 0 ] && [ "$outside" = 1 ] && echo 0 || echo 1)" \
+      "mutation applied: the publication moved out of §5.8 and into §5.6"
+o="$(run_ts "$S")"
+check REQUIRED 3b "$(refuses "$o" "$TS_OK" "OverrideAuthorizationPayload" "$MISSING_WHY" && echo 0 || echo 1)" \
+      "TS reports the type string not published in §5.8 although §5.6 publishes it"
+
+# ============================================================================ case 4 =========
+hdr "CASE 4 — an outside-section DECOY placed BEFORE the real section"
+say "Required: refusal, not a first-match tie-break. Section order in this document is NOT"
+say "monotonic — §5.9 precedes §5.8 — so 'the first match' is not 'the real one'."
+
+S="$(subject c4a)"
+AP="$(section_of "$S/$PROP_REL" "$H58" '^#{1,6} ' | $GREP -E '^ {4}ActionPayload\(' | head -1)"
+[ -n "$AP" ] || die "cannot read the ActionPayload publication from §5.8"
+AP_BAD="$(printf '%s' "$AP" | sed 's/bytes32 mandateHash,bytes32 policyHash/bytes32 policyHash,bytes32 mandateHash/')"
+[ "$AP_BAD" != "$AP" ] || die "the ActionPayload transposition did not change the line"
+edit_at "$S/$PROP_REL" replace "$AP" "$AP_BAD"
+edit_at "$S/$PROP_REL" after "$H59" ""
+edit_at "$S/$PROP_REL" after "$H59" "$AP"
+check CONTROL  4a-mut "$([ "$(section_of "$S/$PROP_REL" "$H59" '^#{1,6} ' | $GREP -cF "$AP")" = 1 ] && \
+      [ "$(section_of "$S/$PROP_REL" "$H58" '^#{1,6} ' | $GREP -cF "$AP_BAD")" = 1 ] && echo 0 || echo 1)" \
+      "mutation applied: the correct line sits in §5.9 (earlier) and §5.8 carries the transposed one"
+o="$(run_ts "$S")"
+check REQUIRED 4a "$(refuses "$o" "$TS_OK" "ActionPayload" 'drift|differ|mismatch|does not match|disagree' && echo 0 || echo 1)" \
+      "TS reads §5.8 itself and reports drift, ignoring the earlier correct decoy"
+
+# 4c and 4d PLANT A COMPLETE DECOY SECTION, not a bare heading. A decoy heading with an
+# empty body makes the guard refuse for the WRONG reason — its empty-scope check fires and
+# the case reports PASS while proving nothing about first-match selection. The decoy body
+# below is a VERBATIM COPY of the real section, so a first-match reader sees a section that
+# looks entirely correct.
+plant_decoy_section() {  # SUBJECT ANCHORLINE BEFORELINE  — copies the real section up front
+    local s anchor before body
+    s="$1"; anchor="$2"; before="$3"
+    body="$WORK/.decoy-body"
+    { printf '%s\n\n' "$anchor"
+      section_of "$s/$PROP_REL" "$anchor" '^#{1,6} '
+      printf '\n---\n\n'
+    } > "$body"
+    edit_at_file "$s/$PROP_REL" before "$before" "$body"
+    rm -f "$body"
+}
+
+S="$(subject c4c)"
+D58="$(section_of "$S/$PROP_REL" "$H58" '^#{1,6} ' | $GREP -E '^ {4}EIP712Domain\(' | head -1)"
+plant_decoy_section "$S" "$H58" "$H59"
+n58="$($GREP -c -x -F -- "$H58" "$S/$PROP_REL")"
+n_dom="$($GREP -cF "$D58" "$S/$PROP_REL")"
+check CONTROL  4c-mut "$([ "$n58" = 2 ] && [ "$n_dom" = 2 ] && echo 0 || echo 1)" \
+      "mutation applied: TWO complete §5.8 sections with identical bodies, the decoy first"
+o="$(run_ts "$S")"
+check REQUIRED 4c "$(refuses "$o" "$TS_OK" "5.8" "$DUP_WHY" && echo 0 || echo 1)" \
+      "TS refuses when two headings claim the §5.8 anchor, rather than taking the first"
+
+S="$(subject c4d)"
+plant_decoy_section "$S" "$H58" "$H59"
+AP_REAL="$(awk -v a="$H58" 'n==2 && $0 ~ /^ {4}ActionPayload\(/ {print; exit} $0==a{n++}' "$S/$PROP_REL")"
+[ -n "$AP_REAL" ] || die "cannot read the ActionPayload publication from the second §5.8"
+AP_BAD="$(printf '%s' "$AP_REAL" | sed 's/bytes32 mandateHash,bytes32 policyHash/bytes32 policyHash,bytes32 mandateHash/')"
+awk -v a="$H58" -v old="$AP_REAL" -v new="$AP_BAD" '
+    $0==a{n++} { if (n==2 && $0==old) { print new; next } print }' "$S/$PROP_REL" > "$S/$PROP_REL.t" \
+    && mv "$S/$PROP_REL.t" "$S/$PROP_REL"
+n58="$($GREP -c -x -F -- "$H58" "$S/$PROP_REL")"
+first_ap="$(section_of "$S/$PROP_REL" "$H58" '^#{1,6} ' | $GREP -cF "$AP_REAL")"
+bad_n="$($GREP -cF "$AP_BAD" "$S/$PROP_REL")"
+check CONTROL  4d-mut "$([ "$n58" = 2 ] && [ "$first_ap" = 1 ] && [ "$bad_n" = 1 ] && echo 0 || echo 1)" \
+      "mutation applied: the FIRST §5.8 carries the correct ActionPayload, the REAL one the transposed"
+o="$(run_ts "$S")"
+check REQUIRED 4d "$(has "$o" "$TS_OK" && echo 1 || echo 0)" \
+      "TS does NOT report success when an earlier duplicate §5.8 anchor hides a real drift"
+
+S="$(subject c4b)"
+plant_decoy_section "$S" "$H571" "$H59"
+awk -v a="$H571" '$0==a{n++} { if (n==2) { gsub(/EVAL_TARGET_BOUND/, "EVAL_REMOVED_HERE") } print }' \
+    "$S/$PROP_REL" > "$S/$PROP_REL.t" && mv "$S/$PROP_REL.t" "$S/$PROP_REL"
+n571="$($GREP -c -x -F -- "$H571" "$S/$PROP_REL")"
+first_has="$(section_of "$S/$PROP_REL" "$H571" '^#{1,6} ' | $GREP -c 'EVAL_TARGET_BOUND')"
+total_has="$($GREP -c 'EVAL_TARGET_BOUND' "$S/$PROP_REL")"
+check CONTROL  4b-mut "$([ "$n571" = 2 ] && [ "$first_has" -ge 1 ] && [ "$total_has" = "$first_has" ] && echo 0 || echo 1)" \
+      "mutation applied: TWO complete §5.7.1 sections; only the DECOY documents EVAL_TARGET_BOUND"
+o="$(run_ec "$S")"
+check REQUIRED 4b "$(has "$o" "$EC_OK" && echo 1 || echo 0)" \
+      "EC does NOT report full coverage when an earlier duplicate §5.7.1 anchor supplies the codes"
+
+# ============================================================================ case 5 =========
+hdr "CASE 5 — DUPLICATE normative publication inside the section, in BOTH orders"
+say "Required: refuse. A section that publishes two different strings for one type has no"
+say "correct answer to choose between, so choosing is the defect."
+
+for order in before after; do
+    S="$(subject "c5$order")"
+    AP="$(section_of "$S/$PROP_REL" "$H58" '^#{1,6} ' | $GREP -E '^ {4}ActionPayload\(' | head -1)"
+    AP_BAD="$(printf '%s' "$AP" | sed 's/bytes32 mandateHash,bytes32 policyHash/bytes32 policyHash,bytes32 mandateHash/')"
+    edit_at "$S/$PROP_REL" "$order" "$AP" ""
+    edit_at "$S/$PROP_REL" "$order" "$AP" "$AP_BAD"
+    n="$(section_of "$S/$PROP_REL" "$H58" '^#{1,6} ' | $GREP -cE '^ {4}ActionPayload\(')"
+    check CONTROL  "5$order-mut" "$([ "$n" = 2 ] && echo 0 || echo 1)" \
+          "mutation applied: §5.8 publishes ActionPayload twice (decoy $order the real line)"
+    o="$(run_ts "$S")"
+    check REQUIRED "5$order" "$(refuses "$o" "$TS_OK" "ActionPayload" "$DUP_WHY" && echo 0 || echo 1)" \
+          "TS refuses the duplicate publication with the decoy $order the real line"
+done
+check CONTROL  5-ctl "$(has "$_p0ts" "$TS_OK" && echo 0 || echo 1)" \
+      "paired control: with one publication per type TS reports success"
+
+# ============================================================================ case 6 =========
+hdr "CASE 6 — DUPLICATE authoritative definition in the SOURCE, in BOTH orders"
+say "D-059(8)(b): source uniqueness is a SECOND property, not the Markdown one. Required:"
+say "refuse and name the duplicate definition — not report drift, and not report success."
+
+SRC_ANCHOR_BEFORE="export const MANDATE_TYPE ="
+SRC_ANCHOR_AFTER="export const EIP712_DOMAIN_TYPEHASH = keccak256(stringToBytes(EIP712_DOMAIN_TYPE));"
+for order in before after; do
+    S="$(subject "c6$order")"
+    REALDEF="$($GREP -oE '"MandatePayload\([^"]*\)"' "$S/$SRC_REL" | head -1)"
+    [ -n "$REALDEF" ] || die "cannot read the MandatePayload definition from $SRC_REL"
+    DECOYDEF="$(printf '%s' "$REALDEF" | sed 's/address principal,address vault/address vault,address principal/')"
+    [ "$DECOYDEF" != "$REALDEF" ] || die "the source transposition did not change the definition"
+    if [ "$order" = before ]; then
+        edit_at "$S/$SRC_REL" before "$SRC_ANCHOR_BEFORE" ""
+        edit_at "$S/$SRC_REL" before "$SRC_ANCHOR_BEFORE" "const _decoyMandateType = $DECOYDEF;"
+    else
+        edit_at "$S/$SRC_REL" after "$SRC_ANCHOR_AFTER" "const _decoyMandateType = $DECOYDEF;"
+        edit_at "$S/$SRC_REL" after "$SRC_ANCHOR_AFTER" ""
+    fi
+    n="$($GREP -cE '"MandatePayload\(' "$S/$SRC_REL")"
+    real_ln="$($GREP -nF "$REALDEF" "$S/$SRC_REL" | head -1 | cut -d: -f1)"
+    decoy_ln="$($GREP -nF "$DECOYDEF" "$S/$SRC_REL" | head -1 | cut -d: -f1)"
+    if [ "$order" = before ]; then ord_ok="$([ "$decoy_ln" -lt "$real_ln" ] && echo 0 || echo 1)"
+    else ord_ok="$([ "$decoy_ln" -gt "$real_ln" ] && echo 0 || echo 1)"; fi
+    check CONTROL  "6$order-mut" "$([ "$n" = 2 ] && [ "$ord_ok" = 0 ] && echo 0 || echo 1)" \
+          "mutation applied: two MandatePayload definitions in the source, decoy $order the real one (lines $decoy_ln/$real_ln)"
+    o="$(run_ts "$S")"
+    check REQUIRED "6$order" "$(refuses "$o" "$TS_OK" "MandatePayload" "$DUP_WHY" && echo 0 || echo 1)" \
+          "TS refuses the duplicate SOURCE definition with the decoy $order the real one"
+done
+check CONTROL  6-ctl "$([ "$($GREP -cE '"MandatePayload\(' "$P0/$SRC_REL")" = 1 ] && has "$_p0ts" "$TS_OK" && echo 0 || echo 1)" \
+      "paired control: the base source defines MandatePayload exactly once and TS reports success"
+
+# ============================================================================ case 7 =========
+hdr "CASE 7 — a DEEPER subsection remains INSIDE its parent section"
+say "D-059(8)(a): a §5.8.1 subsection must not truncate §5.8. Depth is relative to the ANCHOR."
+
+S="$(subject c7a)"
+DOM="$(section_of "$S/$PROP_REL" "$H58" '^#{1,6} ' | $GREP -E '^ {4}EIP712Domain\(' | head -1)"
+edit_at "$S/$PROP_REL" after "$DOM" ""
+edit_at "$S/$PROP_REL" after "$DOM" "#### 5.8.1 Domain field values"
+below="$(awk -v a='#### 5.8.1 Domain field values' '$0==a{f=1;next} f && /^### /{exit} f' "$S/$PROP_REL" | $GREP -cE '^ {4}[A-Za-z]+Payload\(')"
+check CONTROL  7a-mut "$([ "$($GREP -c -x -F '#### 5.8.1 Domain field values' "$S/$PROP_REL")" = 1 ] && \
+      [ "$below" = 5 ] && echo 0 || echo 1)" \
+      "mutation applied: a #### subsection sits inside §5.8 with 5 publications below it"
+o="$(run_ts "$S")"
+check REQUIRED 7a "$(has "$o" "$TS_OK" && echo 0 || echo 1)" \
+      "TS still matches all six: a #### subsection inside a ### anchor does NOT end the section"
+
+S="$(subject c7c)"
+DOM="$(section_of "$S/$PROP_REL" "$H58" '^#{1,6} ' | $GREP -E '^ {4}EIP712Domain\(' | head -1)"
+edit_at "$S/$PROP_REL" after "$DOM" ""
+edit_at "$S/$PROP_REL" after "$DOM" "##### 5.8.0.1 A deeper subsection still"
+o="$(run_ts "$S")"
+check CONTROL  7c "$(has "$o" "$TS_OK" && echo 0 || echo 1)" \
+      "paired control: a ##### subsection inside §5.8 already does not end it — so 7a is about depth, not about headings"
+
+S="$(subject c7b)"
+edit_at "$S/$PROP_REL" after "$H571" ""
+edit_at "$S/$PROP_REL" after "$H571" "##### 5.7.1.1 A deeper subsection"
+o="$(run_ec "$S")"
+check REQUIRED 7b "$(has "$o" "$EC_OK" && echo 0 || echo 1)" \
+      "EC still documents all codes: a ##### subsection inside a #### anchor does NOT end the section"
+
+# ============================================================================ case 8 =========
+hdr "CASE 8 — a SAME-DEPTH or SHALLOWER heading ENDS the section"
+say "The other half of case 7, and the half that makes the depth ANCHOR-RELATIVE: the very"
+say "same #### depth must stay inside a ### anchor (7a) and must terminate a #### anchor (8c)."
+
+S="$(subject c8a)"
+DOM="$(section_of "$S/$PROP_REL" "$H58" '^#{1,6} ' | $GREP -E '^ {4}EIP712Domain\(' | head -1)"
+edit_at "$S/$PROP_REL" after "$DOM" ""
+edit_at "$S/$PROP_REL" after "$DOM" "### 5.8bis An interposed same-depth heading"
+o="$(run_ts "$S")"
+check REQUIRED 8a "$(refuses "$o" "$TS_OK" "MandatePayload" "$MISSING_WHY" && echo 0 || echo 1)" \
+      "TS ends §5.8 at an interposed ### heading and reports the publications below it absent"
+
+S="$(subject c8b)"
+DOM="$(section_of "$S/$PROP_REL" "$H58" '^#{1,6} ' | $GREP -E '^ {4}EIP712Domain\(' | head -1)"
+edit_at "$S/$PROP_REL" after "$DOM" ""
+edit_at "$S/$PROP_REL" after "$DOM" "## 5bis A shallower heading"
+o="$(run_ts "$S")"
+check REQUIRED 8b "$(refuses "$o" "$TS_OK" "MandatePayload" "$MISSING_WHY" && echo 0 || echo 1)" \
+      "TS ends §5.8 at an interposed shallower ## heading"
+
+# 8c AND 8d INTERPOSE THE HEADING PART-WAY THROUGH §5.7.1, not immediately after its anchor.
+# Immediately after leaves an EMPTY section, and the guard then refuses for its empty-scope
+# reason instead of naming the codes that fell outside — a PASS that proves nothing about
+# where the section ended. Placed after the binding paragraph, the codes below it are the
+# evidence, and the case asserts one of them BY NAME.
+BIND_LINE="$(section_of "$P0/$PROP_REL" "$H571" '^#{1,6} ' | $GREP -F 'EVAL_CHAIN_BOUND' | head -1)"
+[ -n "$BIND_LINE" ] || die "cannot locate the §5.7.1 binding paragraph"
+
+S="$(subject c8c)"
+edit_at "$S/$PROP_REL" after "$BIND_LINE" "$(printf '\n#### 5.7.2 A same-depth heading\n')"
+kept="$(section_of "$S/$PROP_REL" "$H571" '^#{1,6} ' | $GREP -c 'EVAL_CHAIN_BOUND')"
+dropped="$(section_of "$S/$PROP_REL" "$H571" '^#{1,6} ' | $GREP -c 'EVAL_MANDATE_WINDOW')"
+check CONTROL  8c-mut "$([ "$kept" = 1 ] && [ "$dropped" = 0 ] && echo 0 || echo 1)" \
+      "mutation applied: a #### heading sits mid-§5.7.1; EVAL_CHAIN_BOUND is above it and EVAL_MANDATE_WINDOW below"
+o="$(run_ec "$S")"
+check REQUIRED 8c "$(refuses "$o" "$EC_OK" "EVAL_MANDATE_WINDOW" "$MISSING_WHY" && echo 0 || echo 1)" \
+      "EC ends §5.7.1 at an interposed #### heading — the SAME depth that must stay inside §5.8 (7a)"
+
+S="$(subject c8d)"
+edit_at "$S/$PROP_REL" after "$BIND_LINE" "$(printf '\n### 5.7bis A shallower heading\n')"
+o="$(run_ec "$S")"
+check REQUIRED 8d "$(refuses "$o" "$EC_OK" "EVAL_MANDATE_WINDOW" "$MISSING_WHY" && echo 0 || echo 1)" \
+      "EC ends §5.7.1 at an interposed shallower ### heading"
+
+check CONTROL  8-ctl "$(has "$_p0ts" "$TS_OK" && has "$_p0ec" "$EC_OK" && echo 0 || echo 1)" \
+      "paired control: with no interposed heading both sections extend over their whole content"
+
+# ============================================================================ case 9 =========
+hdr "CASE 9 — a legitimate PROSE or BACKTICKED mention is NOT a normative publication"
+say "D-059(8): legitimate prose mentions must remain CONTROLS. Required: the verdict is"
+say "unchanged and no duplicate refusal is raised."
+
+S="$(subject c9a)"
+AP="$(section_of "$S/$PROP_REL" "$H58" '^#{1,6} ' | $GREP -E '^ {4}ActionPayload\(' | head -1)"
+AP_BAD="$(printf '%s' "$AP" | sed 's/bytes32 mandateHash,bytes32 policyHash/bytes32 policyHash,bytes32 mandateHash/;s/^ *//')"
+edit_at "$S/$PROP_REL" after "$AP" ""
+edit_at "$S/$PROP_REL" after "$AP" "An earlier draft wrote it as \`$AP_BAD\`, which is recorded here as history and is not a publication."
+check CONTROL  9a-mut "$([ "$(section_of "$S/$PROP_REL" "$H58" '^#{1,6} ' | $GREP -c 'recorded here as history')" = 1 ] && echo 0 || echo 1)" \
+      "mutation applied: §5.8 carries an inline backticked mention of a different ActionPayload string"
+o="$(run_ts "$S")"
+check REQUIRED 9a "$(has "$o" "$TS_OK" && echo 0 || echo 1)" \
+      "TS still reports success: an inline backticked prose mention is not a second publication"
+
+S="$(subject c9b)"
+AP="$(section_of "$S/$PROP_REL" "$H58" '^#{1,6} ' | $GREP -E '^ {4}ActionPayload\(' | head -1)"
+AP_BAD="$(printf '%s' "$AP" | sed 's/bytes32 mandateHash,bytes32 policyHash/bytes32 policyHash,bytes32 mandateHash/;s/^ *//')"
+edit_at "$S/$PROP_REL" after "$AP" ""
+edit_at "$S/$PROP_REL" after "$AP" "    \`$AP_BAD\`"
+o="$(run_ts "$S")"
+check REQUIRED 9b "$(has "$o" "$TS_OK" && echo 0 || echo 1)" \
+      "TS still reports success: an indented BACKTICKED line is not a normative publication"
+
+S="$(subject c9c)"
+AP="$(section_of "$S/$PROP_REL" "$H58" '^#{1,6} ' | $GREP -E '^ {4}ActionPayload\(' | head -1)"
+AP_BAD="$(printf '%s' "$AP" | sed 's/bytes32 mandateHash,bytes32 policyHash/bytes32 policyHash,bytes32 mandateHash/')"
+edit_at "$S/$PROP_REL" after "$AP" ""
+edit_at "$S/$PROP_REL" after "$AP" "$AP_BAD"
+o="$(run_ts "$S")"
+check CONTROL  9c "$(refuses "$o" "$TS_OK" "ActionPayload" "$DUP_WHY" && echo 0 || echo 1)" \
+      "paired control: the SAME text as an unbackticked indented literal IS a publication and is refused"
+
+# ============================================================================ case 10 ========
+hdr "CASE 10 — §7.2's caveat is extracted FROM §7.2, not from the first tree-wide match"
+say "V3-N2. Required: the sentence enforced against the ablation report is the one §7.2"
+say "itself words, whatever else in the document contains the same phrase."
+
+S="$(subject c10a add)"
+edit_at "$S/$PROP_REL" after "$H6" ""
+edit_at "$S/$PROP_REL" after "$H6" "An earlier draft of this paragraph read: the demo baseline is illustrative and $CAVEAT_PHRASE in any respect."
+first_ln="$($GREP -nF "$CAVEAT_PHRASE" "$S/$PROP_REL" | head -1 | cut -d: -f1)"
+sec_ln="$($GREP -n -x -F -- "$H72" "$S/$PROP_REL" | cut -d: -f1)"
+in72="$(section_of "$S/$PROP_REL" "$H72" '^#{1,6} ' | $GREP -cF "$CAVEAT_SENTENCE")"
+check CONTROL  10a-mut "$([ "$first_ln" -lt "$sec_ln" ] && [ "$in72" = 1 ] && echo 0 || echo 1)" \
+      "mutation applied: a decoy carrying the phrase sits at line $first_ln, before §7.2 at line $sec_ln, which still words it exactly"
+o="$(run_vh "$S")"
+check REQUIRED 10a "$(has "$o" "$VH_OK" && echo 0 || echo 1)" \
+      "VH reports the report carries §7.2's caveat, ignoring an earlier decoy elsewhere in the document"
+
+S="$(subject c10b add)"
+NEW72='This baseline makes the demo reproducible but, stated exactly, is not evidence that current vendors miss Case 3 at all.'
+edit_at "$S/$PROP_REL" replace "$CAVEAT_SENTENCE" "$NEW72"
+edit_at "$S/$PROP_REL" after "$H6" ""
+edit_at "$S/$PROP_REL" after "$H6" "$CAVEAT_SENTENCE"
+in72="$(section_of "$S/$PROP_REL" "$H72" '^#{1,6} ' | $GREP -cF "$NEW72")"
+rpt="$(norm_count "$S/$RPT_REL" "$NEW72")"
+check CONTROL  10b-mut "$([ "$in72" = 1 ] && [ "$rpt" = 0 ] && echo 0 || echo 1)" \
+      "mutation applied: §7.2 now words the caveat differently and the report does NOT carry that wording"
+o="$(run_vh "$S")"
+check REQUIRED 10b "$(refuses "$o" "$VH_OK" "ablation-report.md" 'no longer|missing|absent|does not carry|fail' && echo 0 || echo 1)" \
+      "VH FAILS naming the report when §7.2's own wording is absent from it, despite an earlier decoy that matches"
+
+_p0vh="$(run_vh "$P0")"
+check CONTROL  10-ctl "$(has "$_p0vh" "$VH_OK" && echo 0 || echo 1)" \
+      "paired control: unmutated, VH reports the report carries §7.2's caveat"
+
+# ============================================================================ case 11 ========
+hdr "CASE 11 — the generated ablation report still carries the EXACT required caveat"
+say "D-058(6): the comparison is over LOGICAL PARAGRAPHS. A hard line wrap on either side is"
+say "not a change to the text, and a line-oriented grep is disallowed for this purpose."
+
+check REQUIRED 11a "$(has "$_p0vh" "$VH_OK" && echo 0 || echo 1)" \
+      "at the base commit the report carries §7.2's caveat verbatim"
+
+S="$(subject c11b add)"
+edit_at "$S/$PROP_REL" replace "$CAVEAT_SENTENCE" \
+    "This baseline makes the demo reproducible but is not evidence that current
+vendors miss Case 3."
+raw="$($GREP -cF "$CAVEAT_PHRASE" "$S/$PROP_REL")"
+nrm="$(norm_count "$S/$PROP_REL" "$CAVEAT_PHRASE")"
+check CONTROL  11b-mut "$([ "$raw" = 0 ] && [ "$nrm" = 1 ] && echo 0 || echo 1)" \
+      "mutation applied: §7.2's caveat is hard-wrapped — 0 line-oriented hits, 1 normalized hit"
+o="$(run_vh "$S")"
+check REQUIRED 11b "$(has "$o" "$VH_OK" && echo 0 || echo 1)" \
+      "VH still locates §7.2's caveat across a hard line wrap and confirms the report carries it"
+
+S="$(subject c11c add)"
+sed 's/evidence that current vendors miss Case 3\./evidence that current providers miss Case 3./' \
+    "$S/$RPT_REL" > "$S/$RPT_REL.t" && mv "$S/$RPT_REL.t" "$S/$RPT_REL"
+check CONTROL  11c-mut "$([ "$(norm_count "$S/$RPT_REL" "$CAVEAT_PHRASE")" = 0 ] && echo 0 || echo 1)" \
+      "mutation applied: the report's copy of the caveat differs by one word"
+o="$(run_vh "$S")"
+check CONTROL  11c "$(refuses "$o" "$VH_OK" "ablation-report.md" 'no longer|missing|absent|does not carry|fail' && echo 0 || echo 1)" \
+      "paired control: VH does FAIL naming the report when the report's copy is altered"
+
+S="$(subject c11d add)"
+awk '{ if ($0 ~ /^\*\*§7\.2.s own caveat, verbatim:\*\*/) { print "**§7.2'"'"'s own caveat, verbatim:** *\"This baseline makes the demo"; skip=1; next } if (skip) { print "reproducible but is not evidence that current vendors"; print "miss Case 3.\"* The L1 arm is a local reimplementation of the"; skip=0; next } print }' \
+    "$S/$RPT_REL" > "$S/$RPT_REL.t" && mv "$S/$RPT_REL.t" "$S/$RPT_REL"
+raw="$($GREP -cF "$CAVEAT_PHRASE" "$S/$RPT_REL")"
+nrm="$(norm_count "$S/$RPT_REL" "$CAVEAT_PHRASE")"
+check CONTROL  11d-mut "$([ "$raw" = 0 ] && [ "$nrm" = 1 ] && echo 0 || echo 1)" \
+      "mutation applied: the report is re-wrapped at a different column — 0 line hits, 1 normalized hit"
+o="$(run_vh "$S")"
+check CONTROL  11d "$(has "$o" "$VH_OK" && echo 0 || echo 1)" \
+      "paired control: a re-wrap of the report alone is tolerated, so 11b is about the PROPOSAL side"
+
+# THE GENERATOR IS COUNTED IN TWO FRAGMENTS, AND THE REASON IS THE POINT OF THIS CASE. The
+# emitting source splits the sentence across two `w(...)` calls, so BOTH a line-oriented and
+# a whitespace-normalized count of the whole phrase in report.ts are ZERO — the `"); w("`
+# between the halves is not whitespace. Counting it either of those ways would have published
+# a figure of zero beside a generator that demonstrably emits the caveat, which is exactly the
+# "a probe can be dead because of the data it was aimed at" class. The two halves are counted
+# instead, and the figure that matters — the caveat in the emitted report — is case 11a.
+gen_a="$($GREP -c 'This baseline makes the demo reproducible but is not' "$P0/ts/src/ablation/report.ts")"
+gen_b="$($GREP -c 'evidence that current vendors miss Case 3' "$P0/ts/src/ablation/report.ts")"
+check OBSERVED 11e 0 "the generator emits the caveat in two halves: $gen_a + $gen_b occurrence(s) in ts/src/ablation/report.ts"
+check CONTROL  11f "$([ "$gen_a" -ge 1 ] && [ "$gen_b" -ge 1 ] && echo 0 || echo 1)" \
+      "the caveat in the report comes from the GENERATOR, so a regeneration reproduces it rather than a hand edit"
+
+# ============================================================================ case 12 ========
+hdr "CASE 12 — EC rejects a ONE-CHARACTER prefix substitution"
+say "C1. Required: exact-token membership. One appended or prepended character makes a"
+say "DIFFERENT identifier, and an unanchored substring search cannot tell them apart."
+
+for variant in suffix prefix; do
+    S="$(subject "c12$variant")"
+    if [ "$variant" = suffix ]; then repl="EVAL_NONCE_CURRENTX"; else repl="XEVAL_NONCE_CURRENT"; fi
+    sec_sub "$S/$PROP_REL" "$H571" '^#{1,6} ' 'EVAL_NONCE_CURRENT' "$repl"
+    body="$(section_of "$S/$PROP_REL" "$H571" '^#{1,6} ')"
+    exact="$(printf '%s' "$body" | $GREP -cE '(^|[^A-Za-z0-9_])EVAL_NONCE_CURRENT([^A-Za-z0-9_]|$)')"
+    sub="$(printf '%s' "$body" | $GREP -c 'EVAL_NONCE_CURRENT')"
+    check CONTROL  "12$variant-mut" "$([ "$exact" = 0 ] && [ "$sub" = 1 ] && echo 0 || echo 1)" \
+          "mutation applied: §5.7.1 carries $repl — 0 exact-token hits, 1 substring hit"
+    o="$(run_ec "$S")"
+    check REQUIRED "12$variant" "$(refuses "$o" "$EC_OK" "EVAL_NONCE_CURRENT" "$MISSING_WHY" && echo 0 || echo 1)" \
+          "EC reports EVAL_NONCE_CURRENT undocumented when §5.7.1 carries only $repl"
+done
+
+S="$(subject c12ctl)"
+sec_sub "$S/$PROP_REL" "$H571" '^#{1,6} ' 'EVAL_NONCE_CURRENT' 'EVAL_SOMETHING_ELSE'
+o="$(run_ec "$S")"
+check CONTROL  12-ctl "$(refuses "$o" "$EC_OK" "EVAL_NONCE_CURRENT" "$MISSING_WHY" && echo 0 || echo 1)" \
+      "paired control: with the token replaced by an unrelated one EC does name it undocumented"
+
+# ============================================================================ case 13 ========
+hdr "CASE 13 — the verifier's §5.8 consumer AGREES with the shell guard"
+say "Two consumers of one section that disagree about its extent or about duplicates are two"
+say "different claims wearing one section number. Required: the same verdict on each fixture."
+
+agree() {  # SUBJECT  -> 0 when TS success and VP success coincide
+    local s a b; s="$1"
+    has "$(run_ts "$s")" "$TS_OK" && a=1 || a=0
+    has_re "$(run_vp "$s")" "$VP_OK_RE" && b=1 || b=0
+    [ "$a" = "$b" ]
+}
+
+S="$(subject c13a)"
+DOM="$(section_of "$S/$PROP_REL" "$H58" '^#{1,6} ' | $GREP -E '^ {4}EIP712Domain\(' | head -1)"
+edit_at "$S/$PROP_REL" after "$DOM" ""
+edit_at "$S/$PROP_REL" after "$DOM" "#### 5.8.1 Domain field values"
+ts_ok="$(has "$(run_ts "$S")" "$TS_OK" && echo yes || echo no)"
+vp_ok="$(has_re "$(run_vp "$S")" "$VP_OK_RE" && echo yes || echo no)"
+check REQUIRED 13a "$(agree "$S" && echo 0 || echo 1)" \
+      "deeper #### subsection inside §5.8: TS success=$ts_ok, verifier success=$vp_ok — must agree"
+
+for order in before after; do
+    S="$(subject "c13b$order")"
+    AP="$(section_of "$S/$PROP_REL" "$H58" '^#{1,6} ' | $GREP -E '^ {4}ActionPayload\(' | head -1)"
+    AP_BAD="$(printf '%s' "$AP" | sed 's/bytes32 mandateHash,bytes32 policyHash/bytes32 policyHash,bytes32 mandateHash/')"
+    edit_at "$S/$PROP_REL" "$order" "$AP" ""
+    edit_at "$S/$PROP_REL" "$order" "$AP" "$AP_BAD"
+    vpo="$(run_vp "$S")"
+    check REQUIRED "13b-$order" "$(has_re "$vpo" "$VP_OK_RE" && echo 1 || echo 0)" \
+          "duplicate publication (decoy $order): the verifier consumer must not report success by taking one of them"
+done
+
+S="$(subject c13d)"
+DOM="$(section_of "$S/$PROP_REL" "$H58" '^#{1,6} ' | $GREP -E '^ {4}EIP712Domain\(' | head -1)"
+edit_at "$S/$PROP_REL" after "$DOM" ""
+edit_at "$S/$PROP_REL" after "$DOM" "---"
+ts_ok="$(has "$(run_ts "$S")" "$TS_OK" && echo yes || echo no)"
+vp_ok="$(has_re "$(run_vp "$S")" "$VP_OK_RE" && echo yes || echo no)"
+check REQUIRED 13d "$(agree "$S" && echo 0 || echo 1)" \
+      "a horizontal rule inside §5.8: TS success=$ts_ok, verifier success=$vp_ok — must agree on extent"
+
+check CONTROL  13-ctl "$(agree "$P0" && has "$_p0ts" "$TS_OK" && echo 0 || echo 1)" \
+      "paired control: unmutated, both consumers succeed — so agreement at 13a/13d is not vacuous"
+
+check OBSERVED 13-patch 0 "the verifier-side assertions this case specifies are supplied as TESTS.patch, NOT applied"
+
+# ============================================================================ case 14 ========
+hdr "CASE 14 — Gate 5's certified §2 table and its pinned hash are UNCHANGED CONTROLS"
+say "D-059(1): the certification stands and is neither revoked, reaffirmed nor recertified by"
+say "this batch. These assertions must hold before AND after any repair."
+
+pin_in="$($GREP -oE 'CERTIFIED_TABLE_SHA="[0-9a-f]{64}"' "$P0/scripts/check-vendor-honesty.sh" | head -1 | sed 's/.*="//;s/"//')"
+check CONTROL  14a "$([ "$pin_in" = "$GATE5_PINNED" ] && echo 0 || echo 1)" \
+      "the pinned §2 table hash in the snapshot is the one D-038 certified"
+check CONTROL  14b "$(has "$_p0vh" "certified by record" && echo 0 || echo 1)" \
+      "VH reports the §2 capability table certified by record on the unmutated snapshot"
+
+S="$(subject c14c add)"
+row="$(awk '/^## 2\. Need, Market Reality, and First User/{t=1} t&&/^## 3\./{exit} t&&/^\| /{n++; if(n==3){print; exit}}' "$S/$PROP_REL")"
+[ -n "$row" ] || die "cannot read a §2 capability table row"
+edit_at "$S/$PROP_REL" replace "$row" "$(printf '%s' "$row" | sed 's/|$/ |/')"
+check CONTROL  14c-mut "$([ "$($GREP -c -x -F -- "$row" "$S/$PROP_REL")" = 0 ] && echo 0 || echo 1)" \
+      "mutation applied: one §2 table row differs from the certified text"
+o="$(run_vh "$S")"
+check CONTROL  14c "$(has "$o" "STALE" && echo 0 || echo 1)" \
+      "paired control: the pin is LIVE — a §2 edit makes VH report the certification stale"
+
+live_pin="$($GREP -oE 'CERTIFIED_TABLE_SHA="[0-9a-f]{64}"' "$ROOT/scripts/check-vendor-honesty.sh" | head -1 | sed 's/.*="//;s/"//')"
+live_tbl="$(awk '/^## 2\. Need, Market Reality, and First User/{t=1} t&&/^## 3\./{exit} t&&/^\|/{print} t&&/^\*Certified by John/{print}' "$ROOT/$PROP_REL" | shasum -a 256 | awk '{print $1}')"
+check REQUIRED 14d "$([ "$live_pin" = "$GATE5_PINNED" ] && [ "$live_tbl" = "$GATE5_PINNED" ] && echo 0 || echo 1)" \
+      "in the LIVE repository the pinned constant and the computed §2 table hash are both still the certified value"
+
+# ============================================================================ integrity =====
+hdr "HARNESS INTEGRITY"
+for f in scripts/check-type-strings.sh scripts/check-eval-codes.sh scripts/check-vendor-honesty.sh verifier/test_verifier.py; do
+    a="$(shasum -a 256 "$P0/$f" | awk '{print $1}')"
+    b="$(cd "$ROOT" && git show "$BASE_SHA:$f" | shasum -a 256 | awk '{print $1}')"
+    check CONTROL "Z-${f##*/}" "$([ "$a" = "$b" ] && echo 0 || echo 1)" \
+          "the consumer under test is byte-identical to $BASE_SHA: ${f##*/} ${a%%????????????????????????????????????????????????????????}…"
+done
+dirty="$(cd "$ROOT" && git status --porcelain -- "$PROP_REL" "$SRC_REL" "$RPT_REL" scripts verifier | wc -l | tr -d ' ')"
+check CONTROL Z-clean "$([ "$dirty" = "0" ] && echo 0 || echo 1)" \
+      "the repository under test was not modified by this run ($dirty changed path(s) in the boundary)"
+
+# ============================================================================ summary ========
+hdr "SUMMARY"
+printf '%s' "$MATRIX_TSV" > "$WORK/matrix.tsv"
+if [ -n "${A_EXTRACT_MATRIX_OUT:-}" ]; then cp "$WORK/matrix.tsv" "$A_EXTRACT_MATRIX_OUT"; fi
+req_total="$(printf '%s' "$MATRIX_TSV" | awk -F'\t' '$2=="REQUIRED"' | wc -l | tr -d ' ')"
+ctl_total="$(printf '%s' "$MATRIX_TSV" | awk -F'\t' '$2=="CONTROL"'  | wc -l | tr -d ' ')"
+printf '  REQUIRED : %s of %s held\n' "$((req_total - req_fail))" "$req_total"
+printf '  CONTROL  : %s of %s held\n' "$((ctl_total - ctl_fail))" "$ctl_total"
+echo
+if [ "$ctl_fail" -ne 0 ]; then
+    echo "  CONTROL FAILURE — the harness is untrustworthy and no verdict beside a failing"
+    echo "  control may be relied on. Fix the harness before reading the REQUIRED column."
+    exit 2
+fi
+if [ "$req_fail" -ne 0 ]; then
+    echo "  REQUIRED FAILURES with every control holding: the defects are observed."
+    exit 1
+fi
+echo "  Every REQUIRED and every CONTROL held."
+exit 0
