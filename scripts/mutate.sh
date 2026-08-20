@@ -30,7 +30,19 @@
 # takes roughly half an hour. It is a periodic verification tool, not a gate stage.
 set -uo pipefail
 
-ROOT="$(git rev-parse --show-toplevel)"
+# --- Sentinel repository identity (D-060(2)) ---------------------------------
+# Derived from THIS FILE's own location, never the caller's working directory, so a
+# run from an unrelated directory or a foreign repository still inspects Sentinel.
+# Every step is checked: `cd ""` returns 0 and does not abort even under `set -e`.
+_sentinel_self="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)" || _sentinel_self=""
+if [ -z "$_sentinel_self" ]; then
+    echo "  FAIL  cannot resolve this script's own location; refusing." >&2; exit 2
+fi
+ROOT="$(cd -- "$_sentinel_self" 2>/dev/null && env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE -u GIT_COMMON_DIR git rev-parse --show-toplevel 2>/dev/null)" || ROOT=""
+if [ -z "$ROOT" ] || [ ! -e "$ROOT/scripts/test.sh" ] || [ ! -e "$ROOT/.githooks/pre-commit" ]; then
+    echo "  FAIL  this script is not inside the Sentinel repository; refusing." >&2; exit 2
+fi
+cd "$ROOT" || { echo "  FAIL  cannot enter the Sentinel repository root; refusing." >&2; exit 2; }
 TS="$ROOT/ts"
 FILTER="${1:-}"
 export PATH="$HOME/.foundry/bin:$PATH"

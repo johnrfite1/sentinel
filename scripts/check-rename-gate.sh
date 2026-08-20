@@ -15,6 +15,21 @@
 # that a violation is caught the day it happens rather than at the next review.
 set -uo pipefail
 
+# --- Sentinel repository identity (D-060(2)) ---------------------------------
+# This guard previously operated on whatever repository the caller stood in, so a
+# run from elsewhere reported a clean result for the wrong tree. Identity is now
+# derived from THIS FILE's own location, and every step is checked: `cd ""`
+# returns 0 and does not abort even under `set -e`.
+_sentinel_self="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)" || _sentinel_self=""
+if [ -z "$_sentinel_self" ]; then
+    echo "  FAIL  cannot resolve this script's own location; refusing." >&2; exit 2
+fi
+SENTINEL_ROOT="$(cd -- "$_sentinel_self" 2>/dev/null && env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE -u GIT_COMMON_DIR git rev-parse --show-toplevel 2>/dev/null)" || SENTINEL_ROOT=""
+if [ -z "$SENTINEL_ROOT" ] || [ ! -e "$SENTINEL_ROOT/scripts/test.sh" ] || [ ! -e "$SENTINEL_ROOT/.githooks/pre-commit" ]; then
+    echo "  FAIL  this script is not inside the Sentinel repository; refusing." >&2; exit 2
+fi
+cd "$SENTINEL_ROOT" || { echo "  FAIL  cannot enter the Sentinel repository root; refusing." >&2; exit 2; }
+
 RED=$'\033[31m'; YEL=$'\033[33m'; RST=$'\033[0m'
 [ -t 1 ] || { RED=""; YEL=""; RST=""; }
 

@@ -44,7 +44,19 @@
 # Coverage here means R1-R3 partition the tree; R4 ranges over all of it.
 set -uo pipefail
 
-cd "$(git rev-parse --show-toplevel)"
+# --- Sentinel repository identity (D-060(2)) ---------------------------------
+# Derived from THIS FILE's own location, never the caller's working directory, so a
+# run from an unrelated directory or a foreign repository still inspects Sentinel.
+# Every step is checked: `cd ""` returns 0 and does not abort even under `set -e`.
+_sentinel_self="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)" || _sentinel_self=""
+if [ -z "$_sentinel_self" ]; then
+    echo "  FAIL  cannot resolve this script's own location; refusing." >&2; exit 2
+fi
+SENTINEL_ROOT="$(cd -- "$_sentinel_self" 2>/dev/null && env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE -u GIT_COMMON_DIR git rev-parse --show-toplevel 2>/dev/null)" || SENTINEL_ROOT=""
+if [ -z "$SENTINEL_ROOT" ] || [ ! -e "$SENTINEL_ROOT/scripts/test.sh" ] || [ ! -e "$SENTINEL_ROOT/.githooks/pre-commit" ]; then
+    echo "  FAIL  this script is not inside the Sentinel repository; refusing." >&2; exit 2
+fi
+cd "$SENTINEL_ROOT" || { echo "  FAIL  cannot enter the Sentinel repository root; refusing." >&2; exit 2; }
 
 # --- The partition. FIRST MATCH WINS, so more specific rules come first and the ordering is
 #     load-bearing. Moving an arm changes assignments silently; nothing detects that but review.
@@ -103,14 +115,22 @@ assign() {
 #
 # **Fixing the branch a reviewer demonstrated and leaving its sibling is the exact defect this
 # repository has now recorded more times than any other**, committed inside the repair for it.
-tracked="$(git ls-files 2>&1)"
-if [ $? -ne 0 ]; then
+# NUL-DELIMITED so a filename carrying a newline, a quote or a non-ASCII byte cannot be split,
+# nor octal-escaped by core.quotePath into a token nothing can open (Batch A1 case 9). A temp
+# file rather than $(...) because command substitution STRIPS NUL bytes, and rather than
+# mapfile because this runs under bash 3.2 where mapfile does not exist.
+_scope_out="$(mktemp "${TMPDIR:-/tmp}/sentinel-scope.XXXXXXXX")"
+_scope_err="$(mktemp "${TMPDIR:-/tmp}/sentinel-scope-err.XXXXXXXX")"
+if ! git ls-files -z >"$_scope_out" 2>"$_scope_err"; then
     echo "  FAIL  git ls-files failed:"
-    printf '    %s\n' "$tracked"
+    printf '    %s\n' "$(cat "$_scope_err")"
     echo "    Refusing to report a partition measured against nothing."
-    exit 1
+    rm -f "$_scope_out" "$_scope_err"; exit 1
 fi
-if [ -z "$tracked" ]; then
+tracked_files=()
+while IFS= read -r -d '' _f; do tracked_files+=("$_f"); done < "$_scope_out"
+rm -f "$_scope_out" "$_scope_err"
+if [ "${#tracked_files[@]}" -eq 0 ]; then
     echo "  FAIL  git ls-files returned NO tracked files."
     echo "    A repository with nothing in it is not a repository whose every file is assigned."
     exit 1
@@ -125,10 +145,10 @@ while IFS= read -r f; do
         R3) r3=$((r3+1)) ;;
         *)  unassigned+=("$f") ;;
     esac
-done <<< "$tracked"
+done < <(printf '%s\n' "${tracked_files[@]}")
 
 total=$((r1 + r2 + r3))
-echo "review scope: R1=$r1  R2=$r2  R3=$r3  (assigned $total of $(printf '%s\n' "$tracked" | wc -l | tr -d ' ') tracked files)"
+echo "review scope: R1=$r1  R2=$r2  R3=$r3  (assigned $total of ${#tracked_files[@]} tracked files)"
 
 if [ ${#unassigned[@]} -ne 0 ]; then
     echo "  FAIL  ${#unassigned[@]} tracked file(s) assigned to NO reviewer:"
@@ -165,12 +185,16 @@ if ! git rev-parse --verify --quiet "${since}^{commit}" >/dev/null; then
     exit 1
 fi
 
-scope_diff="$(git diff --name-only "$since"..HEAD 2>&1)"
-if [ $? -ne 0 ]; then
+_diff_out="$(mktemp "${TMPDIR:-/tmp}/sentinel-diff.XXXXXXXX")"
+_diff_err="$(mktemp "${TMPDIR:-/tmp}/sentinel-diff-err.XXXXXXXX")"
+if ! git diff -z --name-only "$since"..HEAD >"$_diff_out" 2>"$_diff_err"; then
     echo "  FAIL  git diff against '$since' failed:"
-    printf '    %s\n' "$scope_diff"
-    exit 1
+    printf '    %s\n' "$(cat "$_diff_err")"
+    rm -f "$_diff_out" "$_diff_err"; exit 1
 fi
+scope_files=()
+while IFS= read -r -d '' _f; do scope_files+=("$_f"); done < "$_diff_out"
+rm -f "$_diff_out" "$_diff_err"
 
 # PRESERVATION IS NOT REMEDIATION, and conflating them would overstate what needs reviewing.
 # The round-six record is historical evidence, faithfully preserved with disclosed path
@@ -193,16 +217,46 @@ preservation_only() {
 
 touched=0
 preserved=0
+_um_failed=0
+_um_last=""
 while IFS= read -r f; do
     [ -n "$f" ] || continue
-    git ls-files --error-unmatch "$f" >/dev/null 2>&1 || continue   # deleted since; not in scope
+    # V3-N1. This read `... || continue`, converting EVERY git failure mode into "deleted
+    # since; not in scope" — upstream of the UNASSIGNED check below, so a swallowed file was
+    # UNCHECKED, not merely uncounted. With ls-files failing it printed "0 file(s) changed
+    # ... all assigned", exit 0. AN INSTRUMENT FAILURE IS NOT A DELETION: --error-unmatch
+    # exits 1 when the path is genuinely absent from the index, and 128 when git itself failed.
+    if _um_err="$(git ls-files --error-unmatch -- "$f" 2>&1 >/dev/null)"; then
+        _um_rc=0
+    else
+        _um_rc=$?
+    fi
+    if [ "$_um_rc" -eq 1 ]; then
+        continue                                  # genuinely not in the index: deleted since
+    elif [ "$_um_rc" -ne 0 ]; then
+        # THE INSTRUMENT FAILED, WHICH IS NOT A DELETION. Refuse — but do not refuse by
+        # discarding a measurement that IS established: the tracked enumeration above
+        # succeeded, so membership is answerable without this call. Fall back to it, finish
+        # the walk, report the surface, and THEN refuse naming the failed instrument. A
+        # refusal that also destroys a sound count teaches a reader nothing about which of
+        # the two went wrong.
+        _um_failed=1
+        _um_last="$_um_err"
+        _present=0
+        _j=0
+        while [ "$_j" -lt "${#tracked_files[@]}" ]; do
+            if [ "${tracked_files[$_j]}" = "$f" ]; then _present=1; break; fi
+            _j=$((_j + 1))
+        done
+        [ "$_present" -eq 1 ] || continue
+    fi
     who="$(assign "$f")"
     if [ "$who" = "UNASSIGNED" ]; then
         echo "  FAIL  touched since A-070 and unassigned: $f"
         exit 1
     fi
     if preservation_only "$f"; then preserved=$((preserved+1)); else touched=$((touched+1)); fi
-done <<< "$scope_diff"
+done < <(printf '%s\n' ${scope_files[@]+"${scope_files[@]}"})
 # NAME THE BASE ACTUALLY USED, not a fixed label. The line said "since A-070" whatever
 # `SENTINEL_SCOPE_BASE` was set to, so an override produced a true count under a false label
 # (V3-N1, LOW).
@@ -215,3 +269,11 @@ if [ "$preserved" -gt 0 ]; then
 fi
 
 echo "  reviewer 4 is unassigned BY DESIGN (D-056(d)) and ranges over every surface above"
+
+if [ "$_um_failed" -ne 0 ]; then
+    echo "  FAIL  git ls-files --error-unmatch failed during the scope walk."
+    printf '    %s\n' "$_um_last"
+    echo "    The surface above is measured from the enumeration that DID succeed."
+    echo "    Refusing anyway: an instrument failure is not a deletion (V3-N1)."
+    exit 1
+fi

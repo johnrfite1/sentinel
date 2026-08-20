@@ -54,6 +54,21 @@
 
 set -euo pipefail
 
+# --- Sentinel repository identity (D-060(2)) ---------------------------------
+# This guard previously operated on whatever repository the caller stood in, so a
+# run from elsewhere reported a clean result for the wrong tree. Identity is now
+# derived from THIS FILE's own location, and every step is checked: `cd ""`
+# returns 0 and does not abort even under `set -e`.
+_sentinel_self="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)" || _sentinel_self=""
+if [ -z "$_sentinel_self" ]; then
+    echo "  FAIL  cannot resolve this script's own location; refusing." >&2; exit 2
+fi
+SENTINEL_ROOT="$(cd -- "$_sentinel_self" 2>/dev/null && env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE -u GIT_COMMON_DIR git rev-parse --show-toplevel 2>/dev/null)" || SENTINEL_ROOT=""
+if [ -z "$SENTINEL_ROOT" ] || [ ! -e "$SENTINEL_ROOT/scripts/test.sh" ] || [ ! -e "$SENTINEL_ROOT/.githooks/pre-commit" ]; then
+    echo "  FAIL  this script is not inside the Sentinel repository; refusing." >&2; exit 2
+fi
+cd "$SENTINEL_ROOT" || { echo "  FAIL  cannot enter the Sentinel repository root; refusing." >&2; exit 2; }
+
 STAGED=0
 [ "${1:-}" = "--staged" ] && STAGED=1
 
@@ -74,14 +89,120 @@ failures=0
 # (`.env`, `contracts/out`, `ts/node_modules`) stay out, because an ignored file is NOT one
 # `git add -A` away. Rule 1 above already blocks tracked `.env*` by name, and the .env
 # discipline covers the ignored copy.
-if [ "$STAGED" -eq 1 ]; then
-  files=$(git diff --cached --name-only --diff-filter=ACM)
-else
-  files=$(printf '%s\n%s\n' "$(git ls-files)" "$(git ls-files --others --exclude-standard)")
+# NUL-DELIMITED ENUMERATION IN BOTH MODES, WITH INDEX MODE INFORMATION (C4, D-060).
+# The previous form parsed newline-joined output of `git ls-files` / `git diff --cached
+# --name-only`. Under the default core.quotePath=true a non-ASCII filename is emitted QUOTED
+# and octal-escaped, producing a token nothing can open: `[ -f ]` was false and `git show
+# ":$f"` failed, and both were followed by `|| continue`. A byte-identical credential was
+# BLOCKED under an ASCII name and reported CLEAN under an accented one (Batch A1 cases 9-11).
+# `-z` removes the quoting outright, and $(...) is avoided because command substitution STRIPS
+# NUL bytes. bash 3.2 here, so no mapfile and no associative arrays.
+_sec_err="$(mktemp "${TMPDIR:-/tmp}/sentinel-sec-err.XXXXXXXX")"
+_sec_idx="$(mktemp "${TMPDIR:-/tmp}/sentinel-sec-idx.XXXXXXXX")"
+_sec_lst="$(mktemp "${TMPDIR:-/tmp}/sentinel-sec-lst.XXXXXXXX")"
+_sec_cleanup() { rm -f "$_sec_err" "$_sec_idx" "$_sec_lst"; }
+
+# The index census. `-s` yields "<mode> <object> <stage>\t<path>"; mode 160000 is a GITLINK,
+# which is a submodule pointer and not a regular file to scan.
+if ! git ls-files -s -z >"$_sec_idx" 2>"$_sec_err"; then
+  echo "${RED}FAIL${RST} git ls-files -s failed; refusing to report a clean scan:"
+  printf '    %s\n' "$(cat "$_sec_err")"
+  _sec_cleanup; exit 1
 fi
+# A Sentinel checkout always has tracked files. An enumeration that SUCCEEDS with no output
+# is the dangerous case — indistinguishable from "nothing to scan" and it reads as clean.
+if [ ! -s "$_sec_idx" ]; then
+  echo "${RED}FAIL${RST} git ls-files succeeded but returned NO tracked files."
+  echo "    Refusing to report a clean scan measured against nothing."
+  _sec_cleanup; exit 1
+fi
+idx_paths=(); idx_modes=()
+while IFS= read -r -d '' _rec; do
+  idx_modes+=("${_rec%% *}")
+  idx_paths+=("${_rec#*$'\t'}")
+done < "$_sec_idx"
+
+sec_files=(); sec_kind=(); sec_hasidx=()
+_sec_mode_of() {   # linear lookup; the staged set is small and this runs once per path
+  local q="$1" i=0
+  while [ "$i" -lt "${#idx_paths[@]}" ]; do
+    if [ "${idx_paths[$i]}" = "$q" ]; then printf '%s' "${idx_modes[$i]}"; return 0; fi
+    i=$((i + 1))
+  done
+  return 1
+}
+
+if [ "$STAGED" -eq 1 ]; then
+  # --diff-filter=ACM already excludes status D, so A GENUINELY STAGED DELETION IS NEVER
+  # ENUMERATED HERE and cannot become a false failure (D-059(3), Batch A1 case 7).
+  if ! git diff --cached -z --name-only --diff-filter=ACM >"$_sec_lst" 2>"$_sec_err"; then
+    echo "${RED}FAIL${RST} git diff --cached failed; refusing to report a clean scan:"
+    printf '    %s\n' "$(cat "$_sec_err")"
+    _sec_cleanup; exit 1
+  fi
+  while IFS= read -r -d '' _f; do
+    _m="$(_sec_mode_of "$_f" || printf '100644')"
+    sec_files+=("$_f")
+    if [ "$_m" = "160000" ]; then sec_kind+=("gitlink"); else sec_kind+=("regular"); fi
+    sec_hasidx+=("1")
+  done < "$_sec_lst"
+else
+  _i=0
+  while [ "$_i" -lt "${#idx_paths[@]}" ]; do
+    sec_files+=("${idx_paths[$_i]}")
+    if [ "${idx_modes[$_i]}" = "160000" ]; then sec_kind+=("gitlink"); else sec_kind+=("regular"); fi
+    sec_hasidx+=("1")
+    _i=$((_i + 1))
+  done
+  if ! git ls-files --others --exclude-standard -z >"$_sec_lst" 2>"$_sec_err"; then
+    echo "${RED}FAIL${RST} git ls-files --others failed; refusing to report a clean scan:"
+    printf '    %s\n' "$(cat "$_sec_err")"
+    _sec_cleanup; exit 1
+  fi
+  while IFS= read -r -d '' _f; do
+    sec_files+=("$_f"); sec_kind+=("regular"); sec_hasidx+=("0")
+  done < "$_sec_lst"
+fi
+_sec_cleanup
+
+# Content for entry $1. Prints it on stdout. Returns 0 read, 2 legitimately skip, 1 REFUSE.
+# D-060: in DEFAULT mode a regular tracked path whose working-tree copy is absent but whose
+# INDEX BLOB EXISTS is read from the index — until the deletion is staged the index still
+# carries the content, and default mode may not report clean while known repository content
+# went unread. The previous `[ -f "$f" ] || continue` skipped exactly that case.
+_sec_content() {
+  # bash 3.2: split, because a later expansion in the SAME `local` cannot rely on an
+  # earlier name in it under `set -u`.
+  local i="$1"
+  local pth="${sec_files[$i]}"
+  local knd="${sec_kind[$i]}"
+  local hix="${sec_hasidx[$i]}"
+  [ "$knd" = "gitlink" ] && return 2
+  if [ "$STAGED" -eq 1 ]; then
+    git show ":$pth" 2>/dev/null && return 0
+    return 1
+  fi
+  if [ -f "$pth" ]; then cat -- "$pth" 2>/dev/null && return 0; return 1; fi
+  # D-060's ruling: absent working-tree copy, index blob present -> scan the INDEX BLOB.
+  # Until the deletion is staged the index still carries the content, and default mode may
+  # not report clean while known repository content went unread.
+  if [ "$hix" = "1" ]; then git show ":$pth" 2>/dev/null && return 0; return 1; fi
+  # Exists but is not a regular file — a symlink to a directory, a device. Never scannable,
+  # and NOT the C4 defect, which is a REGULAR file made unreadable by path quoting. Skipping
+  # here is legitimate; skipping a regular file is what the repair forbids.
+  if [ -e "$pth" ] || [ -L "$pth" ]; then return 2; fi
+  return 1
+}
+_sec_refuse() {
+  echo "${RED}FAIL${RST} could not read $1 — refusing to report it clean."
+  echo "    An unreadable file is not a scanned file (C4, D-060)."
+  failures=$((failures + 1))
+}
 
 # --- 1. Secret-bearing files must never be tracked -------------------------
-while IFS= read -r f; do
+_i=0
+while [ "$_i" -lt "${#sec_files[@]}" ]; do
+  f="${sec_files[$_i]}"; _i=$((_i + 1))
   [ -z "$f" ] && continue
   case "$(basename "$f")" in
     .env|.env.*)
@@ -95,7 +216,7 @@ while IFS= read -r f; do
       failures=$((failures + 1))
       ;;
   esac
-done <<< "$files"
+done
 
 # --- 2. Known credential prefixes ------------------------------------------
 # Anthropic, OpenAI, AWS, GitHub, Slack. Unambiguous — these shapes are not
@@ -191,17 +312,16 @@ scan_content() {
   fi
 }
 
-while IFS= read -r f; do
+_i=0
+while [ "$_i" -lt "${#sec_files[@]}" ]; do
+  f="${sec_files[$_i]}"; _idx=$_i; _i=$((_i + 1))
   [ -z "$f" ] && continue
   [ "$(basename "$f")" = "check-secrets.sh" ] && continue   # this file defines the patterns
-  if [ "$STAGED" -eq 1 ]; then
-    git show ":$f" >/dev/null 2>&1 || continue
-    scan_content "$f" "$(git show ":$f" 2>/dev/null || true)"
-  else
-    [ -f "$f" ] || continue
-    scan_content "$f" "$(cat "$f")"
-  fi
-done <<< "$files"
+  if _body="$(_sec_content "$_idx")"; then _rc=0; else _rc=$?; fi
+  if [ "$_rc" -eq 2 ]; then continue; fi            # gitlink: not a regular file
+  if [ "$_rc" -ne 0 ]; then _sec_refuse "$f"; continue; fi
+  scan_content "$f" "$_body"
+done
 
 # --- 4. Machine-specific absolute paths ------------------------------------
 # House rule 6 / A-008: scripts resolve $HOME, they do not hardcode /Users/<name>.
@@ -222,15 +342,14 @@ done <<< "$files"
 # `check-vendor-honesty.sh` blocked the commit for naming a vendor in a measurement artifact
 # (D-008(4)) — the same way it caught the first draft of the rule-4 comment below. Recorded
 # because a guard catching its own documentation is the cheapest possible evidence that it works.
-while IFS= read -r f; do
+_i=0
+while [ "$_i" -lt "${#sec_files[@]}" ]; do
+  f="${sec_files[$_i]}"; _idx=$_i; _i=$((_i + 1))
   [ -z "$f" ] && continue
   [ "$(basename "$f")" = "check-secrets.sh" ] && continue
-  if [ "$STAGED" -eq 1 ]; then
-    body=$(git show ":$f" 2>/dev/null || true)
-  else
-    [ -f "$f" ] || continue
-    body=$(cat "$f")
-  fi
+  if body="$(_sec_content "$_idx")"; then _rc=0; else _rc=$?; fi
+  if [ "$_rc" -eq 2 ]; then continue; fi
+  if [ "$_rc" -ne 0 ]; then _sec_refuse "$f"; continue; fi
   # HTTP(S) URLs are stripped before matching, and only those. A remote URL's path can
   # legitimately contain the segment `/home/` — a documentation citation gathered for the Gate 5
   # source-verification pass had exactly that shape and blocked a commit. (The vendor is not
@@ -254,7 +373,7 @@ while IFS= read -r f; do
     printf '%s\n' "$hits" | sed 's/^/    /'
     failures=$((failures + 1))
   fi
-done <<< "$files"
+done
 
 if [ "$failures" -gt 0 ]; then
   echo

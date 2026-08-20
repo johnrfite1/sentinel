@@ -10,7 +10,19 @@
 # run measures. They are equal today and that is not guaranteed tomorrow — run the gate for the
 # counts. Stating this because reporting a floor as a measurement is the defect one layer up.
 set -uo pipefail
-cd "$(git rev-parse --show-toplevel)"
+# --- Sentinel repository identity (D-060(2)) ---------------------------------
+# Derived from THIS FILE's own location, never the caller's working directory, so a
+# run from an unrelated directory or a foreign repository still inspects Sentinel.
+# Every step is checked: `cd ""` returns 0 and does not abort even under `set -e`.
+_sentinel_self="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)" || _sentinel_self=""
+if [ -z "$_sentinel_self" ]; then
+    echo "  FAIL  cannot resolve this script's own location; refusing." >&2; exit 2
+fi
+SENTINEL_ROOT="$(cd -- "$_sentinel_self" 2>/dev/null && env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE -u GIT_COMMON_DIR git rev-parse --show-toplevel 2>/dev/null)" || SENTINEL_ROOT=""
+if [ -z "$SENTINEL_ROOT" ] || [ ! -e "$SENTINEL_ROOT/scripts/test.sh" ] || [ ! -e "$SENTINEL_ROOT/.githooks/pre-commit" ]; then
+    echo "  FAIL  this script is not inside the Sentinel repository; refusing." >&2; exit 2
+fi
+cd "$SENTINEL_ROOT" || { echo "  FAIL  cannot enter the Sentinel repository root; refusing." >&2; exit 2; }
 GATE=scripts/test.sh
 get() { grep -E "^$1=" "$GATE" | head -1 | cut -d= -f2; }
 missing=0

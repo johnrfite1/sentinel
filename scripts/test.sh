@@ -158,7 +158,20 @@ unset SENTINEL_GATE_TOKEN
 _gate_complete() { printf '%s' "$_gate_token_local" >&3; }
 # <<< GATE BOOTSTRAP <<<
 
-cd "$(git rev-parse --show-toplevel)"
+# --- Sentinel repository identity (D-060(2)) ---------------------------------
+# THE BOOTSTRAP ABOVE IS UNTOUCHED. This is the executing BODY, reached via
+# `exec bash /dev/fd/N` on an unlinked snapshot, so ${BASH_SOURCE[0]} here is
+# `/dev/fd/N` and carries no path — the BASH_SOURCE derivation used by the other
+# entry points is unavailable at this point by construction. The body therefore
+# validates the repository it is standing in and REFUSES rather than gating a
+# tree it cannot establish is Sentinel. `cd ""` returns 0 and does not abort.
+SENTINEL_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || SENTINEL_ROOT=""
+if [ -z "$SENTINEL_ROOT" ] || [ ! -e "$SENTINEL_ROOT/scripts/test.sh" ] || [ ! -e "$SENTINEL_ROOT/.githooks/pre-commit" ]; then
+    echo "  FAIL  the gate was invoked outside the Sentinel repository; refusing." >&2
+    echo "        Run it as ./scripts/test.sh from a Sentinel worktree." >&2
+    exit 2
+fi
+cd "$SENTINEL_ROOT" || { echo "  FAIL  cannot enter the Sentinel repository root; refusing." >&2; exit 2; }
 export PATH="$HOME/.foundry/bin:$PATH"
 
 PROFILE="default"

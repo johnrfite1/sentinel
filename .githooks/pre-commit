@@ -1,5 +1,35 @@
 #!/usr/bin/env bash
 # Sentinel pre-commit hook (A-007). Install with: ./scripts/install-hooks.sh
+#
+# D-060(2): this hook belongs to the repository that CONTAINS IT. It previously
+# exec'd "$(git rev-parse --show-toplevel)/scripts/check-secrets.sh", i.e. the
+# CALLER's script — so committing in a foreign repository that had this hook
+# configured ran that repository's own scripts/check-secrets.sh. Batch A1 case 13
+# demonstrated a decoy running and a planted credential landing in the foreign
+# HEAD. The identity comparison below happens BEFORE any caller-provided script
+# is executed.
 set -euo pipefail
-repo_root=$(git rev-parse --show-toplevel)
-exec "$repo_root/scripts/check-secrets.sh" --staged
+
+_hook_self="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd -P)" || _hook_self=""
+if [ -z "$_hook_self" ]; then
+    echo "  FAIL  pre-commit: cannot resolve this hook's own location; refusing." >&2; exit 2
+fi
+# GIT_DIR / GIT_WORK_TREE are EXPORTED while a hook runs and override `git -C`, so the
+# hook must derive its own repository with them unset or it resolves the caller's tree —
+# which is precisely the confusion this guard exists to refuse.
+HOOK_ROOT="$(env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE -u GIT_COMMON_DIR git -C "$_hook_self" rev-parse --show-toplevel 2>/dev/null)" || HOOK_ROOT=""
+if [ -z "$HOOK_ROOT" ] || [ ! -e "$HOOK_ROOT/scripts/check-secrets.sh" ]; then
+    echo "  FAIL  pre-commit: this hook is not inside the Sentinel repository; refusing." >&2; exit 2
+fi
+INVOKING_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || INVOKING_ROOT=""
+if [ -z "$INVOKING_ROOT" ]; then
+    echo "  FAIL  pre-commit: cannot determine the invoking repository; refusing." >&2; exit 2
+fi
+if [ "$INVOKING_ROOT" != "$HOOK_ROOT" ]; then
+    echo "  FAIL  pre-commit: repository identity mismatch; refusing before running anything." >&2
+    echo "        committing in : $INVOKING_ROOT" >&2
+    echo "        hook belongs to: $HOOK_ROOT" >&2
+    exit 2
+fi
+
+exec "$HOOK_ROOT/scripts/check-secrets.sh" --staged
