@@ -1,8 +1,20 @@
-# Findings raised DURING this cycle that were not in its fixed scope. NOT adjudicated.
-# id	source	severity_as_filed	surface	status
-V3-N2	V3	MEDIUM	scripts/check-vendor-honesty.sh (Gate 5 condition)	filed-not-adjudicated
-F7-R1	V1	unrated	contracts/src/SentinelVault.sol NatSpec	filed-not-adjudicated
-N-EVAL-ACTION-TARGET	V4	LOW	ts/test/evaluate.checks.test.ts	filed-not-adjudicated
-N-DECODE-E4	V4	unrated	ts/src/decode/index.ts	filed-not-adjudicated
-N-TESTSH-FLOORS	V5	unrated	scripts/test.sh coverage-boundary prose	filed-not-adjudicated
-N-SCOPE-CD	V2	MEDIUM	scripts/check-review-scope.sh line 47	filed-not-adjudicated
+# Findings raised DURING the D-057(9) cycle that were not in its fixed scope.
+# ADJUDICATED 2026-08-19 — see adjudication/new-findings/ADJUDICATED-NEW-FINDINGS.md
+# and adjudication/round2/ (ADJ3, ADJ4) for the round-two candidates.
+# id	source	severity	surface	classification
+V3-N2	V3	MEDIUM	scripts/check-vendor-honesty.sh (Gate 5 supplementary §7.2 condition)	CONFIRMED
+F7-R1	V1	LOW-as-risk	contracts/src/SentinelVault.sol NatSpec	CONFIRMED
+N-TESTSH-FLOORS	V5	-	scripts/test.sh coverage-boundary prose	DUPLICATE of R4-F4
+N-SCOPE-CD	V2	LOW (down from MEDIUM)	scripts/check-review-scope.sh:47	CONFIRMED, distinct from V3-N1
+N-EVAL-ACTION-TARGET	V4	LOW	ts/test/evaluate.checks.test.ts	CONFIRMED, cosmetic
+N-DECODE-E4	V4	MEDIUM	ts/src/decode/index.ts	CONFIRMED IN PART
+C1	contract-drafting	MEDIUM (raised from LOW)	scripts/check-eval-codes.sh unanchored membership	CONFIRMED, distinct
+C2	contract-drafting	MEDIUM	scripts/check-type-strings.sh section extent	CONFIRMED, distinct
+C3	contract-drafting	MEDIUM	scripts/check-suite-floors.sh duplicate handling	CONFIRMED, distinct
+C4	contract-drafting	MEDIUM	scripts/check-secrets.sh quotePath skip	CONFIRMED — repaired at f61ecca
+C5	contract-drafting	LOW	ts/src/signer/protocol.ts "detail" claim	CONFIRMED (code claim true, detail claim false)
+C6a	contract-drafting	INFO	scripts/check-findings-ledger.sh cd	CONFIRMED — repaired at f61ecca
+C6b	contract-drafting	LOW	scripts/check-suite-floors.sh cd	CONFIRMED — repaired at f61ecca
+C6c	contract-drafting	LOW	scripts/install-hooks.sh cd	CONFIRMED — repaired at f61ecca
+C6d	contract-drafting	LOW	scripts/test.sh cd	CONFIRMED — repaired at f61ecca; fork RULED at D-060(2)
+R1	V-attempt-one	severe	scripts/check-secrets.sh staged rename/typechange	CONFIRMED — repaired at f61ecca

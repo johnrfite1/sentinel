@@ -25,6 +25,19 @@ the paragraph above: no gate is signed or reopened, no public claim is certified
 blocks all publication**, and the §14.8 ladder is still not an agent's to start climbing. Start
 at `docs/session-state.md` §1.
 
+**2026-08-20 — THE REMEDIATION LOOP IS STOPPED AND BATCH A1 IS CLOSED AS FAILED.** The
+convergence reset (D-058, D-059, D-060) abandoned the repository-wide repair-contract method
+after two contracts failed independent audit, and replaced it with small batch cards whose
+completeness is assessed inside a declared boundary. **Batch A1 — repository identity,
+fail-closed enumeration, secret scanning — was carded, tested first by an independent author,
+implemented twice, and independently verified FAIL both times. D-061(4) permits no third
+attempt.** Attempt two came within one line: the verifier held 8 of 9 items, but the repair's
+own clearing of `GIT_INDEX_FILE` means **a credential committed with `git commit -a` is not
+scanned.** That fail-open is LIVE on the branch. **D-055's exit is NOT MET** — condition 4 still
+has known false claims against it — and nothing is signed, certified, published, renamed or
+pushed. Start at `docs/session-state.md` §1; the evidence directory is
+`docs/review-2026-08-19-d057-targeted/`, whose README explains why there is no active contract.
+
 Amended 2026-07-27 by Opus 5 at build start: D-007…D-011 (delegated rulings) resolve four open forks and the labeling blind spot. Sections below reflect them. Proposal mirror: §14.9.
 
 ## Mission
