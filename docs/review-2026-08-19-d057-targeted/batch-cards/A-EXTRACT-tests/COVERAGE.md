@@ -6,6 +6,83 @@ stated so that nobody has to rediscover it from a passing line.
 
 ---
 
+## 0. THE SUBJECT-SELECTION INTERFACE — read this before running either harness
+
+**Both harnesses take an explicit repository and an explicit subject commit. There is no default
+subject and no fallback to the historical base.**
+
+```
+a-extract.sh       <repository-path> <subject-ref>
+a-extract-gate.sh  <repository-path> <subject-ref>
+```
+
+| | |
+|---|---|
+| `<repository-path>` | the Sentinel repository to measure. Resolved with `cd … && pwd -P`. |
+| `<subject-ref>` | the commit to measure. Any ref git can resolve: full or abbreviated SHA, branch, tag, `HEAD`. |
+
+**Resolution is `git rev-parse --verify --quiet "<ref>^{commit}"`, run inside the repository.**
+`--verify` refuses an ambiguous ref rather than choosing; `^{commit}` refuses a ref that resolves
+to a tree, a blob, or an unpeelable tag.
+
+**What fails PREFLIGHT, and how** — every one of these exits **2** and measures nothing:
+
+| Condition | Message |
+|---|---|
+| fewer than two arguments | `PREFLIGHT FAILED: an evidentiary run requires BOTH a repository and a subject ref.` followed by usage |
+| repository path does not exist | `the repository path '<arg>' does not exist or is not a directory` |
+| path is not a git repository | `<sanitized path> is not a git repository` |
+| ref missing, **ambiguous**, or not a commit | `cannot resolve subject ref '<ref>' to exactly one commit in <sanitized path>.` plus **git's own diagnostic**, plus `Missing, ambiguous, or not-a-commit is a REFUSAL here, never a fallback.` |
+| snapshot of the subject cannot be built or is empty | `cannot build a snapshot of <SUBJECT_SHA>` / `the snapshot of <SUBJECT_SHA> is empty` |
+| `-h` / `--help` | usage, exit 2 |
+
+**Every run prints five identity facts, separately, twice** — once under `== SUBJECT IDENTITY ==`
+before any case runs, and again in `== SUMMARY ==`:
+
+```
+  harness sha256   : <sha256 of the harness file itself>
+  repository       : <path with any home prefix replaced by ~>
+  requested ref    : <exactly what the caller typed>
+  resolved subject : <40-hex SUBJECT_SHA>
+  pre-repair ref   : bb664c626d592d86391f644bf014e76f2bbf7db4
+```
+
+**`PRE_REPAIR_SHA` is an immutable named reference, never the thing archived.** It exists so the
+original measurement stays reproducible:
+
+```
+a-extract.sh . bb664c626d592d86391f644bf014e76f2bbf7db4
+```
+
+**Which control asserts what, so the two are not confused:**
+
+| Control | Claim | Compared against |
+|---|---|---|
+| `P3` | the requested ref resolves to exactly one commit and that commit is the recorded `SUBJECT_SHA` | the ref, re-resolved |
+| `Z-check-type-strings.sh`, `Z-check-eval-codes.sh`, `Z-check-vendor-honesty.sh`, `Z-test_verifier.py` | the snapshot's consumer is byte-identical to the subject's blob | **`SUBJECT_SHA`** |
+| `Z-clean` | this run changed nothing in the live repository's boundary | the live working tree |
+| `Z-gate5` | the live pin and live §2 table still hash to the certified value | the live tree, anchored on `PRE_REPAIR_SHA` |
+| `Z-signed` | `docs/gate-s2-evidence.md` in the live tree is unmoved | the live tree, anchored on `PRE_REPAIR_SHA` |
+
+**`Z-clean`, `Z-gate5` and `Z-signed` are about the LIVE TREE and are deliberately not folded
+into the subject comparison.** "The snapshot matches the commit I asked for" and "this run
+changed nothing in the repository it read" are different claims; one merged control would let
+either carry the other.
+
+**The subject's own Gate 5 material is not a separate control** — it is already exercised by
+`14-fixture`, `14a` and `14b`, which run against the snapshot built from `SUBJECT_SHA`. Adding a
+sixth `Z-` control would have inflated the control count without adding a claim.
+
+### Why this section exists
+
+`a-extract.sh` previously hardcoded the subject commit and built its snapshot from it, whatever
+repository or HEAD it was given; `P3` was an OBSERVED line that could not fail. **After a repair
+the harness would have measured the pre-repair consumers and reported `21 of 49` for ever, with
+every control green** — and `CARD.md` forbids the implementer from touching the harness, so
+nothing downstream could have corrected it. **Found in John's review of the contract**, not by a
+run and not by this author. `a-extract-gate.sh` carried the same shape and is corrected the same
+way.
+
 ## 1. Which consumer each case reaches
 
 `TS` = `scripts/check-type-strings.sh` · `EC` = `scripts/check-eval-codes.sh` ·
@@ -129,9 +206,16 @@ STOPS and has the disagreement independently confirmed — it does not edit the 
 2. **Two headings claiming one anchor is an ambiguity to REFUSE, not a duplicate to
    deduplicate** (cases 4b/4c/4d, 10g, 13f). A repair that "reads the last one" or "merges them"
    satisfies nothing here; either is the same first-match defect wearing different clothes.
-3. **A heading QUOTED inside a fenced code block is a MENTION, not an anchor** (4e, 4f, 10h).
-   `check-vendor-honesty.sh` already records this exact defeat against its own `§2` lookup, so
-   the fixture is the project's own, not invented for this card.
+3. **A heading QUOTED inside a fenced code block is a MENTION, not an anchor** — in **both**
+   CommonMark fence spellings, three backticks and three tildes (`4e-btick`/`4e-tilde`,
+   `4f-btick`/`4f-tilde`, `10h-btick`/`10h-tilde`). `check-vendor-honesty.sh` already records
+   this exact defeat against its own `§2` lookup, so the fixture is the project's own, not
+   invented for this card. **Each fence character is a separate case with a separate
+   proof-of-mutation control** rather than a loop, so a reader can point at the one that moved,
+   and each tilde control additionally asserts that **no backtick fence is present** — otherwise
+   a tilde case could pass on backtick handling.
+   **Deliberately NOT generalised beyond the two fence characters:** indented code blocks, HTML
+   blocks, blockquoted headings, and info-string variants are not probed and are not claimed.
 4. **A horizontal rule does not end a section** (case 13d). The shell guard's boundary is a
    heading; for the two `§5.8` consumers to agree, the Python one must stop at a heading too.
    They agree on the live document only because `§5.8`'s trailing `---` happens to sit
@@ -195,8 +279,9 @@ STOPS and has the disagreement independently confirmed — it does not edit the 
   the vocabulary in `CARD.md` and `TESTS.patch` rather than guess it.
 - **The VH cases are slow** (~4 s each, dominated by the repository-wide vendor scan the block
   under test does not need). A whole run is roughly 55 s.
-- **`P3` warns rather than fails when HEAD is not the base SHA.** The outcomes are evidence
-  about whatever was measured; the harness records what that was instead of refusing to run.
+- **`P3` is now a CONTROL, and the subject is an argument.** Its predecessor was an OBSERVED
+  warning beside a snapshot built from a hardcoded commit — see §0. A run that cannot resolve the
+  ref it was given refuses at preflight rather than measuring something nobody named.
 - **The `§2` capability-cell mutation in `14b` appends one space to a table row.** It is enough
   to move the hash, which is all case 14 needs, and it is deliberately not a semantic edit.
 - **The harness's own section reader carried the defect it measures, and did so undetected until

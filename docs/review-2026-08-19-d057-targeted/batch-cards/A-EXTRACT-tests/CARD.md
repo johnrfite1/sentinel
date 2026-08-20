@@ -25,6 +25,39 @@ already identifies frozen attempt-two evidence.
 or by the commit that carries it. `TESTS.patch` is supplied as a patch file and is **NOT
 applied**.
 
+## AN INSTRUMENT DEFECT FOUND IN JOHN'S REVIEW — corrected, and NOT an implementation attempt
+
+**John reviewed this contract and found a BLOCKING defect in the harness itself.** It is recorded
+here as an instrument defect found in review. **It is not implementation attempt one and must not
+be counted as one; D-058(9)'s attempt budget is unspent.**
+
+**The defect.** `a-extract.sh` hardcoded the subject commit and built its snapshot from that
+constant, whatever repository or HEAD it was handed. `P3` noticed a differing HEAD and emitted an
+**OBSERVED warning it could not fail on**. The four consumer-integrity controls, the Gate 5
+control and the signed-pack control all compared against the same constant.
+
+**The consequence, which is why it was blocking.** After a repair the harness would have
+extracted and measured the **PRE-REPAIR** consumers and reported **`21 of 49` for ever, with
+every control green** — and this card forbids the implementer from touching the harness, so
+nothing downstream could have corrected it. **A harness that cannot observe the repair it exists
+to gate is a confident wrong answer**, which is this project's named defect class.
+`a-extract-gate.sh` carried the same shape.
+
+**The correction, in five parts.** `PRE_REPAIR_SHA` stays as an immutable named reference so the
+original measurement remains reproducible, but is never archived. An evidentiary run takes an
+explicit repository **and** an explicit subject ref; the subject is resolved with
+`git rev-parse --verify --quiet "<ref>^{commit}"` and a missing, **ambiguous**, or
+not-a-commit ref is a **preflight refusal**, never a fallback. The snapshot is built from
+`SUBJECT_SHA`. **`P3` is now a CONTROL** asserting the requested ref resolved to the recorded
+`SUBJECT_SHA`. The four consumer-integrity controls compare against `SUBJECT_SHA`; `Z-clean`,
+`Z-gate5` and `Z-signed` remain about the **live tree** and are deliberately not folded in. Every
+run prints five identity facts separately — harness hash, sanitized repository path, requested
+ref, resolved `SUBJECT_SHA`, pre-repair reference. **The full interface is `COVERAGE.md` §0.**
+
+**No case semantics, reason vocabulary, expected outcome, exclusion or Gate 5 material was
+changed to accomplish it.** The only deliberate count movement is `P3` becoming a CONTROL where
+it was an OBSERVED line, plus the fence sibling below.
+
 ## ADJUDICATION OF WHAT THIS CARD EXPOSED — settled, and fed back in
 
 An independent adjudicator classified the three defect classes this card's first run exposed
@@ -54,8 +87,10 @@ binding set on a weak assertion.** See `COVERAGE.md` §7 for the removals with t
 - **`11f` executes the canonical generator.** The proxy over `report.ts`'s text is gone.
 - **EC duplicate publication: determined NOT NORMATIVE and omitted**, with `P8` asserting the basis.
 - **Vendor honesty gains section-extent cases** (`10c`–`10h`) written **before** any extractor exists.
-- **Exact-anchor cases added:** a quoted heading is a mention (`4e`, `4f`, `10h`); two exact headings
-  must be REFUSED rather than the first selected (`4b`, `4c`, `4d`, `10g`, `13f`).
+- **Exact-anchor cases added:** a quoted heading is a mention — now in **both fence spellings**,
+  `4e-btick`/`4e-tilde` (TS), `4f-btick`/`4f-tilde` (EC), `10h-btick`/`10h-tilde` (VH), each with
+  its own mutation control; two exact headings must be REFUSED rather than the first selected
+  (`4b`, `4c`, `4d`, `10g`, `13f`).
 - **The harness's own section reader is now anchor-derived.** It had a fixed `^#{1,6} `
   terminator — the same defect case 7 exists to falsify — and control `10c-mut` failed because of
   it. An instrument carrying the defect it measures cannot be believed about it.
@@ -132,8 +167,12 @@ proof-of-mutation control.**
 - **4a** correct decoy earlier in §5.9, real §5.8 transposed → must report the drift.
   **4c** two complete §5.8 sections → must refuse. **4d** the FIRST §5.8 correct, the real one
   transposed → **must not report success**. **4b** the same shape at §5.7.1.
-  **4e / 4f** — a heading **quoted inside a fenced code block** is a MENTION and must not be
-  selected as the anchor, at TS and EC.
+  **4e-btick / 4e-tilde / 4f-btick / 4f-tilde** — a heading **quoted inside a fenced code block**
+  is a MENTION and must not be selected as the anchor, at TS and EC, in **both CommonMark fence
+  spellings**: three backticks and three tildes. **Each fence character is its own case with its
+  own proof-of-mutation control** — a guard taught to ignore ``` and not `~~~` would have
+  generalised the demonstration and not the argument. Deliberately not generalised further:
+  indented code blocks, HTML blocks, blockquoted headings and info-string variants are NOT probed.
 - **5before / 5after** — duplicate publication either side of the real line.
 - **6before / 6after** — duplicate SOURCE definition either side of the real one. **This is
   `R4-F3`'s residual (AX-2), carried under its existing id.**
@@ -149,7 +188,7 @@ proof-of-mutation control.**
   **§7.2 SECTION EXTENT, specified before any extractor exists:** **10c** a `####` subsection
   inside §7.2 does not end it; **10d** a same-depth `###` heading does; **10e** a shallower `##`
   heading does; **10f** an ABSENT §7.2 anchor is REFUSED by name; **10g** TWO exact §7.2 headings
-  are REFUSED as ambiguous; **10h** a §7.2 heading quoted in a fenced block is a MENTION.
+  are REFUSED as ambiguous; **10h-btick / 10h-tilde** a §7.2 heading quoted in a fenced block is a MENTION, in both fence spellings.
 - **11a** base commit; **11b** §7.2's caveat hard-wrapped → must still be located;
   **11g** the **AX-3 false-assurance** direction — the report carries only the TAIL half and the
   guard must FAIL naming it; **11c/11d** controls.

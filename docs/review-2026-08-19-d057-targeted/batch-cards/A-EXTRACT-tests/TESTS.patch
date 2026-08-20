@@ -84,10 +84,12 @@
  
      def test_all_six_are_published(self):
          self.assertEqual(len(self._published()), 6)
-@@ -956,6 +1007,150 @@
+@@ -954,8 +1005,167 @@
+         for name, mine in cases.items():
+             with self.subTest(struct=name):
                  self.assertEqual(pub[name], mine)
- 
- 
++
++
 +
 +class TestPublishedTypeStringsSectionExtent(unittest.TestCase):
 +    """A-EXTRACT case 13 — the §5.8 consumer agrees with the shell guard.
@@ -193,7 +195,22 @@
 +        ]))
 +        got = published_type_strings(doc)
 +        self.assertEqual(got.get("BetaPayload"), self.TWO.strip())
-+
+ 
++    def test_a_tilde_fenced_heading_is_not_the_anchor(self):
++        # CommonMark spells a fenced code block with three or more BACKTICKS or
++        # three or more TILDES. A consumer taught to ignore one and not the
++        # other has generalised the demonstration and not the argument, which
++        # is this project's most repeated repair defect. Its own case, not a
++        # parameter of the one above, so a reader can point at it.
++        doc = self._doc("\n".join([
++            "A format considered and rejected, quoted so the reasoning survives:",
++            "", "~~~markdown", self.A, "", self.TWO_ALT, "~~~", "",
++            self.A, "", self.ONE, "", self.TWO, "",
++            "### 5.6 EvidenceBundle",
++        ]))
++        got = published_type_strings(doc)
++        self.assertEqual(got.get("BetaPayload"), self.TWO.strip())
+ 
 +    def test_duplicate_publication_is_refused_decoy_first(self):
 +        doc = self._doc("\n".join([
 +            self.A, "", self.ONE, "", self.TWO_ALT, "", self.TWO,

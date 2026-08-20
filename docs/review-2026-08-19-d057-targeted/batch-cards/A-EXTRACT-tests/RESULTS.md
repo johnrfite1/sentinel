@@ -1,30 +1,67 @@
 # A-EXTRACT — the measured pre-repair run at `bb664c6`
 
-**Base SHA:** `bb664c626d592d86391f644bf014e76f2bbf7db4`, tree clean at the time of measurement.
-**Harness sha256:** `e54354a3f35b1110117c0ab2bfb1988c9ea025e4d9409bb1f782c779200027e6`
-(`a-extract.sh`; the harness prints this itself at preflight case `P0`).
-**Gate harness sha256:** `3e4cfe5a4b08db02d9c69954b3683afdf6f1145c2d874085068718a53c6af0f0`
-(`a-extract-gate.sh`; see `GATE-BINDING.md`).
-**Environment, printed by preflight `P1`/`P2`:** git 2.50.1 (Apple Git-155); bash 3.2.57;
-Python 3.9.6; node v26.3.0; `/usr/bin/grep` with a matched canary.
-
+**Subject:** `bb664c626d592d86391f644bf014e76f2bbf7db4`, named **explicitly** on the command line.
 **Command:**
 
 ```
-docs/review-2026-08-19-d057-targeted/batch-cards/A-EXTRACT-tests/a-extract.sh
+docs/review-2026-08-19-d057-targeted/batch-cards/A-EXTRACT-tests/a-extract.sh . bb664c626d592d86391f644bf014e76f2bbf7db4
 ```
 
-**Result — run twice, per-case verdicts identical between runs:**
+**Harness sha256:** `ea661affb969eb075d84ca22400a18fa3ff2ee5966fea01e5d2c48a9be720a53` (`a-extract.sh`; printed by the harness itself).
+**Gate harness sha256:** `af66a45ebf9dfe0501e4e1743b6662392126e82cd462dcc3f3a11c1009330746` (`a-extract-gate.sh`; see `GATE-BINDING.md`).
+**Environment:** git 2.50.1 (Apple Git-155); bash 3.2.57; Python 3.9.6; node v26.3.0;
+`/usr/bin/grep` with a matched canary.
+
+**The five identity facts the run printed, twice — before any case and again in the summary:**
 
 ```
-  REQUIRED : 21 of 49 held      (28 REQUIRED failures)
-  CONTROL  : 70 of 70 held      (0 control failures)
+  harness sha256   : ea661affb969eb075d84ca22400a18fa3ff2ee5966fea01e5d2c48a9be720a53
+  repository       : ~/Projects/Sentinel
+  requested ref    : bb664c626d592d86391f644bf014e76f2bbf7db4
+  resolved subject : bb664c626d592d86391f644bf014e76f2bbf7db4
+  pre-repair ref   : bb664c626d592d86391f644bf014e76f2bbf7db4
+```
+
+**Result — run twice, per-case verdicts identical:**
+
+```
+  REQUIRED : 21 of 52 held      (31 REQUIRED failures)
+  CONTROL  : 74 of 74 held      (0 control failures)
   exit 1   — REQUIRED FAILURES with every control holding: the defects are observed.
 ```
 
-**The exit path matters.** Exit 1 is "required cases failed, controls all held". Exit 2 would
-mean a control failed and no verdict beside it could be relied on. **Every control held on both
-runs**, so the failures below are findings about the tree, not about the instrument.
+## 0a. Reconciling against the previously recorded `21 of 49` / `70 of 70`
+
+**No verdict reversed and no case semantics changed.** Every count movement is accounted for by
+exactly two things, both mandated by John's review:
+
+| Movement | Cause |
+|---|---|
+| REQUIRED `49 → 52` | the fence sibling: `4e` split into `4e-btick`/`4e-tilde`, `4f` into `4f-btick`/`4f-tilde`, `10h` into `10h-btick`/`10h-tilde`. **+3** |
+| REQUIRED **held** `21 → 21` | unchanged — all three new cases FAIL, and no existing verdict moved |
+| CONTROL `70 → 74` | **+3** the three new tilde `-mut` proof-of-mutation controls, **+1** `P3` promoted from OBSERVED to CONTROL as Part 2 requires |
+| OBSERVED `11 → 10` | **-1**, exactly `P3` leaving. Nothing else was reclassified |
+
+**The `+1` CONTROL from `P3` is not a fence-sibling effect and is called out separately** — Part 2
+of the correction requires `P3` to become a control, and a control is counted where an OBSERVED
+line was not. **A previously published figure of "9 OBSERVED" in this file was wrong; the count
+was 11.** Corrected here rather than left standing: a published number that was true once is one
+of this project's recorded defect classes, and this one was never true.
+
+## 0b. The instrument defect this revision corrects
+
+`a-extract.sh` hardcoded its subject commit and archived **that**, whatever repository or HEAD it
+was given; `P3` was an OBSERVED warning that could not fail; the four consumer-integrity controls
+and both live-tree controls compared against the same constant. **After a repair the harness
+would have measured the PRE-REPAIR consumers and reported `21 of 49` for ever with every control
+green**, and `CARD.md` forbids the implementer from touching the harness.
+
+**Found in John's review of the contract. Recorded as an instrument defect, NOT as an
+implementation attempt** — D-058(9)'s budget is unspent.
+
+The interface that replaces it is `COVERAGE.md` §0. Its live proof is in §6 below: the same
+harness run against a **different** subject archives that subject, records it in every identity
+line, and keeps its consumer-integrity controls green against **that** commit's blobs.
 
 ## 0. Two measurements, and what moved between them
 
@@ -360,25 +397,76 @@ case is about the malformed path and not about the harness reaching the consumer
 ## 5. `TESTS.patch` — measured, and NOT applied
 
 `TESTS.patch` adds `published_type_strings()` (carrying the current behaviour unchanged) plus
-`TestPublishedTypeStringsSectionExtent` to `verifier/test_verifier.py`, and states the **reason-class
-vocabulary** case 13 requires so the shell and Python halves of the contract cannot drift. Verified
-against a throwaway `bb664c6` extraction:
+`TestPublishedTypeStringsSectionExtent` to `verifier/test_verifier.py`, and states the reason-class
+vocabulary case 13 requires so the shell and Python halves cannot drift. **This revision added
+exactly one test — the tilde-fence twin of the existing backtick-fence test — and modified no
+existing assertion.**
 
-- `git apply --check` — **applies cleanly at `bb664c6`.**
-- With it applied to a scratch copy: `TestPublishedTypeStrings` (the two pre-existing tests) still
+Verified against a throwaway extraction of `bb664c6`:
+
+- `git apply --check` — **applies cleanly.**
+- Applied to a scratch copy, `TestPublishedTypeStrings` (the two pre-existing tests) still
   **pass**, so the patch changes no behaviour on its own.
-- `TestPublishedTypeStringsSectionExtent`: **11 tests, 9 fail** (8 failures + 1 error) and the
-  **2 controls pass** — `test_a_well_formed_section_is_read_whole` and
-  `test_the_live_proposal_still_publishes_six`.
-- The failing set now includes `test_a_quoted_heading_is_not_the_anchor`, and both anchor refusals
-  additionally assert the message lands in the required class rather than merely naming §5.8.
+- **`TestPublishedTypeStringsSectionExtent` now carries 12 tests, of which 10 are expected to
+  FAIL** (9 failures + 1 error) and **2 are controls that pass** —
+  `test_a_well_formed_section_is_read_whole` and `test_the_live_proposal_still_publishes_six`.
+- Running both classes together: **14 tests, 10 expected failures.**
+- The two fence tests, `test_a_quoted_heading_is_not_the_anchor` and
+  `test_a_tilde_fenced_heading_is_not_the_anchor`, both fail — each is its own test rather than a
+  parameter of the other, so a reader can point at the one that moved.
 
-**The patch is not applied to the repository.** `verifier/` is untouched by this batch.
+**The patch is not applied.** `verifier/` is untouched by this batch.
 
-## 6. Gate binding — D-059(7)
+## 6. Live proof that the subject correction works
 
-Measured separately by `a-extract-gate.sh`: **7 of 7 REQUIRED held, 9 of 9 CONTROL held,
-exit 0.** The unchanged top-level fast gate passes in an isolated clone; breaking the FIRST of the
-three consumer stages fails the gate at its named banner with two later consumers green; breaking
-the LAST does the same with two earlier consumers green. The three demonstrations, their controls,
-the stage-level output and the three discarded attempts are in **`GATE-BINDING.md`**.
+Three runs of the **same harness file**, differing only in the subject argument.
+
+| # | requested ref | resolved subject | REQUIRED held | CONTROL |
+|---|---|---|---|---|
+| 1 | `bb664c626d592d86391f644bf014e76f2bbf7db4` | `bb664c626d592d86391f644bf014e76f2bbf7db4` | **21 of 52** | 74 of 74 |
+| 2 | `HEAD` | `2579bcb03c9bd16291316a08febe98c43a62baa7` | **21 of 52** | 74 of 74 |
+| 3 | a private clone with **one consumer changed** | `32f8d4cd9be76f424413ec51b12bb43b74c0b4e0` | **24 of 52** | 74 of 74 |
+
+**Run 2** shows the resolved subject and every identity line follow the ref that was asked for.
+The verdicts are identical to run 1 — correctly, because the four consumers are byte-identical at
+both commits — so on its own it proves the subject is *recorded*, not that a change would be
+*seen*.
+
+**Run 3 is the falsification of the defect.** A private clone of this repository was checked out
+at the pre-repair commit, **one line** of `scripts/check-eval-codes.sh` was changed there from an
+unanchored `grep -q "$code"` to a word-anchored `grep -qE "(^|[^A-Za-z0-9_])${code}([^A-Za-z0-9_]|$)"`,
+and that was committed **in the clone only**. Running the harness against that commit:
+
+```
+  case 2a         REQUIRED  FAIL → PASS
+  case 12suffix   REQUIRED  FAIL → PASS
+  case 12prefix   REQUIRED  FAIL → PASS
+  REQUIRED : 24 of 52 held      (was 21 of 52)
+  CONTROL  : 74 of 74 held      (unchanged)
+  case Z-check-eval-codes.sh  CONTROL PASS  byte-identical to SUBJECT_SHA 32f8d4cd…: b4ca2c4f…
+```
+
+**Exactly the three exact-token membership cases moved, and nothing else.** The integrity control
+reports the subject's blob — `b4ca2c4f…`, not the pre-repair `7970d226…`.
+
+**Under the instrument as it stood before this correction, all three would have stayed FAIL and
+the control would have printed `7970d226…`**, because the snapshot came from a constant. That is
+the defect, demonstrated rather than described.
+
+**This is a FIXTURE, not a production repair.** It lives in a throwaway clone under `TMPDIR`; the
+Sentinel repository is untouched, and `Z-clean` in every run above asserts so. The one-line
+change is not proposed as the repair — the implementer owns that, against this contract.
+
+**A fourth observation, recorded because it is the harness behaving correctly:** the first attempt
+at run 3 **refused at preflight** — the fresh clone had no `ts/node_modules`, so the canonical
+generator (case `11f`) could not run, and `P7` died with exit 2 rather than skipping. *A check
+that cannot execute must never read as a check that passed.*
+
+## 7. Gate binding — D-059(7), PARTLY discharged
+
+Measured separately by `a-extract-gate.sh`: **fast-profile gate binding is MEASURED** — 7 of 7
+REQUIRED and 10 of 10 CONTROL held on the corrected revision. **The deep profile (`--gate`) was NOT run**; its coverage rests
+on static control-flow evidence only, and **D-059(7) is therefore NOT yet fully discharged.**
+What the eventual independent post-repair verification must do to close it — run the deep profile
+at the exact candidate SHA and capture the three stage banners, with three deep mutation runs
+*not* required unless the control flow differs — is stated in **`GATE-BINDING.md` STATUS**.

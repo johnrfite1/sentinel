@@ -74,13 +74,74 @@
 set -uo pipefail
 
 # ---------------------------------------------------------------------------- preamble ------
-# The commit this harness was authored and demonstrated against. A different SHA is not an
-# error; it is recorded and warned about, because every outcome below is evidence about
-# whatever was actually measured and nothing else.
-BASE_SHA="bb664c626d592d86391f644bf014e76f2bbf7db4"
+# THE SUBJECT IS AN ARGUMENT, NOT A CONSTANT. THIS IS THE INSTRUMENT DEFECT JOHN FOUND, AND
+# IT WAS BLOCKING.
+#
+# Until this correction the harness hardcoded one commit and archived THAT, whatever repository
+# or HEAD it was pointed at. `P3` noticed a differing HEAD and emitted an OBSERVED warning it
+# could not fail on. So after a repair the harness would have snapshotted the PRE-REPAIR tree,
+# measured the PRE-REPAIR consumers, and reported `21 of 49` with every control green —
+# for ever. And `CARD.md` forbids the implementer from touching the harness, so nobody
+# downstream could have corrected it. **An instrument that always reports the same number is
+# not a failing instrument; it is a confident wrong answer, which is this project's named
+# defect class.** Found in John's review of the contract, not by this author and not by a run.
+#
+# THE CORRECTION, in one sentence: an evidentiary run is given a repository AND a subject
+# commit, resolves the subject or REFUSES, archives the SUBJECT, and prints all five identity
+# facts beside every result so a reader can tell what was measured without trusting a claim.
+
+# The historical baseline, kept as an IMMUTABLE NAMED REFERENCE so the original measurement
+# stays reproducible — `21 of 49 REQUIRED, 70 of 70 CONTROL` was measured here. It is never
+# what gets archived, and no default falls back to it.
+PRE_REPAIR_SHA="bb664c626d592d86391f644bf014e76f2bbf7db4"
 
 SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT="${1:-$(cd "$SELF_DIR/../../../.." && pwd)}"
+
+usage() {
+    cat >&2 <<'USAGE'
+usage: a-extract.sh <repository-path> <subject-ref>
+
+  <repository-path>  the Sentinel repository to measure. Required.
+  <subject-ref>      the commit to measure, as any ref git can resolve — a full or
+                     abbreviated SHA, a branch, a tag, HEAD. Required.
+
+An evidentiary run has NO DEFAULT SUBJECT. Omitting the subject is a preflight failure, not
+a fallback to the historical base: a harness that quietly measures a commit nobody named is
+how a repaired tree gets reported with pre-repair numbers.
+
+To reproduce the recorded pre-repair baseline:
+
+  a-extract.sh . bb664c626d592d86391f644bf014e76f2bbf7db4
+
+Optional environment:
+  A_EXTRACT_EVIDENCE_DIR   directory to write per-case consumer output into
+  A_EXTRACT_MATRIX_OUT     file to write the case matrix TSV into
+USAGE
+}
+
+case "${1:-}" in
+    -h|--help) usage; exit 2 ;;
+esac
+
+if [ "$#" -lt 2 ]; then
+    printf '\n  PREFLIGHT FAILED: an evidentiary run requires BOTH a repository and a subject ref.\n' >&2
+    printf '  Received %s argument(s). There is no default subject, by design.\n\n' "$#" >&2
+    usage
+    exit 2
+fi
+
+ROOT_ARG="$1"
+SUBJECT_REF="$2"
+ROOT="$(cd -- "$ROOT_ARG" 2>/dev/null && pwd -P)" || ROOT=""
+
+# HOME is redirected into the scratch area further down, so the real one is captured HERE, while
+# it is still the user's, purely so paths can be printed without a machine-specific prefix.
+ORIG_HOME="${HOME:-}"
+sanitize_path() {  # PATH -> the same path with any home prefix replaced by ~
+    local q; q="$1"
+    if [ -n "$ORIG_HOME" ]; then case "$q" in "$ORIG_HOME"*) q="~${q#"$ORIG_HOME"}" ;; esac; fi
+    printf '%s' "$q" | sed -E 's#^/Users/[^/]+#~#; s#^/home/[^/]+#~#'
+}
 
 PROP_REL="Sentinel_Protocol_Lab_Proposal_v0_2.md"
 SRC_REL="ts/src/signer/eip712.ts"
@@ -346,7 +407,17 @@ vp_class() {  # OUTPUT -> reason class
 # ============================================================================ preflight ======
 hdr "PREFLIGHT"
 
+# THE FIVE IDENTITY FACTS, PRINTED SEPARATELY AND BEFORE ANY MEASUREMENT. A result that does not
+# say which harness, which repository, which ref, which commit, and against which historical
+# reference is not evidence about anything in particular.
 SELF_SHA="$(shasum -a 256 "${BASH_SOURCE[0]}" | awk '{print $1}')"
+identity_block() {
+    printf '  harness sha256   : %s\n' "$SELF_SHA"
+    printf '  repository       : %s\n' "$(sanitize_path "${ROOT:-$ROOT_ARG}")"
+    printf '  requested ref    : %s\n' "$SUBJECT_REF"
+    printf '  resolved subject : %s\n' "${SUBJECT_SHA:-<unresolved>}"
+    printf '  pre-repair ref   : %s\n' "$PRE_REPAIR_SHA"
+}
 check OBSERVED P0 0 "harness sha256 $SELF_SHA"
 
 [ -x "$GREP" ] || die "$GREP is not executable; this harness will not use a PATH-resolved grep"
@@ -357,24 +428,49 @@ check OBSERVED P1 0 "/usr/bin/grep is used for every search; canary matched"
 GIT_V="$(git --version 2>/dev/null)"; BASH_V="$($GREP -o 'version [0-9.]*' <<<"$(bash --version | head -1)")"
 check OBSERVED P2 0 "$GIT_V ; bash ${BASH_V#version } ; $(python3 --version 2>&1)"
 
-[ -d "$ROOT/.git" ] || die "no repository at the resolved root"
-HEAD_SHA="$(cd "$ROOT" && git rev-parse HEAD 2>/dev/null)"
-if [ "$HEAD_SHA" != "$BASE_SHA" ]; then
-    check OBSERVED P3 0 "WARNING: HEAD is $HEAD_SHA, not the demonstrated base $BASE_SHA"
-else
-    check OBSERVED P3 0 "HEAD is the demonstrated base commit $BASE_SHA"
+[ -n "$ROOT" ] || die "the repository path '$ROOT_ARG' does not exist or is not a directory"
+[ -d "$ROOT/.git" ] || die "$(sanitize_path "$ROOT") is not a git repository"
+
+# SUBJECT RESOLUTION IS FAIL-CLOSED, AND `--verify … ^{commit}` IS THE WHOLE POINT.
+#
+#   * `--verify` refuses an AMBIGUOUS ref — an abbreviated SHA matching two objects, a branch
+#     and a tag of the same name — instead of silently choosing one. A first-match tie-break in
+#     the instrument that exists to falsify first-match tie-breaks would be indefensible.
+#   * `^{commit}` refuses a ref that resolves to a tree, a blob or an unpeelable tag, so
+#     "resolved" cannot mean "resolved to something that is not a commit".
+#   * git's own diagnostic is captured and printed, because "could not resolve" without saying
+#     WHY is the shape of message this project keeps finding and correcting.
+_rev_err=""
+SUBJECT_SHA="$(cd "$ROOT" && git rev-parse --verify --quiet "${SUBJECT_REF}^{commit}" 2>/dev/null)" || SUBJECT_SHA=""
+if [ -z "$SUBJECT_SHA" ]; then
+    _rev_err="$(cd "$ROOT" && git rev-parse --verify "${SUBJECT_REF}^{commit}" 2>&1 >/dev/null | head -3)"
+    die "cannot resolve subject ref '$SUBJECT_REF' to exactly one commit in $(sanitize_path "$ROOT").
+                     git said: ${_rev_err:-(no diagnostic)}
+                     A ref that is missing, ambiguous, or not a commit is a REFUSAL here, never a fallback."
 fi
 
-( cd "$ROOT" && git archive --format=tar "$BASE_SHA" ) > "$PRISTINE_TAR" 2>/dev/null \
-    || die "cannot build a snapshot of $BASE_SHA"
-[ -s "$PRISTINE_TAR" ] || die "the snapshot of $BASE_SHA is empty"
+# P3 IS A CONTROL NOW, NOT A WARNING. Its predecessor was an OBSERVED line that could not fail,
+# beside a snapshot built from a constant — which is precisely how the instrument could have gone
+# on reporting a pre-repair number against a repaired tree. This asserts that the ref the caller
+# NAMED is the commit the run RECORDED, so every verdict below is attributable to a stated commit.
+_subject_recheck="$(cd "$ROOT" && git rev-parse --verify --quiet "${SUBJECT_REF}^{commit}" 2>/dev/null)" || _subject_recheck=""
+check CONTROL P3 "$([ -n "$SUBJECT_SHA" ] && [ "$_subject_recheck" = "$SUBJECT_SHA" ] && \
+      [ "${#SUBJECT_SHA}" = "40" ] && echo 0 || echo 1)" \
+      "the requested ref '$SUBJECT_REF' resolves to exactly one commit and that commit is the recorded SUBJECT_SHA $SUBJECT_SHA"
+
+# THE SNAPSHOT IS BUILT FROM THE SUBJECT, NEVER FROM THE HISTORICAL BASE.
+( cd "$ROOT" && git archive --format=tar "$SUBJECT_SHA" ) > "$PRISTINE_TAR" 2>/dev/null \
+    || die "cannot build a snapshot of $SUBJECT_SHA"
+[ -s "$PRISTINE_TAR" ] || die "the snapshot of $SUBJECT_SHA is empty"
 
 P0="$(subject p0 add)" || die "cannot build the pristine subject"
 for f in "$PROP_REL" "$SRC_REL" "$RPT_REL" scripts/check-type-strings.sh \
          scripts/check-eval-codes.sh scripts/check-vendor-honesty.sh verifier/test_verifier.py; do
     [ -f "$P0/$f" ] || die "the snapshot is missing $f"
 done
-check OBSERVED P4 0 "snapshot of $BASE_SHA built; four consumers present"
+check OBSERVED P4 0 "snapshot of SUBJECT_SHA $SUBJECT_SHA built; four consumers present"
+hdr "SUBJECT IDENTITY"
+identity_block
 
 for h in "$H58" "$H59" "$H56" "$H571" "$H6" "$H72"; do
     n="$($GREP -c -x -F -- "$h" "$P0/$PROP_REL")"
@@ -608,13 +704,27 @@ check REQUIRED 4b "$(has "$o" "$EC_OK" && echo 1 || echo 0)" \
 # was deleted from §2 and the string planted inside a code block in §14, introduced as "a format
 # we considered and rejected", and the guard reported certified. The same fixture is planted
 # here against the section anchors.
-plant_quoted_anchor() {  # SUBJECT ANCHORLINE BODYLINE BEFORELINE
-    local s anchor body before blk
-    s="$1"; anchor="$2"; body="$3"; before="$4"
+# THE FENCE CHARACTER IS A PARAMETER, AND EXACTLY TWO VALUES ARE USED.
+#
+# CommonMark gives a fenced code block two spellings — three or more BACKTICKS, or three or more
+# TILDES — and they are equally ordinary. A guard that learned to ignore ``` and not ~~~ would
+# have generalised the DEMONSTRATION instead of the ARGUMENT, which is this project's most
+# repeated repair defect (A-081(2)). So each fence character gets its OWN case and its OWN
+# proof-of-mutation control, rather than one case with a loop nobody can point at.
+#
+# **DELIBERATELY NOT GENERALISED FURTHER.** Indented code blocks, HTML blocks, blockquoted
+# headings and info-string variants are NOT probed. Two fence characters is the whole addition.
+plant_quoted_anchor() {  # SUBJECT ANCHORLINE BODYLINE BEFORELINE [FENCE]
+    local s anchor body before fence blk
+    s="$1"; anchor="$2"; body="$3"; before="$4"; fence="${5:-\`\`\`}"
+    case "$fence" in
+        '```'|'~~~') : ;;
+        *) echo "plant_quoted_anchor: unsupported fence '$fence'" >&2; return 1 ;;
+    esac
     blk="$WORK/.quoted-anchor"
     { printf 'A heading format considered and rejected in 2026-08-14, quoted here so the\n'
       printf 'reasoning survives rather than being lost:\n\n'
-      printf '```markdown\n%s\n\n%s\n```\n\n' "$anchor" "$body"
+      printf '%smarkdown\n%s\n\n%s\n%s\n\n' "$fence" "$anchor" "$body" "$fence"
     } > "$blk"
     edit_at_file "$s/$PROP_REL" before "$before" "$blk"
     rm -f "$blk"
@@ -626,19 +736,43 @@ D58_BAD="$(printf '%s' "$D58" | sed 's/string name,string version/string version
 plant_quoted_anchor "$S" "$H58" "$D58_BAD" "$H59"
 fence="$($GREP -c -x -F '```markdown' "$S/$PROP_REL")"
 real_intact="$(section_of "$P0/$PROP_REL" "$H58" | $GREP -cF "$D58")"
-check CONTROL  4e-mut "$([ "$fence" = 1 ] && [ "$($GREP -c -x -F -- "$H58" "$S/$PROP_REL")" = 2 ] && [ "$real_intact" = 1 ] && echo 0 || echo 1)" \
-      "mutation applied: the §5.8 heading is QUOTED inside a fenced block earlier in the file; the real §5.8 is untouched"
+check CONTROL  4e-btick-mut "$([ "$fence" = 1 ] && [ "$($GREP -c -x -F -- "$H58" "$S/$PROP_REL")" = 2 ] && [ "$real_intact" = 1 ] && echo 0 || echo 1)" \
+      "mutation applied: the §5.8 heading is quoted inside a BACKTICK fence earlier in the file; the real §5.8 is untouched"
 o="$(run_ts "$S")"
-check REQUIRED 4e "$(has "$o" "$TS_OK" && echo 0 || echo 1)" \
-      "TS ignores a §5.8 heading quoted inside a fenced code block and reads the real section"
+check REQUIRED 4e-btick "$(has "$o" "$TS_OK" && echo 0 || echo 1)" \
+      "TS ignores a §5.8 heading quoted inside a BACKTICK fence and reads the real section"
+
+S="$(subject c4e-tilde)"
+D58="$(section_of "$S/$PROP_REL" "$H58" | $GREP -E '^ {4}EIP712Domain\(' | head -1)"
+D58_BAD="$(printf '%s' "$D58" | sed 's/string name,string version/string version,string name/')"
+plant_quoted_anchor "$S" "$H58" "$D58_BAD" "$H59" '~~~'
+fence="$($GREP -c -x -F '~~~markdown' "$S/$PROP_REL")"
+real_intact="$(section_of "$P0/$PROP_REL" "$H58" | $GREP -cF "$D58")"
+check CONTROL  4e-tilde-mut "$([ "$fence" = 1 ] && [ "$($GREP -c -x -F '```markdown' "$S/$PROP_REL")" = 0 ] && \
+      [ "$($GREP -c -x -F -- "$H58" "$S/$PROP_REL")" = 2 ] && [ "$real_intact" = 1 ] && echo 0 || echo 1)" \
+      "mutation applied: the §5.8 heading is quoted inside a TILDE fence (and no backtick fence) earlier in the file"
+o="$(run_ts "$S")"
+check REQUIRED 4e-tilde "$(has "$o" "$TS_OK" && echo 0 || echo 1)" \
+      "TS ignores a §5.8 heading quoted inside a TILDE fence and reads the real section"
 
 S="$(subject c4f)"
 plant_quoted_anchor "$S" "$H571" '`EVAL_CHAIN_BOUND` only, in a format that was rejected.' "$H59"
-check CONTROL  4f-mut "$([ "$($GREP -c -x -F -- "$H571" "$S/$PROP_REL")" = 2 ] && echo 0 || echo 1)" \
-      "mutation applied: the §5.7.1 heading is QUOTED inside a fenced block earlier in the file"
+check CONTROL  4f-btick-mut "$([ "$($GREP -c -x -F -- "$H571" "$S/$PROP_REL")" = 2 ] && \
+      [ "$($GREP -c -x -F '```markdown' "$S/$PROP_REL")" = 1 ] && echo 0 || echo 1)" \
+      "mutation applied: the §5.7.1 heading is quoted inside a BACKTICK fence earlier in the file"
 o="$(run_ec "$S")"
-check REQUIRED 4f "$(has "$o" "$EC_OK" && echo 0 || echo 1)" \
-      "EC ignores a §5.7.1 heading quoted inside a fenced code block and reads the real section"
+check REQUIRED 4f-btick "$(has "$o" "$EC_OK" && echo 0 || echo 1)" \
+      "EC ignores a §5.7.1 heading quoted inside a BACKTICK fence and reads the real section"
+
+S="$(subject c4f-tilde)"
+plant_quoted_anchor "$S" "$H571" '`EVAL_CHAIN_BOUND` only, in a format that was rejected.' "$H59" '~~~'
+check CONTROL  4f-tilde-mut "$([ "$($GREP -c -x -F -- "$H571" "$S/$PROP_REL")" = 2 ] && \
+      [ "$($GREP -c -x -F '~~~markdown' "$S/$PROP_REL")" = 1 ] && \
+      [ "$($GREP -c -x -F '```markdown' "$S/$PROP_REL")" = 0 ] && echo 0 || echo 1)" \
+      "mutation applied: the §5.7.1 heading is quoted inside a TILDE fence (and no backtick fence) earlier in the file"
+o="$(run_ec "$S")"
+check REQUIRED 4f-tilde "$(has "$o" "$EC_OK" && echo 0 || echo 1)" \
+      "EC ignores a §5.7.1 heading quoted inside a TILDE fence and reads the real section"
 
 # ============================================================================ case 5 =========
 hdr "CASE 5 — DUPLICATE normative publication inside the section, in BOTH orders"
@@ -922,12 +1056,24 @@ check REQUIRED 10g "$(refuses "$o" "$VH_OK" "7.2" "$AMBIG_WHY" && echo 0 || echo
 
 S="$(subject c10h add)"
 plant_quoted_anchor "$S" "$H72" 'This baseline is illustrative and is not evidence that current vendors miss Case 3 at all.' "$H6"
-check CONTROL  10h-mut "$([ "$($GREP -c -x -F -- "$H72" "$S/$PROP_REL")" = 2 ] && \
+check CONTROL  10h-btick-mut "$([ "$($GREP -c -x -F -- "$H72" "$S/$PROP_REL")" = 2 ] && \
+      [ "$($GREP -c -x -F '```markdown' "$S/$PROP_REL")" = 1 ] && \
       [ "$(section_of "$P0/$PROP_REL" "$H72" | $GREP -cF "$CAVEAT_SENTENCE")" = 1 ] && echo 0 || echo 1)" \
-      "mutation applied: the §7.2 heading is QUOTED inside a fenced block earlier; the real §7.2 is untouched"
+      "mutation applied: the §7.2 heading is quoted inside a BACKTICK fence earlier; the real §7.2 is untouched"
 o="$(run_vh "$S")"
-check REQUIRED 10h "$(has "$o" "$VH_OK" && echo 0 || echo 1)" \
-      "a §7.2 heading quoted inside a fenced code block is a MENTION, not the anchor"
+check REQUIRED 10h-btick "$(has "$o" "$VH_OK" && echo 0 || echo 1)" \
+      "a §7.2 heading quoted inside a BACKTICK fence is a MENTION, not the anchor"
+
+S="$(subject c10h-tilde add)"
+plant_quoted_anchor "$S" "$H72" 'This baseline is illustrative and is not evidence that current vendors miss Case 3 at all.' "$H6" '~~~'
+check CONTROL  10h-tilde-mut "$([ "$($GREP -c -x -F -- "$H72" "$S/$PROP_REL")" = 2 ] && \
+      [ "$($GREP -c -x -F '~~~markdown' "$S/$PROP_REL")" = 1 ] && \
+      [ "$($GREP -c -x -F '```markdown' "$S/$PROP_REL")" = 0 ] && \
+      [ "$(section_of "$P0/$PROP_REL" "$H72" | $GREP -cF "$CAVEAT_SENTENCE")" = 1 ] && echo 0 || echo 1)" \
+      "mutation applied: the §7.2 heading is quoted inside a TILDE fence (and no backtick fence) earlier; the real §7.2 is untouched"
+o="$(run_vh "$S")"
+check REQUIRED 10h-tilde "$(has "$o" "$VH_OK" && echo 0 || echo 1)" \
+      "a §7.2 heading quoted inside a TILDE fence is a MENTION, not the anchor"
 
 # ============================================================================ case 11 ========
 hdr "CASE 11 — the generated ablation report still carries the EXACT required caveat"
@@ -1175,12 +1321,19 @@ check REQUIRED 14b "$(has "$o" "STALE" && ! has "$o" "certified by record" && ec
 
 # ============================================================================ integrity =====
 hdr "HARNESS INTEGRITY"
+# THESE FOUR ARE ABOUT THE SUBJECT, and after the correction they say so. Comparing the snapshot
+# against a hardcoded historical commit was the mechanism by which a repaired consumer would have
+# been reported as pre-repair with the control still green.
 for f in scripts/check-type-strings.sh scripts/check-eval-codes.sh scripts/check-vendor-honesty.sh verifier/test_verifier.py; do
     a="$(shasum -a 256 "$P0/$f" | awk '{print $1}')"
-    b="$(cd "$ROOT" && git show "$BASE_SHA:$f" | shasum -a 256 | awk '{print $1}')"
+    b="$(cd "$ROOT" && git show "$SUBJECT_SHA:$f" | shasum -a 256 | awk '{print $1}')"
     check CONTROL "Z-${f##*/}" "$([ "$a" = "$b" ] && echo 0 || echo 1)" \
-          "the consumer under test is byte-identical to $BASE_SHA: ${f##*/} ${a%%????????????????????????????????????????????????????????}…"
+          "the consumer under test is byte-identical to SUBJECT_SHA $SUBJECT_SHA: ${f##*/} ${a%%????????????????????????????????????????????????????????}…"
 done
+# THE NEXT THREE CONTROLS ARE ABOUT THE LIVE WORKING TREE, NOT ABOUT THE SUBJECT, and they are
+# deliberately NOT folded into the Z-consumer comparison above. "the snapshot matches the commit
+# I asked for" and "this run changed nothing in the repository it read" are different claims, and
+# a single merged control would let either one carry the other.
 dirty="$(cd "$ROOT" && git status --porcelain -- "$PROP_REL" "$SRC_REL" "$RPT_REL" scripts verifier | wc -l | tr -d ' ')"
 check CONTROL Z-clean "$([ "$dirty" = "0" ] && echo 0 || echo 1)" \
       "the repository under test was not modified by this run ($dirty changed path(s) in the boundary)"
@@ -1193,20 +1346,22 @@ check CONTROL Z-clean "$([ "$dirty" = "0" ] && echo 0 || echo 1)" \
 # not to touch is byte-identical to its base blob.
 live_pin="$($GREP -oE 'CERTIFIED_TABLE_SHA="[0-9a-f]{64}"' "$ROOT/scripts/check-vendor-honesty.sh" | head -1 | sed 's/.*="//;s/"//')"
 live_tbl="$(awk '/^## 2\. Need, Market Reality, and First User/{t=1} t&&/^## 3\./{exit} t&&/^\|/{print} t&&/^\*Certified by John/{print}' "$ROOT/$PROP_REL" | shasum -a 256 | awk '{print $1}')"
-base_tbl="$(cd "$ROOT" && git show "$BASE_SHA:$PROP_REL" | awk '/^## 2\. Need, Market Reality, and First User/{t=1} t&&/^## 3\./{exit} t&&/^\|/{print} t&&/^\*Certified by John/{print}' | shasum -a 256 | awk '{print $1}')"
+base_tbl="$(cd "$ROOT" && git show "$PRE_REPAIR_SHA:$PROP_REL" | awk '/^## 2\. Need, Market Reality, and First User/{t=1} t&&/^## 3\./{exit} t&&/^\|/{print} t&&/^\*Certified by John/{print}' | shasum -a 256 | awk '{print $1}')"
 check CONTROL Z-gate5 "$([ "$live_pin" = "$GATE5_PINNED" ] && [ "$live_tbl" = "$GATE5_PINNED" ] && [ "$base_tbl" = "$GATE5_PINNED" ] && echo 0 || echo 1)" \
-      "Gate 5 untouched: the live pin, the live §2 table and the §2 table at $BASE_SHA all hash to the certified value"
+      "Gate 5 untouched IN THE LIVE TREE: the live pin, the live §2 table and the §2 table at PRE_REPAIR_SHA all hash to the certified value"
 
 # THE SIGNED PACK IS NOT READ FOR CHANGE AND IS ASSERTED UNMOVED. D-059(1b) and D-060(4):
 # `docs/gate-s2-evidence.md` carries signed text and a ratified correction. This batch does not
 # edit it, quote it for correction, or re-hash it — and says so mechanically rather than in prose.
 s2_now="$(shasum -a 256 "$ROOT/docs/gate-s2-evidence.md" | awk '{print $1}')"
-s2_base="$(cd "$ROOT" && git show "$BASE_SHA:docs/gate-s2-evidence.md" | shasum -a 256 | awk '{print $1}')"
+s2_base="$(cd "$ROOT" && git show "$PRE_REPAIR_SHA:docs/gate-s2-evidence.md" | shasum -a 256 | awk '{print $1}')"
 check CONTROL Z-signed "$([ "$s2_now" = "$s2_base" ] && echo 0 || echo 1)" \
-      "docs/gate-s2-evidence.md is byte-identical to $BASE_SHA (${s2_now%%????????????????????????????????????????????????????????}…)"
+      "docs/gate-s2-evidence.md IN THE LIVE TREE is byte-identical to PRE_REPAIR_SHA (${s2_now%%????????????????????????????????????????????????????????}…)"
 
 # ============================================================================ summary ========
 hdr "SUMMARY"
+identity_block
+echo
 printf '%s' "$MATRIX_TSV" > "$WORK/matrix.tsv"
 if [ -n "${A_EXTRACT_MATRIX_OUT:-}" ]; then cp "$WORK/matrix.tsv" "$A_EXTRACT_MATRIX_OUT"; fi
 req_total="$(printf '%s' "$MATRIX_TSV" | awk -F'\t' '$2=="REQUIRED"' | wc -l | tr -d ' ')"

@@ -7,7 +7,7 @@
 > and is NOT general prose-consistency evidence."* — D-059(7)
 
 **Harness:** `a-extract-gate.sh`, sha256
-`3e4cfe5a4b08db02d9c69954b3683afdf6f1145c2d874085068718a53c6af0f0`.
+`af66a45ebf9dfe0501e4e1743b6662392126e82cd462dcc3f3a11c1009330746`.
 **Subject:** a private `git clone` of this repository checked out at
 `bb664c626d592d86391f644bf014e76f2bbf7db4`, with `ts/node_modules` and both submodule working
 trees copied in. **The live gate is never run, never edited, and never written to.** No signed or
@@ -17,14 +17,67 @@ byte-identical to the base commit.
 **Environment:** git 2.50.1 (Apple Git-155); bash 3.2.57; node v26.3.0; Python 3.9.6; forge on
 PATH. **Fast profile only** — see §5.
 
-**MEASURED RESULT:**
+## STATUS — D-059(7) IS PARTLY DISCHARGED, AND THIS DOCUMENT PREVIOUSLY OVERSTATED IT
+
+**Corrected on John's review. The earlier wording — including the harness's own closing line
+"D-059(7) GATE BINDING ESTABLISHED" — read as though the whole obligation were discharged. It is
+not.** D-059(7) requires *"invocation by the applicable fast and deep gate paths"*, and only one
+of the two was run.
+
+| | Status |
+|---|---|
+| **Fast-profile gate binding** | **MEASURED.** Three full `./scripts/test.sh` runs against a private clone: unchanged passes, a targeted failure fails the gate at its named stage, and that failure survives other consumers succeeding both before and after it. |
+| **Deep-profile invocation (`--gate`)** | **NOT MEASURED.** Supported only by **STATIC CONTROL-FLOW EVIDENCE**: the three consumer invocations sit at `scripts/test.sh:235`, `:238` and `:252`; between line 210 (where `PROFILE` is assigned) and line 253 there is no `if`, `fi`, `else`, `case`, `esac`, `while`, `for` or `do` at column 0, so nothing encloses them; the first `PROFILE`-dependent statement is at line 308. Strong, and still a reading of the source rather than an observation of a run. |
+| **D-059(7) overall** | **NOT YET DISCHARGED.** The deep portion is outstanding. |
+
+**WHAT THE EVENTUAL INDEPENDENT POST-REPAIR VERIFICATION MUST DO TO CLOSE IT.** Run
+`./scripts/test.sh --gate` **at the exact candidate SHA** and capture the three stage banners:
+
+```
+== published EIP-712 type strings (D-023) ==
+== §5.7.1 check coverage (D-031) ==
+== vendor honesty (§7.5 Gate 5, D-008) ==
+```
+
+**Three deep MUTATION runs are NOT required unless the control flow differs between profiles.**
+The fast profile's mutation evidence below already establishes that a failure in any one of the
+three fails the gate at its named stage and cannot be masked; what the deep profile adds is that
+the three stages are *invoked* there too. **A measured deep invocation plus the existing fast
+mutation evidence is sufficient.** If the candidate SHA changes the control flow around lines
+210-253 — introduces a conditional, moves an invocation, makes one profile-dependent — that
+sufficiency lapses and the deep mutation runs become required.
+
+---
+
+## RE-MEASURED ON THE CORRECTED REVISION
+
+The earlier `7 of 7` / `9 of 9` figure was produced by the revision of `a-extract-gate.sh`
+immediately prior to the subject-selection correction, which checked out `bb664c6` from a
+hardcoded constant. **That revision's evidence is superseded here.** The corrected revision,
+sha256 `af66a45ebf9dfe0501e4e1743b6662392126e82cd462dcc3f3a11c1009330746`, was re-run end to end
+through the new interface:
+
+```
+a-extract-gate.sh . bb664c626d592d86391f644bf014e76f2bbf7db4
+
+  REQUIRED : 7 of 7 held
+  CONTROL  : 10 of 10 held
+  exit 0
+```
+
+**`CONTROL` moved 9 → 10 for exactly one reason: the new `P3-subject` control**, which asserts
+the requested ref resolved to `SUBJECT_SHA` **and that the clone is actually checked out at it**.
+No case semantics changed and no verdict moved.
+
+**MEASURED RESULT (fast profile, corrected revision `af66a45e…`):**
 
 ```
   REQUIRED : 7 of 7 held
-  CONTROL  : 9 of 9 held
-  exit 0 — D-059(7) GATE BINDING ESTABLISHED: the gate passes unchanged, fails at the named
+  CONTROL  : 10 of 10 held
+  exit 0 — FAST-PROFILE gate binding measured: the gate passes unchanged, fails at the named
            stage when a targeted A-EXTRACT fact is wrong, and that failure survives other
-           consumers succeeding both before and after it.
+           consumers succeeding both before and after it. The DEEP portion of D-059(7) is
+           NOT covered by this run.
 ```
 
 | Case | Kind | Verdict | What it asserts |
@@ -44,7 +97,8 @@ PATH. **Fast profile only** — see §5.
 | `G3-unmasked` | REQUIRED | **PASS** | the two EARLIER consumer stages report success and the gate still fails |
 | `G3-scope` | CONTROL | PASS | targeted |
 | `Z-clean` | CONTROL | PASS | **0 changed paths** in the live repository's production boundary |
-| `Z-signed` | CONTROL | PASS | `docs/gate-s2-evidence.md` byte-identical to `bb664c6` |
+| `Z-signed` | CONTROL | PASS | `docs/gate-s2-evidence.md` byte-identical to `PRE_REPAIR_SHA` |
+| `P3-subject` | CONTROL | PASS | the requested ref resolved to `SUBJECT_SHA` and the clone is checked out at it |
 
 **The gate's own exit status is recorded (`rc=0`, `rc=5`, `rc=5`) and used in no assertion.**
 `rc=5` is the completion-token supervisor refusing a run that did not reach completion — a fact

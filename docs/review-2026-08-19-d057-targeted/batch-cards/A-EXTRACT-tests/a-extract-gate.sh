@@ -65,10 +65,55 @@
 
 set -uo pipefail
 
-BASE_SHA="bb664c626d592d86391f644bf014e76f2bbf7db4"
+# THE SUBJECT IS AN ARGUMENT, NOT A CONSTANT — the same instrument defect John found in
+# `a-extract.sh`, in the same shape here: this script cloned and then checked out a HARDCODED
+# commit, so it would have gone on measuring the pre-repair gate against a repaired tree.
+# The historical baseline is kept as an immutable named reference and is never what gets
+# checked out.
+PRE_REPAIR_SHA="bb664c626d592d86391f644bf014e76f2bbf7db4"
 
 SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ROOT="${1:-$(cd "$SELF_DIR/../../../.." && pwd)}"
+
+usage() {
+    cat >&2 <<'USAGE'
+usage: a-extract-gate.sh <repository-path> <subject-ref>
+
+  <repository-path>  the Sentinel repository to clone. Required.
+  <subject-ref>      the commit whose GATE is to be measured. Required.
+
+There is NO DEFAULT SUBJECT. Omitting it is a preflight failure, not a fallback to the
+historical base.
+
+To reproduce the recorded baseline:
+
+  a-extract-gate.sh . bb664c626d592d86391f644bf014e76f2bbf7db4
+
+Optional environment:
+  A_EXTRACT_GATE_LOGDIR    directory to copy the three gate logs and the matrix into
+USAGE
+}
+
+case "${1:-}" in
+    -h|--help) usage; exit 2 ;;
+esac
+
+if [ "$#" -lt 2 ]; then
+    printf '\n  PREFLIGHT FAILED: an evidentiary run requires BOTH a repository and a subject ref.\n' >&2
+    printf '  Received %s argument(s). There is no default subject, by design.\n\n' "$#" >&2
+    usage
+    exit 2
+fi
+
+ROOT_ARG="$1"
+SUBJECT_REF="$2"
+ROOT="$(cd -- "$ROOT_ARG" 2>/dev/null && pwd -P)" || ROOT=""
+
+ORIG_HOME="${HOME:-}"
+sanitize_path() {
+    local q; q="$1"
+    if [ -n "$ORIG_HOME" ]; then case "$q" in "$ORIG_HOME"*) q="~${q#"$ORIG_HOME"}" ;; esac; fi
+    printf '%s' "$q" | sed -E 's#^/Users/[^/]+#~#; s#^/home/[^/]+#~#'
+}
 
 PROP_REL="Sentinel_Protocol_Lab_Proposal_v0_2.md"
 
@@ -140,12 +185,27 @@ stage_body() {  # LOGFILE BANNER
 hdr "PREFLIGHT"
 
 SELF_SHA="$(shasum -a 256 "${BASH_SOURCE[0]}" | awk '{print $1}')"
+identity_block() {
+    printf '  harness sha256   : %s\n' "$SELF_SHA"
+    printf '  repository       : %s\n' "$(sanitize_path "${ROOT:-$ROOT_ARG}")"
+    printf '  requested ref    : %s\n' "$SUBJECT_REF"
+    printf '  resolved subject : %s\n' "${SUBJECT_SHA:-<unresolved>}"
+    printf '  pre-repair ref   : %s\n' "$PRE_REPAIR_SHA"
+}
 check OBSERVED P0 0 "gate harness sha256 $SELF_SHA"
 check OBSERVED P1 0 "$(git --version) ; bash $(bash --version | head -1 | $GREP -o '[0-9][0-9.]*' | head -1) ; $(node --version 2>&1) ; $(python3 --version 2>&1)"
 
 for t in git node python3; do command -v "$t" >/dev/null 2>&1 || die "$t is required"; done
 command -v forge >/dev/null 2>&1 || die "forge is required — the gate's solidity stage cannot run without it"
-[ -d "$ROOT/.git" ] || die "no repository at the resolved root"
+[ -n "$ROOT" ] || die "the repository path '$ROOT_ARG' does not exist or is not a directory"
+[ -d "$ROOT/.git" ] || die "$(sanitize_path "$ROOT") is not a git repository"
+SUBJECT_SHA="$(cd "$ROOT" && git rev-parse --verify --quiet "${SUBJECT_REF}^{commit}" 2>/dev/null)" || SUBJECT_SHA=""
+if [ -z "$SUBJECT_SHA" ]; then
+    _rev_err="$(cd "$ROOT" && git rev-parse --verify "${SUBJECT_REF}^{commit}" 2>&1 >/dev/null | head -3)"
+    die "cannot resolve subject ref '$SUBJECT_REF' to exactly one commit in $(sanitize_path "$ROOT").
+                     git said: ${_rev_err:-(no diagnostic)}
+                     Missing, ambiguous, or not-a-commit is a REFUSAL here, never a fallback."
+fi
 [ -d "$ROOT/ts/node_modules" ] || die "ts/node_modules is absent; the gate's TypeScript stage cannot run"
 for m in forge-std openzeppelin-contracts; do
     [ -d "$ROOT/contracts/lib/$m" ] || die "submodule working tree contracts/lib/$m is absent"
@@ -158,13 +218,20 @@ check OBSERVED P2 0 "toolchain present: git, node, python3, forge; node_modules 
 # smallest faithful subject. Nothing is written back to $ROOT.
 BASECOPY="$WORK/gate-base"
 git clone -q --no-hardlinks --local "$ROOT" "$BASECOPY" 2>/dev/null || die "cannot clone the repository"
-( cd "$BASECOPY" && git checkout -q "$BASE_SHA" ) || die "cannot check out $BASE_SHA in the clone"
+( cd "$BASECOPY" && git checkout -q "$SUBJECT_SHA" ) || die "cannot check out $SUBJECT_SHA in the clone"
+# P3 IS A CONTROL: the clone is standing on the commit the caller NAMED, not on whatever the
+# source repository happened to have checked out and not on a constant compiled into this file.
+_clone_head="$(cd "$BASECOPY" && git rev-parse HEAD 2>/dev/null)" || _clone_head=""
+check CONTROL P3-subject "$([ "$_clone_head" = "$SUBJECT_SHA" ] && [ "${#SUBJECT_SHA}" = "40" ] && echo 0 || echo 1)" \
+      "the requested ref '$SUBJECT_REF' resolved to SUBJECT_SHA $SUBJECT_SHA and the clone is checked out at it"
 cp -R "$ROOT/ts/node_modules" "$BASECOPY/ts/node_modules" || die "cannot stage node_modules"
 for m in forge-std openzeppelin-contracts; do
     rm -rf "$BASECOPY/contracts/lib/$m"
     cp -R "$ROOT/contracts/lib/$m" "$BASECOPY/contracts/lib/$m" || die "cannot stage contracts/lib/$m"
 done
-check OBSERVED P3 0 "isolated clone built at $BASE_SHA with both dependency trees"
+check OBSERVED P3 0 "isolated clone built at SUBJECT_SHA $SUBJECT_SHA with both dependency trees"
+hdr "SUBJECT IDENTITY"
+identity_block
 
 # ============================================================================ G1 =============
 hdr "G1 — the UNCHANGED top-level fast gate PASSES"
@@ -279,9 +346,9 @@ dirty="$(cd "$ROOT" && git status --porcelain -- "$PROP_REL" scripts ts contract
 check CONTROL Z-clean "$([ "$dirty" = "0" ] && echo 0 || echo 1)" \
       "the repository under test was not modified by this run ($dirty changed path(s) in the production boundary)"
 s2_now="$(shasum -a 256 "$ROOT/docs/gate-s2-evidence.md" | awk '{print $1}')"
-s2_base="$(cd "$ROOT" && git show "$BASE_SHA:docs/gate-s2-evidence.md" | shasum -a 256 | awk '{print $1}')"
+s2_base="$(cd "$ROOT" && git show "$PRE_REPAIR_SHA:docs/gate-s2-evidence.md" | shasum -a 256 | awk '{print $1}')"
 check CONTROL Z-signed "$([ "$s2_now" = "$s2_base" ] && echo 0 || echo 1)" \
-      "docs/gate-s2-evidence.md is byte-identical to $BASE_SHA — no signed document was read for change"
+      "docs/gate-s2-evidence.md IN THE LIVE TREE is byte-identical to PRE_REPAIR_SHA — no signed document was read for change"
 
 if [ -n "${A_EXTRACT_GATE_LOGDIR:-}" ]; then
     mkdir -p "$A_EXTRACT_GATE_LOGDIR"
@@ -290,6 +357,8 @@ if [ -n "${A_EXTRACT_GATE_LOGDIR:-}" ]; then
 fi
 
 hdr "SUMMARY"
+identity_block
+echo
 req_total="$(printf '%s' "$MATRIX_TSV" | awk -F'\t' '$2=="REQUIRED"' | wc -l | tr -d ' ')"
 ctl_total="$(printf '%s' "$MATRIX_TSV" | awk -F'\t' '$2=="CONTROL"'  | wc -l | tr -d ' ')"
 printf '  REQUIRED : %s of %s held\n' "$((req_total - req_fail))" "$req_total"
@@ -303,7 +372,12 @@ if [ "$req_fail" -ne 0 ]; then
     echo "  REQUIRED FAILURES with every control holding: the gate binding is NOT established."
     exit 1
 fi
-echo "  D-059(7) GATE BINDING ESTABLISHED: the gate passes unchanged, fails at the named stage"
+echo "  FAST-PROFILE GATE BINDING MEASURED: the gate passes unchanged, fails at the named stage"
 echo "  when a targeted A-EXTRACT fact is wrong, and that failure survives other consumers"
 echo "  succeeding both before and after it."
+echo
+echo "  D-059(7) IS NOT FULLY DISCHARGED BY THIS RUN. The DEEP profile (--gate) was not"
+echo "  invoked; its coverage rests on static control-flow evidence only. The independent"
+echo "  post-repair verification must run ./scripts/test.sh --gate at the exact candidate SHA"
+echo "  and capture the three stage banners. See GATE-BINDING.md STATUS."
 exit 0
