@@ -1,0 +1,77 @@
+
+[1m== preflight — refuse to run a harness that cannot fail ==[0m
+        git       : git version 2.50.1 (Apple Git-155)
+        bash      : GNU bash, version 3.2.57(1)-release (arm64-apple-darwin25)
+        root      : repository under test is at 492021325255f56ed8d3df8265bbaa43ef0f7efa
+        WARNING: that is NOT the commit this harness was demonstrated on (76c466fe95ef4a69a1ce86f271498e076e5343aa).
+                 Outcomes below are evidence about 492021325255f56ed8d3df8265bbaa43ef0f7efa and nothing else.
+        P1 /usr/bin/grep canary found
+        P2 HOME and the global/system/XDG git configuration redirected into the scratch area
+        P3 isolated clone of the subject at 492021325255f56ed8d3df8265bbaa43ef0f7efa
+        P4 fixture base commit 94db3e23a660f685803a94601dc089e3f5aca12c carrying d062-fixture.txt
+        P5 the planted credential trips check-secrets.sh in both modes (default=1 staged=1)
+        P6 git commit -a        -> GIT_INDEX_FILE=/var/folders/59/4wnx2cd52598yk1567y_9lnh0000gn/T/d062-containment.o1LcWs8x/sut/.git/index.lock
+        P6 git commit -- <path> -> GIT_INDEX_FILE=/var/folders/59/4wnx2cd52598yk1567y_9lnh0000gn/T/d062-containment.o1LcWs8x/sut/.git/next-index-81383.lock
+        P6 git commit           -> GIT_INDEX_FILE=.git/index
+        P6 hook environment: GIT_DIR=<unset> GIT_WORK_TREE=<unset> GIT_COMMON_DIR=<unset> GIT_PREFIX=[] PWD=/var/folders/59/4wnx2cd52598yk1567y_9lnh0000gn/T/d062-containment.o1LcWs8x/sut
+        P6 the emulated hook environment matches what git was measured to hand a real hook
+        P7 victim repository created; fingerprint e3c4f77c7365a2283d8c3888ab04fb13087c1c059f11305f0166cdb146002501 (1 commit)
+
+[1m== results ==[0m
+  case 1-tmp  CONTROL  PASS  the temporary index git hands the hook for -a CARRIES the candidate credential, and the canonical index does not
+  case 1      REQUIRED PASS  git commit -am with a planted credential is BLOCKED, the guard NAMES d062-fixture.txt, and nothing lands in HEAD
+  case 1      OBSERVED ....  exit=1  first line: BLOCKED d062-fixture.txt — credential-shaped content:
+  case 2-tmp  CONTROL  PASS  the temporary index git hands the hook for -- <path> CARRIES the candidate credential, and the canonical index does not
+  case 2      REQUIRED PASS  git commit -m ... -- <path> with a planted credential is BLOCKED, the guard NAMES d062-fixture.txt, and nothing lands in HEAD
+  case 2      OBSERVED ....  exit=1  first line: BLOCKED d062-fixture.txt — credential-shaped content:
+  case 3      REQUIRED PASS  git add + git commit with a planted credential REMAINS blocked, named, and out of HEAD
+  case 3      OBSERVED ....  exit=1  first line: BLOCKED d062-fixture.txt — credential-shaped content:
+  case 4      REQUIRED PASS  a clean git commit -am is ALLOWED, reports clean, and the intended content reaches HEAD
+  case 4      OBSERVED ....  exit=0  HEAD advanced to 4f97b14
+  case 5      REQUIRED PASS  a clean path-limited commit is ALLOWED, reports clean, and the intended content reaches HEAD
+  case 5      OBSERVED ....  exit=0  HEAD advanced to 71f293b
+  case 6a     REQUIRED PASS  a PRE-STAGED genuine deletion is ALLOWED and is not a false failure
+  case 6b     REQUIRED PASS  a deletion arriving through the TEMPORARY index (git commit -am) is ALLOWED
+  case 6c     CONTROL  PASS  a deletion staged ALONGSIDE a credential is still BLOCKED — the deletion path does not blanket-accept
+  case 7-decoy CONTROL  PASS  the decoy index is POTENT and CLEAN — honouring it yields an empty staged set while the canonical set holds d062-fixture.txt
+  case 7      REQUIRED PASS  check-secrets.sh --staged with a malicious caller GIT_INDEX_FILE still scans the CANONICAL index and names d062-fixture.txt
+  case 7-nov  CONTROL  PASS  the same invocation with NO caller variable blocks — the fixture is live on this path
+  case 7-def  CONTROL  PASS  DEFAULT mode with the same malicious caller GIT_INDEX_FILE also still scans Sentinel
+  case 8-L1   CONTROL  PASS  the emulated hook invocation with the CANONICAL index and nothing staged exits 0 and reports clean
+  case 8-L2   CONTROL  PASS  the same emulated invocation BLOCKS a credential staged in the canonical index — the emulation is not inert
+  case 8-read CONTROL  PASS  the victim index is READABLE from the subject and reads CLEAN — a refusal here cannot be an unreadable-object artifact
+  case 8      REQUIRED PASS  the hook REFUSES a GIT_INDEX_FILE outside the invoking repository's index directory (non-zero AND no clean report)
+  case 8      OBSERVED ....  exit=2  first line:   FAIL  pre-commit: the index git handed this hook is not acceptable; refusing.
+  case 9-sym  CONTROL  PASS  the planted .git/index.lock really is a SYMLINK at scan time
+  case 9a     REQUIRED PASS  the hook REFUSES a SYMLINKED temporary index (non-zero AND no clean report)
+  case 9a     OBSERVED ....  exit=2  first line:   FAIL  pre-commit: the index git handed this hook is not acceptable; refusing.
+  case 9-abs  CONTROL  PASS  the nonexistent temporary index really is absent at scan time
+  case 9b     REQUIRED PASS  the hook REFUSES a NONEXISTENT temporary index (non-zero AND no clean report)
+  case 9b     OBSERVED ....  exit=2  first line:   FAIL  pre-commit: the index git handed this hook is not acceptable; refusing.
+  case 10-tmp CONTROL  PASS  the planted index.lock is a regular file, CARRIES the credential, and the canonical index is empty
+  case 10     REQUIRED PASS  the hook SCANS a valid .git/index.lock and BLOCKS the credential it carries, naming d062-fixture.txt
+  case 10     OBSERVED ....  exit=1  first line: BLOCKED d062-fixture.txt — credential-shaped content:
+  case 11-tmp CONTROL  PASS  the planted next-index-24680.lock is a regular file, CARRIES the credential, and the canonical index is empty
+  case 11     REQUIRED PASS  the hook SCANS a valid .git/next-index-<pid>.lock and BLOCKS the credential it carries, naming d062-fixture.txt
+  case 11     OBSERVED ....  exit=1  first line: BLOCKED d062-fixture.txt — credential-shaped content:
+  case 12     REQUIRED PASS  the victim repository's HEAD, configuration, index and files are byte-identical after every refusal case
+  case 12     OBSERVED ....  victim fingerprint before=e3c4f77c7365a2283d8c3888ab04fb13087c1c059f11305f0166cdb146002501 after=e3c4f77c7365a2283d8c3888ab04fb13087c1c059f11305f0166cdb146002501
+  case 12-live CONTROL  PASS  the victim fingerprint MOVES under a deliberate change — case 12 is not vacuous
+
+[1m== hygiene ==[0m
+  case Z-frozen CONTROL  PASS  both frozen harnesses are byte-identical to their declared sha256 values
+  case Z-base OBSERVED ....  git diff 28fa955..HEAD over the two production files is 209 bytes (0 means the result transfers to 28fa955)
+  case Z-prod OBSERVED ....  pre-commit sha256 07563bdf16b061796cea624da16044ea1b7bd443665eef3510c3781f3bcaf704
+  case Z-prod OBSERVED ....  check-secrets sha256 acba49bbb70633546df9c3992c6b7d5377d193039333229d959e61c4590af8a5
+  case Z-cfg  CONTROL  PASS  the redirected global/system/XDG git configuration is unchanged by this run
+  case Z-tree OBSERVED ....  the repository under test has 0 modified path(s) under .githooks/ and scripts/
+
+[1m== summary ==[0m
+  git      : git version 2.50.1 (Apple Git-155)
+  bash     : GNU bash, version 3.2.57(1)-release (arm64-apple-darwin25)
+  measured : 492021325255f56ed8d3df8265bbaa43ef0f7efa
+  REQUIRED failures : 0
+  CONTROL  failures : 0
+
+  [1mALL REQUIRED CASES AND ALL CONTROLS HELD.[0m
+EXIT=0

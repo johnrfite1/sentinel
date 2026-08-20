@@ -1,0 +1,85 @@
+canonical index of subject is clean vs HEAD: []
+parked credential-bearing index: 100644 3dd2086892f9fc3c8eeca1c5871431721bdd04e2 0	zz-fixture-d062v.md
+=============== ATTACKS (candidate carries the credential unless noted) ===============
+A1  traversal INTO canonical .git/refs/../../.git/index.lock exit=1   BLOCKED(scanned)
+        BLOCKED zz-fixture-d062v.md — credential-shaped content:
+A15 relative .git/index.lock                               exit=1   BLOCKED(scanned)
+        BLOCKED zz-fixture-d062v.md — credential-shaped content:
+A16 relative ./.git/../.git/index.lock                     exit=1   BLOCKED(scanned)
+        BLOCKED zz-fixture-d062v.md — credential-shaped content:
+A14 double slash .git//index.lock                          exit=1   BLOCKED(scanned)
+        BLOCKED zz-fixture-d062v.md — credential-shaped content:
+A13 trailing slash .git/index.lock/                        exit=1   BLOCKED(scanned)
+        BLOCKED zz-fixture-d062v.md — credential-shaped content:
+A20 case variant .git/INDEX.LOCK (case-insensitive FS)     exit=2   REFUSED
+                reason        : unexpected basename 'INDEX.LOCK'
+A2  traversal OUT to a foreign index                       exit=2   REFUSED
+                reason        : the supplied path does not resolve to an existing directory
+A2b traversal OUT, foreign file NAMED index                exit=2   REFUSED
+                reason        : the supplied path does not resolve to an existing directory
+A3  symlink (to a real credential-bearing index)           exit=2   REFUSED
+                reason        : is a symlink
+A12 dangling symlink                                       exit=2   REFUSED
+                reason        : is a symlink
+A4  directory symlink out (.git/dlink/index.lock)          exit=2   REFUSED
+                reason        : outside this worktree's index directory (/private/tmp/claude-501/-Users-johnfite-Projects/65399fa2-af3f-48ca-8f41-4ce3f0256b92/scratchpad/work/atk/subject/.git)
+A6  chained directory symlink out                          exit=2   REFUSED
+                reason        : outside this worktree's index directory (/private/tmp/claude-501/-Users-johnfite-Projects/65399fa2-af3f-48ca-8f41-4ce3f0256b92/scratchpad/work/atk/subject/.git)
+A5  directory symlink IN (outside path -> canonical dir)   exit=1   BLOCKED(scanned)
+        BLOCKED zz-fixture-d062v.md — credential-shaped content:
+A7  HARDLINK to a foreign credential-bearing index         exit=1   BLOCKED(scanned)
+        BLOCKED zz-fixture-d062v.md — credential-shaped content:
+A10 next-index-007.lock                                    exit=1   BLOCKED(scanned)
+        BLOCKED zz-fixture-d062v.md — credential-shaped content:
+A10 next-index-0.lock                                      exit=1   BLOCKED(scanned)
+        BLOCKED zz-fixture-d062v.md — credential-shaped content:
+A10 next-index-99999999999999999999.lock                   exit=1   BLOCKED(scanned)
+        BLOCKED zz-fixture-d062v.md — credential-shaped content:
+A10 next-index-[].lock (malformed)                         exit=2   REFUSED
+                reason        : malformed next-index temporary name
+A10 next-index-[1a].lock (malformed)                       exit=2   REFUSED
+                reason        : malformed next-index temporary name
+A10 next-index-[+1].lock (malformed)                       exit=2   REFUSED
+                reason        : malformed next-index temporary name
+A10 next-index-[1.2].lock (malformed)                      exit=2   REFUSED
+                reason        : malformed next-index temporary name
+A10 next-index-[ 1].lock (malformed)                       exit=2   REFUSED
+                reason        : malformed next-index temporary name
+A10 next-index-[1 ].lock (malformed)                       exit=2   REFUSED
+                reason        : malformed next-index temporary name
+A10 next-index-<Arabic-Indic digits>.lock                  exit=2   REFUSED
+                reason        : malformed next-index temporary name
+A10 next-index-5.lock.lock                                 exit=2   REFUSED
+                reason        : malformed next-index temporary name
+A11 directory where a file is expected                     exit=2   REFUSED
+                reason        : is not an existing regular file at scan time
+A21 FIFO where a file is expected                          exit=2   REFUSED
+                reason        : is not an existing regular file at scan time
+A17 empty GIT_INDEX_FILE                                   exit=0   CLEAN
+        secret guard: clean
+A18 single space                                           exit=2   REFUSED
+                reason        : outside this worktree's index directory (/private/tmp/claude-501/-Users-johnfite-Projects/65399fa2-af3f-48ca-8f41-4ce3f0256b92/scratchpad/work/atk/subject/.git)
+A22 nonexistent directory component                        exit=2   REFUSED
+                reason        : the supplied path does not resolve to an existing directory
+A23 correct basename, WRONG subdirectory (.git/hooks)      exit=2   REFUSED
+                reason        : outside this worktree's index directory (/private/tmp/claude-501/-Users-johnfite-Projects/65399fa2-af3f-48ca-8f41-4ce3f0256b92/scratchpad/work/atk/subject/.git)
+A24 basename 'index' but in canonical dir = canonical file exit=0   CLEAN
+        secret guard: clean
+=============== direct check-secrets.sh --index-file interface ===============
+./scripts/check-secrets.sh --staged --index-file /private/tmp/claude-501/-Users-johnfite-Projects/65399fa2-af3f-48ca-8f41-4ce3f0256b92/scratchpad/work/atk/subject/.git/index.lock exit=1
+        BLOCKED zz-fixture-d062v.md — credential-shaped content:
+./scripts/check-secrets.sh --index-file /private/tmp/claude-501/-Users-johnfite-Projects/65399fa2-af3f-48ca-8f41-4ce3f0256b92/scratchpad/work/atk/subject/.git/index.lock exit=2
+          FAIL  --index-file is not acceptable; refusing.
+                reason    : only meaningful with --staged
+./scripts/check-secrets.sh --staged --index-file /private/tmp/claude-501/-Users-johnfite-Projects/65399fa2-af3f-48ca-8f41-4ce3f0256b92/scratchpad/work/atk/cred.idx exit=2
+          FAIL  --index-file is not acceptable; refusing.
+                reason    : outside the canonical index directory (/private/tmp/claude-501/-Users-johnfite-Projects/65399fa2-af3f-48ca-8f41-4ce3f0256b92/scratchpad/work/atk/subject/.git)
+./scripts/check-secrets.sh --staged --index-file           exit=2
+          FAIL  --index-file requires a path; refusing.
+./scripts/check-secrets.sh --index-file --staged           exit=2
+          FAIL  --index-file is not acceptable; refusing.
+                reason    : only meaningful with --staged
+./scripts/check-secrets.sh --staged --index-file /private/tmp/claude-501/-Users-johnfite-Projects/65399fa2-af3f-48ca-8f41-4ce3f0256b92/scratchpad/work/atk/subject/.git/index.lock --staged exit=1
+        BLOCKED zz-fixture-d062v.md — credential-shaped content:
+=============== END ATTACKS ===============
+EXIT=0

@@ -1,0 +1,81 @@
+ case A0 CONTROL PASS a caller decoy drops a marker when it is actually executed (1 marker(s)) — the marker mechanism is live
+ case A0b CONTROL PASS the foreign fixture is a repository whose two lookalike files are EMPTY — shape alone, no Sentinel content
+ case A1 REQUIRED PASS ZERO caller decoys execute (0 marker(s), 0 decoy line(s) in the gate's own output)
+ case A2 REQUIRED PASS the gate's secret-guard stage read SENTINEL's tree — the credential planted in the subject is blocked (1)
+ case A3 REQUIRED PASS the foreign repository is unchanged — worktree fingerprint and .git/config both byte-identical
+ case A4 CONTROL PASS from Sentinel's root the gate runs SENTINEL's children and blocks the planted credential (0 markers, blocked=1) — the discriminator is live
+ case A4s OBSERVED .... both invocations reach the same stage count (foreign=13, Sentinel=13) and both exit 5/5 — THE EXIT STATUS IS NOT A DISCRIMINATOR HERE (see COVERAGE.md §2: no completing gate run is available in this worktree)
+ case A5f CONTROL PASS the 'outside' layout is inside no git repository — the premise is instantiated
+ case A5 CONTROL PASS a copy of the gate outside every Sentinel repository emits a dedicated identity refusal BEFORE any child runs (exit 5, 0 markers)
+ case A6 CONTROL PASS the refusal scorer accepts three invented wordings, not one implementation's literal
+ case A6n CONTROL PASS the refusal scorer rejects missing-file, command-not-found, not-a-repository, shim and non-identity refusals
+ case B1-none CONTROL PASS no caller variables (CONTROL): the planted credential IS blocked in both modes (default exit 1, staged exit 1) — the fixture is live
+ case B1d-gitdir REQUIRED PASS GIT_DIR only: DEFAULT mode still blocks the credential in Sentinel (exit 1, clean-report=0)
+ case B1s-gitdir REQUIRED PASS GIT_DIR only: --staged mode still blocks the credential in Sentinel (exit 1, clean-report=0)
+ case B1d-worktree REQUIRED PASS GIT_WORK_TREE only: DEFAULT mode still blocks the credential in Sentinel (exit 1, clean-report=0)
+ case B1s-worktree REQUIRED PASS GIT_WORK_TREE only: --staged mode still blocks the credential in Sentinel (exit 1, clean-report=0)
+ case B1d-both REQUIRED PASS GIT_DIR + GIT_WORK_TREE: DEFAULT mode still blocks the credential in Sentinel (exit 1, clean-report=0)
+ case B1s-both REQUIRED PASS GIT_DIR + GIT_WORK_TREE: --staged mode still blocks the credential in Sentinel (exit 1, clean-report=0)
+ case B1d-index REQUIRED PASS GIT_INDEX_FILE only: DEFAULT mode still blocks the credential in Sentinel (exit 1, clean-report=0)
+ case B1s-index REQUIRED PASS GIT_INDEX_FILE only: --staged mode still blocks the credential in Sentinel (exit 1, clean-report=0)
+ case B1d-common REQUIRED PASS GIT_COMMON_DIR only: DEFAULT mode still blocks the credential in Sentinel (exit 1, clean-report=0)
+ case B1s-common REQUIRED PASS GIT_COMMON_DIR only: --staged mode still blocks the credential in Sentinel (exit 1, clean-report=0)
+ case B1d-prefix REQUIRED PASS GIT_PREFIX only: DEFAULT mode still blocks the credential in Sentinel (exit 1, clean-report=0)
+ case B1s-prefix REQUIRED PASS GIT_PREFIX only: --staged mode still blocks the credential in Sentinel (exit 1, clean-report=0)
+ case B1i-prefix OBSERVED .... GIT_PREFIX only: P7 measured NO observable redirection on this git — the two lines above are inert here, not coverage
+ case B2-gitdir REQUIRED PASS GIT_DIR only: the victim's WHOLE .git/config is byte-identical and core.hooksPath stays unset (victim=UNSET, exit 0)
+ case B2o-gitdir REQUIRED PASS GIT_DIR only: install-hooks.sh either REFUSED or configured SENTINEL ONLY (exit 0, Sentinel core.hooksPath=.githooks)
+ case B2-worktree REQUIRED PASS GIT_WORK_TREE only: the victim's WHOLE .git/config is byte-identical and core.hooksPath stays unset (victim=UNSET, exit 2)
+ case B2o-worktree REQUIRED PASS GIT_WORK_TREE only: install-hooks.sh either REFUSED or configured SENTINEL ONLY (exit 2, Sentinel core.hooksPath=UNSET)
+ case B2-both REQUIRED PASS GIT_DIR + GIT_WORK_TREE: the victim's WHOLE .git/config is byte-identical and core.hooksPath stays unset (victim=UNSET, exit 2)
+ case B2o-both REQUIRED PASS GIT_DIR + GIT_WORK_TREE: install-hooks.sh either REFUSED or configured SENTINEL ONLY (exit 2, Sentinel core.hooksPath=UNSET)
+ case B2-index REQUIRED PASS GIT_INDEX_FILE only: the victim's WHOLE .git/config is byte-identical and core.hooksPath stays unset (victim=UNSET, exit 0)
+ case B2o-index REQUIRED PASS GIT_INDEX_FILE only: install-hooks.sh either REFUSED or configured SENTINEL ONLY (exit 0, Sentinel core.hooksPath=.githooks)
+ case B2-common REQUIRED PASS GIT_COMMON_DIR only: the victim's WHOLE .git/config is byte-identical and core.hooksPath stays unset (victim=UNSET, exit 0)
+ case B2o-common REQUIRED PASS GIT_COMMON_DIR only: install-hooks.sh either REFUSED or configured SENTINEL ONLY (exit 0, Sentinel core.hooksPath=.githooks)
+ case B2-prefix REQUIRED PASS GIT_PREFIX only: the victim's WHOLE .git/config is byte-identical and core.hooksPath stays unset (victim=UNSET, exit 0)
+ case B2o-prefix REQUIRED PASS GIT_PREFIX only: install-hooks.sh either REFUSED or configured SENTINEL ONLY (exit 0, Sentinel core.hooksPath=.githooks)
+ case B2p CONTROL PASS a caller-provided GIT_DIR really does redirect a git CONFIG WRITE into a victim (canary=REACHED) — B2 is not passing for want of a mechanism
+ case B2n CONTROL PASS with no caller variables install-hooks.sh against Sentinel still succeeds and sets core.hooksPath (exit 0, .githooks)
+ case B3-none CONTROL PASS no caller variables (CONTROL): the hook blocks a staged credential in the matching repository (exit 1) — the fixture is live
+ case B3-gitdir REQUIRED PASS GIT_DIR only: the hook blocks the staged credential or refuses (exit 1, blocked=1 refusal=0 clean-report=0)
+ case B3-worktree REQUIRED PASS GIT_WORK_TREE only: the hook blocks the staged credential or refuses (exit 2, blocked=0 refusal=1 clean-report=0)
+ case B3-both REQUIRED PASS GIT_DIR + GIT_WORK_TREE: the hook blocks the staged credential or refuses (exit 2, blocked=0 refusal=1 clean-report=0)
+ case B3-index REQUIRED FAIL GIT_INDEX_FILE only: the hook blocks the staged credential or refuses (exit 2, blocked=0 refusal=0 clean-report=0)
+ case B3-common REQUIRED PASS GIT_COMMON_DIR only: the hook blocks the staged credential or refuses (exit 1, blocked=1 refusal=0 clean-report=0)
+ case B3-prefix REQUIRED PASS GIT_PREFIX only: the hook blocks the staged credential or refuses (exit 1, blocked=1 refusal=0 clean-report=0)
+ case B3b REQUIRED PASS on an identity mismatch the hook refuses BEFORE executing the caller's own check script (exit 1, decoy ran=0, commits=1)
+ case B3c CONTROL PASS a matching repository still commits benign content (exit 0) and still BLOCKS a credential through the hook (exit 1)
+ case B4s CONTROL PASS the census scores a deliberately leaky body as a carrier (1) and a deliberately scrubbed one as clean (0) — it can fail, and it can pass
+ case B4 REQUIRED FAIL no caller-provided git environment survives into a body-level git call in ANY of the 16 entry points (1 entry point(s) carry: .githooks/pre-commit)
+ case B4z OBSERVED .... entry points that made NO git call at all under the census, so B4 says nothing about them: none
+ case B4n OBSERVED .... 16 of 16 entry points were executed for the census; 275 git invocations recorded in total
+ case B4v OBSERVED .... variables present on the EXEMPT identity-probe calls: [GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_PREFIX |GIT_PREFIX |] — the entry points scrub GIT_DIR/GIT_WORK_TREE/GIT_INDEX_FILE/GIT_COMMON_DIR there and do NOT scrub GIT_PREFIX
+ case B4b OBSERVED .... body-level carrier breakdown: 1 call(s) carried GIT_DIR and its siblings; 0 carried GIT_PREFIX alone, which P7 measured inert on this git
+ case B5-none CONTROL PASS no caller variables (CONTROL): mutate.sh refuses against a dirty ts/src (exit 1) — the fixture is live
+ case B5-gitdir REQUIRED PASS GIT_DIR only: the dirty-tree refusal still fires (exit 1, refusal printed=1)
+ case B5-worktree REQUIRED PASS GIT_WORK_TREE only: the dirty-tree refusal still fires (exit 1, refusal printed=1)
+ case B5-both REQUIRED PASS GIT_DIR + GIT_WORK_TREE: the dirty-tree refusal still fires (exit 1, refusal printed=1)
+ case B5-index REQUIRED PASS GIT_INDEX_FILE only: the dirty-tree refusal still fires (exit 1, refusal printed=1)
+ case B5-common REQUIRED PASS GIT_COMMON_DIR only: the dirty-tree refusal still fires (exit 1, refusal printed=1)
+ case B5-prefix REQUIRED PASS GIT_PREFIX only: the dirty-tree refusal still fires (exit 1, refusal printed=1)
+ case B5clean CONTROL PASS on a CLEAN tree mutate.sh does NOT print the dirty-tree refusal — it is conditional, not unconditional
+ case C0 CONTROL PASS the staged pair actually scores a RENAME record in the raw enumeration (R present=1) — the fixture is the one a prior probe failed to build
+ case C1 REQUIRED PASS --staged scans the rename DESTINATION and blocks it (exit 1, destination named=1)
+ case C1b REQUIRED PASS the hook stops the commit and the credential does NOT reach HEAD (commit exit 1, credential in HEAD=0)
+ case C2f CONTROL PASS the executable-rename fixture really carries NEW MODE 100755 in its raw record (observed '100755')
+ case C2 REQUIRED PASS a rename destination with new mode 100755 is scanned and blocked (exit 1, named=1)
+ case C3f CONTROL PASS the typechange fixture really scores a T record from mode 120000 to 100644 (T present=1)
+ case C3 REQUIRED PASS a staged typechange whose destination is a regular file is scanned and blocked (exit 1, named=1)
+ case C4 CONTROL PASS an ordinary staged ADD carrying the identical bytes IS blocked (exit 1) — the discriminator is the STATUS LETTER, not the pattern
+ case C5 CONTROL PASS a genuine staged DELETION is still accepted, exit 0 (protected control, D-059(3))
+ case C5b CONTROL PASS deleting a credential-bearing tracked file is a DELETION and is accepted, exit 0 — removing content is not a finding
+ case C6f CONTROL PASS the gitlink fixture really carries new mode 160000 in its raw record (present=1)
+ case C6 CONTROL PASS a newly staged gitlink is not a false failure, exit 0 (protected control)
+ case C7f OBSERVED .... the copy fixture scores a C record under diff.renames=copies (present=1) — under this git's DEFAULT configuration the same change surfaces as A
+ case C7 CONTROL PASS a staged COPY destination is scanned and blocked (exit 1, named=1) — already true today and a repair must not lose it
+ case C8 OBSERVED .... one staged rename produces 3 NUL-delimited fields: the record, the SOURCE and the DESTINATION — not one pathname per record
+ case C8b OBSERVED .... the excluded statuses at this SHA are the ones outside --diff-filter=ACM: R (rename) and T (typechange); A, C and M are enumerated
+ case Z1 CONTROL PASS no git configuration was written to the redirected global/system/XDG files or to the repository under test
+ case Z2 CONTROL PASS the subject clone is back at 492021325255f56ed8d3df8265bbaa43ef0f7efa with no modification — every case measured a clean subject
+ case Z3 OBSERVED .... instrumentation: 5 shimmed-child hit(s) recorded across the run; reaching one is an instrument fact, never a result

@@ -1,0 +1,100 @@
+
+[1m== preflight — refuse to run a harness that cannot fail ==[0m
+        repository under test is at 28fa955900c102b680084c138e45c8b49cd12a79
+        WARNING: that is NOT the card's base SHA (f68d4d804de4d3b631e25fd539deecda5409f0d7).
+                 Outcomes below are evidence about 28fa955900c102b680084c138e45c8b49cd12a79 and nothing else.
+        P1 /usr/bin/grep canary found
+        P2 unrelated directory is outside every repository
+        P3 isolated clone of the subject at 28fa955900c102b680084c138e45c8b49cd12a79
+        P4 git shim passes through when idle
+        P5 the planted credential fixture trips check-secrets.sh
+        P6 foreign repository created (2 tracked files, a decoy remote)
+
+[1m== CASE 1 (CONTROL) — invoked from Sentinel's root, normal result ==[0m
+  case 1a  CONTROL  PASS  16 tracked entry points under scripts/ and .githooks/, all env-bash and executable
+  case 1b  CONTROL  PASS  12 executable entry points exit 0 from the repository root
+  case 1c  CONTROL  PASS  install-hooks/mutate/test/pre-commit resolve a root (runtime NOT exercised; see COVERAGE.md)
+
+[1m== CASE 2 (REQUIRED) — invoked from an unrelated directory, must still check Sentinel ==[0m
+  case 2   REQUIRED PASS  all 12 give the Sentinel answer from an unrelated directory (0 differ, of which 0 exit 0)
+
+[1m== CASE 3 (REQUIRED) — invoked from inside a foreign git repository, must still check Sentinel ==[0m
+        same output from both places (NOT evidence of agreement): check-class-coverage check-eval-codes check-findings-ledger check-gate-immutability check-label-integrity check-label-prompt check-rename-gate check-review-scope check-secrets check-suite-floors check-type-strings check-vendor-honesty
+  case 3   REQUIRED PASS  all 12 give the Sentinel answer from inside a foreign repository (0 differ, of which 0 exit 0)
+  case 3a  REQUIRED PASS  check-secrets.sh blocks a credential in Sentinel when called from a foreign repo (exit 1)
+  case 3a  CONTROL  PASS  the same credential blocks when called from Sentinel's root (exit 1) — the fixture is live
+  case 3b  REQUIRED PASS  check-review-scope.sh does not print a partition of the FOREIGN repository
+  case 3c  REQUIRED PASS  check-rename-gate.sh does not report on the FOREIGN repository's slug
+
+[1m== CASE 4 (REQUIRED) — an entry point whose OWN repository cannot be established must refuse ==[0m
+  case 4a  CONTROL  PASS  16 byte-identical entry-point copies, structure preserved, in layouts outside every repository
+  case 4b  CONTROL  PASS  no normal in-repository run emits an identity refusal — the marker is dedicated, not boilerplate
+  case 4c  CONTROL  PASS  the scorer accepts dedicated identity refusals in three wordings this harness invented, not one implementation's literal
+  case 4d  CONTROL  PASS  the scorer rejects missing-file, command-not-found, failed-cd, not-a-repository, shim and non-identity refusals
+  case 4   REQUIRED PASS  all 16 entry points refuse with a dedicated repository-identity refusal before doing any work (16 of 16 refuse, 0 do not)
+  case 4i  REQUIRED PASS  install-hooks.sh refuses on an unestablished repository and writes NO git configuration anywhere (exit 2, config unchanged=yes)
+  case 4h  REQUIRED PASS  the hook refuses before executing the layout's own scripts/check-secrets.sh (exit 2, decoy ran: no)
+  case 4e  CONTROL  PASS  case 4 changed neither the Sentinel clone nor any git configuration — later cases still measure a clean subject
+  case 4s  OBSERVED ....  instrumentation: 0 of 16 reached a shimmed child, 0 of 16 printed an incidental error (neither can score as a refusal)
+  case 4x  OBSERVED ....  case 2 and case 4 differ only in WHERE THE SCRIPT LIVES: originals inside Sentinel, called from elsewhere, must answer; copies outside every repository must refuse
+
+[1m== CASE 5 (REQUIRED) — a git command exits non-zero, must refuse ==[0m
+  case 5a  REQUIRED PASS  check-secrets.sh refuses when git ls-files exits non-zero (exit 1)
+  case 5b  REQUIRED PASS  check-review-scope.sh refuses when 'git ls-files --error-unmatch' fails (exit 1)
+  case 5c  REQUIRED PASS  the remediation count survives that failure (true=112, observed=112)
+  case 5d  CONTROL  PASS  check-review-scope.sh's GUARDED ls-files branch does refuse on the same shim (exit 1) — the shim is live
+  case 5e  CONTROL  PASS  an unmutated run assigns every tracked file and measures a non-empty remediation surface (112)
+
+[1m== CASE 6 (REQUIRED) — a git command succeeds with EMPTY output, must refuse ==[0m
+  case 6   REQUIRED PASS  check-secrets.sh refuses when git ls-files succeeds with no output (exit 1)
+  case 6   CONTROL  PASS  check-review-scope.sh's guarded branch does refuse on an empty enumeration (exit 1)
+
+[1m== CASE 7 (PROTECTED CONTROL) — a genuine staged deletion must NOT be refused (D-059(3)) ==[0m
+  case 12c CONTROL  PASS  install-hooks.sh against Sentinel still succeeds and sets core.hooksPath (exit 0)
+  case 7   CONTROL  PASS  staged deletion accepted: guard=0 hook=0 commit=0 (a blanket 'any git failure refuses' would break this)
+
+[1m== CASES 8 & 9 — the same credential bytes under an ASCII and a non-ASCII filename ==[0m
+  case 89  CONTROL  PASS  the two fixtures are byte-identical — only the FILENAME differs, which is the whole discriminator
+  case 8   CONTROL  PASS  ASCII filename is BLOCKED in both modes (default=1 staged=1)
+  case 9   REQUIRED PASS  non-ASCII filename is BLOCKED in both modes (default=1 staged=1)
+        enumeration as check-secrets.sh sees it (quoted):
+          ls-files      -> "a1-case9-caf\303\251.ts"
+          diff --cached -> "a1-case9-caf\303\251.ts"
+        the same paths with quoting removed (candidate discriminators, NOT applied here):
+          ls-files -z          -> a1-case9-café.ts
+          diff --cached --raw -z -> a1-case9-café.ts
+
+[1m== CASE 10 (REQUIRED) — secret guard DEFAULT mode, fail-closed ==[0m
+  case 10  CONTROL  PASS  the same file, present in the working tree, IS blocked in default mode (exit 1)
+  case 10  REQUIRED PASS  default mode refuses when a tracked path it enumerated cannot be read (exit 1)
+        default-mode discriminator evidence (observed, not applied):
+          git ls-files --deleted names it            -> a1-case10-index.ts
+          git show ":path" still yields the content  -> 1 matching line(s)
+          index mode-bit census (160000 = gitlink, legitimately not a file):
+             475 100644
+              18 100755
+               2 160000
+
+[1m== CASE 11 (REQUIRED) — secret guard --staged mode, fail-closed ==[0m
+  case 11  CONTROL  PASS  unshimmed, the staged credential IS blocked (exit 1)
+  case 11  REQUIRED PASS  staged mode refuses when 'git show :path' fails instead of skipping the file (exit 1)
+
+[1m== CASE 12 (REQUIRED) — install-hooks.sh against a FOREIGN repository ==[0m
+  case 12  REQUIRED PASS  core.hooksPath is NOT written into a repository that does not own the script (before='' after='')
+  case 12b REQUIRED PASS  the non-zero exit is a refusal taken BEFORE any write, not a downstream chmod failure (exit 2, wrote='')
+
+[1m== CASE 13 (REQUIRED) — pre-commit hook under a repository-identity MISMATCH ==[0m
+  case 13a OBSERVED ....  with no guard in the foreign tree the commit is stopped (exit 1, commits=1) — recorded, and asserted by 13a-r below
+  case 13a-r REQUIRED PASS  the stop is a refusal, not an exec failure against a path in the calling repository
+  case 13  REQUIRED PASS  the hook refuses on an identity mismatch (exit 1, commits=1, credential landed=no)
+  case 13b REQUIRED PASS  the hook does not execute the FOREIGN repository's scripts/check-secrets.sh (decoy ran: no)
+  case 13c CONTROL  PASS  a matching repository with hooks installed still commits (exit 0)
+  case 13d CONTROL  PASS  a matching repository still BLOCKS an ASCII credential through the hook (exit 1)
+
+[1m== A1 SUMMARY ==[0m
+  repository under test : 28fa955900c102b680084c138e45c8b49cd12a79
+  REQUIRED failed       : 0   (pre-repair defects observed)
+  CONTROL  failed       : 0   (must be 0, or nothing above is evidence)
+
+  every required assertion and every control held.
+EXIT=0

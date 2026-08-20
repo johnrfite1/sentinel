@@ -1,0 +1,98 @@
+================ TEMPLATE=tpl-subject  ASSIGNMENT 2 ================
+--- combo=NONE (git commit -am, credential planted, temp index legitimate)  exit=1
+    BLOCKED zz-fixture-d062v.md — credential-shaped content:
+        1:signerKey: "0xPLACEHOLDER-b-repeated-64-times
+    
+    secret guard: 1 finding(s). Do not weaken this guard to make a commit pass (AGENTS.md).
+    If this is a false positive, fix or refine the guard and document why.
+    HEAD moved=no  credential-in-HEAD=no  clean-line=0
+    victim fingerprint unchanged=yes
+    victim HEAD holds our credential already (by construction, hex c) — victim HEAD=73a27fc
+--- combo=GITDIR_VICTIM (git commit -am, credential planted, temp index legitimate)  exit=1
+      FAIL  pre-commit: the index git handed this hook is not acceptable; refusing.
+            reason        : outside this worktree's index directory (/private/tmp/claude-501/-Users-johnfite-Projects/65399fa2-af3f-48ca-8f41-4ce3f0256b92/scratchpad/work/SUBJ-gd/run-GITDIR_VICTIM/.git)
+            GIT_INDEX_FILE: /private/tmp/claude-501/-Users-johnfite-Projects/65399fa2-af3f-48ca-8f41-4ce3f0256b92/scratchpad/work/SUBJ-gd/victim/.git/index.lock
+        A guard that cannot establish WHICH index is being committed must not report a
+        result it did not establish (D-062).
+    HEAD moved=no  credential-in-HEAD=no  clean-line=0
+    victim fingerprint unchanged=yes
+    victim HEAD holds our credential already (by construction, hex c) — victim HEAD=73a27fc
+--- combo=WT_VICTIM (git commit -am, credential planted, temp index legitimate)  exit=1
+      FAIL  pre-commit: the index git handed this hook is not acceptable; refusing.
+            reason        : outside this worktree's index directory (/private/tmp/claude-501/-Users-johnfite-Projects/65399fa2-af3f-48ca-8f41-4ce3f0256b92/scratchpad/work/SUBJ-gd/victim/.git)
+            GIT_INDEX_FILE: /private/tmp/claude-501/-Users-johnfite-Projects/65399fa2-af3f-48ca-8f41-4ce3f0256b92/scratchpad/work/SUBJ-gd/run-WT_VICTIM/.git/index.lock
+        A guard that cannot establish WHICH index is being committed must not report a
+        result it did not establish (D-062).
+    HEAD moved=no  credential-in-HEAD=no  clean-line=0
+    victim fingerprint unchanged=yes
+    victim HEAD holds our credential already (by construction, hex c) — victim HEAD=73a27fc
+--- combo=BOTH_VICTIM (git commit -am, credential planted, temp index legitimate)  exit=1
+    secret guard: clean
+    HEAD detached from 4920213
+    nothing to commit, working tree clean
+    HEAD moved=no  credential-in-HEAD=no  clean-line=1
+    victim fingerprint unchanged=yes
+    victim HEAD holds our credential already (by construction, hex c) — victim HEAD=73a27fc
+--- combo=GITDIR_SELF (git commit -am, credential planted, temp index legitimate)  exit=1
+    BLOCKED zz-fixture-d062v.md — credential-shaped content:
+        1:signerKey: "0xPLACEHOLDER-b-repeated-64-times
+    
+    secret guard: 1 finding(s). Do not weaken this guard to make a commit pass (AGENTS.md).
+    If this is a false positive, fix or refine the guard and document why.
+    HEAD moved=no  credential-in-HEAD=no  clean-line=0
+    victim fingerprint unchanged=yes
+    victim HEAD holds our credential already (by construction, hex c) — victim HEAD=73a27fc
+--- combo=BOTH_SELF (git commit -am, credential planted, temp index legitimate)  exit=1
+    BLOCKED zz-fixture-d062v.md — credential-shaped content:
+        1:signerKey: "0xPLACEHOLDER-b-repeated-64-times
+    
+    secret guard: 1 finding(s). Do not weaken this guard to make a commit pass (AGENTS.md).
+    If this is a false positive, fix or refine the guard and document why.
+    HEAD moved=no  credential-in-HEAD=no  clean-line=0
+    victim fingerprint unchanged=yes
+    victim HEAD holds our credential already (by construction, hex c) — victim HEAD=73a27fc
+--- emulated hook + valid temp index, env=NONE  exit=1
+    BLOCKED zz-fixture-d062v.md — credential-shaped content:
+        1:signerKey: "0xPLACEHOLDER-b-repeated-64-times
+    
+    secret guard: 1 finding(s). Do not weaken this guard to make a commit pass (AGENTS.md).
+    If this is a false positive, fix or refine the guard and document why.
+    victim fingerprint unchanged=yes
+--- emulated hook + valid temp index, env=GITDIR_VICTIM  exit=1
+    BLOCKED zz-fixture-d062v.md — credential-shaped content:
+        1:signerKey: "0xPLACEHOLDER-b-repeated-64-times
+    
+    secret guard: 1 finding(s). Do not weaken this guard to make a commit pass (AGENTS.md).
+    If this is a false positive, fix or refine the guard and document why.
+    victim fingerprint unchanged=yes
+--- emulated hook + valid temp index, env=WT_VICTIM  exit=2
+      FAIL  pre-commit: repository identity mismatch; refusing before running anything.
+            committing in : /private/tmp/claude-501/-Users-johnfite-Projects/65399fa2-af3f-48ca-8f41-4ce3f0256b92/scratchpad/work/SUBJ-gd/victim
+            hook belongs to: /private/tmp/claude-501/-Users-johnfite-Projects/65399fa2-af3f-48ca-8f41-4ce3f0256b92/scratchpad/work/SUBJ-gd/emul-tmp
+    victim fingerprint unchanged=yes
+--- emulated hook + valid temp index, env=BOTH_VICTIM  exit=2
+      FAIL  pre-commit: repository identity mismatch; refusing before running anything.
+            committing in : /private/tmp/claude-501/-Users-johnfite-Projects/65399fa2-af3f-48ca-8f41-4ce3f0256b92/scratchpad/work/SUBJ-gd/victim
+            hook belongs to: /private/tmp/claude-501/-Users-johnfite-Projects/65399fa2-af3f-48ca-8f41-4ce3f0256b92/scratchpad/work/SUBJ-gd/emul-tmp
+    victim fingerprint unchanged=yes
+--- emulated hook + valid temp index, env=GITDIR_SELF  exit=1
+    BLOCKED zz-fixture-d062v.md — credential-shaped content:
+        1:signerKey: "0xPLACEHOLDER-b-repeated-64-times
+    
+    secret guard: 1 finding(s). Do not weaken this guard to make a commit pass (AGENTS.md).
+    If this is a false positive, fix or refine the guard and document why.
+    victim fingerprint unchanged=yes
+--- emulated hook + valid temp index, env=BOTH_SELF  exit=1
+    BLOCKED zz-fixture-d062v.md — credential-shaped content:
+        1:signerKey: "0xPLACEHOLDER-b-repeated-64-times
+    
+    secret guard: 1 finding(s). Do not weaken this guard to make a commit pass (AGENTS.md).
+    If this is a false positive, fix or refine the guard and document why.
+    victim fingerprint unchanged=yes
+--- foreign repo using the SUBJECT's hook (git commit -am)  exit=1
+      FAIL  pre-commit: repository identity mismatch; refusing before running anything.
+            committing in : /private/tmp/claude-501/-Users-johnfite-Projects/65399fa2-af3f-48ca-8f41-4ce3f0256b92/scratchpad/work/SUBJ-gd/victim2
+            hook belongs to: /private/tmp/claude-501/-Users-johnfite-Projects/65399fa2-af3f-48ca-8f41-4ce3f0256b92/scratchpad/work/SUBJ-gd/subject
+    HEAD moved=no  credential-in-HEAD=no  clean-line=0
+================ END ASSIGNMENT 2 ================
+EXIT=0

@@ -1,0 +1,55 @@
+================ TEMPLATE=tpl-baseline — LAYOUTS ================
+--- linked worktree layout facts
+    .git is a: FILE   content: gitdir: /private/tmp/claude-501/-Users-johnfite-Projects/65399fa2-af3f-48ca-8f41-4ce3f0256b92/scratchpad/work/BASE-lay/main/.git/worktrees/lw
+    git rev-parse --git-path index  -> /private/tmp/claude-501/-Users-johnfite-Projects/65399fa2-af3f-48ca-8f41-4ce3f0256b92/scratchpad/work/BASE-lay/main/.git/worktrees/lw/index
+    git rev-parse --git-dir         -> /private/tmp/claude-501/-Users-johnfite-Projects/65399fa2-af3f-48ca-8f41-4ce3f0256b92/scratchpad/work/BASE-lay/main/.git/worktrees/lw
+    core.hooksPath                  -> .githooks
+    hook that would run             -> .githooks
+        LWPROBE cwd=/private/tmp/claude-501/-Users-johnfite-Projects/65399fa2-af3f-48ca-8f41-4ce3f0256b92/scratchpad/work/BASE-lay/lw
+        LWPROBE GIT_INDEX_FILE=[/private/tmp/claude-501/-Users-johnfite-Projects/65399fa2-af3f-48ca-8f41-4ce3f0256b92/scratchpad/work/BASE-lay/main/.git/worktrees/lw/index.lock]
+--- linked worktree: git commit -am with a planted credential, real hook
+    exit=0
+    secret guard: clean
+    [wtbranch 5b4fe93] lw
+     1 file changed, 1 insertion(+), 2 deletions(-)
+    HEAD moved=yes  credential-in-HEAD=yes  clean-line=1
+  >>> LINKED WORKTREE: *** FAILS OPEN *** credential in HEAD
+--- linked worktree: clean commit (does the hook let legitimate work through?)
+    exit=0
+    secret guard: clean
+    [wtbranch 3f627fd] lwclean
+     1 file changed, 1 insertion(+), 1 deletion(-)
+--- linked worktree: git add + git commit with credential
+    exit=1
+    BLOCKED zz-fixture-d062v.md — credential-shaped content:
+        1:signerKey: "0xPLACEHOLDER-b-repeated-64-times
+    
+    secret guard: 1 finding(s). Do not weaken this guard to make a commit pass (AGENTS.md).
+    If this is a false positive, fix or refine the guard and document why.
+--- separate-gitdir layout facts
+    .git is a: FILE   content: gitdir: /private/tmp/claude-501/-Users-johnfite-Projects/65399fa2-af3f-48ca-8f41-4ce3f0256b92/scratchpad/work/BASE-lay/realgit
+    git rev-parse --git-path index -> /private/tmp/claude-501/-Users-johnfite-Projects/65399fa2-af3f-48ca-8f41-4ce3f0256b92/scratchpad/work/BASE-lay/realgit/index
+    core.hooksPath                 -> .githooks
+        LWPROBE cwd=/private/tmp/claude-501/-Users-johnfite-Projects/65399fa2-af3f-48ca-8f41-4ce3f0256b92/scratchpad/work/BASE-lay/sepwt
+        LWPROBE GIT_INDEX_FILE=[/private/tmp/claude-501/-Users-johnfite-Projects/65399fa2-af3f-48ca-8f41-4ce3f0256b92/scratchpad/work/BASE-lay/realgit/index.lock]
+--- separate-gitdir: git commit -am with a planted credential, real hook
+    exit=0
+    secret guard: clean
+    [detached HEAD d869a8e] sg
+     1 file changed, 1 insertion(+), 2 deletions(-)
+    HEAD moved=yes  credential-in-HEAD=yes  clean-line=1
+  >>> SEPARATE GITDIR: *** FAILS OPEN *** credential in HEAD
+--- separate-gitdir: clean commit
+    exit=0
+    secret guard: clean
+    [detached HEAD 393a969] sgclean
+     1 file changed, 1 insertion(+), 1 deletion(-)
+        LWPROBE cwd=/private/tmp/claude-501/-Users-johnfite-Projects/65399fa2-af3f-48ca-8f41-4ce3f0256b92/scratchpad/work/BASE-lay/subdir
+        LWPROBE GIT_INDEX_FILE=[/private/tmp/claude-501/-Users-johnfite-Projects/65399fa2-af3f-48ca-8f41-4ce3f0256b92/scratchpad/work/BASE-lay/subdir/.git/index.lock]
+--- commit -am issued from a subdirectory, real hook
+    exit=0
+    secret guard: clean
+    [detached HEAD 9182d44] sd
+     1 file changed, 1 insertion(+), 2 deletions(-)
+================ END LAYOUTS ================
+EXIT=0

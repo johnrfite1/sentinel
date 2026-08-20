@@ -1,0 +1,46 @@
+### RUNNING a2-env-and-supervisor against tpl-subject (HEAD=4920213) at 12:16:23
+  REQUIRED failed       : 2
+  CONTROL  failed       : 0   (must be 0, or nothing above is evidence)
+
+  2 required assertion(s) failed with every control intact — the confirmed A1
+  attempt-two obligations are present and observable at this SHA.
+EXIT=1
+### RUNNING d062-containment against tpl-subject (HEAD=4920213) at 12:25:54
+  measured : 492021325255f56ed8d3df8265bbaa43ef0f7efa
+  REQUIRED failures : 0
+  CONTROL  failures : 0
+
+  [1mALL REQUIRED CASES AND ALL CONTROLS HELD.[0m
+EXIT=0
+### RUNNING a1-repo-identity against tpl-subject (HEAD=4920213) at 12:26:34
+  repository under test : 492021325255f56ed8d3df8265bbaa43ef0f7efa
+  REQUIRED failed       : 0   (pre-repair defects observed)
+  CONTROL  failed       : 0   (must be 0, or nothing above is evidence)
+
+  every required assertion and every control held.
+EXIT=0
+### tpl-subject fingerprint unchanged by harness runs: yes
+### RUNNING a2-env-and-supervisor against tpl-baseline (HEAD=28fa955) at 12:31:28
+  repository under test : 28fa955900c102b680084c138e45c8b49cd12a79
+  REQUIRED failed       : 0
+  CONTROL  failed       : 0   (must be 0, or nothing above is evidence)
+
+  every required assertion and every control held.
+EXIT=0
+### RUNNING d062-containment against tpl-baseline (HEAD=28fa955) at 12:40:10
+  measured : 28fa955900c102b680084c138e45c8b49cd12a79
+  REQUIRED failures : 7
+  CONTROL  failures : 0
+
+  [1mREQUIRED FAILURES: 7[0m — every control held, so each failure is attributable.
+EXIT=1
+### RUNNING a1-repo-identity against tpl-baseline (HEAD=28fa955) at 12:40:55
+  repository under test : 28fa955900c102b680084c138e45c8b49cd12a79
+  REQUIRED failed       : 0   (pre-repair defects observed)
+  CONTROL  failed       : 0   (must be 0, or nothing above is evidence)
+
+  every required assertion and every control held.
+EXIT=0
+### tpl-baseline fingerprint unchanged by harness runs: yes
+### ALL HARNESS RUNS DONE
+DRIVER_EXIT=0
