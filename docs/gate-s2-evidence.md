@@ -281,8 +281,12 @@ none exist. `scripts/check-vendor-honesty.sh` now runs in the project gate and e
 - **D-008(4), no claim or layout implying superiority** — implemented as: **no named vendor may
   appear in any measurement artifact**. Stronger than a phrase scan, and deliberately so: D-008
   forbids a *layout* that implies superiority, and layout has no vocabulary to grep for.
-- **§7.2's caveat travels with the numbers** — extracted from §7.2 itself and required in the
-  ablation report, after A-028 found the report had published its table without it.
+- **§7.2's caveat travels with the numbers** — required in the ablation report after A-028
+  found the report had published its table without it. **[CORRECTED 2026-08-19 (D-060).
+  The signed wording also said "extracted from §7.2 itself." That was false: the
+  contemporaneous guard searched the whole proposal and selected its first matching phrase
+  rather than locating §7.2 (`V3-N2`). The report requirement was real and remains
+  unchanged. This correction does not recertify the pack or change Gate 5's standing.]**
 
 **D-008(1) and (3), now cleared and how.** Condition (1)'s mechanical half is **MET** — the check
 counts `[§13#N read YYYY-MM-DD]` in each capability cell and reports **11 of 11**, and a row
