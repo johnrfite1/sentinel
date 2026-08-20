@@ -183,7 +183,8 @@ _sec_content() {
     return 1
   fi
   if [ -f "$pth" ]; then cat -- "$pth" 2>/dev/null && return 0; return 1; fi
-  # D-060's ruling: absent working-tree copy, index blob present -> scan the INDEX BLOB.
+  # D-061's ruling: absent working-tree copy, index blob present -> scan the INDEX BLOB.
+  # (Ruled after D-060 was recorded; D-060's entry does not contain it. Citation corrected.)
   # Until the deletion is staged the index still carries the content, and default mode may
   # not report clean while known repository content went unread.
   if [ "$hix" = "1" ]; then git show ":$pth" 2>/dev/null && return 0; return 1; fi
