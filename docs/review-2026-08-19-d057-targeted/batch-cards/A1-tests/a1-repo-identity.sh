@@ -283,17 +283,195 @@ else
 fi
 
 # ============================================================================ CASE 4 =========
-hdr "CASE 4 (REQUIRED) — repository identity unresolved, must refuse"
+hdr "CASE 4 (REQUIRED) — an entry point whose OWN repository cannot be established must refuse"
 
-four_open=0; four_closed=0
-for s in $RUNNABLE; do
-    ( cd "$PLAIN" && "$SUT/scripts/$s.sh" >/dev/null 2>&1 ); rc=$?
-    if [ "$rc" -eq 0 ]; then four_open=$((four_open + 1)); say "exits 0 with identity unresolved: $s.sh"
-    else four_closed=$((four_closed + 1)); fi
+# WHY THIS FIXTURE REPLACED THE PREVIOUS ONE, recorded here rather than in a side document.
+# The withdrawn case 4 ran the SAME command as case 2 — the in-repository entry points, called
+# from a directory outside every repository — and required a non-zero exit where case 2
+# requires the Sentinel answer and exit 0. What that fixture made unresolvable was only the
+# CALLER's repository, which was the identity solely under the caller-current-directory
+# semantics D-060(2) abolished. Under the ruled semantics the entry point derives identity from
+# its OWN location, so it resolves and exit 0 is CORRECT. The two rows described one fixture
+# read under two semantics; only case 2 survives. Independently adjudicated CONFIRMED-INVALID.
+#
+# THE PROPERTY THIS CASE NOW ASSERTS:
+#   An entry point whose own containing Sentinel repository cannot be established must REFUSE
+#   before performing project work.
+# The fixture instantiates that premise the only way D-060(2) allows: it attacks the SCRIPT's
+# own location. The entry-point layout is copied out of every repository, preserving the
+# scripts/ and .githooks/ structure, and the COPIES are invoked from there with the git
+# identity variables cleared. Case 2 is untouched and still requires the ORIGINALS, called
+# from an unrelated directory, to check Sentinel and exit 0 — so the two cases now measure two
+# different commands and can both hold. All 16 entry points are covered, not the 12 of the
+# withdrawn form.
+#
+# A NON-ZERO EXIT IS NOT A PASS, AND THIS IS THE CRUX. At the pre-repair checkpoint most of
+# these copies exit non-zero for INCIDENTAL reasons — a missing file, a `cd` that failed, a
+# child that is not on PATH — and scoring those as refusals is exactly the mislabelling case
+# 12b already forecloses; it would make this case vacuous. A pass requires a DEDICATED
+# repository-identity refusal, and controls 4c/4d prove the scorer separates the two in both
+# directions. Nothing here is scored on an implementation's literal string: 4c feeds the
+# scorer refusal wordings this harness invented.
+#
+# ISOLATION. The copies run with HOME, the global/system/XDG git config files and PATH all
+# redirected into this run's scratch area, so nothing they attempt can reach the operator's
+# configuration. Expensive and network-capable children (forge, npm, node, curl, gh, …) are
+# shimmed to a recorder that does no work: REACHING A SHIM IS AN INSTRUMENT FAILURE, never a
+# refusal, and an entry point that reaches one cannot pass this case.
+
+ISO="$WORK/iso-layout"
+ISO_DECOY="$WORK/iso-decoy"
+FOURSHIM="$WORK/shim4"
+FOURHOME="$WORK/home4"
+FOURTOUCH="$WORK/shim4.touched"
+mkdir -p "$ISO" "$ISO_DECOY" "$FOURSHIM" "$FOURHOME"
+: > "$FOURTOUCH"
+
+EP_ALL="$( cd "$SUT" && git ls-files 'scripts/*' '.githooks/*' )"
+for f in $EP_ALL; do
+    mkdir -p "$ISO/$(dirname "$f")" "$ISO_DECOY/$(dirname "$f")"
+    cp "$SUT/$f" "$ISO/$f";       chmod +x "$ISO/$f"
+    cp "$SUT/$f" "$ISO_DECOY/$f"; chmod +x "$ISO_DECOY/$f"
 done
-check REQUIRED 4 "$four_open" "no entry point reports a result with identity unresolved ($four_open of 12 exit 0)"
-if [ "$four_closed" -gt 0 ]; then held=0; else held=1; fi
-check CONTROL  4 "$held" "$four_closed of 12 do refuse — the probe discriminates between refusal and a clean summary"
+# The decoy layout differs in exactly one file: a caller-provided check sitting where the hook
+# would look for one. It must not run.
+printf '#!/usr/bin/env bash\necho "A1-CASE4-DECOY-RAN"\nexit 0\n' > "$ISO_DECOY/scripts/check-secrets.sh"
+chmod +x "$ISO_DECOY/scripts/check-secrets.sh"
+
+for c in forge anvil cast chisel npm npx node cargo curl wget gh python3 pip3 yarn pnpm ssh nc; do
+    cat > "$FOURSHIM/$c" <<SHIM4
+#!/usr/bin/env bash
+printf '%s %s\n' "$c" "\$*" >> "$FOURTOUCH"
+echo "a1-case4 shim: '$c' was reached — INSTRUMENT FAILURE, not a refusal" >&2
+exit 97
+SHIM4
+    chmod +x "$FOURSHIM/$c"
+done
+
+# --- the scorer -----------------------------------------------------------------------------
+# A dedicated repository-identity refusal is ONE LINE carrying both a refusal verb and the
+# repository-identity condition. Behavioural, not a transcription of any implementation.
+is_ident_refusal() {
+    printf '%s\n' "$1" \
+      | /usr/bin/grep -Ei 'refus(e|ed|es|ing)|declin(e|ed|es|ing)' \
+      | /usr/bin/grep -Eiq 'sentinel repositor|repository identit|identity mismatch|repository root|own location|invoking repositor|another repositor|foreign repositor|(is |was )?(not inside|outside) the sentinel|cannot (establish|determine|resolve).*(repositor|identity|location)'
+}
+
+iso_fp() { ( cd "$1" && { find . | LC_ALL=C sort
+                          find . -type f -exec shasum -a 256 {} + | LC_ALL=C sort
+                        } | shasum -a 256 | cut -d' ' -f1 ); }
+sut_fp() { printf '%s|%s' "$(git -C "$SUT" rev-parse HEAD)" \
+                          "$(git -C "$SUT" status --porcelain -z -uall | shasum -a 256 | cut -d' ' -f1)"; }
+# "no git configuration was written ANYWHERE": the clone, the real tree, this run's redirected
+# global/system/XDG files, and any repository that might have been conjured in the layout.
+cfg_fp() {
+    { git -C "$SUT"  config --local --list 2>/dev/null || true
+      git -C "$ROOT" config --local --list 2>/dev/null || true
+      cat "$FOURHOME/.gitconfig"        2>/dev/null || echo ABSENT-global
+      cat "$FOURHOME/.gitconfig-system" 2>/dev/null || echo ABSENT-system
+      find "$FOURHOME/.config" -type f -exec cat {} + 2>/dev/null || echo ABSENT-xdg
+      for d in "$ISO" "$ISO_DECOY"; do [ -e "$d/.git" ] && echo "GIT-IN-$d" || echo "NO-GIT-IN-$d"; done
+    } | shasum -a 256 | cut -d' ' -f1
+}
+run_iso() {   # $1 layout directory, $2 entry point path relative to it
+    ( cd "$1" && env -u GIT_DIR -u GIT_WORK_TREE -u GIT_COMMON_DIR -u GIT_PREFIX \
+        HOME="$FOURHOME" GIT_CONFIG_GLOBAL="$FOURHOME/.gitconfig" \
+        GIT_CONFIG_SYSTEM="$FOURHOME/.gitconfig-system" XDG_CONFIG_HOME="$FOURHOME/.config" \
+        GIT_TERMINAL_PROMPT=0 PATH="$FOURSHIM:$PATH" "./$2" 2>&1 )
+}
+
+# 4a — the fixture instantiates the premise, or nothing below means anything.
+iso_bad=0; iso_n=0
+for d in "$ISO" "$ISO_DECOY"; do
+    ( cd "$d" && git rev-parse --show-toplevel >/dev/null 2>&1 ) && { iso_bad=1; say "layout $d is inside a git repository — case 4 would measure nothing"; }
+done
+for f in $EP_ALL; do
+    iso_n=$((iso_n + 1))
+    cmp -s "$SUT/$f" "$ISO/$f" || { iso_bad=1; say "copy differs from the original: $f"; }
+    [ -x "$ISO/$f" ] || { iso_bad=1; say "copy is not executable: $f"; }
+done
+[ "$iso_n" -eq 16 ] || { iso_bad=1; say "copied $iso_n entry points; the card enumerates 16"; }
+check CONTROL 4a "$iso_bad" "16 byte-identical entry-point copies, structure preserved, in layouts outside every repository"
+
+# 4b — the marker is a dedicated signal. If a NORMAL run already emitted it, the scorer would
+#      pass anything and case 4 would prove nothing.
+b4=0
+for s in $RUNNABLE; do
+    is_ident_refusal "$(cat "$WORK/base/$s.out")" && { b4=1; say "an identity refusal appears in a NORMAL run of $s.sh"; }
+done
+check CONTROL 4b "$b4" "no normal in-repository run emits an identity refusal — the marker is dedicated, not boilerplate"
+
+# 4c/4d — the scorer itself, probed both ways with synthetic lines.
+p1='  FAIL  refusing: the Sentinel repository containing this script cannot be established.'
+p2='cannot determine the repository identity of this hook; declining before running anything.'
+p3='guard: this file is not inside the Sentinel repository, so it refuses to report a result.'
+if is_ident_refusal "$p1" && is_ident_refusal "$p2" && is_ident_refusal "$p3"; then held=0; else held=1; fi
+check CONTROL 4c "$held" "the scorer accepts dedicated identity refusals in three wordings this harness invented, not one implementation's literal"
+neg_bad=0
+while IFS= read -r probe; do
+    [ -n "$probe" ] || continue
+    is_ident_refusal "$probe" && { neg_bad=1; say "scorer accepted an INCIDENTAL failure: $probe"; }
+done <<'NEGPROBES'
+bash: ./scripts/check-secrets.sh: No such file or directory
+./scripts/test.sh: line 12: forge: command not found
+fatal: not a git repository (or any of the parent directories): .git
+./scripts/mutate.sh: line 33: cd: /ts: No such file or directory
+a1-case4 shim: 'npm' was reached — INSTRUMENT FAILURE, not a refusal
+  FAIL  git ls-files failed; refusing to report a clean scan:
+findings ledger: MISSING at docs/findings-register.md — refusing to report totals from nothing.
+  FAIL  git ls-files --error-unmatch failed on: .githooks/pre-commit. Refusing to treat an instrument failure as a deletion.
+NEGPROBES
+check CONTROL 4d "$neg_bad" "the scorer rejects missing-file, command-not-found, failed-cd, not-a-repository, shim and non-identity refusals"
+
+# --- the case itself ------------------------------------------------------------------------
+sut_before="$(sut_fp)"; cfg_before="$(cfg_fp)"
+four_pass=0; four_fail=0; four_shim=0; four_incidental=0
+ih_rc=""; ih_out=""; ih_cfg_held=1
+for f in $EP_ALL; do
+    fp0="$(iso_fp "$ISO")"; cfg0="$(cfg_fp)"; sut0="$(sut_fp)"
+    t0="$(/usr/bin/grep -c '' "$FOURTOUCH")"
+    out="$( run_iso "$ISO" "$f" )"; rc=$?
+    printf '%s' "$out" > "$WORK/case4-$( printf '%s' "$f" | tr '/' '_' ).out"
+    fp1="$(iso_fp "$ISO")"; cfg1="$(cfg_fp)"; sut1="$(sut_fp)"
+    t1="$(/usr/bin/grep -c '' "$FOURTOUCH")"
+    [ "$t1" = "$t0" ] || four_shim=$((four_shim + 1))
+    printf '%s' "$out" | /usr/bin/grep -Eiq 'no such file or directory|command not found|permission denied|not a git repository|cannot open' \
+        && four_incidental=$((four_incidental + 1))
+    why=""
+    [ "$rc" -eq 0 ]              && why="${why:+$why; }exited 0"
+    is_ident_refusal "$out"      || why="${why:+$why; }no dedicated identity refusal"
+    [ "$t1" = "$t0" ]            || why="${why:+$why; }reached a shimmed child (instrument failure)"
+    [ "$fp1" = "$fp0" ]          || why="${why:+$why; }mutated the layout"
+    [ "$cfg1" = "$cfg0" ]        || why="${why:+$why; }wrote git configuration"
+    [ "$sut1" = "$sut0" ]        || why="${why:+$why; }mutated the Sentinel clone"
+    if [ "$f" = "scripts/install-hooks.sh" ]; then
+        ih_rc="$rc"; ih_out="$out"
+        [ "$cfg1" = "$cfg0" ] && ih_cfg_held=0
+    fi
+    if [ -z "$why" ]; then four_pass=$((four_pass + 1))
+    else four_fail=$((four_fail + 1)); say "NOT a refusal: $f (exit $rc) — $why"; fi
+done
+sut_after="$(sut_fp)"; cfg_after="$(cfg_fp)"
+
+check REQUIRED 4 "$four_fail" "all 16 entry points refuse with a dedicated repository-identity refusal before doing any work ($four_pass of 16 refuse, $four_fail do not)"
+
+# 4i — install-hooks.sh carries the extra obligation: NOTHING may be written to git config.
+if [ -n "$ih_rc" ] && [ "$ih_rc" -ne 0 ] && is_ident_refusal "$ih_out" && [ "$ih_cfg_held" -eq 0 ]; then held=0; else held=1; fi
+check REQUIRED 4i "$held" "install-hooks.sh refuses on an unestablished repository and writes NO git configuration anywhere (exit ${ih_rc:-none}, config unchanged=$( [ "$ih_cfg_held" -eq 0 ] && echo yes || echo no ))"
+
+# 4h — .githooks/pre-commit carries its own: no caller-provided check may execute first.
+out4h="$( run_iso "$ISO_DECOY" ".githooks/pre-commit" )"; rc4h=$?
+printf '%s' "$out4h" > "$WORK/case4-decoy-pre-commit.out"
+decoy4=no; printf '%s' "$out4h" | /usr/bin/grep -q 'A1-CASE4-DECOY-RAN' && decoy4=yes
+if [ "$rc4h" -ne 0 ] && [ "$decoy4" = "no" ] && is_ident_refusal "$out4h"; then held=0; else held=1; fi
+check REQUIRED 4h "$held" "the hook refuses before executing the layout's own scripts/check-secrets.sh (exit $rc4h, decoy ran: $decoy4)"
+
+# 4e — case 4 is inert with respect to everything the later cases measure.
+if [ "$sut_after" = "$sut_before" ] && [ "$cfg_after" = "$cfg_before" ]; then held=0; else held=1; fi
+check CONTROL 4e "$held" "case 4 changed neither the Sentinel clone nor any git configuration — later cases still measure a clean subject"
+
+check OBSERVED 4s 0 "instrumentation: $four_shim of 16 reached a shimmed child, $four_incidental of 16 printed an incidental error (neither can score as a refusal)"
+check OBSERVED 4x 0 "case 2 and case 4 differ only in WHERE THE SCRIPT LIVES: originals inside Sentinel, called from elsewhere, must answer; copies outside every repository must refuse"
 
 # ============================================================================ CASE 5 =========
 hdr "CASE 5 (REQUIRED) — a git command exits non-zero, must refuse"
