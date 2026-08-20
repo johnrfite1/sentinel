@@ -1,0 +1,10 @@
+# Adjudication of the three defect classes newly exposed by the A-EXTRACT test contract.
+# ONE ROW PER CLASS. Authoritative for counts; do not re-count by hand (D-057(1)).
+# Adjudicated at ca49f1852aaa73c2a094597c06e16d19115254f9 by an independent adjudicator who
+# authored no A-EXTRACT test, no harness, and no production code under review.
+# Reasoning, probes and observed output: ADJUDICATION.md beside this file.
+# classification is one of: CONFIRMED | DUPLICATE | REFUTED | OUT-OF-SCOPE
+# id	class	classification	severity	boundary	relation	relates_to	live_false_claim_at_HEAD	consumers	reproduced
+AX-1	first-match section anchor accepts an earlier decoy heading	CONFIRMED	MEDIUM	INSIDE	distinct — survives the remedies of all three	C1;C2;R4-F3	no	check-type-strings.sh;check-eval-codes.sh;test_verifier.py	yes
+AX-2	SOURCE-definition lookup does not require uniqueness	DUPLICATE	carried-from-R4-F3	INSIDE	same defect — R4-F3's confirmed unrepaired residual	R4-F3	no	check-type-strings.sh	yes
+AX-3	line-oriented comparison on the proposal side of the §7.2 caveat	CONFIRMED	MEDIUM	INSIDE	sibling — same line, neither remedy covers the other	V3-N2	no	check-vendor-honesty.sh	yes
