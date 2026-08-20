@@ -3,28 +3,38 @@
 Rewritten at the end of each working session. **This file, not the conversation, is the
 memory.** If it disagrees with anything an agent remembers, this file wins.
 
-Last updated: **2026-08-20 (post-A-084). BATCH A1 IS CLOSED AS FAILED after two independently
-verified attempts. THE REPAIR LOOP IS STOPPED AND THE NEXT MOVE IS JOHN'S.** Branch
+Last updated: **2026-08-20 (post-A-086, closure maintenance). BATCH A1 IS CLOSED. Its two
+ordinary implementation attempts BOTH FAILED; what closed is one named regression, under the
+explicit D-062 containment exception, and NOT either attempt on its merits.** Branch
 `step-3/isolated-signer`.
 
 > ## READ THIS BEFORE ANYTHING ELSE
 >
-> **YOUR JOB IS NOTHING WITHOUT AN INSTRUCTION FROM JOHN.** Batch A1 stopped permanently under
-> D-061(4) — a confirmed contract item failed at independent verification and **no third
-> implementation attempt is permitted.** Do not repair it. Do not start another batch. Do not
-> assess D-055. Report the state below and wait.
+> **YOUR JOB IS NOTHING WITHOUT AN INSTRUCTION FROM JOHN.** A1 is closed and **no A1 reopening,
+> no further A1 test and no further A1 production change is authorised.** Do not assess D-055.
+> Report the state below and wait.
 >
-> **THERE IS A LIVE FAIL-OPEN ON THIS BRANCH AND YOU SHOULD KNOW IT IN THE FIRST MINUTE.**
-> `scripts/check-secrets.sh` and `.githooks/pre-commit` clear `GIT_INDEX_FILE`. Git hands the
-> pre-commit hook a TEMPORARY index in that variable for `git commit -a` and
-> `git commit -- <path>`, so **a credential committed with `git commit -am` is NOT scanned and
-> lands in HEAD.** An ordinary staged add is still blocked. Reproduced twice, independently.
-> **Until John rules, prefer `git add` + `git commit` over `git commit -a` in this repository.**
+> **THE `GIT_INDEX_FILE` FAIL-OPEN IS FIXED — the warning that stood here is withdrawn.**
+> It was real: clearing the variable made the pre-commit guard read `.git/index` while git was
+> committing from a temporary index, so `git commit -am` and `git commit -- <path>` landed a
+> credential in HEAD. **Repaired at `4920213` under D-062, independently verified HOLD at
+> `c163195`, and confirmed live in this repository — both forms now block with the finding named
+> and HEAD unmoved, while a benign `-am` still lands.** `git add` + `git commit` remains a
+> perfectly good habit; it is no longer a workaround for a live defect.
+>
+> **CARRIED AND UNACCEPTED — `V-1`, and it is the one to know.** `git rev-parse --git-path index`
+> **honours `GIT_INDEX_FILE`.** The repair is therefore correct **only because both files scrub
+> that variable BEFORE asking git for the canonical index path** (`.githooks/pre-commit` 39→86,
+> `scripts/check-secrets.sh` 76→121). **Reversing that ordering would reopen the hole and NO TEST
+> IN ANY HARNESS WOULD FAIL** — every card case would still pass. A correctness property held by
+> ordering alone and pinned by nothing. **It is carried, not accepted, and it has no regression
+> test.**
 
-**UNPUSHED — 12 commits.** Count with `git log --oneline origin/step-3/isolated-signer..HEAD`;
-do not quote a number from here. The repository is PRIVATE and **D-016 still blocks all
-publication.** Pushing to the private remote is backup, not publication. **John pushes; an agent
-does not.**
+**Count what is unpushed with `git log --oneline origin/step-3/isolated-signer..HEAD`; do not
+quote a number from here** — this file has published a stale one before, including one line
+below its own instruction not to. The repository is PRIVATE and **D-016 still blocks all
+publication.** Pushing to the private remote is backup, never publication, and **an agent pushes
+only on John's explicit direction for a specific state.**
 
 **READING ORDER FOR A FRESH INSTANCE.**
 
@@ -38,6 +48,12 @@ does not.**
    explains why there is no active global contract and what a batch card is.
 5. **`.../batch-cards/A2-tests/VERIFICATION-2.md`** — why Batch A1 failed. Read it before
    proposing anything about the entry points.
+6. **`docs/decisions.md`: D-062, D-063, D-064**, then
+   **`.../batch-cards/D062-containment-tests/`** — the containment exception that closed the one
+   named regression. `CARD.md` is the contract, `VERIFICATION.md` is the independent verdict and
+   **§10 is the authoritative residual list**, and `IMPLEMENTATION.md` is the implementer's own
+   claim rather than evidence. **D-063 withdrew standing force authorization: any forced removal
+   now needs new, exact approval after every stated precondition holds.**
 
 **DO NOT QUOTE COUNTS FROM THIS FILE.** Suite floors: `./scripts/check-suite-floors.sh`.
 Findings: `./scripts/check-findings-ledger.sh`. Review verdicts:
@@ -190,7 +206,7 @@ autonomy *none*).
 
 ### YOUR JOB: NOTHING, WITHOUT AN INSTRUCTION FROM JOHN. Say so and stop.
 
-Batch A1 is closed. The repair loop is stopped by John's own rule, not by an agent's judgement.
+Batch A1 is closed and its closure is accepted by John. **NO SUBSEQUENT BATCH HAS BEGUN.**
 If you arrived with no instruction, report the state below and wait.
 
 ### WHERE THE PROJECT IS, 2026-08-20
@@ -199,9 +215,31 @@ If you arrived with no instruction, report the state below and wait.
 |---|---|
 | Gates | **S1 SIGNED** 2026-07-28 · **S2 SIGNED** 2026-08-16, both by John (D-002 non-delegable) |
 | Review arc | **COMPLETE.** Rounds five and six adjudicated; D-055(e) ran four reviewers, 23 findings, one CRITICAL in the gate itself; D-057 ruled every one |
-| Remediation | **STOPPED.** A-081 reverified 11 items — 3 held, **8 FAILED**. The convergence reset (D-058/059/060) replaced the method. Batch A1 was carded and **failed twice** |
-| D-055 exit | **NOT MET.** Conditions 1 and 2 MET; condition 3 is John's to confirm; **condition 4 NOT MET — known false claims still stand** |
+| Remediation | **A-081 reverified 11 items — 3 held, 8 FAILED.** The convergence reset (D-058/059/060) replaced the method with batch cards. **Batch A1's two ordinary attempts BOTH FAILED and stay failed** |
+| Batch A1 | **CLOSED — through the D-062 containment exception, NOT on the merits of either attempt.** One named regression repaired and independently verified HOLD. **Neither ordinary attempt is relabelled successful (D-061(4)).** |
+| D-055 exit | **NOT MET.** Conditions 1 and 2 MET; condition 3 is John's to confirm; **condition 4 NOT MET — known false claims still stand.** Nothing in the D-062 arc changes this |
+| Next batch | **NONE STARTED.** No batch is open and none is authorised without John |
 | Publication | **BLOCKED and untouched.** D-048 precondition unmet; Gate 8 needs the D-009 dashboard and John's five held questions; D-016 blocks everything |
+
+### HOW BATCH A1 ACTUALLY CLOSED — the record, stated so it cannot be rounded up
+
+**Both ordinary implementation attempts FAILED** — `63c6906` and `f61ecca`, each independently
+verified FAIL. **D-061(4) permitted no third, and none was made.** John then authorised **one
+surgical containment exception (D-062) for the `GIT_INDEX_FILE` regression only** — explicitly not
+a third general attempt, and reopening no other A1 finding or residual. That exception was run
+test-first with the roles separate: independent test contract at **`c73b17a`** demonstrated
+failing (7 REQUIRED, 0 CONTROL failures); the two-file repair at **`4920213`**; independent
+verification by a third agent at **`c163195`** returned **HOLD**.
+
+**A1 IS THEREFORE CLOSED THROUGH THE EXCEPTION, NOT ON THE MERITS OF EITHER ORDINARY ATTEMPT.**
+Do not compress that into "A1 passed". It did not.
+
+**Two A2 assertions were EXPRESSLY SUPERSEDED, never silently treated as passing.** The frozen
+attempt-two harness fails exactly `B3-index` and `B4` against the repair, with **zero control
+failures on two runs**, and **D-064 rules them superseded for the hook path only** — A2 is not
+modified, not re-scoped, not relabelled. **The verifier independently confirmed exactly two
+assertions moved and no third, so D-064's reversal condition did not fire; the rest of A2 remained
+stable.**
 
 ### WHAT IS OPEN, AND NONE OF IT IS REPAIRED
 
@@ -211,31 +249,48 @@ If you arrived with no instruction, report the state below and wait.
    `R3-F6`, `R3-F4`, and A-080's rejected-design correction. Derived from `VERDICT-LEDGER.tsv`.
 2. **Sixteen adjudicated findings in `NEW-FINDINGS.tsv`.** Five were repaired inside Batch A1's
    commit; the rest are open. **`V3-N2` reaches a §7.5 Gate 5 condition** — see below.
-3. **Batch A1's code is ON THIS BRANCH at `f61ecca` and its verification FAILED.** The verifier
-   held 8 of 9 items — zero of 267 body-level git calls carry a caller variable, the staged
-   rename bypass is genuinely fixed, the decoy-repository attack is closed — but the one failure
-   is the live `GIT_INDEX_FILE` fail-open in the header above. **The tree is better than before
-   A1 in most respects and worse in one specific, reproducible way.**
+3. **Batch A1's code is on this branch and its own verification FAILED at `f61ecca`.** That
+   record stands unaltered: the verifier held 8 of 9 items and the one failure was the
+   `GIT_INDEX_FILE` fail-open. **That single failure — and only that one — was subsequently
+   repaired under the D-062 exception and independently verified HOLD.** The other eight items
+   were never re-verified after `f61ecca` and nothing here claims they were.
+
+4. **RESIDUALS CARRIED FROM THE D-062 VERIFICATION — carried, not accepted.**
+   **`V-1` is stated in full in the header above and has NO regression test.** **`V-2` through
+   `V-10` are NOT reproduced here** — read them in
+   `docs/review-2026-08-19-d057-targeted/batch-cards/D062-containment-tests/VERIFICATION.md` §10,
+   which is the authoritative record. Copying their prose into this file is how this file has
+   drifted before.
+
+5. **DEFERRED AND UNRESOLVED — `R2`, `R3`, `R5`.** `R2` (`check-vendor-honesty.sh` quotePath),
+   `R3` (the inert Case 4 scorer residual) and `R5` (`check-rename-gate.sh` exiting zero while
+   printing `UNVERIFIED`) were deferred by D-061(2) and **are still deferred and still
+   unresolved.** D-062 did not reach them. `R5` in particular means the rename gate's exit status
+   is not evidence — read its output.
 
 ### WHAT IS WAITING ON JOHN — all of it is his
 
-1. **The `GIT_INDEX_FILE` fail-open.** Named fix direction, recorded and deliberately NOT
-   applied: capture the variable before clearing and honour it for staged enumeration while
-   still refusing a caller-supplied one, or do not clear it and bound the risk elsewhere.
-2. **Whether Batch A1 is recarded.** Attempt two was one line from holding. D-061(4) forbids a
-   third attempt under the existing card; a new authorization is his to give.
+1. ~~**The `GIT_INDEX_FILE` fail-open.**~~ **CLOSED** under the D-062 exception — repaired at
+   `4920213`, independently verified HOLD at `c163195`, accepted by John. **`V-1` remains carried
+   and untested** and is the live piece of this item.
+2. ~~**Whether Batch A1 is recarded.**~~ **RULED: it is not.** A1's closure is accepted and **no
+   A1 reopening, no further A1 test and no further A1 production change is authorised.**
 3. **Gate 5's status fork.** `V3-N2` is CONFIRMED. Per D-059(1) the certification **STANDS** —
    the guarded §7.2 property was measured true at this commit, independently of the broken
    guard — but **`check-vendor-honesty.sh` is NOT admissible as evidence for that supplementary
    condition until repaired and independently reverified.** An agent may not revoke, reaffirm or
    recertify it.
-4. **The push.** 12 commits are local. Backup, not publication (D-016 unchanged).
+4. ~~**The push.**~~ **DONE at John's direction, twice, as private backup** — the branch and its
+   remote were confirmed synchronized. Count anything outstanding with `git log --oneline
+   origin/step-3/isolated-signer..HEAD`; **do not quote a number from this file.** D-016 is
+   unchanged and the repository is still PRIVATE: backup is not publication.
 5. **How the remaining open work is organised**, now that the global-contract method is
    abandoned and cards are the replacement.
 
 ### WHAT IS NOT AUTHORISED, and none of it has changed
 
-- **No third Batch A1 implementation attempt** (D-061(4)).
+- **NO A1 REOPENING OF ANY KIND** — no third implementation attempt (D-061(4)), and after the
+  closure was accepted, **no further A1 test and no further A1 production change either.**
 - **No other batch started**, no D-055 assessment, no gate signed or reopened, no public claim
   certified, no correction ratified.
 - **D-016 blocks all publication**; the repository is PRIVATE and the rename gate checks it.

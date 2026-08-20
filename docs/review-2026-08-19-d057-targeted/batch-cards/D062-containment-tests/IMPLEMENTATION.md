@@ -41,9 +41,16 @@ The validated path is passed as an **argument**. It is never re-exported.
 **The guard.** `--index-file` is re-validated with the same rule rather than trusted from the
 hook, because this script is reachable directly and a check that exists only in the caller is a
 check this script cannot claim. The value reaches git through `_cs_git`, which sets
-`GIT_INDEX_FILE` as a **per-command prefix** on exactly three calls — the index census, the staged
-raw enumeration, and the staged blob read. Every other git call in both modes still runs against
-the canonical index.
+`GIT_INDEX_FILE` as a **per-command prefix** on exactly **three call sites — the index census, the
+staged raw enumeration, and the staged blob read — which execute as FOUR invocations**, because
+`_sec_content` is called once by the credential scan and once by the machine-path scan, so the
+staged blob read runs twice per scanned path. Every other git call in both modes still runs
+against the canonical index.
+*(Corrected in place, closure maintenance. This passage read "exactly three calls", which counted
+call SITES and stated them as invocations — `V-9` in `VERIFICATION.md`, raised by the independent
+verifier. The scoping claim it supports is unchanged and was independently confirmed; the count
+was imprecise, and in this project an imprecise count in an evidence file is the defect class, not
+a rounding error.)*
 
 ## WHAT IT DELIBERATELY DOES NOT DO
 

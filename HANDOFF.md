@@ -38,6 +38,30 @@ has known false claims against it — and nothing is signed, certified, publishe
 pushed. Start at `docs/session-state.md` §1; the evidence directory is
 `docs/review-2026-08-19-d057-targeted/`, whose README explains why there is no active contract.
 
+**2026-08-20 (later) — BATCH A1 IS CLOSED, AND IT CLOSED THROUGH AN EXCEPTION RATHER THAN ON THE
+MERITS. The paragraph above stands as written; this one records what happened next, and the
+fail-open it calls LIVE is now FIXED.** **Both ordinary implementation attempts remain FAILED**
+(`63c6906`, `f61ecca`, each independently verified FAIL) and **neither is relabelled successful;
+D-061(4) still permitted no third, and none was made.** John instead authorised **one surgical
+containment exception, D-062, for the `GIT_INDEX_FILE` regression only** — explicitly not a third
+general attempt, and reopening no other A1 finding or residual. It was run test-first with the
+roles separate: an independent test author's contract at **`c73b17a`**, demonstrated failing with
+zero control failures; the two-file repair at **`4920213`**; and an independent verifier who wrote
+neither, returning **HOLD** at **`c163195`**. **A1 is therefore CLOSED THROUGH THE EXCEPTION, NOT
+ON THE MERITS OF EITHER ORDINARY ATTEMPT — do not compress that into "A1 passed".** Two frozen-A2
+assertions (`B3-index`, `B4`) fail against the repair and were **expressly SUPERSEDED by D-064 for
+the hook path only, never silently treated as passing**; the verifier confirmed exactly two moved
+and no third, so D-064's reversal condition did not fire and the rest of A2 remained stable.
+**`V-1` is a carried, unaccepted residual with no regression test:** `git rev-parse --git-path
+index` honours `GIT_INDEX_FILE`, so the repair is correct only because both files scrub that
+variable before resolving the canonical index — reverse that ordering and the hole reopens with
+**no harness failing.** `V-2`–`V-10` are carried by reference in
+`.../batch-cards/D062-containment-tests/VERIFICATION.md` §10; `R2`, `R3` and `R5` remain
+**deferred and unresolved.** **D-055's exit is UNCHANGED at NOT MET, NO SUBSEQUENT BATCH HAS
+BEGUN**, D-063 withdrew standing force authorization, and nothing is signed, certified, published
+or renamed under D-016. **Do not quote suite counts from any handoff file — run
+`./scripts/test.sh` and read its output, or `./scripts/check-suite-floors.sh`.**
+
 Amended 2026-07-27 by Opus 5 at build start: D-007…D-011 (delegated rulings) resolve four open forks and the labeling blind spot. Sections below reflect them. Proposal mirror: §14.9.
 
 ## Mission
