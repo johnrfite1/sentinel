@@ -1,10 +1,12 @@
 # A-EXTRACT — the measured pre-repair run at `bb664c6`
 
 **Base SHA:** `bb664c626d592d86391f644bf014e76f2bbf7db4`, tree clean at the time of measurement.
-**Harness sha256:** `e8e370f56965850542b166afe426c45876f002ed4944273efaefed4a6a5a26d6`
+**Harness sha256:** `e54354a3f35b1110117c0ab2bfb1988c9ea025e4d9409bb1f782c779200027e6`
 (`a-extract.sh`; the harness prints this itself at preflight case `P0`).
-**Environment, printed by preflight `P2`:** git 2.50.1 (Apple Git-155); bash 3.2.57; Python
-3.9.6; `/usr/bin/grep` with a matched canary.
+**Gate harness sha256:** `3e4cfe5a4b08db02d9c69954b3683afdf6f1145c2d874085068718a53c6af0f0`
+(`a-extract-gate.sh`; see `GATE-BINDING.md`).
+**Environment, printed by preflight `P1`/`P2`:** git 2.50.1 (Apple Git-155); bash 3.2.57;
+Python 3.9.6; node v26.3.0; `/usr/bin/grep` with a matched canary.
 
 **Command:**
 
@@ -12,107 +14,107 @@
 docs/review-2026-08-19-d057-targeted/batch-cards/A-EXTRACT-tests/a-extract.sh
 ```
 
-**Result — run twice, case-line output byte-identical between runs:**
+**Result — run twice, per-case verdicts identical between runs:**
 
 ```
-  REQUIRED : 19 of 34 held      (15 REQUIRED failures)
-  CONTROL  : 52 of 52 held      (0 control failures)
+  REQUIRED : 21 of 49 held      (28 REQUIRED failures)
+  CONTROL  : 70 of 70 held      (0 control failures)
   exit 1   — REQUIRED FAILURES with every control holding: the defects are observed.
 ```
 
 **The exit path matters.** Exit 1 is "required cases failed, controls all held". Exit 2 would
 mean a control failed and no verdict beside it could be relied on. **Every control held on both
-runs**, so the fifteen failures below are findings about the tree, not about the instrument.
+runs**, so the failures below are findings about the tree, not about the instrument.
+
+## 0. Two measurements, and what moved between them
+
+The first measurement of this contract, frozen at commit `ca49f18`, read **15 REQUIRED failures
+of 34, 52 controls**. This one reads **28 of 49, 70 controls**. **No verdict reversed.** The
+difference is entirely new and repaired cases:
+
+| Change | Effect on the numbers |
+|---|---|
+| `1c` now requires a **named diagnostic** rather than "not success" | one case moved PASS → FAIL, because an uncaught `IndexError` no longer satisfies it |
+| case 13 now asserts a **reason class per consumer** | `13b-after` moved PASS → FAIL; `13e`/`13f` are new |
+| `4e`, `4f`, `10h` — a **quoted heading is a mention** | three new failures |
+| `10c`–`10g` — **§7.2 section extent**, specified before any extractor exists | five new failures |
+| `11g` — the **AX-3 false-assurance** direction the adjudicator found | one new failure |
+| `11f` now **executes the canonical generator** | three new PASSES (`11f-a/b/c`) replacing one proxy control |
+| `14d` removed from binding; `14a`/`14b` exercise both directions on a snapshot | one REQUIRED removed, two added, both PASS |
+| the harness's own section reader made **anchor-derived** | no verdict changed; control `10c-mut` stopped failing |
+
+**No case that passed at `ca49f18` fails here for a different reason, and no case that failed
+there passes here.**
 
 ---
 
-## 1. Per-case verdict table
+## 1. Per-case verdict table — BINDING cases
 
-`R` = REQUIRED, `C` = CONTROL, `O` = OBSERVED. "Control discriminated" answers: did the paired
-opposite outcome actually behave oppositely?
+Every row below is a REQUIRED assertion with a paired control, a proof-of-mutation control, and
+a named failure reason. The full run including every CONTROL and OBSERVED line is reproducible
+with `A_EXTRACT_EVIDENCE_DIR=<dir>`.
 
-| Case | Kind | Verdict | Consumer | Control discriminated |
-|---|:--:|:--:|---|---|
-| P0–P6 | O | recorded | — | preflight; `P6` proves the unmutated snapshot passes all three runnable consumers |
-| 1-mut | C | PASS | — | heading present once in base, absent in fixture |
-| **1a** | R | **PASS** | TS | yes — `1-ctl` reports 6/6 with the section present |
-| **1c** | R | **PASS** | VP | yes — `13-ctl` |
-| 1c-how | O | recorded | VP | refusal shape is an uncaught `IndexError` |
-| 1b-mut | C | PASS | — | |
-| **1b** | R | **PASS** | EC | yes — `1-ctl` |
-| 1-ctl | C | PASS | TS+EC | the opposite outcome |
-| 2-mut | C | PASS | — | 0 exact-token hits, 1 superstring hit |
-| **2a** | R | **FAIL** | EC | yes — `2-ctl` names it missing when wholly removed |
-| 2b-mut | C | PASS | — | |
-| **2b** | R | **PASS** | TS | yes — `2-ctl` |
-| 2-ctl | C | PASS | EC | the reporting path is live |
-| 3-mut | C | PASS | — | absent inside §5.7.1, present in the document |
-| **3a** | R | **PASS** | EC | yes — `1-ctl` |
-| 3b-mut | C | PASS | — | moved out of §5.8 into §5.6 |
-| **3b** | R | **PASS** | TS | yes — `5-ctl` |
-| 4a-mut | C | PASS | — | correct line in §5.9, transposed line in §5.8 |
-| **4a** | R | **PASS** | TS | yes — `5-ctl` |
-| 4c-mut | C | PASS | — | two complete §5.8 sections |
-| **4c** | R | **FAIL** | TS | yes — `5-ctl` |
-| 4d-mut | C | PASS | — | first §5.8 correct, real §5.8 transposed |
-| **4d** | R | **FAIL** | TS | yes — `4a` shows the same drift IS reported without a decoy anchor |
-| 4b-mut | C | PASS | — | only the decoy §5.7.1 documents the code |
-| **4b** | R | **FAIL** | EC | yes — `2-ctl`, `3a` |
-| 5before-mut / 5after-mut | C | PASS | — | two publications, either order |
-| **5before**, **5after** | R | **PASS** | TS | yes — `5-ctl` |
-| 5-ctl | C | PASS | TS | the opposite outcome |
-| 6before-mut / 6after-mut | C | PASS | — | two definitions, line numbers reported |
-| **6before** | R | **FAIL** | TS | yes — `6-ctl` |
-| **6after** | R | **FAIL** | TS | yes — `6-ctl` |
-| 6-ctl | C | PASS | TS | one definition, success reported |
-| 7a-mut | C | PASS | — | 5 publications below the interposed `####` |
-| **7a** | R | **FAIL** | TS | yes — `7c` (a `#####` at the same place does NOT truncate) |
-| 7c-mut, 7c | C | PASS | TS | the depth-paired control |
-| **7b** | R | **PASS** | EC | yes — `8c` (a `####` at §5.7.1 DOES end it) |
-| 8a-mut, 8b-mut | C | PASS | — | 5 publications below each interposed heading |
-| **8a**, **8b** | R | **PASS** | TS | yes — `8-ctl` |
-| 8c-mut | C | PASS | — | `EVAL_CHAIN_BOUND` above, `EVAL_MANDATE_WINDOW` below |
-| **8c**, **8d** | R | **PASS** | EC | yes — `8-ctl` |
-| 8-ctl | C | PASS | TS+EC | the opposite outcome |
-| 9a-mut, 9b-mut | C | PASS | — | the backticked mentions are present |
-| **9a**, **9b** | R | **PASS** | TS | yes — `9c` refuses the SAME text unbackticked |
-| 9c | C | PASS | TS | the opposite outcome |
-| 10a-mut | C | PASS | — | decoy at line 608, §7.2 at line 665 |
-| **10a** | R | **FAIL** | VH | yes — `10-ctl` reports ok without the decoy |
-| 10b-mut | C | PASS | — | §7.2 reworded, report does not carry the new wording |
-| **10b** | R | **FAIL** | VH | yes — `11c` FAILs when the report's copy is altered |
-| 10-ctl | C | PASS | VH | the opposite outcome |
-| **11a** | R | **PASS** | VH | yes — `11c` |
-| 11b-mut | C | PASS | — | 0 line-oriented hits, 1 normalized hit |
-| **11b** | R | **FAIL** | VH | yes — `11d` (a report-side re-wrap IS tolerated) |
-| 11c-mut, 11c | C | PASS | VH | the report-side opposite outcome |
-| 11d-mut, 11d | C | PASS | VH | the report-side re-wrap control |
-| 11e | O | recorded | — | generator emits the caveat in two halves, 1 + 1 |
-| 11f | C | PASS | — | the caveat is generated, not hand-pasted |
-| 12suffix-mut, 12prefix-mut | C | PASS | — | 0 exact-token hits, 1 substring hit |
-| **12suffix**, **12prefix** | R | **FAIL** | EC | yes — `12-ctl` names it undocumented when replaced by an unrelated token |
-| 12-ctl | C | PASS | EC | the opposite outcome |
-| 13a-mut | C | PASS | — | the `#### 5.8.1` subsection is present |
-| **13a** | R | **FAIL** | VP vs TS | yes — `13-ctl` |
-| **13b-before** | R | **FAIL** | VP | yes — `13-ctl` |
-| **13b-after** | R | **PASS** | VP | yes — `13-ctl` |
-| 13d-mut | C | PASS | — | §5.8 carries 2 horizontal rules where the base carries 1 |
-| **13d** | R | **FAIL** | VP vs TS | yes — `13-ctl` |
-| 13-ctl | C | PASS | VP+TS | both succeed unmutated, so agreement is not vacuous |
-| 13-patch | O | recorded | — | the verifier-side half is `TESTS.patch`, NOT applied |
-| 14a, 14b, 14c-mut, 14c | C | PASS | VH | `14c` proves the pin is live |
-| **14d** | R | **PASS** | — | the live repository still carries the certified value |
-| Z-* (5) | C | PASS | — | four consumers byte-identical to `bb664c6`; boundary unmodified |
+| Case | Verdict | Consumer | The reason it asserts | Control that discriminated |
+|---|:--:|---|---|---|
+| 1a | PASS | TS | refuses, naming §5.8 | `1-ctl` |
+| 1b | PASS | EC | refuses, naming §5.7.1 | `1-ctl` |
+| **1c** | **FAIL** | VP | **named `anchor-unresolved` diagnostic, no traceback** — observed class `crash` | `1c-ctl` (valid input → `success`, no diagnostic) |
+| **2a** | **FAIL** | EC | `EVAL_POLICY_WINDOW` absent although a superstring is documented | `2-ctl` |
+| 2b | PASS | TS | `PolicyPayload` not published although `PolicyPayloadV2` is | `2-ctl` |
+| 3a | PASS | EC | code absent from §5.7.1 though present in the document | `3-mut` |
+| 3b | PASS | TS | type string not published in §5.8 though §5.6 publishes it | `3b-mut` |
+| 4a | PASS | TS | reads §5.8 itself and reports the drift | `5-ctl` |
+| **4b** | **FAIL** | EC | must not report full coverage when an earlier duplicate §5.7.1 anchor supplies the codes | `4b-mut`, `2-ctl` |
+| **4c** | **FAIL** | TS | two headings claim §5.8 → refuse | `4c-mut`, `5-ctl` |
+| **4d** | **FAIL** | TS | must not report success when an earlier duplicate anchor hides a real drift | `4d-mut`, `4a` |
+| **4e** | **FAIL** | TS | a §5.8 heading **quoted in a fenced block** is not the anchor | `4e-mut` |
+| **4f** | **FAIL** | EC | a §5.7.1 heading quoted in a fenced block is not the anchor | `4f-mut` |
+| 5before / 5after | PASS | TS | refuses a duplicate publication in both orders | `5-ctl` |
+| **6before** | **FAIL** | TS | must name the **duplicate SOURCE definition**; observed `drift` — the wrong reason | `6-ctl` |
+| **6after** | **FAIL** | TS | same, decoy after the real one; observed silent `6/6` | `6-ctl` |
+| **7a** | **FAIL** | TS | a `####` subsection inside a `###` anchor does NOT end §5.8 | `7c` (a `#####` there already does not) |
+| 7b | PASS | EC | a `#####` subsection inside a `####` anchor does not end §5.7.1 | `8c` |
+| 8a / 8b | PASS | TS | `###` and `##` headings end §5.8 | `8-ctl` |
+| 8c / 8d | PASS | EC | `####` and `###` headings end §5.7.1 | `8-ctl`, `8c-mut` |
+| 9a / 9b | PASS | TS | backticked mentions are not publications | `9c` (unbackticked IS refused) |
+| **10a** | **FAIL** | VH | ignore an earlier decoy; report the caveat carried | `10-ctl`, `10a-mut` |
+| **10b** | **FAIL** | VH | FAIL naming the report when §7.2's own wording is absent from it | `11c` |
+| **10c** | **FAIL** | VH | a `####` subsection inside §7.2 does not end it | `10c-mut`, `10-ctl` |
+| **10d** | **FAIL** | VH | a same-depth `###` heading ENDS §7.2 | `10d-mut` |
+| **10e** | **FAIL** | VH | a shallower `##` heading ENDS §7.2 | `10e-mut` |
+| **10f** | **FAIL** | VH | an ABSENT §7.2 anchor is REFUSED by name | `10f-mut`, `10-ctl` |
+| **10g** | **FAIL** | VH | TWO exact §7.2 headings are REFUSED as ambiguous | `10g-mut` |
+| **10h** | **FAIL** | VH | a §7.2 heading quoted in a fenced block is a mention | `10h-mut` |
+| 11a | PASS | VH | at the base commit the report carries the caveat | `11c` |
+| **11b** | **FAIL** | VH | locate §7.2's caveat across a hard line wrap | `11d` (a report-side rewrap IS tolerated) |
+| 11f-a | PASS | generator | the committed report IS `buildReport(loadInputs())`'s output, byte for byte | `11f-mut` |
+| 11f-b | PASS | generator | the **regenerated** artifact carries the caveat | `11f-mut` |
+| 11f-c | PASS | VH+generator | VH passes against the **freshly regenerated** artifact | `11f-ctl` |
+| **11g** | **FAIL** | VH | FAIL naming the report when it carries only HALF the caveat | `11g-mut`, `11c` |
+| **12suffix** | **FAIL** | EC | `EVAL_NONCE_CURRENTX` does not document `EVAL_NONCE_CURRENT` | `12-ctl` |
+| **12prefix** | **FAIL** | EC | `XEVAL_NONCE_CURRENT` does not either | `12-ctl` |
+| **13a** | **FAIL** | TS+VP | required class `success`; observed shell `not-published`, verifier `success` | `13-ctl` |
+| **13b-before** | **FAIL** | TS+VP | required `duplicate-publication`; observed shell `duplicate-publication`, verifier `success` | `13-ctl` |
+| **13b-after** | **FAIL** | TS+VP | required `duplicate-publication`; observed shell `duplicate-publication`, verifier `assertion-mismatch` | `13-ctl` |
+| **13d** | **FAIL** | TS+VP | required `success`; observed shell `success`, verifier `crash` | `13d-mut`, `13-ctl` |
+| **13e** | **FAIL** | TS+VP | required `anchor-unresolved`; observed shell `anchor-unresolved`, verifier `crash` | `13e-mut`, `13-ctl` |
+| **13f** | **FAIL** | TS+VP | required `anchor-ambiguous`; observed `success` from BOTH | `13f-mut`, `13-ctl` |
+| 14a | PASS | VH | unmodified §2 + pin → certified by record | `14b` |
+| 14b | PASS | VH | mutated §2, **pin unchanged** → STALE | `14a`, `14b-mut` |
 
-**Every falsification carries its own `*-mut` proof-of-mutation control.** The six added last
-(`7c-mut`, `8a-mut`, `8b-mut`, `9b-mut`, `13a-mut`, `13d-mut`) closed the only cases that had
-been relying on the consumer's own output as evidence that the fixture had changed.
+**Totals: 70 CONTROL PASS · 21 REQUIRED PASS · 28 REQUIRED FAIL · 9 OBSERVED.**
 
-**Totals:** 52 CONTROL PASS · 19 REQUIRED PASS · **15 REQUIRED FAIL** · 10 OBSERVED.
+**EXCLUDED / residual — not in the binding contract.** Reasons in `COVERAGE.md` §7.
 
----
+| Item | Status |
+|---|---|
+| `14d` — live-repository pin comparison | **REMOVED from binding.** No control constructible without editing `§2` in the live tree. Retained as integrity control `Z-gate5` (PASS). |
+| EC duplicate publication | **NOT CREATED.** §5.7.1 declares its identifiers non-normative; control `P8` (PASS) asserts that basis so the omission expires if it changes. |
+| `11f` text proxy over `report.ts` | **REPLACED** by executing the generator. |
+| boolean agreement in case 13 | **REPLACED** by per-consumer reason classes. |
+| `AX-2` as a new finding id | **NOT CREATED.** Adjudicated DUPLICATE of `R4-F3`; cases `6before`/`6after` are carried under that id. |
 
-## 2. The fifteen failures, with the output each was asserted on
+## 2. Selected failures, with the output each was asserted on
 
 ### 2a — EC accepts a superstring for the identifier it names
 
@@ -152,11 +154,15 @@ eval codes: 41/41 engine checks documented in §5.7.1 (D-031)
 
 **4d is the one that matters:** a real transposition inside the real `§5.8` is reported as
 `6/6 … match … exactly`. Both guards' `awk` starts at the FIRST anchor match and never asks
-whether a second exists. This is the same first-match class `V3-N2` names, at the anchor rather
-than at the value, and it is **not** in `NEW-FINDINGS.tsv` — it is new here. Control `4a` shows
-the identical drift IS reported when no duplicate anchor is present.
+whether a second exists. Control `4a` shows the identical drift IS reported when no duplicate
+anchor is present.
 
-### 6before / 6after — the SOURCE side has no uniqueness test at all
+**Adjudicated `AX-1`, CONFIRMED, MEDIUM, distinct.** The adjudicator ran `C2`'s depth-aware
+terminator and `C1`'s word-anchored membership against its own fixtures and **both still read the
+decoy** — so this survives the remedies of the two findings it most resembles, and it reaches a
+third consumer (`13f`).
+
+### 6before / 6after — the SOURCE side has no uniqueness test at all (`R4-F3`'s residual)
 
 ```
 $ ./scripts/check-type-strings.sh        # decoy definition BEFORE the real one (6before)
@@ -168,11 +174,15 @@ $ ./scripts/check-type-strings.sh        # decoy definition AFTER the real one (
 type strings: 6/6 published in §5.8 match eip712.ts exactly (D-023)
 ```
 
-`src_line="$(grep -oE … "$SRC" | head -1 …)"`. The spec side refuses a duplicate publication;
-the source side silently takes the first. **`6before` is a non-zero exit for the WRONG reason** —
-it names drift where the finding is a duplicate definition, which is exactly why a generic
-non-zero exit is not a caught defect. **`6after` is a silent false pass.** This is D-059(8)(b),
-and it is **not** in `NEW-FINDINGS.tsv`.
+`src_line="$(grep -oE … "$SRC" | head -1 …)"`. The spec side refuses a duplicate publication; the
+source side silently takes the first. **`6before` is a non-zero exit for the WRONG reason** — it
+names drift where the finding is a duplicate definition. **`6after` is a silent false pass.**
+
+**This is `R4-F3`, not a new finding.** The adjudicator verified the block byte-identical to
+`c8d15a7`, the commit `R4-F3` was confirmed FAIL against, and D-058(8)'s Batch A already assigns
+*"`R4-F3` BOTH operands"* by name. **No new id is created for it.** What this card contributes is
+a falsifying test for an obligation that previously had only a prose description; the wrong-reason
+exit is a refinement of that finding's severity, not a second defect.
 
 ### 7a — a `#### 5.8.1` subsection truncates `§5.8`
 
@@ -229,26 +239,85 @@ that the sentence it enforces does not exist. Control `11d` re-wraps the report 
 guard tolerates it, which locates the defect precisely on the proposal side. **This is D-058(6)'s
 disallowed line-oriented grep, still live in the block D-058(6) was written about.**
 
-### 13a / 13b-before / 13d — the two `§5.8` consumers disagree
+### 4e / 4f — a heading QUOTED inside a fenced code block is taken as the anchor
 
-| Fixture | `check-type-strings.sh` | `verifier` §5.8 consumer |
-|---|---|---|
-| `#### 5.8.1` inside §5.8 (13a) | fails — section truncated | **OK** |
-| duplicate publication, decoy first (13b-before) | refuses | **OK** — dict keeps the last, which is the real line |
-| duplicate publication, decoy second (13b-after) | refuses | fails — dict keeps the decoy |
-| `---` inside §5.8 (13d) | 6/6, unaffected | **fails** — `split("---")[0]` truncates |
+```
+$ ./scripts/check-type-strings.sh        # §5.8 quoted in a ```markdown fence, earlier in the file
+type strings: DRIFT in EIP712Domain
+  spec  : EIP712Domain(string version,string name,uint256 chainId,address verifyingContract)
+  source: EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)
+type strings: §5.8 does not publish MandatePayload
+  … (four more)
+```
 
-The Python consumer's extent is `text.split("### 5.8 EIP-712 Type Strings")[1].split("---")[0]`
-— a first-match anchor and a horizontal-rule boundary — and its duplicate handling is a dict
-assignment, so **the later line silently wins.** `13b-after` passes only because the decoy
-happened to be last; the same defect passes and fails depending on fixture order, which is what
-makes `13b-before` a real finding rather than a wording quibble.
+The real §5.8 is untouched; the guard is reading a block introduced as *"a format considered and
+rejected"*. **This is the project's own fixture, not one invented here:**
+`check-vendor-honesty.sh`'s §2 block records an independent review defeating its certification
+lookup the same way on 2026-08-16 — the real line deleted, the string planted inside a code block
+in §14 with a 1999 date and a decision id that does not exist, and the guard reported certified.
+
+### 10c – 10h — `check-vendor-honesty.sh` has no §7.2 extent at all, in six directions
+
+`CAVEAT="$(grep -F '…' "$PROPOSAL" | head -1 …)"` searches the whole 84 KB document. Every one of
+these is a live consequence, and three of them are FALSE ASSURANCES:
+
+| Fixture | Observed at `bb664c6` |
+|---|---|
+| `10c` `#### 7.2.1` inside §7.2 above the caveat, decoy earlier | `FAIL docs/ablation-report.md no longer carries §7.2's caveat` — quoting the decoy |
+| `10d` caveat moved below the same-depth `### 7.3` | **`ok … carries §7.2's caveat verbatim, as §7.2 words it`** — §7.2 does not contain it |
+| `10e` shallower `##` interposed above the caveat | **`ok …`** — same |
+| `10f` the §7.2 heading DELETED | **`ok …`** — there is no §7.2 to word anything |
+| `10g` TWO exact §7.2 headings | `ok …` — no ambiguity detected |
+| `10h` §7.2 quoted in a fenced block earlier | `FAIL … no longer carries §7.2's caveat` — quoting the fence |
+
+### 11g — the AX-3 false-assurance direction
+
+```
+$ ./scripts/check-vendor-honesty.sh
+  ok    the ablation report carries §7.2's caveat verbatim, as §7.2 words it
+```
+
+§7.2's caveat is hard-wrapped **before** the anchor phrase, so `CAVEAT` is the tail half only; the
+report has had the head half deleted. **The report carries half the caveat and the guard certifies
+it `verbatim, as §7.2 words it`.** Demonstrated first by the independent adjudicator (`AX-3/C`),
+which is why it is here — the first measurement of this contract recorded only the false-failure
+direction.
+
+### 13a … 13f — the two `§5.8` consumers land in different reason classes
+
+| Fixture | `check-type-strings.sh` | verifier §5.8 consumer | Required class |
+|---|---|---|---|
+| `#### 5.8.1` inside §5.8 | `not-published` | `success` | `success` |
+| duplicate publication, decoy first | `duplicate-publication` | `success` | `duplicate-publication` |
+| duplicate publication, decoy second | `duplicate-publication` | `assertion-mismatch` | `duplicate-publication` |
+| `---` inside §5.8 | `success` | `crash` | `success` |
+| §5.8 anchor absent | `anchor-unresolved` | **`crash`** | `anchor-unresolved` |
+| §5.8 anchor duplicated | `success` | `success` | `anchor-ambiguous` |
+
+The Python consumer's extent is
+`text.split("### 5.8 EIP-712 Type Strings")[1].split("---")[0]` — a first-match anchor and a
+horizontal-rule boundary — and its duplicate handling is a dict assignment, so **the later line
+silently wins**. `13b-after` passed under the earlier boolean comparison purely because the decoy
+happened to be last; under reason classes it fails, which is the point of the change.
+
+**`crash` twice.** An uncaught `IndexError` is what the consumer does with a malformed section
+today. It is recorded as an instrument failure rather than as a refusal.
+
+### 1c — a crash is not a refusal
+
+```
+class=crash, names §5.8=yes
+verifier failure shape at this commit: IndexError
+```
+
+`1c-ctl` shows the same consumer reports `success` and emits no diagnostic on valid input, so the
+case is about the malformed path and not about the harness reaching the consumer.
 
 ---
 
 ## 3. Cases that already hold — real findings about the tree
 
-**Nineteen REQUIRED assertions passed pre-repair, and that is information, not filler.**
+**Twenty-one REQUIRED assertions passed pre-repair, and that is information, not filler.**
 
 - **`§5.8` and `§5.7.1` extraction already refuses an absent section** (1a, 1b) and already
   scopes correctly against a value that lives only outside the section (3a, 3b) or in a decoy
@@ -265,7 +334,14 @@ makes `13b-before` a real finding rather than a wording quibble.
   unbackticked does (9c). The publication form is genuinely discriminating.
 - **`§5.7.1`'s boundary behaviour is already correct at its own anchor depth** (7b, 8c, 8d) —
   which is precisely why `7a` is a depth bug and not a heading bug.
-- **Gate 5's certified `§2` table and its pinned hash are untouched** (14a–14d).
+- **The committed ablation report IS its generator's output** (`11f-a`), the **regenerated**
+  artifact carries §7.2's caveat (`11f-b`), and the vendor-honesty comparison passes against the
+  regenerated artifact rather than only against the committed bytes (`11f-c`). Deleting the
+  emitting statement from the generator removes the caveat and fails the guard (`11f-ctl`), so
+  none of the three is vacuous.
+- **Gate 5's certified `§2` table and its pinned hash are untouched**, and the pin is proven LIVE
+  rather than assumed: `14a` reports certified on the unmodified snapshot and `14b` reports STALE
+  after one row moves with the pin left unchanged (`Z-gate5`, `Z-signed`).
 
 ---
 
@@ -284,14 +360,25 @@ makes `13b-before` a real finding rather than a wording quibble.
 ## 5. `TESTS.patch` — measured, and NOT applied
 
 `TESTS.patch` adds `published_type_strings()` (carrying the current behaviour unchanged) plus
-`TestPublishedTypeStringsSectionExtent` to `verifier/test_verifier.py`. Verified against a
-throwaway `bb664c6` extraction:
+`TestPublishedTypeStringsSectionExtent` to `verifier/test_verifier.py`, and states the **reason-class
+vocabulary** case 13 requires so the shell and Python halves of the contract cannot drift. Verified
+against a throwaway `bb664c6` extraction:
 
 - `git apply --check` — **applies cleanly at `bb664c6`.**
-- With it applied to a scratch copy: `TestPublishedTypeStrings` (the two pre-existing tests)
-  still **pass**, so the patch changes no behaviour on its own.
-- `TestPublishedTypeStringsSectionExtent`: **10 tests, 8 fail** (7 failures + 1 error) and the
+- With it applied to a scratch copy: `TestPublishedTypeStrings` (the two pre-existing tests) still
+  **pass**, so the patch changes no behaviour on its own.
+- `TestPublishedTypeStringsSectionExtent`: **11 tests, 9 fail** (8 failures + 1 error) and the
   **2 controls pass** — `test_a_well_formed_section_is_read_whole` and
   `test_the_live_proposal_still_publishes_six`.
+- The failing set now includes `test_a_quoted_heading_is_not_the_anchor`, and both anchor refusals
+  additionally assert the message lands in the required class rather than merely naming §5.8.
 
 **The patch is not applied to the repository.** `verifier/` is untouched by this batch.
+
+## 6. Gate binding — D-059(7)
+
+Measured separately by `a-extract-gate.sh`: **7 of 7 REQUIRED held, 9 of 9 CONTROL held,
+exit 0.** The unchanged top-level fast gate passes in an isolated clone; breaking the FIRST of the
+three consumer stages fails the gate at its named banner with two later consumers green; breaking
+the LAST does the same with two earlier consumers green. The three demonstrations, their controls,
+the stage-level output and the three discarded attempts are in **`GATE-BINDING.md`**.

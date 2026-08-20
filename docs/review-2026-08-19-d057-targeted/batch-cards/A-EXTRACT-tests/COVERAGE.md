@@ -14,40 +14,37 @@ stated so that nobody has to rediscover it from a passing line.
 
 | Case | TS | EC | VH | VP |
 |---|:--:|:--:|:--:|:--:|
-| 1 — section absent | 1a | 1b | — | 1c |
+| 1 — section absent | 1a | 1b | — | 1c, 1c-ctl |
 | 2 — prefix-sharing value | 2b | 2a, 2-ctl | — | — |
 | 3 — value only outside | 3b | 3a | — | — |
-| 4 — decoy before the section | 4a, 4c, 4d | 4b | — | — |
+| 4 — decoy before the section | 4a, 4c, 4d, 4e | 4b, 4f | — | — |
 | 5 — duplicate publication | 5before, 5after, 5-ctl | — | — | — |
 | 6 — duplicate source definition | 6before, 6after, 6-ctl | — | — | — |
 | 7 — deeper subsection stays in | 7a, 7c | 7b | — | — |
 | 8 — same/shallower ends | 8a, 8b | 8c, 8d | — | — |
 | 9 — prose is not a publication | 9a, 9b, 9c | — | — | — |
-| 10 — §7.2 caveat from §7.2 | — | — | 10a, 10b, 10-ctl | — |
-| 11 — report carries the caveat | — | — | 11a–11f | — |
+| 10 — §7.2 caveat + SECTION EXTENT | — | — | 10a–10h, 10-ctl | — |
+| 11 — report carries the caveat | — | — | 11a–11d, 11f-*, 11g | — |
 | 12 — one-character prefix | — | 12suffix, 12prefix, 12-ctl | — | — |
-| 13 — the two §5.8 consumers agree | 13a, 13d (paired) | — | — | 13a, 13b-*, 13d, 13-ctl |
-| 14 — Gate 5 controls | — | — | 14a–14c | — |
+| 13 — the two §5.8 consumers agree by CLASS | 13a–13f (paired) | — | — | 13a–13f, 13-ctl |
+| 14 — certified §2 table + pin, isolated copy | — | — | 14a, 14b, 14-fixture, 14b-mut | — |
+| integrity | — | — | — | Z-*, incl. Z-gate5 and Z-signed |
 
 **Coverage gaps inside the boundary, named rather than implied:**
 
-- **EC is never probed for duplicate publication (case 5's shape).** `§5.7.1`'s own heading says
-  "the identifiers are not normative", so a code named twice there is not obviously a defect and
-  I decline to invent one. **This is an interpretation, not a measurement** — see §4.
-- **VH is never probed for section EXTENT.** Its `§7.2` block does not extract a section at all;
-  it greps the whole proposal. Case 10 is therefore about *where the sentence came from*, not
-  about where `§7.2` ends. A repair that gives VH a real section extractor will need extent
-  cases of its own, and this card does not supply them.
+- **EC is never probed for duplicate publication.** This is now a DETERMINATION, not an omission
+  by default — see §7.
+- **VH now HAS section-extent cases** (`10c`–`10h`), written before any extractor exists. They
+  specify the extent the repair must implement rather than describing one that already does.
 - **VP is probed only through `TestPublishedTypeStrings`.** No other test class in
   `test_verifier.py` is run, imported, or asserted on.
-- **Case 14 is a control everywhere and a REQUIRED assertion only at `14d`.** It proves this
-  batch left Gate 5 alone. It says nothing about whether Gate 5 is right — D-008(1) and (3) are
-  John's, and no hash speaks to them.
-- **The `§2` `[§13#N read YYYY-MM-DD]` marker census, the vendor-name scan, the `§10.1` label
-  scan and the `EVAL_CODES` parse are executed** (they are earlier blocks of the same scripts)
-  **but nothing is asserted about them.** They appear in the captured output only as context.
-
----
+- **Case 14 no longer asserts anything about the LIVE repository as a REQUIRED case.** Its
+  pass/fail pair is on an isolated snapshot; the live tree is covered by integrity control
+  `Z-gate5` and by `Z-signed`. Neither is a certification, recertification or reaffirmation
+  (D-059(1)).
+- **The `§2` marker census, the vendor-name scan, the `§10.1` label scan and the `EVAL_CODES`
+  parse execute** (they are earlier blocks of the same scripts) **but nothing is asserted about
+  them.**
 
 ## 2. Version and platform bounds
 
@@ -71,6 +68,25 @@ claim about CI, about Linux, or about a container image.**
 
 ---
 
+## 2b. Gate binding — what `a-extract-gate.sh` does and does not show
+
+- **Shown:** the unchanged top-level FAST gate passes in an isolated clone; all three consumer
+  stages are invoked by their exact banners, in a known order; breaking the FIRST consumer fails
+  the gate at its named stage with two later consumers green; breaking the LAST does the same
+  with two earlier consumers green.
+- **NOT shown:** the DEEP profile (`--gate`) is not run — it costs several minutes more per
+  invocation and executes the corpus. **That the three stages are unconditional in both profiles
+  is a READING of `scripts/test.sh`, not a measurement, and it is recorded here as a reading.**
+- **NOT shown:** anything about whether the guards are right. The gate carries their verdict;
+  `a-extract.sh` measures the verdict.
+- **Explicitly, as D-059(7) requires:** these guards cover only their enumerated canonical facts
+  — six §5.8 type strings, forty-one §5.7.1 identifiers, one §7.2 sentence, one §2 table hash.
+  **They are NOT general prose-consistency evidence.**
+- **Cost and dependencies:** three full fast-gate runs, roughly ten to fifteen minutes, ~180 MB
+  of scratch per subject, and it requires `forge`, `node`, an installed `ts/node_modules` and
+  both submodule working trees. If any is absent the harness **DIES (exit 2)** rather than
+  skipping — a check that cannot execute must never read as one that passed.
+
 ## 3. Where exit status is NOT a valid discriminator
 
 **Nowhere is exit status used as a per-case verdict, and here is why it could not be.**
@@ -83,9 +99,13 @@ claim about CI, about Linux, or about a container image.**
 - `check-vendor-honesty.sh` accumulates a single `fail` flag across roughly a dozen unrelated
   conditions; its exit status carries no information about the `§7.2` block specifically.
 - The `VP` consumer's status distinguishes only "all tests passed" from "something failed", and
-  at case 1c the failure is an **uncaught `IndexError`**, not a named assertion. Case 1c
-  therefore asserts *"does not report success"* — the weakest honest form — and `1c-how` records
-  the refusal shape as an OBSERVED fact rather than dressing it up as a clean refusal.
+  at case 1c the failure is an **uncaught `IndexError`**. That is why case 1c no longer asserts
+  *"does not report success"* — a crash satisfies that. It asserts a **named diagnostic in the
+  `anchor-unresolved` class with no traceback**, which a crash fails, and `1c-how` records the
+  observed shape as a fact rather than dressing it up as a refusal.
+- **A `crash` is never an acceptable class.** `unittest` prints `ERROR` for an uncaught exception
+  and `FAIL` for an assertion; the reason classifier keeps them apart, and case 13 requires a
+  named class from both consumers rather than matching booleans.
 
 Every REQUIRED assertion is consequently of the form: **the success line is absent, the finding's
 subject is named, and the output carries refusal vocabulary.** The harness's own exit status is
@@ -107,29 +127,35 @@ STOPS and has the disagreement independently confirmed — it does not edit the 
    overlap**; 12 is the minimal one-character form the brief names, 2 is the realistic
    longer-token form.
 2. **Two headings claiming one anchor is an ambiguity to REFUSE, not a duplicate to
-   deduplicate** (cases 4b/4c/4d). A repair that "reads the last one" or "merges them" satisfies
-   nothing here, and I regard either as the same first-match defect wearing different clothes.
-3. **A horizontal rule does not end a section** (case 13d). The shell guard's boundary is a
+   deduplicate** (cases 4b/4c/4d, 10g, 13f). A repair that "reads the last one" or "merges them"
+   satisfies nothing here; either is the same first-match defect wearing different clothes.
+3. **A heading QUOTED inside a fenced code block is a MENTION, not an anchor** (4e, 4f, 10h).
+   `check-vendor-honesty.sh` already records this exact defeat against its own `§2` lookup, so
+   the fixture is the project's own, not invented for this card.
+4. **A horizontal rule does not end a section** (case 13d). The shell guard's boundary is a
    heading; for the two `§5.8` consumers to agree, the Python one must stop at a heading too.
-   Today they agree on the live document only because `§5.8`'s trailing `---` happens to sit
+   They agree on the live document only because `§5.8`'s trailing `---` happens to sit
    immediately before the next heading. **That coincidence is not a property and this case says
    so.**
-4. **Backticks make a mention non-normative** (cases 9a/9b). The publication form asserted is an
-   unbackticked four-space-indented literal line, which is how `§5.8` publishes today. A repair
-   that adopts fenced code blocks instead would need this case revisited — through the
-   stop-and-confirm route, not by editing it.
-5. **`§5.7.1` identifiers are declared non-normative, so EC gets no duplicate-publication
-   case.** See §1.
-6. **Case 14's assertion is "unchanged", not "correct".** `14d` compares the live repository's
-   pinned constant and computed `§2` hash against the value D-038 certified. **It is not a
-   certification, a recertification, or a reaffirmation** (D-059(1)).
-7. **"The generated report carries the caveat" is measured on the committed report plus the
-   generator source, not by running the generator** (cases 11a, 11e, 11f). `npm --prefix ts run
-   ablation` is not executed: it needs a toolchain this harness does not assume, and a
-   regeneration would rewrite a tracked artifact. **11f is a proxy** — the generator contains
-   both halves of the sentence — and a proxy is what it is called here.
-
----
+5. **Backticks make a mention non-normative** (cases 9a/9b). The publication form asserted is an
+   unbackticked four-space-indented literal line, which is how `§5.8` publishes today.
+6. **The case-13 reason-class vocabulary is a contract.** `success`, `anchor-unresolved`,
+   `anchor-ambiguous`, `duplicate-publication`, `not-published`, `drift`,
+   `duplicate-definition`, `crash`, `other`. **The words that map into each class are
+   alternatives, not a dictated sentence** — a repair picks its own wording; what it may not pick
+   is a different class. `TESTS.patch` states the same vocabulary on the verifier side so the two
+   halves cannot drift.
+7. **Case 14's assertion is "unchanged", not "correct".** `14a`/`14b` exercise both directions on
+   a snapshot. **No certification, recertification or reaffirmation is performed** (D-059(1)), the
+   live pin is never updated or re-signed, and `docs/gate-s2-evidence.md` is not read for change —
+   `Z-signed` asserts it is byte-identical to the base commit.
+8. **`AX-2` is `R4-F3`, not a new finding.** Cases `6before`/`6after` are carried under `R4-F3`'s
+   existing id per the adjudication. The wrong-reason exit at `6before` is recorded as a
+   refinement of that finding's severity, **not as a second defect** — inflating one defect into
+   two is by this project's own terms a defect.
+9. **`AX-3` is a sibling of `V3-N2` on the same line, not a duplicate of it.** The adjudicator
+   tested the implication both ways: a `§7.2`-scoped but still line-oriented extraction fails
+   `11b`, and a paragraph-normalized but unscoped extraction still reads the decoy at `10a`.
 
 ## 5. What this harness does NOT do
 
@@ -148,9 +174,10 @@ STOPS and has the disagreement independently confirmed — it does not edit the 
   Markdown headings, type strings and identifier tokens.
 - **It does not apply `TESTS.patch`.** The patch is verified to apply cleanly at the base SHA
   and is then discarded; the repository's `verifier/` tree is untouched.
-- **It does not run the fast gate, the deep gate, or `scripts/test.sh`.** D-059(7) requires a
-  targeted guard to be bound to the real gate — that obligation belongs to the *repair*, and
-  this card records it as owed rather than pretending to have discharged it.
+- **`a-extract.sh` does not run the gate.** D-059(7)'s gate-binding obligation is discharged by a
+  SEPARATE harness, `a-extract-gate.sh`, whose evidence is in `GATE-BINDING.md`. It runs the
+  top-level FAST gate three times against a private clone. **The DEEP profile (`--gate`) is still
+  not run** — see §2b.
 
 ---
 
@@ -162,17 +189,82 @@ STOPS and has the disagreement independently confirmed — it does not edit the 
   first version of this harness passed a multi-line string through `awk -v`, awk errored to
   stderr, the mutation did not apply, and case 11b reported PASS against an unmutated fixture.
   The `*-mut` controls exist because of that, and they caught it.
-- **Case 13's `agree()` compares only success/failure, not the reason.** Two consumers that both
-  fail for different reasons count as agreeing. `TESTS.patch` carries the finer-grained
-  verifier-side contract; the shell-side reason is asserted separately by the other cases.
+- **Case 13's reason classifier reads MESSAGES, so it is only as good as its alternatives.** A
+  repair whose refusal message uses vocabulary outside the declared sets lands in `other` and
+  fails the case. That is deliberate — the class is the contract — but it means a repair must read
+  the vocabulary in `CARD.md` and `TESTS.patch` rather than guess it.
 - **The VH cases are slow** (~4 s each, dominated by the repository-wide vendor scan the block
   under test does not need). A whole run is roughly 55 s.
 - **`P3` warns rather than fails when HEAD is not the base SHA.** The outcomes are evidence
   about whatever was measured; the harness records what that was instead of refusing to run.
-- **The `§2` capability-cell mutation in `14c` appends one space to a table row.** It is enough
+- **The `§2` capability-cell mutation in `14b` appends one space to a table row.** It is enough
   to move the hash, which is all case 14 needs, and it is deliberately not a semantic edit.
-- **`14d` has no control in the LIVE repository, and cannot have one.** Its paired opposite
-  outcome (`14c`) is measured on the snapshot, because proving the pin is live in the live tree
-  would mean editing `§2` there. **Stated rather than implied:** `14d` is a same-value
-  comparison against a constant recorded in this card, and the evidence that the comparison can
-  fail at all lives one directory away, in the snapshot.
+- **The harness's own section reader carried the defect it measures, and did so undetected until
+  a control failed.** `section_of` used a fixed `^#{1,6} ` terminator; control `10c-mut` then
+  reported that a mutation planted INSIDE `§7.2` had not applied, because the harness's own read
+  of `§7.2` stopped at the planted `#### 7.2.1`. It is now anchor-derived, and so is `sec_sub`.
+  **Recorded rather than quietly fixed**, because "the instrument carries the defect it is
+  measuring" is the same class as the guards under test.
+- **`grep -q` on a pipe was a latent size-dependent falsehood, found by a control and removed.**
+  `printf '%s' "$big" | grep -qF …` exits grep at the first match; `printf` takes `EPIPE`; under
+  `set -o pipefail` the pipeline returns non-zero **although the needle was found**. It never
+  fired in `a-extract.sh`, whose consumer outputs are a few hundred bytes — it fired in the gate
+  harness against a 60 KB log, where control `G1-stages` reported FAIL beside a visible
+  `printf: write error: Broken pipe`. Both harnesses now use `grep -c`. **Recorded rather than
+  quietly fixed**, because "the probe was wrong in a way that only shows up on bigger inputs" is
+  the same shape as the defects under test.
+- **The gate harness's G1 baseline depends on this machine's toolchain.** `forge`, `node` and an
+  installed `ts/node_modules` are copied into the clone from the live tree. That is a disclosed
+  dependency: the gate under test is the committed one, the environment is this workstation's.
+- **`a-extract-gate.sh` asserts on the gate's OUTPUT, never on its exit status.**
+  `scripts/test.sh` runs under a completion-token supervisor with its own codes; the observed
+  supervisor code appears in each case description as a fact and in no assertion.
+
+## 7. Removed from the binding contract — each with its reason
+
+**Leaving a non-discriminating case in the binding set is worse than removing it, because a case
+that cannot fail for its intended reason still reads like coverage.** Four were removed or
+replaced.
+
+1. **`14d` — the live-repository pin comparison. REMOVED from binding; retained as integrity
+   control `Z-gate5`.**
+   *Reason:* no discriminating control is constructible. Proving the pin is live in the live tree
+   means editing `§2` there, which D-059(1) forbids and this batch will not do. The PASS/FAIL
+   pair now lives at `14a`/`14b` on an isolated snapshot, where both directions are exercised and
+   `14b-mut` proves the pin was left unchanged while the table moved.
+   *What is lost:* nothing that was ever evidence — `14d` could only confirm two values were equal.
+
+2. **The EC duplicate-publication case — NOT CREATED, on a determination made before the
+   omission rather than after.**
+   *Reason:* `§5.7.1`'s own heading reads *"the identifiers are not normative"*, and its body says
+   a reimplementer *"should derive behaviour from the descriptions, not transcribe names"*. **A
+   section that does not publish normatively cannot publish twice normatively.** Requiring
+   uniqueness there would manufacture an obligation the document explicitly declines.
+   *How the determination is kept honest:* control **`P8`** asserts §5.7.1 still declares its
+   identifiers non-normative. If that changes, `P8` fails, the harness exits 2, and the omission
+   is revisited rather than inherited.
+   *What is retained either way:* every exact-token case — `2a` (superstring), `12suffix`
+   (appended character), `12prefix` (prepended character), with controls `2-ctl` and `12-ctl`.
+   Those are about MEMBERSHIP, which §5.7.1 does assert.
+
+3. **The `11f` proxy over `ts/src/ablation/report.ts`'s text — REPLACED by executing the
+   canonical generator.**
+   *Reason:* a text count cannot tell an emitted sentence from a commented-out one, and says
+   nothing about the artifact a regeneration would produce. `11f-a`/`11f-b`/`11f-c` now run
+   `buildReport(loadInputs())` — the entry point `scripts/test.sh`'s A-062 stage uses — and assert
+   on its OUTPUT; `11f-ctl` deletes the emitting statement and requires the caveat to vanish from
+   the regenerated artifact and VH to fail naming the report.
+   *Residual, stated:* `npm --prefix ts run ablation` (which writes the tracked file) is not
+   invoked; the same `buildReport(loadInputs())` is called into the scratch area instead, so no
+   tracked artifact is rewritten. `11f-a` asserts the generated bytes are byte-identical to the
+   committed report, which is what makes the two equivalent here.
+
+4. **Boolean agreement in case 13 — REPLACED by per-consumer reason classes.**
+   *Reason:* two consumers failing for different reasons counted as agreement. `13b-after` passed
+   on exactly that: the shell guard refused a duplicate publication while the Python consumer
+   silently kept the LAST line and then failed a value comparison. Under classes it now fails,
+   correctly, with `shell='duplicate-publication', verifier='assertion-mismatch'` printed in its
+   own verdict line.
+
+**Nothing else was removed.** Every assertion that held at the first measurement is retained
+unchanged and still holds.

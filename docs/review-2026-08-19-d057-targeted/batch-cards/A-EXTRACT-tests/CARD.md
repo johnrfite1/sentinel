@@ -7,8 +7,13 @@ and source uniqueness are TWO properties, not one primitive), D-060(1) (batch ca
 completeness is asserted only inside a declared boundary).
 
 **Pre-repair base SHA:** `bb664c626d592d86391f644bf014e76f2bbf7db4`, tree clean.
-**Demonstrated at:** the same commit. **Harness:** `a-extract.sh` (its own sha256 is printed by
-preflight case `P0` and recorded in `RESULTS.md`).
+**Demonstrated at:** the same commit. **Harnesses:** `a-extract.sh` (fast, 49 binding assertions)
+and `a-extract-gate.sh` (D-059(7) gate binding). Each prints its own sha256 at preflight `P0`;
+both are recorded in `RESULTS.md` and `GATE-BINDING.md`.
+
+**This revision is a CORRECTIVE update.** `e7ff655` and `ca49f18` are recorded history and are not
+rewritten or amended; the first measurement they carry is preserved and reconciled with this one
+in `RESULTS.md` §0.
 
 **This card is small on purpose. It claims completeness ONLY inside the boundary below.** It is
 **not** a Batch A1 attempt of any kind. **Batch A1 is CLOSED** — both ordinary attempts remain
@@ -19,6 +24,41 @@ already identifies frozen attempt-two evidence.
 **This is a test-only deliverable.** No production file is modified by this card, by its harness,
 or by the commit that carries it. `TESTS.patch` is supplied as a patch file and is **NOT
 applied**.
+
+## ADJUDICATION OF WHAT THIS CARD EXPOSED — settled, and fed back in
+
+An independent adjudicator classified the three defect classes this card's first run exposed
+(`adjudication/A-EXTRACT/`, committed at `3668f51`). **The classifications are settled and this
+card is written to them, not around them.**
+
+| id | Class | Verdict |
+|---|---|---|
+| **AX-1** | the exact section ANCHOR is taken first-match and a duplicate anchor is never detected | **CONFIRMED, MEDIUM, distinct.** The adjudicator ran `C2`'s depth-aware terminator and `C1`'s word-anchored membership against its own fixtures and **both still read the decoy**, so neither existing remedy discharges it. It reaches a third consumer, `verifier/test_verifier.py`. |
+| **AX-2** | the authoritative SOURCE-definition lookup does not require uniqueness | **DUPLICATE — it IS `R4-F3`'s confirmed, unrepaired residual.** The block is byte-identical to `c8d15a7`, which `R4-F3` was verified FAIL against. **No new finding id exists for it and this card claims none.** The observation that `6before` exits non-zero for the WRONG reason is a refinement of `R4-F3`'s severity, not a second defect. |
+| **AX-3** | the `§7.2` caveat comparison is line-oriented on the PROPOSAL side | **CONFIRMED, MEDIUM, sibling of `V3-N2`** — same line, and neither remedy covers the other. The adjudicator additionally demonstrated a **false-assurance** direction the first run did not record; it is now case `11g`. |
+
+## WHAT CHANGED IN THIS REVISION, and why
+
+The first cut of this contract had cases that returned the right verdict for the wrong reason, or
+had no discriminating control at all. **Each is either repaired or removed — none is left in the
+binding set on a weak assertion.** See `COVERAGE.md` §7 for the removals with their reasons.
+
+- **`14d` removed from binding.** It compared the live repository's pin against a constant with no
+  opposite outcome available, because producing one would mean editing `§2`. The PASS/FAIL pair is
+  now `14a`/`14b` **on an isolated snapshot**; what remains of `14d` is an integrity control,
+  `Z-gate5`.
+- **`1c` no longer binds on a crash.** An uncaught `IndexError` is an instrument failure. It now
+  requires a **stable named diagnostic** in the `anchor-unresolved` class, paired with `1c-ctl`.
+- **Case 13 asserts a REASON CLASS per consumer.** Boolean agreement let `13b-after` pass while the
+  two consumers were failing for different reasons.
+- **`11f` executes the canonical generator.** The proxy over `report.ts`'s text is gone.
+- **EC duplicate publication: determined NOT NORMATIVE and omitted**, with `P8` asserting the basis.
+- **Vendor honesty gains section-extent cases** (`10c`–`10h`) written **before** any extractor exists.
+- **Exact-anchor cases added:** a quoted heading is a mention (`4e`, `4f`, `10h`); two exact headings
+  must be REFUSED rather than the first selected (`4b`, `4c`, `4d`, `10g`, `13f`).
+- **The harness's own section reader is now anchor-derived.** It had a fixed `^#{1,6} `
+  terminator — the same defect case 7 exists to falsify — and control `10c-mut` failed because of
+  it. An instrument carrying the defect it measures cannot be believed about it.
 
 ## THE INVARIANT — one
 
@@ -55,6 +95,12 @@ quoted, or proposed for change by this card.**
 
 ## TEST MATRIX — fourteen cases, all required
 
+**Fourteen CASES; forty-nine BINDING assertions.** The case numbers are the brief's; the
+sub-case ids below are the harness's. Every binding assertion carries a paired control, a
+proof-of-mutation control, and a named failure reason. **Where a case could not be given a
+discriminating control it was REMOVED from the binding set and recorded as a residual, never
+left in on a weak assertion** — see the EXCLUDED table below and `COVERAGE.md` §7.
+
 | # | Case | Consumers | Required behaviour |
 |---|---|---|---|
 | 1 | the named section is **ABSENT** | TS, EC, VP | **refuse, naming the section.** No result for a scope that could not be found, and no fallback to the whole document |
@@ -74,30 +120,83 @@ quoted, or proposed for change by this card.**
 
 ### What each case asserts, in the harness's own case ids
 
-- **1a / 1b / 1c** — TS and EC refuse by name; VP does not report success.
+**BINDING — every one has a paired control, a distinct named failure reason, and a
+proof-of-mutation control.**
+
+- **1a / 1b** — TS and EC refuse by name. **1c** — the verifier emits a **named
+  `anchor-unresolved` diagnostic** mentioning §5.8, with **no uncaught traceback**; `1c-ctl` is the
+  valid-input control.
 - **2a** (EC, `EVAL_POLICY_WINDOW` vs `EVAL_POLICY_WINDOW_STRICT`), **2b** (TS,
   `PolicyPayload` vs `PolicyPayloadV2`).
-- **3a** (EC, code moved to `§6`, later in the file), **3b** (TS, publication moved to `§5.6`).
-- **4a** correct decoy earlier in `§5.9`, real `§5.8` transposed → must report the drift.
-  **4c** two complete `§5.8` sections → must refuse. **4d** the FIRST `§5.8` correct, the real
-  one transposed → **must not report success**. **4b** the same shape at `§5.7.1`.
+- **3a** (EC, code moved later in the file), **3b** (TS, publication moved to §5.6).
+- **4a** correct decoy earlier in §5.9, real §5.8 transposed → must report the drift.
+  **4c** two complete §5.8 sections → must refuse. **4d** the FIRST §5.8 correct, the real one
+  transposed → **must not report success**. **4b** the same shape at §5.7.1.
+  **4e / 4f** — a heading **quoted inside a fenced code block** is a MENTION and must not be
+  selected as the anchor, at TS and EC.
 - **5before / 5after** — duplicate publication either side of the real line.
-- **6before / 6after** — duplicate source definition either side of the real one.
-- **7a** `####` inside `§5.8` (must stay in), **7b** `#####` inside `§5.7.1` (must stay in),
-  **7c** `#####` inside `§5.8` — a CONTROL, because it already stays in.
-- **8a** `###` inside `§5.8`, **8b** `##` inside `§5.8`, **8c** `####` inside `§5.7.1`,
-  **8d** `###` inside `§5.7.1`. **8c against 7a is the anchor-derivation evidence**: the same
+- **6before / 6after** — duplicate SOURCE definition either side of the real one. **This is
+  `R4-F3`'s residual (AX-2), carried under its existing id.**
+- **7a** `####` inside §5.8 (must stay in), **7b** `#####` inside §5.7.1 (must stay in),
+  **7c** `#####` inside §5.8 — a CONTROL, because it already stays in.
+- **8a** `###` inside §5.8, **8b** `##` inside §5.8, **8c** `####` inside §5.7.1,
+  **8d** `###` inside §5.7.1. **8c against 7a is the anchor-derivation evidence**: the same
   `####` depth, opposite required outcomes.
 - **9a** inline backticked mention, **9b** indented backticked line, **9c** CONTROL — the same
   text unbackticked IS a publication and is refused.
-- **10a** decoy earlier, `§7.2` intact → must report ok. **10b** decoy earlier matching the
-  report while `§7.2`'s own wording is absent from it → **must FAIL naming the report**.
-- **11a** base commit, **11b** `§7.2`'s caveat hard-wrapped → must still be located,
-  **11c/11d** controls, **11e/11f** the generator emits it.
+- **10a** decoy earlier, §7.2 intact → must report ok. **10b** decoy earlier matching the report
+  while §7.2's own wording is absent from it → **must FAIL naming the report**.
+  **§7.2 SECTION EXTENT, specified before any extractor exists:** **10c** a `####` subsection
+  inside §7.2 does not end it; **10d** a same-depth `###` heading does; **10e** a shallower `##`
+  heading does; **10f** an ABSENT §7.2 anchor is REFUSED by name; **10g** TWO exact §7.2 headings
+  are REFUSED as ambiguous; **10h** a §7.2 heading quoted in a fenced block is a MENTION.
+- **11a** base commit; **11b** §7.2's caveat hard-wrapped → must still be located;
+  **11g** the **AX-3 false-assurance** direction — the report carries only the TAIL half and the
+  guard must FAIL naming it; **11c/11d** controls.
+  **11f-a / 11f-b / 11f-c** — the **canonical generator is EXECUTED** (`buildReport(loadInputs())`,
+  the entry point `scripts/test.sh`'s A-062 stage uses): its output is byte-identical to the
+  committed report, the **regenerated** artifact carries the caveat, and VH passes **against the
+  regenerated artifact**. `11f-ctl` removes the emitting statement from the generator and requires
+  VH to fail naming the report.
 - **12suffix / 12prefix** — `EVAL_NONCE_CURRENTX` and `XEVAL_NONCE_CURRENT`.
-- **13a** deeper subsection, **13b-before / 13b-after** duplicate publication, **13d** a
-  horizontal rule inside `§5.8`. `TESTS.patch` carries the verifier-side half.
-- **14a–14c** controls on the snapshot, **14d** the live repository is unchanged.
+- **13a / 13b-before / 13b-after / 13d / 13e / 13f** — each names the **reason class BOTH
+  consumers must produce**; class equality alone is not asserted, and two consumers failing for
+  different reasons is a failure. Vocabulary: `success`, `anchor-unresolved`, `anchor-ambiguous`,
+  `duplicate-publication`, `not-published`, `drift`, `duplicate-definition`, `crash`, `other`.
+  **`crash` is never an acceptable class.**
+- **14a / 14b** — the certified §2 table and its pin exercised **in an isolated copy**, both
+  directions: unmodified table + pin → certified by record; mutated table + **pin left unchanged**
+  → STALE. **The live pin is never updated, re-signed or touched.**
+
+**EXCLUDED from the binding contract, each with its reason** — full statements in `COVERAGE.md` §7:
+
+| Removed | Reason |
+|---|---|
+| `14d` (live-repository pin comparison) | no discriminating control is constructible without editing `§2` in the live tree, which D-059(1) forbids. Retained as integrity control `Z-gate5`. |
+| EC duplicate-publication case | **§5.7.1 declares its identifiers NON-NORMATIVE.** A section that does not publish normatively cannot publish twice normatively; manufacturing the requirement would be inventing an obligation the document declines. `P8` asserts the basis so the omission expires if §5.7.1 ever becomes normative. |
+| the `11f` proxy over `report.ts` text | replaced by executing the generator. A text count cannot tell an emitted sentence from a commented-out one. |
+| boolean agreement in case 13 | replaced by per-consumer reason classes. |
+
+## GATE BINDING — D-059(7), `a-extract-gate.sh`
+
+*"A standalone script that nothing invokes repeats the defect this work is trying to close."*
+A separate harness runs the **top-level fast gate** against a private clone and demonstrates three
+things. `GATE-BINDING.md` carries the measured evidence.
+
+| | Demonstration |
+|---|---|
+| **G1** | the **unchanged** top-level fast gate **PASSES**, and all three consumer stages are invoked by name |
+| **G2** | breaking the **FIRST** consumer makes the gate fail **at its named stage** — and the two LATER consumer stages report success in the same run without clearing it |
+| **G3** | breaking the **LAST** consumer does the same with the two EARLIER consumer stages green |
+
+The three stage banners are `== published EIP-712 type strings (D-023) ==`,
+`== §5.7.1 check coverage (D-031) ==` and `== vendor honesty (§7.5 Gate 5, D-008) ==`.
+**Both directions are run because "a later stage cannot clear an earlier failure" and "earlier
+successes cannot excuse a later failure" are two properties, and one direction shows only one.**
+
+**Stated explicitly, as D-059(7) requires: these guards cover only their enumerated canonical
+facts — six §5.8 type strings, forty-one §5.7.1 identifiers, one §7.2 sentence, one §2 table
+hash. They are NOT general prose-consistency evidence.**
 
 ## CONTROLS — each case has an opposite outcome, or it proves nothing
 
@@ -117,9 +216,23 @@ quoted, or proposed for change by this card.**
   `9a`/`9b` do not pass because the fixture is inert.
 - **`11c`, `11d`** — the report's copy altered by one word FAILS, and a pure re-wrap of the
   report does not. `11b` is therefore about the **proposal** side of the comparison.
-- **`14c`** — a `§2` edit makes the pinned hash report STALE, so case 14 is not vacuous.
-- **`Z-*`** — the four consumers are byte-identical to the base SHA at run time, and the
-  repository under test is unmodified when the run ends.
+- **`14b` against `14a`** — the same snapshot, one §2 row changed and the pin left alone, makes the
+  guard report STALE where it reported certified. Case 14 is a two-direction pair, not a single
+  same-value comparison.
+- **`P8`** — §5.7.1 still declares its identifiers non-normative. The basis for omitting an EC
+  duplicate-publication case is asserted, not assumed, so the omission expires if that changes.
+- **`1c-ctl`** — the same verifier consumer reports `success` and emits no diagnostic on VALID
+  input, so `1c` is about the malformed path and not about the harness reaching the consumer.
+- **`11f-ran` / `11f-mut` / `11f-ctl` / `11f-restore`** — the canonical generator really ran;
+  deleting its emitting statement really removes the caveat from its output and really makes VH
+  fail; and the generator fixture is restored so nothing downstream inherits the mutation.
+- **`14-fixture` / `14b-mut`** — the snapshot's pin is the certified value, and the §2 mutation
+  moved the table **while leaving the pin unchanged**, which is what makes `14b` a test of the pin
+  rather than of an edit to it.
+- **`Z-*`** — the four consumers are byte-identical to the base SHA at run time, the repository
+  under test is unmodified when the run ends, **Gate 5's pin and §2 table are unmoved
+  (`Z-gate5`)**, and **`docs/gate-s2-evidence.md` is byte-identical to the base commit
+  (`Z-signed`)** — no signed document was read for change.
 
 **A failing CONTROL exits 2 and invalidates every verdict beside it.** A failing REQUIRED with
 all controls holding exits 1. **Exit status alone is never a per-case discriminator:** three of
@@ -142,6 +255,18 @@ repair chooses its words; it may not choose silence, success, or a message about
   that this batch leaves the certified table and its pin exactly where they were.
 - **`R2` (quotePath), `R3`, `R5`** and every other deferred item stay deferred.
 - One platform, one git, one python. See `COVERAGE.md` §2.
+
+## DELIVERABLES
+
+| File | What it is |
+|---|---|
+| `CARD.md` | this card — the invariant, the boundary, the matrix, the controls, the exclusions, the stopping rule |
+| `a-extract.sh` | the fast harness: 49 binding assertions, 70 controls, ~2 minutes, no toolchain beyond git/bash/awk/python3/node |
+| `a-extract-gate.sh` | the D-059(7) gate-binding harness: three full fast-gate runs in an isolated clone, ~10-20 minutes, needs forge and `ts/node_modules` |
+| `GATE-BINDING.md` | the measured gate-binding evidence |
+| `COVERAGE.md` | what is exercised, what is not, the interpretations, and **§7 — what was removed from the binding contract and why** |
+| `RESULTS.md` | the measured pre-repair run at `bb664c6`, both measurements, and the per-case verdicts |
+| `TESTS.patch` | the verifier-side half of the case-13 contract — **a patch file, NOT applied** |
 
 ## STOPPING RULE
 
