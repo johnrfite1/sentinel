@@ -17,11 +17,18 @@ fi
 # GIT_DIR / GIT_WORK_TREE are EXPORTED while a hook runs and override `git -C`, so the
 # hook must derive its own repository with them unset or it resolves the caller's tree —
 # which is precisely the confusion this guard exists to refuse.
-HOOK_ROOT="$(env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE -u GIT_COMMON_DIR git -C "$_hook_self" rev-parse --show-toplevel 2>/dev/null)" || HOOK_ROOT=""
+HOOK_ROOT="$(cd -- "$_hook_self" 2>/dev/null && env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE -u GIT_COMMON_DIR -u GIT_PREFIX git rev-parse --show-toplevel 2>/dev/null)" || HOOK_ROOT=""
+if [ -n "$HOOK_ROOT" ]; then HOOK_ROOT="$(cd -- "$HOOK_ROOT" && pwd -P)"; fi
 if [ -z "$HOOK_ROOT" ] || [ ! -e "$HOOK_ROOT/scripts/check-secrets.sh" ]; then
     echo "  FAIL  pre-commit: this hook is not inside the Sentinel repository; refusing." >&2; exit 2
 fi
+# CAPTURE THE INVOKING REPOSITORY FIRST — it is the one legitimate use of the hook-exported
+# git environment, and it must be read BEFORE that environment is cleared (D-061, 12-F2).
 INVOKING_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || INVOKING_ROOT=""
+if [ -n "$INVOKING_ROOT" ]; then INVOKING_ROOT="$(cd -- "$INVOKING_ROOT" 2>/dev/null && pwd -P)"; fi
+# NOW clear it, so nothing downstream — including the guard this hook execs — can be
+# redirected by a caller-supplied override.
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_PREFIX
 if [ -z "$INVOKING_ROOT" ]; then
     echo "  FAIL  pre-commit: cannot determine the invoking repository; refusing." >&2; exit 2
 fi

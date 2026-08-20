@@ -68,6 +68,12 @@ if [ -z "$SENTINEL_ROOT" ] || [ ! -e "$SENTINEL_ROOT/scripts/test.sh" ] || [ ! -
     echo "  FAIL  this script is not inside the Sentinel repository; refusing." >&2; exit 2
 fi
 cd "$SENTINEL_ROOT" || { echo "  FAIL  cannot enter the Sentinel repository root; refusing." >&2; exit 2; }
+# CALLER GIT OVERRIDES ARE REMOVED ONCE, HERE, BEFORE ANY BODY-LEVEL GIT CALL (12-F2).
+# Scrubbing only the identity probe left every later `git` inheriting the caller's
+# environment: GIT_DIR alone made this guard report clean over a live credential, and made
+# install-hooks write into a victim repository. GIT_PREFIX is included although inert on
+# git 2.50.1 — an inert variable today is not a guarantee tomorrow.
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_PREFIX
 
 STAGED=0
 [ "${1:-}" = "--staged" ] && STAGED=1
@@ -133,19 +139,57 @@ _sec_mode_of() {   # linear lookup; the staged set is small and this runs once p
 }
 
 if [ "$STAGED" -eq 1 ]; then
-  # --diff-filter=ACM already excludes status D, so A GENUINELY STAGED DELETION IS NEVER
-  # ENUMERATED HERE and cannot become a false failure (D-059(3), Batch A1 case 7).
-  if ! git diff --cached -z --name-only --diff-filter=ACM >"$_sec_lst" 2>"$_sec_err"; then
-    echo "${RED}FAIL${RST} git diff --cached failed; refusing to report a clean scan:"
+  # RAW RECORDS, NUL-DELIMITED, EXCLUDING ONLY PURE DELETIONS (R1, CONFIRMED; D-061).
+  # This was `--name-only --diff-filter=ACM`, an ALLOW-LIST that silently dropped staged
+  # RENAMES and TYPECHANGES. A tracked file renamed with a credential appended to the
+  # destination scores R099, enumerated as NOTHING, and the guard printed clean, exit 0,
+  # while the commit succeeded through this very hook. `d` (lower case) EXCLUDES deletions
+  # and admits everything else, so the set can no longer be narrowed by omission.
+  # `C` (copy) was always inside ACM and is unchanged; only R and T were being dropped.
+  # A GENUINE STAGED DELETION IS STILL NEVER ENUMERATED and cannot become a false failure
+  # (D-059(3), D-061(1), Batch A1 case 7).
+  if ! git diff --cached --raw -z --diff-filter=d >"$_sec_lst" 2>"$_sec_err"; then
+    echo "${RED}FAIL${RST} git diff --cached --raw failed; refusing to report a clean scan:"
     printf '    %s\n' "$(cat "$_sec_err")"
     _sec_cleanup; exit 1
   fi
-  while IFS= read -r -d '' _f; do
-    _m="$(_sec_mode_of "$_f" || printf '100644')"
-    sec_files+=("$_f")
-    if [ "$_m" = "160000" ]; then sec_kind+=("gitlink"); else sec_kind+=("regular"); fi
+  # Record shape: ":<srcmode> <dstmode> <srcsha> <dstsha> <status>" NUL "<path>" [NUL "<dst>"].
+  # RENAME AND COPY CARRY TWO PATHS and the SECOND is the destination — the one that exists
+  # after the commit and therefore the one to scan. Assuming one path per record would
+  # mis-pair every field after the first rename.
+  _raw=()
+  while IFS= read -r -d '' _fld; do _raw+=("$_fld"); done < "$_sec_lst"
+  _k=0
+  while [ "$_k" -lt "${#_raw[@]}" ]; do
+    _meta="${_raw[$_k]}"
+    case "$_meta" in
+      :*) ;;
+      *) echo "${RED}FAIL${RST} malformed raw record from git diff --cached; refusing."
+         printf '    unexpected field: %s\n' "$_meta"; _sec_cleanup; exit 1 ;;
+    esac
+    read -r _m1 _m2 _s1 _s2 _st <<< "${_meta#:}"
+    if [ -z "${_st:-}" ]; then
+      echo "${RED}FAIL${RST} raw record missing a status field; refusing."; _sec_cleanup; exit 1
+    fi
+    _k=$((_k + 1))
+    if [ "$_k" -ge "${#_raw[@]}" ]; then
+      echo "${RED}FAIL${RST} raw record missing its path; refusing."; _sec_cleanup; exit 1
+    fi
+    _p="${_raw[$_k]}"; _k=$((_k + 1))
+    case "$_st" in
+      R*|C*)
+        if [ "$_k" -ge "${#_raw[@]}" ]; then
+          echo "${RED}FAIL${RST} ${_st} record missing its destination path; refusing."
+          _sec_cleanup; exit 1
+        fi
+        _p="${_raw[$_k]}"; _k=$((_k + 1)) ;;   # the DESTINATION
+    esac
+    sec_files+=("$_p")
+    # The NEW mode decides: a destination that is a gitlink is a submodule pointer, but a
+    # regular-file destination may never be skipped.
+    if [ "$_m2" = "160000" ]; then sec_kind+=("gitlink"); else sec_kind+=("regular"); fi
     sec_hasidx+=("1")
-  done < "$_sec_lst"
+  done
 else
   _i=0
   while [ "$_i" -lt "${#idx_paths[@]}" ]; do

@@ -58,6 +58,12 @@ if [ -z "$ROOT" ] || [ ! -e "$ROOT/scripts/test.sh" ] || [ ! -e "$ROOT/.githooks
     echo "  FAIL  this script is not inside the Sentinel repository; refusing." >&2; exit 2
 fi
 cd "$ROOT" || { echo "  FAIL  cannot enter the Sentinel repository root; refusing." >&2; exit 2; }
+# CALLER GIT OVERRIDES ARE REMOVED ONCE, HERE, BEFORE ANY BODY-LEVEL GIT CALL (12-F2).
+# Scrubbing only the identity probe left every later `git` inheriting the caller's
+# environment: GIT_DIR alone made this guard report clean over a live credential, and made
+# install-hooks write into a victim repository. GIT_PREFIX is included although inert on
+# git 2.50.1 — an inert variable today is not a guarantee tomorrow.
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_PREFIX
 cd "$ROOT"
 
 RESULTS="fixtures/corpus/results"

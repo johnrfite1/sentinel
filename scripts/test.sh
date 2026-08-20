@@ -58,6 +58,31 @@ case "${BASH_SOURCE[0]}" in /dev/fd/*) _gate_from_fd=1 ;; esac
 if [ -z "${SENTINEL_GATE_TOKEN:-}" ] || [ "$_gate_from_fd" -eq 0 ]; then
     # ---- SUPERVISOR. Stays outside the executing body for the whole run. ----
     _gate_src="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
+
+    # SENTINEL'S ROOT, ESTABLISHED HERE AND NOWHERE ELSE (12-F1, D-061(3)).
+    # The body executes as /dev/fd/N where BASH_SOURCE carries no path, so it cannot derive
+    # this. The supervisor can: _gate_src is the REAL path of the file being run. Attempt one
+    # let the body resolve the CALLER's repository and validated it by testing that two path
+    # NAMES existed — any repository satisfies that with two empty files, and a decoy got the
+    # gate to execute NINE of the caller's scripts. Identity is now ESTABLISHED, not matched
+    # by shape. Caller git overrides are removed for the probe so they cannot redirect it.
+    unset SENTINEL_GATE_REPO_ROOT          # never honour a caller-supplied value
+    _gate_root="$(cd -- "$(dirname -- "$_gate_src")" 2>/dev/null && env -u GIT_DIR -u GIT_WORK_TREE -u GIT_INDEX_FILE -u GIT_COMMON_DIR -u GIT_PREFIX git rev-parse --show-toplevel 2>/dev/null)" || _gate_root=""
+    # RESOLVE OR LEAVE EMPTY — the supervisor does not refuse here, and that is deliberate.
+    # `check-gate-immutability.sh` exercises this bootstrap by building SYNTHETIC subjects in
+    # a temp directory outside any repository; a refusal here aborted them and broke two of
+    # the original harness's controls. The refusal belongs in the BODY, which is where the
+    # requirement lives: a copied gate must refuse BEFORE RUNNING CHILDREN. The synthetic
+    # subjects carry no body, so they are unaffected, and the real gate's body still refuses
+    # on an empty root.
+    if [ -n "$_gate_root" ]; then
+        _gate_root="$(cd -- "$_gate_root" && pwd -P)"
+        # The established root must actually CONTAIN this script — identity, not shape. A
+        # decoy with two empty lookalike files satisfies a filename test and got attempt one
+        # to execute nine of the caller's scripts.
+        [ "$(cd -- "$(dirname -- "$_gate_src")" && pwd -P)" = "$_gate_root/scripts" ] || _gate_root=""
+    fi
+
     _gate_before="$(shasum -a 256 <"$_gate_src" | cut -d' ' -f1)"
 
     _gate_tmp="$(mktemp "${TMPDIR:-/tmp}/sentinel-gate.XXXXXXXX")"
@@ -107,7 +132,7 @@ if [ -z "${SENTINEL_GATE_TOKEN:-}" ] || [ "$_gate_from_fd" -eq 0 ]; then
     # and the supervisor waits on PIDs it can actually act on.
     cat "$_gate_fifo" > "$_gate_tok_out" &
     _gate_reader=$!
-    SENTINEL_GATE_TOKEN="$_gate_token" bash /dev/fd/9 "$@" 3>"$_gate_fifo" &
+    SENTINEL_GATE_TOKEN="$_gate_token" SENTINEL_GATE_REPO_ROOT="$_gate_root" bash /dev/fd/9 "$@" 3>"$_gate_fifo" &
     _gate_child=$!
     _gate_rc=0
     wait "$_gate_child" || _gate_rc=$?
@@ -158,20 +183,25 @@ unset SENTINEL_GATE_TOKEN
 _gate_complete() { printf '%s' "$_gate_token_local" >&3; }
 # <<< GATE BOOTSTRAP <<<
 
-# --- Sentinel repository identity (D-060(2)) ---------------------------------
-# THE BOOTSTRAP ABOVE IS UNTOUCHED. This is the executing BODY, reached via
-# `exec bash /dev/fd/N` on an unlinked snapshot, so ${BASH_SOURCE[0]} here is
-# `/dev/fd/N` and carries no path — the BASH_SOURCE derivation used by the other
-# entry points is unavailable at this point by construction. The body therefore
-# validates the repository it is standing in and REFUSES rather than gating a
-# tree it cannot establish is Sentinel. `cd ""` returns 0 and does not abort.
-SENTINEL_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || SENTINEL_ROOT=""
-if [ -z "$SENTINEL_ROOT" ] || [ ! -e "$SENTINEL_ROOT/scripts/test.sh" ] || [ ! -e "$SENTINEL_ROOT/.githooks/pre-commit" ]; then
-    echo "  FAIL  the gate was invoked outside the Sentinel repository; refusing." >&2
-    echo "        Run it as ./scripts/test.sh from a Sentinel worktree." >&2
+# --- Sentinel repository identity, RECEIVED FROM THE SUPERVISOR (12-F1, D-061(3)) --------
+# This is the executing BODY, reached via `exec bash /dev/fd/N` on an unlinked snapshot, so
+# ${BASH_SOURCE[0]} here is `/dev/fd/N` and carries no path. The root therefore arrives from
+# the supervisor, which resolved it from its own REAL path, and is accepted ONLY through that
+# path — the body refuses if it was not supervised. Caller git overrides are cleared here,
+# once, BEFORE any body-level git call, so no exported GIT_* can redirect the run (12-F2).
+if [ -z "${SENTINEL_GATE_REPO_ROOT:-}" ]; then
+    echo "  FAIL  the gate body received no supervisor-established repository root; refusing." >&2
     exit 2
 fi
+SENTINEL_ROOT="$SENTINEL_GATE_REPO_ROOT"
+unset SENTINEL_GATE_REPO_ROOT
 cd "$SENTINEL_ROOT" || { echo "  FAIL  cannot enter the Sentinel repository root; refusing." >&2; exit 2; }
+# CALLER GIT OVERRIDES ARE REMOVED ONCE, HERE, BEFORE ANY BODY-LEVEL GIT CALL (12-F2).
+# Scrubbing only the identity probe left every later `git` inheriting the caller's
+# environment: GIT_DIR alone made this guard report clean over a live credential, and made
+# install-hooks write into a victim repository. GIT_PREFIX is included although inert on
+# git 2.50.1 — an inert variable today is not a guarantee tomorrow.
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_PREFIX
 export PATH="$HOME/.foundry/bin:$PATH"
 
 PROFILE="default"
