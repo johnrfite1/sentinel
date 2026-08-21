@@ -698,7 +698,7 @@ fi
 # diagnostic and +6 for H-8's zero-bundle discovery sweep)**. Ratcheted in the SAME edit as the
 # suite it bounds, which is the rule this line exists to enforce and the rule it has broken
 # three times.
-VERIFIER_MIN_TESTS=209
+VERIFIER_MIN_TESTS=221
 VERIFIER_MIN_SAMPLES=7
 VERIFIER_MIN_TAMPER=78
 # A MODE FLOOR, because a pair count alone rewards padding (A-049): `tamper cases` counts

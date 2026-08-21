@@ -918,22 +918,73 @@ class TestReasonCodeTamper(unittest.TestCase):
 OVERRIDE_SAMPLE = os.path.join(SAMPLES, "case-4-review-failmode-review")
 
 
+SPEC_5_8_ANCHOR = "### 5.8 EIP-712 Type Strings (normative)"
+
+
+def published_type_strings(text, anchor=SPEC_5_8_ANCHOR):
+    """The §5.8 consumer, as ONE function so it can be tested against synthetic
+    documents rather than only against the live proposal.
+
+    A-EXTRACT case 13. `scripts/check-type-strings.sh` and this consumer read the
+    same section of the same document and must not disagree about where it ends or
+    about what to do with a duplicate. The contract this function owes, and which
+    TestPublishedTypeStringsSectionExtent below asserts:
+
+      * the section runs from `anchor` to the next heading whose depth is the SAME
+        AS OR SHALLOWER THAN THE ANCHOR'S OWN -- not to a fixed heading class, and
+        not to the next horizontal rule. A `#### 5.8.1` subsection is INSIDE `§5.8`;
+        a `### 5.7` heading ends it; a `## 6.` heading ends it.
+      * an absent anchor is REFUSED by name, not by IndexError. An uncaught
+        exception is an INSTRUMENT FAILURE, not a refusal: it carries no
+        statement about the section and is not stable across inputs.
+      * two headings claiming the anchor are REFUSED. Taking the first is a
+        tie-break, and the document's section order is not monotonic.
+      * a heading QUOTED inside a fenced code block is a MENTION, not the
+        anchor. `scripts/check-vendor-honesty.sh` already records this exact
+        defeat against its own section-2 lookup.
+      * two different publications of one type inside the section are REFUSED in
+        EITHER order. Silently keeping the last is how a transposed type string
+        rode through a consumer that reported success.
+
+    REFUSAL VOCABULARY, because `a-extract.sh` case 13 requires this consumer and
+    `scripts/check-type-strings.sh` to land in the SAME reason class and a class is
+    read off the message. Raise `ValueError` whose text contains the section
+    number AND, for the anchor cases, one of:
+
+        anchor-unresolved    "could not isolate" / "could not find" /
+                             "not found" / "absent" / "missing" /
+                             "no such section"
+        anchor-ambiguous     "ambiguous" / "duplicate" / "two sections" /
+                             "headings claim"
+
+    and for a repeated publication, one of "duplicate" / "twice" /
+    "more than one" / "published N times". The words are alternatives, not a
+    dictated sentence; what is fixed is the CLASS the message must land in.
+
+    The body below is the behaviour AS IT STOOD at bb664c6, moved here unchanged so
+    that applying this patch changes nothing on its own. The new tests fail against
+    it; that is what makes them a contract rather than a description.
+    """
+    import re
+    parts = text.split("### 5.8 EIP-712 Type Strings")
+    block = parts[1].split("---")[0]
+    out = {}
+    for line in block.split("\n"):
+        m = re.match(r"^([A-Za-z0-9]+)\((.*)\)$", line.strip())
+        if m:
+            out[m.group(1)] = line.strip()
+    return out
+
+
 class TestPublishedTypeStrings(unittest.TestCase):
     """§5.8 now publishes all six type strings. Check the published spec is
     sufficient -- and that it agrees with what was independently recovered."""
 
     def _published(self):
-        import re
         spec = os.path.join(REPO, "Sentinel_Protocol_Lab_Proposal_v0_2.md")
         with open(spec, encoding="utf-8") as handle:
             text = handle.read()
-        block = text.split("### 5.8 EIP-712 Type Strings")[1].split("---")[0]
-        out = {}
-        for line in block.split("\n"):
-            m = re.match(r"^([A-Za-z0-9]+)\((.*)\)$", line.strip())
-            if m:
-                out[m.group(1)] = line.strip()
-        return out
+        return published_type_strings(text)
 
     def test_all_six_are_published(self):
         self.assertEqual(len(self._published()), 6)
@@ -955,6 +1006,165 @@ class TestPublishedTypeStrings(unittest.TestCase):
             with self.subTest(struct=name):
                 self.assertEqual(pub[name], mine)
 
+
+
+class TestPublishedTypeStringsSectionExtent(unittest.TestCase):
+    """A-EXTRACT case 13 — the §5.8 consumer agrees with the shell guard.
+
+    Two consumers of one section that disagree about its extent, or about what a
+    duplicate means, are two different claims wearing one section number. Every
+    fixture here is synthetic: the live proposal is never mutated, and no test in
+    this class depends on the proposal's current contents.
+    """
+
+    A = SPEC_5_8_ANCHOR
+    ONE = "    AlphaPayload(uint16 schemaVersion,address vault)"
+    TWO = "    BetaPayload(uint16 schemaVersion,uint256 chainId)"
+    TWO_ALT = "    BetaPayload(uint256 chainId,uint16 schemaVersion)"
+
+    def _doc(self, body):
+        return "# Proposal\n\n## 5. Typed Contracts\n\n" + body + "\n"
+
+    # -- extent ----------------------------------------------------------------
+
+    def test_deeper_subsection_stays_inside_the_section(self):
+        # `#### 5.8.1` is DEEPER than the `###` anchor, so it is part of §5.8.
+        doc = self._doc("\n".join([
+            self.A, "", self.ONE, "",
+            "#### 5.8.1 Domain field values", "",
+            self.TWO, "",
+            "### 5.6 EvidenceBundle", "", "    Ignored(uint8 x)",
+        ]))
+        got = published_type_strings(doc)
+        self.assertIn("AlphaPayload", got)
+        self.assertIn("BetaPayload", got)
+        self.assertNotIn("Ignored", got)
+
+    def test_same_depth_heading_ends_the_section(self):
+        doc = self._doc("\n".join([
+            self.A, "", self.ONE, "",
+            "### 5.6 EvidenceBundle", "", self.TWO,
+        ]))
+        got = published_type_strings(doc)
+        self.assertIn("AlphaPayload", got)
+        self.assertNotIn("BetaPayload", got)
+
+    def test_shallower_heading_ends_the_section(self):
+        doc = self._doc("\n".join([
+            self.A, "", self.ONE, "",
+            "## 6. AI and Context Scope", "", self.TWO,
+        ]))
+        got = published_type_strings(doc)
+        self.assertIn("AlphaPayload", got)
+        self.assertNotIn("BetaPayload", got)
+
+    def test_horizontal_rule_does_not_end_the_section(self):
+        # The shell guard's boundary is a HEADING. A rule inside the section is
+        # typography, and a consumer that stops at one reads a shorter §5.8 than
+        # the guard certifying §5.8 does.
+        doc = self._doc("\n".join([
+            self.A, "", self.ONE, "", "---", "", self.TWO, "",
+            "### 5.6 EvidenceBundle",
+        ]))
+        got = published_type_strings(doc)
+        self.assertIn("AlphaPayload", got)
+        self.assertIn("BetaPayload", got)
+
+    # -- refusals --------------------------------------------------------------
+
+    UNRESOLVED_WORDS = ("could not isolate", "could not find", "could not locate",
+                        "not found", "absent", "missing", "no such section")
+    AMBIGUOUS_WORDS = ("ambiguous", "duplicate", "two sections", "headings claim")
+    REPEATED_WORDS = ("duplicate", "twice", "more than one", "times")
+
+    def _assert_class(self, message, words):
+        lowered = message.lower()
+        self.assertTrue(any(w in lowered for w in words),
+                        "refusal %r lands in no required class %r" % (message, words))
+
+    def test_absent_anchor_is_refused_by_name(self):
+        doc = self._doc("\n".join(["### 5.6 EvidenceBundle", "", self.ONE]))
+        with self.assertRaises(ValueError) as caught:
+            published_type_strings(doc)
+        self.assertIn("5.8", str(caught.exception))
+        self._assert_class(str(caught.exception), self.UNRESOLVED_WORDS)
+
+    def test_duplicate_anchor_is_refused(self):
+        doc = self._doc("\n".join([
+            self.A, "", self.ONE, "", self.TWO, "",
+            "### 5.7 Supported Checks", "",
+            self.A, "", self.ONE, "", self.TWO,
+        ]))
+        with self.assertRaises(ValueError) as caught:
+            published_type_strings(doc)
+        self.assertIn("5.8", str(caught.exception))
+        self._assert_class(str(caught.exception), self.AMBIGUOUS_WORDS)
+
+    def test_a_quoted_heading_is_not_the_anchor(self):
+        # The real section is second; the first "heading" is inside a fenced
+        # block, introduced as a rejected draft. A line-oriented anchor search
+        # cannot see fences and takes the quotation.
+        doc = self._doc("\n".join([
+            "A format considered and rejected, quoted so the reasoning survives:",
+            "", "```markdown", self.A, "", self.TWO_ALT, "```", "",
+            self.A, "", self.ONE, "", self.TWO, "",
+            "### 5.6 EvidenceBundle",
+        ]))
+        got = published_type_strings(doc)
+        self.assertEqual(got.get("BetaPayload"), self.TWO.strip())
+
+    def test_a_tilde_fenced_heading_is_not_the_anchor(self):
+        # CommonMark spells a fenced code block with three or more BACKTICKS or
+        # three or more TILDES. A consumer taught to ignore one and not the
+        # other has generalised the demonstration and not the argument, which
+        # is this project's most repeated repair defect. Its own case, not a
+        # parameter of the one above, so a reader can point at it.
+        doc = self._doc("\n".join([
+            "A format considered and rejected, quoted so the reasoning survives:",
+            "", "~~~markdown", self.A, "", self.TWO_ALT, "~~~", "",
+            self.A, "", self.ONE, "", self.TWO, "",
+            "### 5.6 EvidenceBundle",
+        ]))
+        got = published_type_strings(doc)
+        self.assertEqual(got.get("BetaPayload"), self.TWO.strip())
+
+    def test_duplicate_publication_is_refused_decoy_first(self):
+        doc = self._doc("\n".join([
+            self.A, "", self.ONE, "", self.TWO_ALT, "", self.TWO,
+        ]))
+        with self.assertRaises(ValueError) as caught:
+            published_type_strings(doc)
+        self.assertIn("BetaPayload", str(caught.exception))
+        self._assert_class(str(caught.exception), self.REPEATED_WORDS)
+
+    def test_duplicate_publication_is_refused_decoy_second(self):
+        # The order that fails SILENTLY today: the later line simply overwrites
+        # the earlier one in the dict and the consumer reports success.
+        doc = self._doc("\n".join([
+            self.A, "", self.ONE, "", self.TWO, "", self.TWO_ALT,
+        ]))
+        with self.assertRaises(ValueError) as caught:
+            published_type_strings(doc)
+        self.assertIn("BetaPayload", str(caught.exception))
+        self._assert_class(str(caught.exception), self.REPEATED_WORDS)
+
+    # -- controls --------------------------------------------------------------
+
+    def test_a_well_formed_section_is_read_whole(self):
+        doc = self._doc("\n".join([
+            self.A, "", self.ONE, "", self.TWO, "",
+            "### 5.6 EvidenceBundle",
+        ]))
+        got = published_type_strings(doc)
+        self.assertEqual(sorted(got), ["AlphaPayload", "BetaPayload"])
+
+    def test_the_live_proposal_still_publishes_six(self):
+        # The opposite outcome for every refusal above: the real document is not
+        # ambiguous, so none of these rules may fire on it.
+        spec = os.path.join(REPO, "Sentinel_Protocol_Lab_Proposal_v0_2.md")
+        with open(spec, encoding="utf-8") as handle:
+            text = handle.read()
+        self.assertEqual(len(published_type_strings(text)), 6)
 
 class TestOverride(unittest.TestCase):
     def _doc(self):
