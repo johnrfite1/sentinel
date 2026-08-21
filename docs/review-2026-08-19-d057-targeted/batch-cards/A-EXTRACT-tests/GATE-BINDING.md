@@ -7,7 +7,7 @@
 > and is NOT general prose-consistency evidence."* — D-059(7)
 
 **Harness:** `a-extract-gate.sh`, sha256
-`99c6d8d65fe08f5572c1ce63d6ad06a9742a2411a53ba5cbbbbb1e586bd5cf97`.
+`105f4f6ba0fa2e60abcdd54b9f547b5a109622f17acad6ffaa2b71791f20cc14`.
 **Subject:** a private `git clone` of this repository checked out at
 `bb664c626d592d86391f644bf014e76f2bbf7db4`, with `ts/node_modules` and both submodule working
 trees copied in. **The live gate is never run, never edited, and never written to.** No signed or
@@ -49,13 +49,30 @@ sufficiency lapses and the deep mutation runs become required.
 
 ---
 
+## THE SUBJECT IS NOW AN EXACT COMMIT OID — SUPERSEDES THE PARAGRAPH BELOW
+
+**John's ruling on the second review closed `R1` structurally.** This harness now takes
+`<repository-path> <exact-40-hex-commit>` and nothing else — no abbreviated ids, no branch, tag
+or remote names, no `HEAD`, no `refs/…`, no revision expressions, no option-shaped input. Every
+rejected shape exits 2 with **zero scored verdicts**. Existence and type come from
+`git cat-file --batch-all-objects`, which performs no name resolution at all. Caller
+configuration injection — `GIT_CONFIG_COUNT`, every enumerated `GIT_CONFIG_KEY_<n>` /
+`GIT_CONFIG_VALUE_<n>`, and `GIT_CONFIG_PARAMETERS` — is scrubbed before the first git call.
+**Instrument-local isolation only: this does not reopen Batch A1 and does not address its `R-C`
+residual.** `P3-subject` is renamed `P3-provenance` and no longer claims independence between
+git commands that share git's object resolver.
+
+**The `7 of 7` / `10 of 10` figures below were measured before this narrowing.** Only the subject
+grammar, the config scrub and that control's name and wording changed; no gate demonstration,
+mutation or assertion was touched.
+
 ## SUBJECT RESOLUTION CORRECTED AGAIN AFTER AN INDEPENDENT REVIEW
 
 This harness carried the same ambiguous-refname fail-open as `a-extract.sh` — `--verify` does not
 refuse an ambiguous refname, and `--quiet` plus `2>/dev/null` hid git's warning. It now uses the
-same two independent mechanisms (enumeration, and kept stderr), refuses at preflight with **zero
-scored verdicts**, and `P3-subject` compares two independent resolution routes **and** the
-clone's actual `HEAD`. Every bad-subject shape was re-confirmed to exit 2 with nothing scored.
+same two mechanisms (enumeration, and kept stderr) and refused at preflight with **zero scored
+verdicts**. *(Both are superseded by the exact-oid grammar above; `P3-provenance` no longer
+claims independence between git commands.)* Every bad-subject shape was re-confirmed to exit 2 with nothing scored.
 **The `7 of 7` / `10 of 10` figures below were measured before this second correction; only the
 resolution wiring changed, and that is stated rather than glossed.**
 
@@ -64,7 +81,7 @@ resolution wiring changed, and that is stated rather than glossed.**
 The earlier `7 of 7` / `9 of 9` figure was produced by the revision of `a-extract-gate.sh`
 immediately prior to the subject-selection correction, which checked out `bb664c6` from a
 hardcoded constant. **That revision's evidence is superseded here.** The corrected revision,
-sha256 `99c6d8d65fe08f5572c1ce63d6ad06a9742a2411a53ba5cbbbbb1e586bd5cf97`, was re-run end to end
+sha256 `105f4f6ba0fa2e60abcdd54b9f547b5a109622f17acad6ffaa2b71791f20cc14`, was re-run end to end
 through the new interface:
 
 ```
@@ -76,7 +93,7 @@ a-extract-gate.sh . bb664c626d592d86391f644bf014e76f2bbf7db4
 ```
 
 **`CONTROL` moved 9 → 10 for exactly one reason: the new `P3-subject` control**, which asserts
-the requested ref resolved to `SUBJECT_SHA` **and that the clone is actually checked out at it**.
+the supplied oid is the commit the clone is checked out at. **It is a consistency control, not an independence proof.**
 No case semantics changed and no verdict moved.
 
 **MEASURED RESULT (fast profile, corrected revision `af66a45e…`):**
@@ -108,7 +125,7 @@ No case semantics changed and no verdict moved.
 | `G3-scope` | CONTROL | PASS | targeted |
 | `Z-clean` | CONTROL | PASS | **0 changed paths** in the live repository's production boundary |
 | `Z-signed` | CONTROL | PASS | `docs/gate-s2-evidence.md` byte-identical to `PRE_REPAIR_SHA` |
-| `P3-subject` | CONTROL | PASS | the requested ref resolved to `SUBJECT_SHA` and the clone is checked out at it |
+| `P3-provenance` (was `P3-subject`) | CONTROL | PASS | the supplied exact oid is a commit and the clone is checked out at it |
 
 **The gate's own exit status is recorded (`rc=0`, `rc=5`, `rc=5`) and used in no assertion.**
 `rc=5` is the completion-token supervisor refusing a run that did not reach completion — a fact

@@ -25,7 +25,48 @@ already identifies frozen attempt-two evidence.
 or by the commit that carries it. `TESTS.patch` is supplied as a patch file and is **NOT
 applied**.
 
-## A SECOND INSTRUMENT DEFECT, FOUND BY INDEPENDENT REVIEW — VERDICT FAIL, now corrected
+## THE SUBJECT INTERFACE IS NARROWED TO AN EXACT COMMIT OID — `R1` CLOSED STRUCTURALLY
+
+**A second independent review returned VERDICT: HOLD with residual `R1` open**
+(`INSTRUMENT-REVIEW-2.md`; that document and `INSTRUMENT-REVIEW.md` are the reviewers' records
+and neither is edited here). **John ruled `R1` NOT ACCEPTED — close it before implementation.**
+Still instrument and tests only; still not an implementation attempt.
+
+**`R1`, in one sentence:** the ambiguity repair's second detector reads git's ambiguity WARNING,
+and `core.warnAmbiguousRefs=false` switches that warning off — after which one ambiguity class
+produced a full green measurement of a commit nobody named.
+
+**The ruling does not add a third detector. It deletes what the detectors were guarding.**
+
+| | |
+|---|---|
+| **Accepted** | `^[0-9a-f]{40}$` naming an object of type `commit` |
+| **Refused**, exit 2, **zero scored verdicts** | abbreviated ids · branch / tag / remote names · `HEAD` · `refs/…` · revision expressions · option-shaped input · uppercase hex · absent objects · non-commit objects · wrong argument count |
+
+**A name has to be RESOLVED, and resolution is the part a tag, an abbreviation or a configuration
+setting gets to influence. An exact object id is looked up, not resolved. There is no
+ref-resolution step left to defeat.** Existence and type are established by
+`git cat-file --batch-all-objects`, which enumerates the object database and performs **no name
+resolution at all**. Measured: a branch literally *named* a 40-hex oid, pointing elsewhere, does
+not shadow that object — with the ambiguity warning on or off.
+
+**Caller configuration injection is neutralised before the first git invocation** —
+`GIT_CONFIG_COUNT`, every `GIT_CONFIG_KEY_<n>` / `GIT_CONFIG_VALUE_<n>` enumerated from the
+environment rather than assumed to stop at a small n, and `GIT_CONFIG_PARAMETERS`. The private
+empty global/system configuration is retained. **This is an INSTRUMENT-LOCAL isolation repair: it
+does not reopen Batch A1 and does not claim to solve A1's repository-wide `R-C` residual.**
+
+**`P3` is renamed `P3-provenance` and redescribed as a subject-provenance CONSISTENCY control —
+not an independence proof**, accepting `R2` as a documented limitation. The claim that two git
+commands are independent is withdrawn: they share git's object resolver. The full chain and what
+asserts each link are in `COVERAGE.md` §0.
+
+## A SECOND INSTRUMENT DEFECT, FOUND BY INDEPENDENT REVIEW — VERDICT FAIL, then SUPERSEDED
+
+> **The two-detector answer described in this section was itself found wanting (`R1`) and is
+> SUPERSEDED by the exact-oid grammar in the section above.** It is retained as the record of
+> that repair. Where it says "two independent mechanisms", that describes the interface as it
+> then stood, not as it stands now.
 
 **An independent instrument review of the corrected harness returned VERDICT: FAIL**
 (`INSTRUMENT-REVIEW.md`, committed at `7e4e5c0`; that document is the reviewer's record and is
@@ -79,8 +120,8 @@ original measurement remains reproducible, but is never archived. An evidentiary
 explicit repository **and** an explicit subject ref; the subject is resolved with
 `git rev-parse --verify --quiet "<ref>^{commit}"` and a missing, **ambiguous**, or
 not-a-commit ref is a **preflight refusal**, never a fallback. The snapshot is built from
-`SUBJECT_SHA`. **`P3` is now a CONTROL** asserting the requested ref resolved to the recorded
-`SUBJECT_SHA`. The four consumer-integrity controls compare against `SUBJECT_SHA`; `Z-clean`,
+`SUBJECT_SHA`. **`P3` became a CONTROL** — later renamed `P3-provenance` and redescribed as a consistency
+control, see the section above. The four consumer-integrity controls compare against `SUBJECT_SHA`; `Z-clean`,
 `Z-gate5` and `Z-signed` remain about the **live tree** and are deliberately not folded in. Every
 run prints five identity facts separately — harness hash, sanitized repository path, requested
 ref, resolved `SUBJECT_SHA`, pre-repair reference. **The full interface is `COVERAGE.md` §0.**

@@ -99,15 +99,30 @@ SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 usage() {
     cat >&2 <<'USAGE'
-usage: a-extract.sh <repository-path> <subject-ref>
+usage: a-extract.sh <repository-path> <exact-40-hex-commit>
 
-  <repository-path>  the Sentinel repository to measure. Required.
-  <subject-ref>      the commit to measure, as any ref git can resolve — a full or
-                     abbreviated SHA, a branch, a tag, HEAD. Required.
+  <repository-path>       the Sentinel repository to measure. Required.
+  <exact-40-hex-commit>   the commit to measure, as a FULL 40-character lowercase
+                          object id. Required. Nothing else is accepted.
 
-An evidentiary run has NO DEFAULT SUBJECT. Omitting the subject is a preflight failure, not
-a fallback to the historical base: a harness that quietly measures a commit nobody named is
-how a repaired tree gets reported with pre-repair numbers.
+ACCEPTED:   ^[0-9a-f]{40}$ naming an object of type `commit` in that repository.
+
+REJECTED, every one at exit 2 with ZERO scored verdicts:
+  abbreviated object ids            bb664c6
+  branch / tag / remote names       main, v1.0, origin/main
+  symbolic refs                     HEAD, @
+  fully qualified refs              refs/heads/main, refs/tags/v1.0
+  revision expressions              HEAD~1, x^{commit}, :/text, @{u}, a..b
+  option-shaped input               anything beginning with -
+  uppercase hex                     BB664C6…  (git's canonical form is lowercase)
+  objects that are missing, or exist but are not commits
+
+WHY SO NARROW. A name has to be RESOLVED, and resolution is what an attacker or an
+accident gets to influence — a tag shadowing a branch, a branch shadowing an
+abbreviation, `core.warnAmbiguousRefs=false` silencing the warning that detected it.
+An exact object id is not resolved, it is looked up. **There is no ref-resolution step
+left to defeat.** Convenience refs buy this instrument nothing and cost it its only
+remaining fail-open.
 
 To reproduce the recorded pre-repair baseline:
 
@@ -123,15 +138,15 @@ case "${1:-}" in
     -h|--help) usage; exit 2 ;;
 esac
 
-if [ "$#" -lt 2 ]; then
-    printf '\n  PREFLIGHT FAILED: an evidentiary run requires BOTH a repository and a subject ref.\n' >&2
+if [ "$#" -ne 2 ]; then
+    printf '\n  PREFLIGHT FAILED: an evidentiary run takes EXACTLY a repository and a full 40-hex commit.\n' >&2
     printf '  Received %s argument(s). There is no default subject, by design.\n\n' "$#" >&2
     usage
     exit 2
 fi
 
 ROOT_ARG="$1"
-SUBJECT_REF="$2"
+SUBJECT_OID="$2"
 ROOT="$(cd -- "$ROOT_ARG" 2>/dev/null && pwd -P)" || ROOT=""
 
 # HOME is redirected into the scratch area further down, so the real one is captured HERE, while
@@ -200,9 +215,35 @@ export GIT_CONFIG_NOSYSTEM=1
 export GIT_TERMINAL_PROMPT=0
 export GIT_AUTHOR_NAME="a-extract" GIT_AUTHOR_EMAIL="a-extract@invalid"
 export GIT_COMMITTER_NAME="a-extract" GIT_COMMITTER_EMAIL="a-extract@invalid"
+# CALLER CONFIGURATION INJECTION IS NEUTRALISED BEFORE THE FIRST GIT INVOCATION.
+#
+# `GIT_CONFIG_COUNT` with `GIT_CONFIG_KEY_<n>` / `GIT_CONFIG_VALUE_<n>`, and the older
+# `GIT_CONFIG_PARAMETERS`, inject configuration into every git process without touching any
+# file — so a caller could set `core.warnAmbiguousRefs=false`, or point `safe.directory`,
+# `core.hooksPath`, `include.path` and similar at whatever it liked, and nothing on disk would
+# show it. The keys are enumerated FROM THE ENVIRONMENT rather than assumed to stop at some
+# small n, because "we scrubbed the first ten" is the kind of bound that is wrong exactly once.
+#
+# **SCOPE, AND IT IS DELIBERATELY NARROW (John's framing, recorded here so it is not
+# overstated): this is an INSTRUMENT-LOCAL isolation repair. It does not reopen Batch A1 and it
+# does not claim to solve A1's repository-wide `R-C` residual.** It makes THIS harness's git
+# calls unconfigurable by its caller. It says nothing about any other entry point.
+_scrub_git_config_env() {
+    local v
+    for v in $( ( env; printf '%s\n' "${!GIT_CONFIG_@}" ) 2>/dev/null \
+                | sed -n 's/^\(GIT_CONFIG_KEY_[0-9][0-9]*\)=.*/\1/p; s/^\(GIT_CONFIG_VALUE_[0-9][0-9]*\)=.*/\1/p; /^GIT_CONFIG_KEY_[0-9][0-9]*$/p; /^GIT_CONFIG_VALUE_[0-9][0-9]*$/p' \
+                | sort -u ); do
+        unset "$v" 2>/dev/null || true
+    done
+    unset GIT_CONFIG_COUNT GIT_CONFIG_PARAMETERS 2>/dev/null || true
+}
+_scrub_git_config_env
 unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_PREFIX 2>/dev/null || true
+# The private empty global/system configuration set above is RETAINED — scrubbing the injection
+# variables and pinning the config files are two different defences and both are wanted.
 
 GREP=/usr/bin/grep
+WITNESS_LOG="$WORK/witness.tsv"; : > "$WITNESS_LOG"
 
 # ---------------------------------------------------------------------------- primitives ----
 # Every mutation is a whole-line operation keyed on the EXACT line text, never on a line
@@ -314,13 +355,33 @@ _log() {  # SUBJECT CONSUMER COMMAND OUTPUT
         "$(basename "$1")" "$2" "$3" "$4"
     } >> "$A_EXTRACT_EVIDENCE_DIR/consumer-output.txt"
 }
-run_ts() { local o; o="$( cd "$1" && ./scripts/check-type-strings.sh 2>&1 )"
+# THE EXECUTION WITNESS. Every consumer invocation records the sha256 of the file it is ABOUT
+# TO RUN, keyed by path, into a witness log. The `Z-<consumer>` controls then require that the
+# bytes they compared against the subject's blob are bytes that were actually EXECUTED at least
+# once — turning "the file we hashed is the file we ran" from an inference into a measurement.
+# This is the strongest property this instrument has and it is kept deliberately.
+# WITNESS_LOG is initialised in the isolation block, where WORK exists. It is deliberately NOT
+# re-declared here: an earlier draft carried a `WITNESS_LOG=""` placeholder on this line, which
+# executed AFTER the real assignment and silently emptied it, so `_witness` returned early and
+# every Z control reported "0 execution(s) recorded". The controls caught it — which is the
+# behaviour wanted from a control, including against its own author.
+_witness() {  # SUBJECT RELPATH
+    [ -n "$WITNESS_LOG" ] || return 0
+    local h; h="$(shasum -a 256 "$1/$2" 2>/dev/null | awk '{print $1}')"
+    [ -n "$h" ] || h="<unreadable>"
+    printf '%s\t%s\n' "$2" "$h" >> "$WITNESS_LOG"
+}
+run_ts() { local o; _witness "$1" scripts/check-type-strings.sh
+           o="$( cd "$1" && ./scripts/check-type-strings.sh 2>&1 )"
            _log "$1" TS "./scripts/check-type-strings.sh" "$o"; printf '%s' "$o"; }
-run_ec() { local o; o="$( cd "$1" && ./scripts/check-eval-codes.sh 2>&1 )"
+run_ec() { local o; _witness "$1" scripts/check-eval-codes.sh
+           o="$( cd "$1" && ./scripts/check-eval-codes.sh 2>&1 )"
            _log "$1" EC "./scripts/check-eval-codes.sh" "$o"; printf '%s' "$o"; }
-run_vh() { local o; o="$( cd "$1" && git add -A >/dev/null 2>&1; ./scripts/check-vendor-honesty.sh 2>&1 )"
+run_vh() { local o; _witness "$1" scripts/check-vendor-honesty.sh
+           o="$( cd "$1" && git add -A >/dev/null 2>&1; ./scripts/check-vendor-honesty.sh 2>&1 )"
            _log "$1" VH "./scripts/check-vendor-honesty.sh" "$o"; printf '%s' "$o"; }
-run_vp() { local o; o="$( cd "$1/verifier" && python3 -m unittest test_verifier.TestPublishedTypeStrings 2>&1 )"
+run_vp() { local o; _witness "$1" verifier/test_verifier.py
+           o="$( cd "$1/verifier" && python3 -m unittest test_verifier.TestPublishedTypeStrings 2>&1 )"
            _log "$1" VP "python3 -m unittest test_verifier.TestPublishedTypeStrings" "$o"; printf '%s' "$o"; }
 
 TS_OK='published in §5.8 match eip712.ts exactly'
@@ -414,7 +475,7 @@ SELF_SHA="$(shasum -a 256 "${BASH_SOURCE[0]}" | awk '{print $1}')"
 identity_block() {
     printf '  harness sha256   : %s\n' "$SELF_SHA"
     printf '  repository       : %s\n' "$(sanitize_path "${ROOT:-$ROOT_ARG}")"
-    printf '  requested ref    : %s\n' "$SUBJECT_REF"
+    printf '  requested subject: %s\n' "$SUBJECT_OID"
     printf '  resolved subject : %s\n' "${SUBJECT_SHA:-<unresolved>}"
     printf '  pre-repair ref   : %s\n' "$PRE_REPAIR_SHA"
 }
@@ -431,136 +492,72 @@ check OBSERVED P2 0 "$GIT_V ; bash ${BASH_V#version } ; $(python3 --version 2>&1
 [ -n "$ROOT" ] || die "the repository path '$ROOT_ARG' does not exist or is not a directory"
 [ -d "$ROOT/.git" ] || die "$(sanitize_path "$ROOT") is not a git repository"
 
-# SUBJECT RESOLUTION IS FAIL-CLOSED, AND `--verify` IS **NOT** WHAT MAKES IT SO.
+# THERE IS NO SUBJECT RESOLUTION STEP ANY MORE. THAT IS THE POINT.
 #
-# **CORRECTING A FALSE CLAIM THAT STOOD IN THIS FILE.** The previous comment here said
-# `--verify` "refuses an AMBIGUOUS ref — a branch and a tag of the same name — instead of
-# silently choosing one." **That is false, and an independent instrument review measured it
-# false on git 2.50.1:**
+# TWO REVIEWS AND TWO REPAIRS OF THE SAME SEAM. The first repair made the subject an argument;
+# the second added two detectors for ambiguous refnames, because
+# `git rev-parse --verify <ref>^{commit}` silently prefers a tag over a branch of the same name.
+# An independent review then measured the residual (`R1`): the second detector reads git's
+# ambiguity WARNING, and `core.warnAmbiguousRefs=false` switches that warning off — after which
+# one ambiguity class produced a full green measurement of a commit nobody named.
 #
-#     $ git rev-parse --verify 'ambig^{commit}'
-#     warning: refname 'ambig' is ambiguous.
-#     f1c0fdd…                                   <- the TAG, silently preferred
-#     exit 0
+# **JOHN'S RULING, AND IT CLOSES THE SEAM STRUCTURALLY RATHER THAN BY ADDING A THIRD DETECTOR:
+# take an EXACT FULL COMMIT OID and nothing else.** A name must be RESOLVED, and resolution is
+# the part a tag, a branch, an abbreviation or a configuration setting gets to influence. A full
+# object id is not resolved, it is LOOKED UP. Delete the resolution step and there is nothing
+# left for a third detector to detect.
 #
-# `--verify` guarantees ONE OBJECT NAME, not one REF. It does refuse an ambiguous abbreviated
-# OBJECT id (`fatal: Needed a single revision`); it does NOT refuse an ambiguous REFNAME — it
-# applies the gitrevisions precedence order and warns on stderr. The old code then compounded
-# it twice: `--quiet` suppressed the warning, and `2>/dev/null` discarded what was left. The
-# harness measured the wrong commit through the ordinary path with every control green.
-#
-# **TWO INDEPENDENT MECHANISMS NOW, AND NEITHER IS A SINGLE POINT OF FAILURE — measured, because
-# each one catches a case the other misses:**
-#
-#   MECHANISM 1, ENUMERATION. Count the refs the name could denote, in git's own search order.
-#       branch `ambig` + tag `ambig`      -> 2 refs  -> CAUGHT
-#       branch named `bb664c6`            -> 1 ref   -> MISSED by this mechanism
-#   MECHANISM 2, STDERR. Run rev-parse WITHOUT `--quiet`, keep stderr, refuse on any ambiguity
-#   warning.
-#       branch `ambig` + tag `ambig`      -> warns   -> CAUGHT
-#       branch named `bb664c6`            -> warns   -> CAUGHT, and only here
-#
-# A refusal is a PREFLIGHT INSTRUMENT FAILURE: exit 2, and not one scored verdict emitted.
+# **MEASURED, because the whole argument rests on it:** with a branch literally NAMED
+# `bb664c626d5…` and pointing at a different commit, `git rev-parse` and `git cat-file -t` both
+# still return the OBJECT, not the branch's target — and they do so with
+# `core.warnAmbiguousRefs=false` as well. A full oid is not shadowed by a ref of the same name.
+# The existence-and-type check below goes further and performs NO NAME RESOLUTION AT ALL.
 
-_ref_candidates() {  # NAME -> the full ref paths git would search, in gitrevisions order
-    printf '%s\n' "$1" "refs/$1" "refs/tags/$1" "refs/heads/$1" "refs/remotes/$1" "refs/remotes/$1/HEAD"
-}
-
-_matching_refs() {  # NAME -> every candidate that actually exists, one per line
-    local c
-    while IFS= read -r c; do
-        [ -n "$c" ] || continue
-        if ( cd "$ROOT" && git show-ref --verify --quiet -- "$c" 2>/dev/null ); then printf '%s\n' "$c"; fi
-    done <<CANDIDATES
-$(_ref_candidates "$1")
-CANDIDATES
-}
-
-_peel_to_commit() {  # OID -> the commit it names, using cat-file ONLY (no rev-parse)
-    local oid t i
-    oid="$1"; i=0
-    while [ "$i" -lt 8 ]; do
-        t="$( cd "$ROOT" && git cat-file -t "$oid" 2>/dev/null )" || return 1
-        case "$t" in
-            commit) printf '%s' "$oid"; return 0 ;;
-            tag)    oid="$( cd "$ROOT" && git cat-file tag "$oid" 2>/dev/null | awk '/^object /{print $2; exit}' )"
-                    [ -n "$oid" ] || return 1 ;;
-            *)      return 1 ;;
-        esac
-        i=$((i + 1))
-    done
-    return 1
-}
-
-# THE INDEPENDENT ROUTE, which exists so `P3` can actually fail. It never calls `rev-parse`:
-# a name that denotes exactly one ref is read straight out of `show-ref` and peeled with
-# `cat-file`; a name that denotes no ref is resolved as an object through `cat-file
-# --batch-check`, which does not enter the ref-disambiguation path at all. **A name denoting
-# MORE THAN ONE ref returns NO ANSWER rather than tie-breaking** — declining to choose is the
-# whole point, and it is what makes `P3` catch an ambiguity even if the refusals above were
-# somehow bypassed.
-_independent_subject_sha() {
-    local hits n oid
-    hits="$(_matching_refs "$SUBJECT_REF")"
-    n="$(printf '%s' "$hits" | $GREP -c . )" || n=0
-    if [ "$n" = "1" ]; then
-        oid="$( cd "$ROOT" && git show-ref --verify -- "$hits" 2>/dev/null | awk '{print $1; exit}' )"
-    elif [ "$n" = "0" ]; then
-        oid="$( cd "$ROOT" && printf '%s\n' "$SUBJECT_REF" | git cat-file --batch-check 2>/dev/null \
-                 | awk '$2 != "missing" && $2 != "ambiguous" {print $1; exit}' )"
-    else
-        return 1
-    fi
-    [ -n "$oid" ] || return 1
-    _peel_to_commit "$oid"
-}
-
-# --- MECHANISM 1 -------------------------------------------------------------
-_ref_hits="$(_matching_refs "$SUBJECT_REF")"
-_ref_n="$(printf '%s' "$_ref_hits" | $GREP -c . )" || _ref_n=0
-if [ "$_ref_n" -gt 1 ]; then
-    die "subject ref '$SUBJECT_REF' is AMBIGUOUS in $(sanitize_path "$ROOT") — it names ${_ref_n} refs:
-$(printf '%s\n' "$_ref_hits" | sed 's/^/                       /')
-                     git would silently prefer one of these and warn on stderr. This harness
-                     refuses instead. Name the ref in full, e.g. refs/heads/$SUBJECT_REF."
+# --- the grammar, enforced before any git touches the subject -----------------
+case "$SUBJECT_OID" in
+    -*) die "subject '$SUBJECT_OID' is option-shaped. The subject must be a bare 40-hex commit id." ;;
+esac
+if ! printf '%s' "$SUBJECT_OID" | $GREP -qE '^[0-9a-f]{40}$'; then
+    # The diagnosis is ordered most-specific first, and "uppercase hex" is only claimed when the
+    # string really is 40 hex characters in the wrong case — otherwise `HEAD` gets reported as
+    # uppercase hex, which is true of its letters and false about what the caller did wrong.
+    _why="not a 40-character lowercase hex object id (length ${#SUBJECT_OID}, need exactly 40)"
+    case "$SUBJECT_OID" in
+        refs/*)        _why="a fully qualified ref; refs are not accepted, only object ids" ;;
+        *[~^:@]*|*..*) _why="a revision expression; expressions are not accepted, only object ids" ;;
+        *)
+            if printf '%s' "$SUBJECT_OID" | $GREP -qE '^[0-9a-fA-F]{40}$'; then
+                _why="uppercase hex — git's canonical form is lowercase"
+            elif printf '%s' "$SUBJECT_OID" | $GREP -qE '^[0-9a-f]+$'; then
+                _why="an ABBREVIATED object id (length ${#SUBJECT_OID}, need exactly 40)"
+            else
+                _why="a NAME, not an object id — branches, tags and HEAD are not accepted"
+            fi ;;
+    esac
+    die "subject '$SUBJECT_OID' is $_why.
+                     This instrument accepts ONE input shape: ^[0-9a-f]{40}\$ naming a commit.
+                     Branches, tags, HEAD, refs/…, revision expressions and abbreviated ids are
+                     all REFUSED — not because a detector fired, but because names are not
+                     accepted at all. Run: git rev-parse --verify <your-ref>^{commit} yourself,
+                     then pass the 40-hex result."
 fi
 
-# --- ROUTE A, with stderr KEPT (no --quiet, no 2>/dev/null) -------------------
-_rev_err_file="$WORK/.rev-parse-stderr"
-SUBJECT_SHA="$( cd "$ROOT" && git rev-parse --verify "${SUBJECT_REF}^{commit}" 2>"$_rev_err_file" )" || SUBJECT_SHA=""
-_rev_err="$(head -3 "$_rev_err_file" 2>/dev/null)"
-rm -f "$_rev_err_file"
-
-# --- MECHANISM 2 -------------------------------------------------------------
-if printf '%s' "$_rev_err" | $GREP -qi 'ambiguous'; then
-    die "subject ref '$SUBJECT_REF' is AMBIGUOUS in $(sanitize_path "$ROOT").
-                     git said: ${_rev_err}
-                     git resolved it anyway, to ${SUBJECT_SHA:-<none>}, by its own precedence
-                     order. This harness refuses rather than inherit that choice."
+# --- existence and type, WITHOUT resolving a name -----------------------------
+# `--batch-all-objects` enumerates the object database and performs no name lookup whatsoever,
+# so nothing a ref, an abbreviation or a configuration setting can do reaches this check. It is
+# the difference between "git told me what this name means" and "this object is present, and it
+# is a commit".
+_odb_type="$( cd "$ROOT" && git cat-file --batch-all-objects --batch-check='%(objectname) %(objecttype)' 2>/dev/null \
+              | $GREP -m1 -E "^${SUBJECT_OID} " | awk '{print $2}' )"
+if [ -z "$_odb_type" ]; then
+    die "object $SUBJECT_OID is not present in $(sanitize_path "$ROOT")'s object database."
+fi
+if [ "$_odb_type" != "commit" ]; then
+    die "object $SUBJECT_OID exists in $(sanitize_path "$ROOT") but is a '$_odb_type', not a commit."
 fi
 
-if [ -z "$SUBJECT_SHA" ]; then
-    die "cannot resolve subject ref '$SUBJECT_REF' to exactly one commit in $(sanitize_path "$ROOT").
-                     git said: ${_rev_err:-(no diagnostic)}
-                     Missing, ambiguous, or not-a-commit is a REFUSAL here, never a fallback."
-fi
-
-# P3 IS A CONTROL, AND IT IS NOW FALSIFIABLE — WHICH IT PREVIOUSLY WAS NOT.
-#
-# Its previous form re-ran the IDENTICAL `rev-parse` command and compared the answer to itself.
-# That cannot fail: it could not catch the ambiguity defect above, or any other resolution
-# defect, and its remaining conjuncts were already guaranteed by the `die` above and by
-# rev-parse's own output format. An independent review named it unfalsifiable by construction
-# and was right.
-#
-# It now compares TWO ROUTES THAT CAN DISAGREE: `rev-parse --verify` against
-# `show-ref` + `cat-file`. The routes disagree, and this control FAILS, whenever the ref
-# denotes more than one ref, whenever the object cannot be peeled to a commit, and whenever
-# git's precedence order would pick something other than the single ref that exists.
-SUBJECT_SHA_INDEP="$(_independent_subject_sha)" || SUBJECT_SHA_INDEP=""
-check CONTROL P3 "$([ -n "$SUBJECT_SHA" ] && [ -n "$SUBJECT_SHA_INDEP" ] && \
-      [ "$SUBJECT_SHA" = "$SUBJECT_SHA_INDEP" ] && [ "${#SUBJECT_SHA}" = "40" ] && echo 0 || echo 1)" \
-      "'$SUBJECT_REF' resolves to the same commit by TWO independent routes — rev-parse=${SUBJECT_SHA:-<none>}, show-ref+cat-file=${SUBJECT_SHA_INDEP:-<none>}"
+# The subject IS the argument. Nothing was resolved, so nothing can have been resolved wrongly.
+SUBJECT_SHA="$SUBJECT_OID"
 
 # THE SNAPSHOT IS BUILT FROM THE SUBJECT, NEVER FROM THE HISTORICAL BASE.
 ( cd "$ROOT" && git archive --format=tar "$SUBJECT_SHA" ) > "$PRISTINE_TAR" 2>/dev/null \
@@ -573,6 +570,36 @@ for f in "$PROP_REL" "$SRC_REL" "$RPT_REL" scripts/check-type-strings.sh \
     [ -f "$P0/$f" ] || die "the snapshot is missing $f"
 done
 check OBSERVED P4 0 "snapshot of SUBJECT_SHA $SUBJECT_SHA built; four consumers present"
+
+# P3-provenance — A SUBJECT-PROVENANCE CONSISTENCY CONTROL. NOT AN INDEPENDENCE PROOF.
+#
+# **RENAMED AND REDESCRIBED ON JOHN'S RULING, accepting `R2` from the second independent review
+# as a documented limitation.** Its predecessor claimed the subject was confirmed "by TWO
+# INDEPENDENT ROUTES". That claim is withdrawn: `rev-parse`, `show-ref`, `cat-file` and
+# `git archive` are all git, and for a subject naming no ref the two routes shared git's object
+# resolver outright. **Commands that share a resolver are not independent of each other, and
+# this control no longer says they are.**
+#
+# What it does establish, and this is the whole of it — a CONSISTENCY CHAIN, each link measured:
+#   (a) the string supplied is an exact full 40-hex object id — no name was resolved;
+#   (b) that exact object is present in the object database with type `commit`, established by
+#       enumeration rather than by name lookup;
+#   (c) the archived tree was produced from THAT oid — checked here against a sentinel blob read
+#       back out of the same commit;
+#   (d) the consumers actually EXECUTED carry that commit's bytes — asserted separately by the
+#       four `Z-<consumer>` controls, which now require a recorded execution, not just a match;
+#   (e) the source repository is unchanged by the run — asserted separately by `Z-clean`.
+#
+# It can fail: a mismatched sentinel blob, an absent object, a non-commit, or a subject that is
+# not an exact oid all make it fail — and (a) and (b) are re-asserted here rather than assumed
+# from the earlier `die`, so that a future edit removing a refusal cannot leave this silent.
+_sentinel_rel="scripts/check-type-strings.sh"
+_sentinel_snap="$(shasum -a 256 "$P0/$_sentinel_rel" 2>/dev/null | awk '{print $1}')"
+_sentinel_commit="$( cd "$ROOT" && git cat-file blob "$SUBJECT_SHA:$_sentinel_rel" 2>/dev/null | shasum -a 256 | awk '{print $1}')"
+check CONTROL P3-provenance "$( printf '%s' "$SUBJECT_OID" | $GREP -qE '^[0-9a-f]{40}$' && \
+      [ "$_odb_type" = "commit" ] && [ -n "$_sentinel_snap" ] && \
+      [ "$_sentinel_snap" = "$_sentinel_commit" ] && echo 0 || echo 1 )" \
+      "subject provenance is CONSISTENT (not independent): '$SUBJECT_OID' is an exact 40-hex oid, the odb reports it type '${_odb_type:-<none>}', and the archived tree's sentinel blob matches that commit's"
 hdr "SUBJECT IDENTITY"
 identity_block
 
@@ -1428,11 +1455,19 @@ hdr "HARNESS INTEGRITY"
 # THESE FOUR ARE ABOUT THE SUBJECT, and after the correction they say so. Comparing the snapshot
 # against a hardcoded historical commit was the mechanism by which a repaired consumer would have
 # been reported as pre-repair with the control still green.
+# THESE FOUR ARE THE EXECUTION WITNESS, and they now assert three things rather than one: the
+# snapshot's consumer matches the SUBJECT's blob, that exact hash was RECORDED AT EXECUTION at
+# least once, and every recorded execution of that consumer carried the same bytes. A control
+# that only compared two files on disk would leave "and it was the file we ran" as an inference.
 for f in scripts/check-type-strings.sh scripts/check-eval-codes.sh scripts/check-vendor-honesty.sh verifier/test_verifier.py; do
     a="$(shasum -a 256 "$P0/$f" | awk '{print $1}')"
     b="$(cd "$ROOT" && git show "$SUBJECT_SHA:$f" | shasum -a 256 | awk '{print $1}')"
-    check CONTROL "Z-${f##*/}" "$([ "$a" = "$b" ] && echo 0 || echo 1)" \
-          "the consumer under test is byte-identical to SUBJECT_SHA $SUBJECT_SHA: ${f##*/} ${a%%????????????????????????????????????????????????????????}…"
+    execs="$(awk -F'\t' -v k="$f" '$1==k{n++} END{print n+0}' "$WITNESS_LOG" 2>/dev/null)"
+    distinct="$(awk -F'\t' -v k="$f" '$1==k{print $2}' "$WITNESS_LOG" 2>/dev/null | sort -u | wc -l | tr -d ' ')"
+    matched="$(awk -F'\t' -v k="$f" -v h="$a" '$1==k && $2==h{n++} END{print n+0}' "$WITNESS_LOG" 2>/dev/null)"
+    check CONTROL "Z-${f##*/}" "$([ "$a" = "$b" ] && [ "$execs" -ge 1 ] && [ "$distinct" = "1" ] && \
+          [ "$matched" = "$execs" ] && echo 0 || echo 1)" \
+          "EXECUTED bytes are SUBJECT_SHA's: ${f##*/} ${a%%????????????????????????????????????????????????????????}… — ${execs} execution(s) recorded, all carrying that hash"
 done
 # THE NEXT THREE CONTROLS ARE ABOUT THE LIVE WORKING TREE, NOT ABOUT THE SUBJECT, and they are
 # deliberately NOT folded into the Z-consumer comparison above. "the snapshot matches the commit

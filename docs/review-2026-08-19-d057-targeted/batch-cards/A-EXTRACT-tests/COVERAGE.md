@@ -8,128 +8,101 @@ stated so that nobody has to rediscover it from a passing line.
 
 ## 0. THE SUBJECT-SELECTION INTERFACE — read this before running either harness
 
-**Both harnesses take an explicit repository and an explicit subject commit. There is no default
-subject and no fallback to the historical base.**
+**Both harnesses take exactly two arguments and accept exactly one subject shape.**
 
 ```
-a-extract.sh       <repository-path> <subject-ref>
-a-extract-gate.sh  <repository-path> <subject-ref>
+a-extract.sh       <repository-path> <exact-40-hex-commit>
+a-extract-gate.sh  <repository-path> <exact-40-hex-commit>
 ```
 
-| | |
-|---|---|
-| `<repository-path>` | the Sentinel repository to measure. Resolved with `cd … && pwd -P`. |
-| `<subject-ref>` | the commit to measure. Any ref git can resolve: full or abbreviated SHA, branch, tag, `HEAD`. |
+### The grammar
 
-**Resolution is fail-closed and uses TWO INDEPENDENT AMBIGUITY MECHANISMS.**
+**ACCEPTED:** `^[0-9a-f]{40}$` naming an object of type `commit` in that repository.
+**Everything else is refused at exit 2 with ZERO scored verdicts:**
 
-**`--verify` does NOT refuse an ambiguous refname — that claim, which this harness previously
-made in a comment, is false.** Measured on git 2.50.1 with a branch and a tag both named
-`ambig`:
+| Rejected shape | Example | Diagnosis given |
+|---|---|---|
+| abbreviated object id | `bb664c6` | *an ABBREVIATED object id (length 7, need exactly 40)* |
+| branch / tag / remote name | `main`, `v1.0`, `origin/main` | *a NAME, not an object id* |
+| symbolic ref | `HEAD` | *a NAME, not an object id* |
+| fully qualified ref | `refs/heads/main` | *a fully qualified ref; refs are not accepted* |
+| revision expression | `HEAD~1`, `x^{commit}`, `a..b`, `@{u}` | *a revision expression; expressions are not accepted* |
+| option-shaped input | `--version` | *is option-shaped* |
+| uppercase hex | `BB664C6…` | *uppercase hex — git's canonical form is lowercase* |
+| object absent from the odb | `000…0` | *is not present in … object database* |
+| object present but not a commit | a tree oid | *exists … but is a 'tree', not a commit* |
+| wrong argument count | 0, 1 or 3 args | *takes EXACTLY a repository and a full 40-hex commit* |
 
-```
-$ git rev-parse --verify 'ambig^{commit}'
-warning: refname 'ambig' is ambiguous.
-f1c0fdd…                                   <- the TAG, silently preferred
-exit 0
-```
+### Why the grammar is this narrow — it closes `R1` structurally
 
-`--verify` guarantees one OBJECT NAME, not one REF. It *does* refuse an ambiguous abbreviated
-object id (`fatal: Needed a single revision`); it does not refuse an ambiguous refname. The old
-code then hid the evidence twice — `--quiet` suppressed the warning and `2>/dev/null` discarded
-it — and the harness measured the wrong commit through the ordinary path with all 74 controls
-green. **Found by an independent instrument review (`INSTRUMENT-REVIEW.md`, VERDICT FAIL).**
+**A name has to be RESOLVED, and resolution is the part an attacker or an accident gets to
+influence.** Two reviews found two successive defects in exactly that step: `--verify` silently
+preferring a tag over a same-named branch, and then — residual `R1` — the ambiguity warning that
+detected it having an off switch, `core.warnAmbiguousRefs=false`, under which one ambiguity class
+produced a full green measurement of a commit nobody named.
 
-| Mechanism | How | branch+tag `ambig` | branch named `bb664c6` |
-|---|---|:--:|:--:|
-| **1 — enumeration** | count the refs the name could denote, in gitrevisions order: `<name>`, `refs/<name>`, `refs/tags/<name>`, `refs/heads/<name>`, `refs/remotes/<name>`, `refs/remotes/<name>/HEAD`; refuse if more than one exists | **CAUGHT** (2 refs) | missed (1 ref) |
-| **2 — stderr** | run `rev-parse --verify` with **no `--quiet`** and stderr **kept**, then refuse on any `ambiguous` warning | **CAUGHT** | **CAUGHT** |
+**A full object id is not resolved, it is looked up. Delete the resolution step and there is
+nothing left for a third detector to detect.** Convenience refs bought this instrument nothing
+and cost it its only remaining fail-open.
 
-**Neither is a single point of failure, and that is measured rather than asserted: each catches
-a case the other misses.** A branch named like an abbreviated object id is one ref, so
-enumeration alone sees nothing wrong; git still warns, so mechanism 2 catches it.
+**Measured, because the argument rests on it:** with a branch literally *named*
+`bb664c626d592d86391f644bf014e76f2bbf7db4` and pointing at a different commit, and with
+`core.warnAmbiguousRefs=false` set repository-locally, the harness still selects the **object**.
+The existence-and-type check goes further and performs **no name resolution at all** — it reads
+`git cat-file --batch-all-objects --batch-check`, which enumerates the object database.
 
-`^{commit}` additionally refuses a ref that resolves to a tree, a blob, or an unpeelable tag.
+### Caller configuration injection is neutralised before the first git invocation
 
-**What fails PREFLIGHT, and how** — every one of these exits **2** and measures nothing:
+`GIT_CONFIG_COUNT`, **every** `GIT_CONFIG_KEY_<n>` / `GIT_CONFIG_VALUE_<n>` — **enumerated from
+the environment, not assumed to stop at a small n** — and `GIT_CONFIG_PARAMETERS` are unset,
+alongside `GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE`, `GIT_COMMON_DIR` and `GIT_PREFIX`. The
+private empty global/system configuration is **retained**: pinning the config files and scrubbing
+the injection variables are two different defences and both are wanted.
 
-| Condition | Message |
-|---|---|
-| fewer than two arguments | `PREFLIGHT FAILED: an evidentiary run requires BOTH a repository and a subject ref.` followed by usage |
-| repository path does not exist | `the repository path '<arg>' does not exist or is not a directory` |
-| path is not a git repository | `<sanitized path> is not a git repository` |
-| ref **ambiguous — names more than one ref** (mechanism 1) | `subject ref '<ref>' is AMBIGUOUS in <path> — it names N refs:` followed by each full ref path, and `Name the ref in full, e.g. refs/heads/<ref>.` |
-| ref **ambiguous — git warned** (mechanism 2) | `subject ref '<ref>' is AMBIGUOUS in <path>.` plus git's warning verbatim, plus what git *would* have resolved it to and `This harness refuses rather than inherit that choice.` |
-| ref missing or not a commit | `cannot resolve subject ref '<ref>' to exactly one commit in <sanitized path>.` plus **git's own diagnostic**, plus `Missing, ambiguous, or not-a-commit is a REFUSAL here, never a fallback.` |
-| snapshot of the subject cannot be built or is empty | `cannot build a snapshot of <SUBJECT_SHA>` / `the snapshot of <SUBJECT_SHA> is empty` |
-| `-h` / `--help` | usage, exit 2 |
+**Scope, stated so it is not overstated (John's framing): this is an INSTRUMENT-LOCAL isolation
+repair. It does not reopen Batch A1 and it does not claim to solve A1's repository-wide `R-C`
+residual.** It makes these two harnesses' git calls unconfigurable by their caller, and says
+nothing about any other entry point.
 
-**Every run prints five identity facts, separately, twice** — once under `== SUBJECT IDENTITY ==`
-before any case runs, and again in `== SUMMARY ==`:
+### Identity block
+
+Every run prints five facts, twice — before any case and again in the summary:
 
 ```
   harness sha256   : <sha256 of the harness file itself>
   repository       : <path with any home prefix replaced by ~>
-  requested ref    : <exactly what the caller typed>
-  resolved subject : <40-hex SUBJECT_SHA>
+  requested subject: <exactly what the caller typed>
+  resolved subject : <the same 40-hex; nothing was resolved>
   pre-repair ref   : bb664c626d592d86391f644bf014e76f2bbf7db4
 ```
 
-**`PRE_REPAIR_SHA` is an immutable named reference, never the thing archived.** It exists so the
-original measurement stays reproducible:
+`PRE_REPAIR_SHA` is an immutable named reference so the original measurement stays reproducible.
+It is never archived and nothing defaults to it.
 
-```
-a-extract.sh . bb664c626d592d86391f644bf014e76f2bbf7db4
-```
+### `P3-provenance` — a CONSISTENCY control, not an independence proof
 
-**Which control asserts what, so the two are not confused:**
+**Renamed and redescribed, accepting `R2` from the second review as a documented limitation.**
+The earlier control claimed the subject was confirmed "by TWO INDEPENDENT ROUTES". **That claim
+is withdrawn.** `rev-parse`, `show-ref`, `cat-file` and `git archive` are all git and share git's
+object resolver; **commands that share a resolver are not independent of each other**, and no
+control here says otherwise.
 
-| Control | Claim | Compared against |
-|---|---|---|
-| `P3` | the ref resolves to the same commit by **two independent routes** | route A `rev-parse --verify` vs route B `show-ref` + `cat-file` |
-| `Z-check-type-strings.sh`, `Z-check-eval-codes.sh`, `Z-check-vendor-honesty.sh`, `Z-test_verifier.py` | the snapshot's consumer is byte-identical to the subject's blob | **`SUBJECT_SHA`** |
-| `Z-clean` | this run changed nothing in the live repository's boundary | the live working tree |
-| `Z-gate5` | the live pin and live §2 table still hash to the certified value | the live tree, anchored on `PRE_REPAIR_SHA` |
-| `Z-signed` | `docs/gate-s2-evidence.md` in the live tree is unmoved | the live tree, anchored on `PRE_REPAIR_SHA` |
+What the provenance chain establishes, each link measured:
 
-**`P3` IS FALSIFIABLE, AND ITS PREDECESSOR WAS NOT.** The earlier `P3` re-ran the *identical*
-`rev-parse` command and compared the answer to itself — it could not fail, and could not catch
-the ambiguity defect or any other resolution defect. It now compares two routes that can
-disagree:
+| Link | Asserted by |
+|---|---|
+| the string supplied is an exact full 40-hex oid — no name was resolved | `P3-provenance` |
+| that exact object is present with type `commit`, by odb enumeration | `P3-provenance` |
+| the archived tree was produced from that oid (sentinel blob) | `P3-provenance` |
+| the consumers actually **EXECUTED** carry that commit's bytes | `Z-<consumer>` ×4 |
+| the source repository is unchanged by the run | `Z-clean` |
+| Gate 5 material and the signed pack are unmoved | `Z-gate5`, `Z-signed` |
 
-- **route A** — `git rev-parse --verify "<ref>^{commit}"`, git's own precedence order;
-- **route B** — `git show-ref` for the single matching ref, peeled to a commit with
-  `git cat-file` (handling annotated tags), never calling `rev-parse`. **When the name denotes
-  more than one ref, route B returns NO ANSWER rather than tie-breaking.**
-
-Measured, with both preflight refusals deliberately bypassed in a scratch copy so `P3` is
-reached at all:
-
-```
-ambiguous  'ambig'              P3 CONTROL FAIL  rev-parse=f1c0fdd… show-ref+cat-file=<none>
-unambiguous 'refs/heads/ambig'  P3 CONTROL PASS  both routes = bb664c6…
-```
-
-**That is defence in depth: even with both refusals bypassed, `P3` still catches it.**
-
-**`Z-clean`, `Z-gate5` and `Z-signed` are about the LIVE TREE and are deliberately not folded
-into the subject comparison.** "The snapshot matches the commit I asked for" and "this run
-changed nothing in the repository it read" are different claims; one merged control would let
-either carry the other.
-
-**The subject's own Gate 5 material is not a separate control** — it is already exercised by
-`14-fixture`, `14a` and `14b`, which run against the snapshot built from `SUBJECT_SHA`. Adding a
-sixth `Z-` control would have inflated the control count without adding a claim.
-
-### Why this section exists
-
-`a-extract.sh` previously hardcoded the subject commit and built its snapshot from it, whatever
-repository or HEAD it was given; `P3` was an OBSERVED line that could not fail. **After a repair
-the harness would have measured the pre-repair consumers and reported `21 of 49` for ever, with
-every control green** — and `CARD.md` forbids the implementer from touching the harness, so
-nothing downstream could have corrected it. **Found in John's review of the contract**, not by a
-run and not by this author. `a-extract-gate.sh` carried the same shape and is corrected the same
-way.
+**The execution witness is the strongest property this instrument has.** Each consumer
+invocation records the sha256 of the file it is about to run; the four `Z-<consumer>` controls
+then require that the hash they compared against the subject's blob was **recorded at execution
+at least once**, and that every recorded execution carried the same bytes. Without it, "the file
+we hashed is the file we ran" would be an inference.
 
 ## 1. Which consumer each case reaches
 

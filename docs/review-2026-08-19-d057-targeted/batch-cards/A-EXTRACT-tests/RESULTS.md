@@ -7,17 +7,17 @@
 docs/review-2026-08-19-d057-targeted/batch-cards/A-EXTRACT-tests/a-extract.sh . bb664c626d592d86391f644bf014e76f2bbf7db4
 ```
 
-**Harness sha256:** `4ad1eb55de50ca23c23aa22c61f7b00c12514371c6e74c2c7206629ef7a7bb32` (`a-extract.sh`; printed by the harness itself).
-**Gate harness sha256:** `99c6d8d65fe08f5572c1ce63d6ad06a9742a2411a53ba5cbbbbb1e586bd5cf97` (`a-extract-gate.sh`; see `GATE-BINDING.md`).
+**Harness sha256:** `ead0bf0cbda8711a742f003b77db1401df8c7df40b37b91e045c66ce57454dca` (`a-extract.sh`; printed by the harness itself).
+**Gate harness sha256:** `105f4f6ba0fa2e60abcdd54b9f547b5a109622f17acad6ffaa2b71791f20cc14` (`a-extract-gate.sh`; see `GATE-BINDING.md`).
 **Environment:** git 2.50.1 (Apple Git-155); bash 3.2.57; Python 3.9.6; node v26.3.0;
 `/usr/bin/grep` with a matched canary.
 
 **The five identity facts the run printed, twice — before any case and again in the summary:**
 
 ```
-  harness sha256   : 4ad1eb55de50ca23c23aa22c61f7b00c12514371c6e74c2c7206629ef7a7bb32
+  harness sha256   : ead0bf0cbda8711a742f003b77db1401df8c7df40b37b91e045c66ce57454dca
   repository       : ~/Projects/Sentinel
-  requested ref    : bb664c626d592d86391f644bf014e76f2bbf7db4
+  requested subject: bb664c626d592d86391f644bf014e76f2bbf7db4
   resolved subject : bb664c626d592d86391f644bf014e76f2bbf7db4
   pre-repair ref   : bb664c626d592d86391f644bf014e76f2bbf7db4
 ```
@@ -30,7 +30,70 @@ docs/review-2026-08-19-d057-targeted/batch-cards/A-EXTRACT-tests/a-extract.sh . 
   exit 1   — REQUIRED FAILURES with every control holding: the defects are observed.
 ```
 
-## 0-AMB. The ambiguity fail-open — found by independent review, VERDICT FAIL, now corrected
+## 0-OID. `R1` closed structurally — the subject is an exact commit OID and nothing else
+
+A second independent review returned **VERDICT: HOLD with residual `R1` open**
+(`INSTRUMENT-REVIEW-2.md`). **John ruled `R1` NOT ACCEPTED.** `R1` was that the ambiguity
+repair's second detector reads git's ambiguity *warning*, and `core.warnAmbiguousRefs=false`
+switches that warning off — after which one ambiguity class produced a full green measurement of
+a commit nobody named.
+
+**The ruling deletes what the detectors were guarding rather than adding a third detector.**
+Both harnesses now accept `^[0-9a-f]{40}$` naming a `commit`, and nothing else. Existence and
+type come from `git cat-file --batch-all-objects`, which enumerates the object database and
+performs **no name resolution at all**. Grammar and diagnoses: `COVERAGE.md` §0.
+
+### The eleven required falsifications, as measured
+
+| # | Falsification | Observed |
+|---|---|---|
+| 1 | exact 40-hex commit completes normally | **21 of 52 REQUIRED, 74 of 74 CONTROL**, exit 1 |
+| 2 | short SHA refused | exit 2, 0 scored — *an ABBREVIATED object id (length 7, need exactly 40)* |
+| 3 | **branch/tag collision refused because NAMES ARE NOT ACCEPTED** | exit 2, 0 scored — *a NAME, not an object id*. No detector fired; there is nothing to detect |
+| 4 | fully qualified ref refused | exit 2, 0 scored — *a fully qualified ref; refs are not accepted* |
+| 5 | branch resembling a SHA refused | exit 2, 0 scored — *an ABBREVIATED object id* |
+| 6 | **branch named exactly 40-hex, pointing elsewhere, cannot redirect** | branch `bb664c6…` → `cefc135…`; harness selected the **object** `bb664c6…`. `P3-provenance` PASS |
+| 7 | `GIT_CONFIG_COUNT`/`KEY_<n>`/`VALUE_<n>` injection | subject unchanged. Control: an unscrubbed git honoured `core.abbrev=4` (`bb66`), so the injection is potent |
+| 8 | `GIT_CONFIG_PARAMETERS` injection | subject unchanged |
+| 9 | repository-local `core.warnAmbiguousRefs=false` | subject unchanged — measured together with 6, warning off |
+| 10 | invalid subjects score zero verdicts | all 13 probed shapes: exit 2, **0 scored verdicts** |
+| 11 | the witness proves the candidate's consumer bytes were **EXECUTED** | see below |
+
+### Falsification 11 — the execution witness, and it caught its own author
+
+Each consumer invocation now records the sha256 of the file it is about to run; the four
+`Z-<consumer>` controls require that hash to match the subject's blob **and** to have been
+recorded at execution at least once, with every recorded execution carrying the same bytes.
+
+```
+paired control  untampered, executed   executed 9bcdb562…  subject 9bcdb562…  PASS  1 execution
+falsification   tampered,   executed   executed 56d3f722…  subject 7970d226…  FAIL  1 execution
+```
+
+**And it failed on its author first.** A leftover `WITNESS_LOG=""` placeholder executed after the
+real assignment and emptied it, so `_witness` returned early. The controls did not report green —
+they reported `0 execution(s) recorded` on all four consumers, which is exactly the diagnostic
+needed. The clobber is removed and the reason recorded in the file.
+
+### `P3` renamed, and an over-claim withdrawn
+
+`P3` is now **`P3-provenance`**, a subject-provenance **CONSISTENCY** control. **The claim that
+the subject was confirmed "by TWO INDEPENDENT ROUTES" is withdrawn** — `rev-parse`, `show-ref`,
+`cat-file` and `git archive` are all git and share its object resolver, so `R2` is accepted as a
+documented limitation. Its exact wording:
+
+> *subject provenance is CONSISTENT (not independent): '<oid>' is an exact 40-hex oid, the odb
+> reports it type 'commit', and the archived tree's sentinel blob matches that commit's*
+
+Every prose claim of independence elsewhere in these evidence files has been corrected; the two
+review documents are untouched.
+
+## 0-AMB. The ambiguity fail-open — found by independent review, VERDICT FAIL, then SUPERSEDED
+
+> **SUPERSEDED BY §0-OID.** The two detectors described here were the *first* answer to the
+> ambiguity defect. A second review found residual `R1` in them, and John ruled the interface
+> narrowed to an exact commit oid instead. This section is retained as the record of that repair,
+> and its two-mechanism table no longer describes the current interface.
 
 **An independent instrument review returned VERDICT: FAIL** (`INSTRUMENT-REVIEW.md`, `7e4e5c0`).
 I reproduced the finding before changing anything.
@@ -86,6 +149,12 @@ warning and states what git *would* have resolved it to. Both shapes refuse iden
 `a-extract-gate.sh`.
 
 ### Paired control — the fix is not "refuse everything"
+
+> **SUPERSEDED BY §0-OID.** This control was run against the *previous* interface, which accepted
+> refs. Under the grammar John ruled, `refs/heads/ambig` is itself REFUSED — names are not
+> accepted at all. It is kept as the record of that earlier repair; the current equivalent is
+> falsification 3 in §0-OID, where the collision is refused *because names are not accepted*
+> rather than because a detector fired.
 
 **Same repository, same colliding names, ref given in full — run to completion:**
 
@@ -516,6 +585,9 @@ Verified against a throwaway extraction of `bb664c6`:
 **The patch is not applied.** `verifier/` is untouched by this batch.
 
 ## 6. Live proof that the subject correction works
+
+> **PARTLY SUPERSEDED BY §0-OID.** Run 2 below used `HEAD`, which the current grammar REFUSES.
+> Runs 1 and 3 used exact 40-hex oids and remain valid as written.
 
 Three runs of the **same harness file**, differing only in the subject argument.
 

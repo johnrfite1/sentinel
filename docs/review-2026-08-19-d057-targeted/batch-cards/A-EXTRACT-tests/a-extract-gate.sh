@@ -76,15 +76,16 @@ SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 usage() {
     cat >&2 <<'USAGE'
-usage: a-extract-gate.sh <repository-path> <subject-ref>
+usage: a-extract-gate.sh <repository-path> <exact-40-hex-commit>
 
-  <repository-path>  the Sentinel repository to clone. Required.
-  <subject-ref>      the commit whose GATE is to be measured. Required.
+  <repository-path>       the Sentinel repository to clone. Required.
+  <exact-40-hex-commit>   the commit whose GATE is measured, as a FULL 40-character
+                          lowercase object id. Required. Nothing else is accepted.
 
-There is NO DEFAULT SUBJECT. Omitting it is a preflight failure, not a fallback to the
-historical base.
-
-To reproduce the recorded baseline:
+Same grammar as a-extract.sh, for the same reason: a name has to be RESOLVED, and
+resolution is the part an ambiguous ref or an injected configuration setting gets to
+influence. Abbreviated ids, branches, tags, HEAD, refs/…, revision expressions and
+option-shaped input are all refused at exit 2 with ZERO scored verdicts.
 
   a-extract-gate.sh . bb664c626d592d86391f644bf014e76f2bbf7db4
 
@@ -97,15 +98,15 @@ case "${1:-}" in
     -h|--help) usage; exit 2 ;;
 esac
 
-if [ "$#" -lt 2 ]; then
-    printf '\n  PREFLIGHT FAILED: an evidentiary run requires BOTH a repository and a subject ref.\n' >&2
+if [ "$#" -ne 2 ]; then
+    printf '\n  PREFLIGHT FAILED: an evidentiary run takes EXACTLY a repository and a full 40-hex commit.\n' >&2
     printf '  Received %s argument(s). There is no default subject, by design.\n\n' "$#" >&2
     usage
     exit 2
 fi
 
 ROOT_ARG="$1"
-SUBJECT_REF="$2"
+SUBJECT_OID="$2"
 ROOT="$(cd -- "$ROOT_ARG" 2>/dev/null && pwd -P)" || ROOT=""
 
 ORIG_HOME="${HOME:-}"
@@ -161,6 +162,19 @@ export GIT_CONFIG_NOSYSTEM=1
 export GIT_TERMINAL_PROMPT=0
 export GIT_AUTHOR_NAME="a-extract" GIT_AUTHOR_EMAIL="a-extract@invalid"
 export GIT_COMMITTER_NAME="a-extract" GIT_COMMITTER_EMAIL="a-extract@invalid"
+# Caller configuration injection is neutralised before the first git invocation; the keys are
+# enumerated from the environment rather than assumed to stop at a small n. INSTRUMENT-LOCAL
+# isolation only — it does not reopen Batch A1 and does not address A1's `R-C` residual.
+_scrub_git_config_env() {
+    local v
+    for v in $( ( env; printf '%s\n' "${!GIT_CONFIG_@}" ) 2>/dev/null \
+                | sed -n 's/^\(GIT_CONFIG_KEY_[0-9][0-9]*\)=.*/\1/p; s/^\(GIT_CONFIG_VALUE_[0-9][0-9]*\)=.*/\1/p; /^GIT_CONFIG_KEY_[0-9][0-9]*$/p; /^GIT_CONFIG_VALUE_[0-9][0-9]*$/p' \
+                | sort -u ); do
+        unset "$v" 2>/dev/null || true
+    done
+    unset GIT_CONFIG_COUNT GIT_CONFIG_PARAMETERS 2>/dev/null || true
+}
+_scrub_git_config_env
 unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_PREFIX 2>/dev/null || true
 
 # NO `grep -q` HERE, AND THE REASON IS A CONTROL FAILURE THIS HARNESS CAUGHT ON ITSELF.
@@ -188,7 +202,7 @@ SELF_SHA="$(shasum -a 256 "${BASH_SOURCE[0]}" | awk '{print $1}')"
 identity_block() {
     printf '  harness sha256   : %s\n' "$SELF_SHA"
     printf '  repository       : %s\n' "$(sanitize_path "${ROOT:-$ROOT_ARG}")"
-    printf '  requested ref    : %s\n' "$SUBJECT_REF"
+    printf '  requested subject: %s\n' "$SUBJECT_OID"
     printf '  resolved subject : %s\n' "${SUBJECT_SHA:-<unresolved>}"
     printf '  pre-repair ref   : %s\n' "$PRE_REPAIR_SHA"
 }
@@ -199,105 +213,33 @@ for t in git node python3; do command -v "$t" >/dev/null 2>&1 || die "$t is requ
 command -v forge >/dev/null 2>&1 || die "forge is required — the gate's solidity stage cannot run without it"
 [ -n "$ROOT" ] || die "the repository path '$ROOT_ARG' does not exist or is not a directory"
 [ -d "$ROOT/.git" ] || die "$(sanitize_path "$ROOT") is not a git repository"
-# SUBJECT RESOLUTION IS FAIL-CLOSED, AND `--verify` IS **NOT** WHAT MAKES IT SO.
-#
-# Same correction as `a-extract.sh`, for the same measured reason: on git 2.50.1
-# `git rev-parse --verify 'ambig^{commit}'` with a branch AND a tag named `ambig` returns the
-# TAG's commit, exit 0, warning on stderr. `--verify` guarantees one OBJECT NAME, not one REF.
-# `--quiet` then suppressed the warning and `2>/dev/null` discarded it.
-#
-# TWO INDEPENDENT MECHANISMS, each catching a case the other misses:
-#   1. ENUMERATION — count the refs the name could denote (catches branch+tag).
-#   2. STDERR — no `--quiet`, keep stderr, refuse on any ambiguity warning (catches a branch
-#      named like an abbreviated object id, which enumeration alone sees as a single ref).
-_ref_candidates() {
-    printf '%s\n' "$1" "refs/$1" "refs/tags/$1" "refs/heads/$1" "refs/remotes/$1" "refs/remotes/$1/HEAD"
-}
-_matching_refs() {
-    local c
-    while IFS= read -r c; do
-        [ -n "$c" ] || continue
-        if ( cd "$ROOT" && git show-ref --verify --quiet -- "$c" 2>/dev/null ); then printf '%s\n' "$c"; fi
-    done <<CANDIDATES
-$(_ref_candidates "$1")
-CANDIDATES
-}
-_peel_to_commit() {
-    local oid t i
-    oid="$1"; i=0
-    while [ "$i" -lt 8 ]; do
-        t="$( cd "$ROOT" && git cat-file -t "$oid" 2>/dev/null )" || return 1
-        case "$t" in
-            commit) printf '%s' "$oid"; return 0 ;;
-            tag)    oid="$( cd "$ROOT" && git cat-file tag "$oid" 2>/dev/null | awk '/^object /{print $2; exit}' )"
-                    [ -n "$oid" ] || return 1 ;;
-            *)      return 1 ;;
-        esac
-        i=$((i + 1))
-    done
-    return 1
-}
-_independent_subject_sha() {  # never calls rev-parse; declines to choose when ambiguous
-    local hits n oid
-    hits="$(_matching_refs "$SUBJECT_REF")"
-    n="$(printf '%s' "$hits" | $GREP -c . )" || n=0
-    if [ "$n" = "1" ]; then
-        oid="$( cd "$ROOT" && git show-ref --verify -- "$hits" 2>/dev/null | awk '{print $1; exit}' )"
-    elif [ "$n" = "0" ]; then
-        oid="$( cd "$ROOT" && printf '%s\n' "$SUBJECT_REF" | git cat-file --batch-check 2>/dev/null \
-                 | awk '$2 != "missing" && $2 != "ambiguous" {print $1; exit}' )"
-    else
-        return 1
-    fi
-    [ -n "$oid" ] || return 1
-    _peel_to_commit "$oid"
-}
-
-_ref_hits="$(_matching_refs "$SUBJECT_REF")"
-_ref_n="$(printf '%s' "$_ref_hits" | $GREP -c . )" || _ref_n=0
-if [ "$_ref_n" -gt 1 ]; then
-    die "subject ref '$SUBJECT_REF' is AMBIGUOUS in $(sanitize_path "$ROOT") — it names ${_ref_n} refs:
-$(printf '%s\n' "$_ref_hits" | sed 's/^/                       /')
-                     git would silently prefer one and warn on stderr. This harness refuses."
+# THERE IS NO SUBJECT RESOLUTION STEP. Same ruling, same reason as `a-extract.sh`: a name must
+# be resolved and resolution is what an ambiguous ref or an injected configuration setting gets
+# to influence; an exact object id is looked up, not resolved. Measured: a branch literally named
+# a 40-hex oid does NOT shadow that object, with `core.warnAmbiguousRefs` on or off.
+case "$SUBJECT_OID" in
+    -*) die "subject '$SUBJECT_OID' is option-shaped. The subject must be a bare 40-hex commit id." ;;
+esac
+if ! printf '%s' "$SUBJECT_OID" | $GREP -qE '^[0-9a-f]{40}$'; then
+    die "subject '$SUBJECT_OID' is not an exact 40-character lowercase hex object id.
+                     Branches, tags, HEAD, refs/…, revision expressions and abbreviated ids are
+                     REFUSED — names are not accepted at all."
 fi
+_odb_type="$( cd "$ROOT" && git cat-file --batch-all-objects --batch-check='%(objectname) %(objecttype)' 2>/dev/null \
+              | $GREP -m1 -E "^${SUBJECT_OID} " | awk '{print $2}' )"
+[ -n "$_odb_type" ] || die "object $SUBJECT_OID is not present in $(sanitize_path "$ROOT")'s object database."
+[ "$_odb_type" = "commit" ] || die "object $SUBJECT_OID exists but is a '$_odb_type', not a commit."
+SUBJECT_SHA="$SUBJECT_OID"
 
-_rev_err_file="$WORK/.rev-parse-stderr"
-SUBJECT_SHA="$( cd "$ROOT" && git rev-parse --verify "${SUBJECT_REF}^{commit}" 2>"$_rev_err_file" )" || SUBJECT_SHA=""
-_rev_err="$(head -3 "$_rev_err_file" 2>/dev/null)"
-rm -f "$_rev_err_file"
-
-if printf '%s' "$_rev_err" | $GREP -qi 'ambiguous'; then
-    die "subject ref '$SUBJECT_REF' is AMBIGUOUS in $(sanitize_path "$ROOT").
-                     git said: ${_rev_err}
-                     git resolved it anyway, to ${SUBJECT_SHA:-<none>}, by its own precedence
-                     order. This harness refuses rather than inherit that choice."
-fi
-
-if [ -z "$SUBJECT_SHA" ]; then
-    die "cannot resolve subject ref '$SUBJECT_REF' to exactly one commit in $(sanitize_path "$ROOT").
-                     git said: ${_rev_err:-(no diagnostic)}
-                     Missing, ambiguous, or not-a-commit is a REFUSAL here, never a fallback."
-fi
-[ -d "$ROOT/ts/node_modules" ] || die "ts/node_modules is absent; the gate's TypeScript stage cannot run"
-for m in forge-std openzeppelin-contracts; do
-    [ -d "$ROOT/contracts/lib/$m" ] || die "submodule working tree contracts/lib/$m is absent"
-    [ -n "$(ls -A "$ROOT/contracts/lib/$m" 2>/dev/null)" ] || die "contracts/lib/$m is empty"
-done
-check OBSERVED P2 0 "toolchain present: git, node, python3, forge; node_modules and both submodule trees staged"
-
-# THE ISOLATED COPY IS A CLONE, NOT AN ARCHIVE. `git archive` drops history, and several gate
-# stages resolve refs. A clone at the base SHA plus the two ignored dependency trees is the
-# smallest faithful subject. Nothing is written back to $ROOT.
 BASECOPY="$WORK/gate-base"
 git clone -q --no-hardlinks --local "$ROOT" "$BASECOPY" 2>/dev/null || die "cannot clone the repository"
 ( cd "$BASECOPY" && git checkout -q "$SUBJECT_SHA" ) || die "cannot check out $SUBJECT_SHA in the clone"
-# P3 IS A CONTROL: the clone is standing on the commit the caller NAMED, not on whatever the
-# source repository happened to have checked out and not on a constant compiled into this file.
-_clone_head="$(cd "$BASECOPY" && git rev-parse HEAD 2>/dev/null)" || _clone_head=""
-SUBJECT_SHA_INDEP="$(_independent_subject_sha)" || SUBJECT_SHA_INDEP=""
-check CONTROL P3-subject "$([ "$_clone_head" = "$SUBJECT_SHA" ] && [ "${#SUBJECT_SHA}" = "40" ] && \
-      [ -n "$SUBJECT_SHA_INDEP" ] && [ "$SUBJECT_SHA_INDEP" = "$SUBJECT_SHA" ] && echo 0 || echo 1)" \
-      "'$SUBJECT_REF' resolves identically by TWO independent routes (rev-parse=${SUBJECT_SHA:-<none>}, show-ref+cat-file=${SUBJECT_SHA_INDEP:-<none>}) and the clone is checked out at it"
+# A SUBJECT-PROVENANCE CONSISTENCY CONTROL — NOT an independence proof. The claim that two git
+# commands are independent is withdrawn (R2): they share git's object resolver. What is asserted
+# is that the clone is standing on the exact oid that was supplied.
+check CONTROL P3-provenance "$([ "$_clone_head" = "$SUBJECT_SHA" ] && [ "${#SUBJECT_SHA}" = "40" ] && \
+      [ "$_odb_type" = "commit" ] && echo 0 || echo 1)" \
+      "subject provenance is CONSISTENT (not independent): '$SUBJECT_OID' is an exact 40-hex oid of type '${_odb_type:-<none>}' and the clone is checked out at it"
 cp -R "$ROOT/ts/node_modules" "$BASECOPY/ts/node_modules" || die "cannot stage node_modules"
 for m in forge-std openzeppelin-contracts; do
     rm -rf "$BASECOPY/contracts/lib/$m"
