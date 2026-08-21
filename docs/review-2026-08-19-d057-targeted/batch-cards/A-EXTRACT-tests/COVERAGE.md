@@ -51,6 +51,68 @@ and cost it its only remaining fail-open.
 The existence-and-type check goes further and performs **no name resolution at all** — it reads
 `git cat-file --batch-all-objects --batch-check`, which enumerates the object database.
 
+### THREAT MODEL — D-065, and what it makes a defect
+
+**The bar: this instrument must measure faithfully under a NON-ADVERSARIAL environment.** A caller
+who can set arbitrary git environment variables can equally edit the harness, so **that class is
+out of scope** and a newly named caller-controlled variable is not by itself a defect here.
+
+**The scrub list below is HARDENING under D-065(2) — one line each because the doors are known —
+and is NOT claimed complete.** Nothing in these files should be read as saying the environment is
+exhaustively controlled; two sentences that did say so have been corrected.
+
+Handled: `GIT_DIR`, `GIT_WORK_TREE`, `GIT_INDEX_FILE`, `GIT_COMMON_DIR`, `GIT_PREFIX`, the
+`GIT_CONFIG_*` family (enumerated), `GIT_REPLACE_REF_BASE`, `GIT_NO_REPLACE_OBJECTS`,
+`GIT_TEMPLATE_DIR`, and `PATH`.
+
+**`GIT_TEMPLATE_DIR`** earns its line because `git init` and `git clone` copy a caller-supplied
+template's `config` **and `hooks/`** into every repository these harnesses create — the same
+repository-local configuration layer the `GIT_CONFIG_*` scrub exists to keep the caller out of. A
+review measured it rewriting a consumer in 16 subject repositories while the witness log recorded
+the tampered bytes executing 16 times and the run printed `CONTROL : 74 of 74 held`.
+
+| | subject `.git/hooks/pre-commit` | subject `core.fsmonitor` |
+|---|---|---|
+| hardening removed (paired control) | **PRESENT** | `/bin/echo` |
+| hardening present | absent | unset |
+
+**`PATH` is pinned BY PRECEDENCE, not by replacement** — system directories are prepended, the
+caller's remainder retained. Measured: a shadowing `git` earlier in PATH is outranked
+(`/usr/bin/git` wins) while `forge`, which the gate harness needs and which is not in a system
+directory here, is still found. **Replacing PATH outright would have broken the gate harness, so
+this raises the bar for shadowing a system tool and does not claim the tool search path is
+controlled.** `/usr/bin/grep` remains absolute, which is stronger than either.
+
+**What remains in scope under D-065(3)** — and these are the ones that have actually bitten this
+instrument: a control that cannot fail; expected and actual sides that move together; a counter
+that does not count; a snapshot not corresponding to the requested commit under ordinary
+conditions; a stated requirement silently removed; a figure that was never measured.
+
+### The gate harness was structurally blind to replacement — `F2-4`, in scope
+
+`a-extract-gate.sh` pinned `--no-replace-objects` on **zero** commands and was protected only by
+the accident that clone's default refspec does not fetch `refs/replace`. **Protection by accident
+is not protection**, and it is in scope under D-065(3) because it is a comparison that could move
+with its subject rather than a caller-controlled variable.
+
+It now pins on every command it runs, and `P3-provenance` verifies the clone's **WORKTREE** against
+the subject commit's tree instead of trusting `rev-parse HEAD`. **Paired control, with
+`GIT_REPLACE_REF_BASE=refs/remotes/origin/` set:**
+
+| | expected | worktree | verdict |
+|---|---|---|---|
+| pins present | `d0a672e8…` | `d0a672e8…` | **PASS** |
+| pins removed | `d8fa9431…` | `d0a672e8…` | **FAIL** |
+
+**A correction to `INSTRUMENT-REVIEW-3`, recorded here because that document is history and is not
+edited:** it stated that `rev-parse HEAD` returns the replacement target. On git 2.50.1 it does
+not — HEAD returns the requested oid and it is the WORKTREE that moves. The fourth review's
+measurement is the correct one, and it is why this control compares trees rather than HEAD.
+
+**Correction to a count in my own earlier reporting:** `a-extract.sh` pins `--no-replace-objects`
+on **2** commands, not 3 — the third occurrence in that file is a comment. `a-extract-gate.sh` now
+pins on 7.
+
 ### Object replacement is neutralised before the first git invocation
 
 **`refs/replace/<oid>` silently substitutes one object for another in every command that
@@ -96,8 +158,10 @@ the injection variables are two different defences and both are wanted.
 
 **Scope, stated so it is not overstated (John's framing): this is an INSTRUMENT-LOCAL isolation
 repair. It does not reopen Batch A1 and it does not claim to solve A1's repository-wide `R-C`
-residual.** It makes these two harnesses' git calls unconfigurable by their caller, and says
-nothing about any other entry point.
+residual.** It raises the bar for a caller influencing these two harnesses' git calls through the variables
+named. **Under D-065(2) that is hardening, not a completeness claim** — the list is not
+exhaustive, and a newly named caller-controlled variable is not by itself a defect in this
+instrument. It says nothing about any other entry point.
 
 ### Identity block
 

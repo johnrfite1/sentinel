@@ -238,8 +238,11 @@ export GIT_COMMITTER_NAME="a-extract" GIT_COMMITTER_EMAIL="a-extract@invalid"
 #
 # **SCOPE, AND IT IS DELIBERATELY NARROW (John's framing, recorded here so it is not
 # overstated): this is an INSTRUMENT-LOCAL isolation repair. It does not reopen Batch A1 and it
-# does not claim to solve A1's repository-wide `R-C` residual.** It makes THIS harness's git
-# calls unconfigurable by its caller. It says nothing about any other entry point.
+# does not claim to solve A1's repository-wide `R-C` residual.** It raises the bar for a caller
+# influencing THIS harness's git calls through the variables named — **under D-065(2) that is
+# hardening, not a completeness claim**; the list is not exhaustive and a newly named
+# caller-controlled variable is not by itself a defect in this instrument. It says nothing about
+# any other entry point.
 _scrub_git_config_env() {
     local v
     for v in $( ( env; printf '%s\n' "${!GIT_CONFIG_@}" ) 2>/dev/null \
@@ -274,6 +277,37 @@ _neutralise_object_replacement() {
     export GIT_NO_REPLACE_OBJECTS=1
 }
 _neutralise_object_replacement
+
+# --- KNOWN-DOOR HARDENING UNDER D-065(2). THE LIST IS NOT CLAIMED COMPLETE. -----
+#
+# **D-065(1) sets the bar: this instrument must measure faithfully under a NON-ADVERSARIAL
+# environment. A caller who can set arbitrary git environment variables can equally edit this
+# file, so that class is OUT OF SCOPE and a newly named caller-controlled variable is not by
+# itself a defect.** The variables handled here are handled because they are KNOWN and the cost
+# is one line each — **that is hardening, not a claim that the environment is exhaustively
+# controlled, and nothing here should be read as such a claim.**
+#
+# `GIT_TEMPLATE_DIR` earns its line: `git init` and `git clone` copy a caller-supplied template's
+# `config` **and `hooks/`** into every repository this harness creates, which is precisely the
+# repository-local configuration layer the `GIT_CONFIG_*` scrub exists to keep the caller out of.
+# An independent review measured it rewriting a consumer in 16 subject repositories while this
+# harness's own witness log recorded the tampered bytes executing 16 times and the run printed
+# `CONTROL : 74 of 74 held`.
+#
+# `PATH` is PINNED BY PRECEDENCE, not by replacement: the system directories are prepended so
+# `git`, `awk`, `sed`, `find`, `paste`, `sort`, `shasum`, `tar` and `python3` resolve there
+# whatever a caller put in front of them, while the caller's remaining PATH is retained after
+# them. **Stated precisely because the difference matters:** replacing PATH outright would have
+# broken `forge`, which the sibling gate harness requires and which does not live in a system
+# directory on this machine — so this raises the bar for shadowing a system tool and does NOT
+# claim the tool search path is exhaustively controlled. `/usr/bin/grep` remains absolute, which
+# is stronger than either.
+_harden_known_doors() {
+    unset GIT_TEMPLATE_DIR 2>/dev/null || true
+    PATH="/usr/bin:/bin:/usr/sbin:/sbin:${PATH:-}"
+    export PATH
+}
+_harden_known_doors
 _scrub_git_config_env
 unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_PREFIX 2>/dev/null || true
 # The private empty global/system configuration set above is RETAINED — scrubbing the injection
@@ -660,6 +694,24 @@ check CONTROL P3-provenance "$( printf '%s' "$SUBJECT_OID" | $GREP -qE '^[0-9a-f
       [ "$_odb_type" = "commit" ] && [ -n "$_tree_expected" ] && [ -n "$_tree_actual" ] && \
       [ "$_tree_expected" = "$_tree_actual" ] && echo 0 || echo 1 )" \
       "subject provenance is CONSISTENT (not independent): '$SUBJECT_OID' is an exact 40-hex oid of odb type '${_odb_type:-<none>}', and the archived tree matches that commit's tree over all ${_tree_n} blob paths (${_tree_actual:0:12}…)"
+
+# THE FIVE IDENTITY FACTS, RESTORED. THEY WERE SILENTLY REMOVED AND THAT WAS A DEFECT.
+#
+# John's requirement is that EVERY RESULT print the harness hash, the sanitized repository path,
+# the requested subject, the resolved SUBJECT_SHA and the pre-repair reference, SEPARATELY. The
+# `d1fa16f` edit deleted this call site — `SUBJECT IDENTITY` went 1 -> 0 and `identity_block`
+# 3 -> 2 — and the report of that commit did not mention it.
+#
+# **ACCIDENTAL, and the mechanism is worth recording rather than excusing.** The edit replaced a
+# region of this file computed as "from the sentinel assignment up to the next blank line after
+# the control's description". Two lines — `hdr "SUBJECT IDENTITY"` and `identity_block` — sat
+# between the end of that control and the next blank line, so the slice consumed them too. It
+# went unnoticed because the edit was verified by checking that the NEW control behaved, not by
+# reading what the replacement had swallowed. **D-065(3) names a silently removed requirement as
+# in scope regardless of threat model, and it is right to: the harness went on printing a
+# complete-looking result with one of its five required facts missing from the header.**
+hdr "SUBJECT IDENTITY"
+identity_block
 
 for h in "$H58" "$H59" "$H56" "$H571" "$H6" "$H72"; do
     n="$($GREP -c -x -F -- "$h" "$P0/$PROP_REL")"

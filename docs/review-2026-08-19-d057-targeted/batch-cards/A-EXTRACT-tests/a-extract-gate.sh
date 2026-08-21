@@ -211,6 +211,37 @@ _neutralise_object_replacement() {
     export GIT_NO_REPLACE_OBJECTS=1
 }
 _neutralise_object_replacement
+
+# --- KNOWN-DOOR HARDENING UNDER D-065(2). THE LIST IS NOT CLAIMED COMPLETE. -----
+#
+# **D-065(1) sets the bar: this instrument must measure faithfully under a NON-ADVERSARIAL
+# environment. A caller who can set arbitrary git environment variables can equally edit this
+# file, so that class is OUT OF SCOPE and a newly named caller-controlled variable is not by
+# itself a defect.** The variables handled here are handled because they are KNOWN and the cost
+# is one line each — **that is hardening, not a claim that the environment is exhaustively
+# controlled, and nothing here should be read as such a claim.**
+#
+# `GIT_TEMPLATE_DIR` earns its line: `git init` and `git clone` copy a caller-supplied template's
+# `config` **and `hooks/`** into every repository this harness creates, which is precisely the
+# repository-local configuration layer the `GIT_CONFIG_*` scrub exists to keep the caller out of.
+# An independent review measured it rewriting a consumer in 16 subject repositories while this
+# harness's own witness log recorded the tampered bytes executing 16 times and the run printed
+# `CONTROL : 74 of 74 held`.
+#
+# `PATH` is PINNED BY PRECEDENCE, not by replacement: the system directories are prepended so
+# `git`, `awk`, `sed`, `find`, `paste`, `sort`, `shasum`, `tar` and `python3` resolve there
+# whatever a caller put in front of them, while the caller's remaining PATH is retained after
+# them. **Stated precisely because the difference matters:** replacing PATH outright would have
+# broken `forge`, which the sibling gate harness requires and which does not live in a system
+# directory on this machine — so this raises the bar for shadowing a system tool and does NOT
+# claim the tool search path is exhaustively controlled. `/usr/bin/grep` remains absolute, which
+# is stronger than either.
+_harden_known_doors() {
+    unset GIT_TEMPLATE_DIR 2>/dev/null || true
+    PATH="/usr/bin:/bin:/usr/sbin:/sbin:${PATH:-}"
+    export PATH
+}
+_harden_known_doors
 _scrub_git_config_env
 unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_PREFIX 2>/dev/null || true
 
@@ -262,22 +293,44 @@ if ! printf '%s' "$SUBJECT_OID" | $GREP -qE '^[0-9a-f]{40}$'; then
                      Branches, tags, HEAD, refs/…, revision expressions and abbreviated ids are
                      REFUSED — names are not accepted at all."
 fi
-_odb_type="$( cd "$ROOT" && git cat-file --batch-all-objects --batch-check='%(objectname) %(objecttype)' 2>/dev/null \
+_odb_type="$( cd "$ROOT" && git --no-replace-objects cat-file --batch-all-objects --batch-check='%(objectname) %(objecttype)' 2>/dev/null \
               | $GREP -m1 -E "^${SUBJECT_OID} " | awk '{print $2}' )"
 [ -n "$_odb_type" ] || die "object $SUBJECT_OID is not present in $(sanitize_path "$ROOT")'s object database."
 [ "$_odb_type" = "commit" ] || die "object $SUBJECT_OID exists but is a '$_odb_type', not a commit."
 SUBJECT_SHA="$SUBJECT_OID"
 
 BASECOPY="$WORK/gate-base"
-git clone -q --no-hardlinks --local "$ROOT" "$BASECOPY" 2>/dev/null || die "cannot clone the repository"
-( cd "$BASECOPY" && git checkout -q "$SUBJECT_SHA" ) || die "cannot check out $SUBJECT_SHA in the clone"
+git --no-replace-objects clone -q --no-hardlinks --local "$ROOT" "$BASECOPY" 2>/dev/null || die "cannot clone the repository"
+( cd "$BASECOPY" && git --no-replace-objects checkout -q "$SUBJECT_SHA" ) || die "cannot check out $SUBJECT_SHA in the clone"
 # A SUBJECT-PROVENANCE CONSISTENCY CONTROL — NOT an independence proof. The claim that two git
 # commands are independent is withdrawn (R2): they share git's object resolver. What is asserted
 # is that the clone is standing on the exact oid that was supplied.
-_clone_head="$( cd "$BASECOPY" && git rev-parse HEAD 2>/dev/null )" || _clone_head=""
+_clone_head="$( cd "$BASECOPY" && git --no-replace-objects rev-parse HEAD 2>/dev/null )" || _clone_head=""
+# THE CONTROL VERIFIES THE WORKTREE, NOT MERELY WHAT `HEAD` SAYS — `F2-4`.
+#
+# This harness pinned `--no-replace-objects` on ZERO commands and was protected only by the
+# accident that clone's default refspec does not fetch `refs/replace`. **Protection by accident
+# is not protection.** An independent review measured `GIT_REPLACE_REF_BASE=refs/remotes/origin/`
+# giving the clone a worktree of another commit's tree — 533 tracked paths against 500 — while
+# `rev-parse HEAD` still returned the requested oid, so a HEAD-only control passed.
+#
+# **A CORRECTION TO `INSTRUMENT-REVIEW-3` FOR THE RECORD, made here because that document is
+# history and is not edited:** it recorded `rev-parse HEAD` returning the replacement target. On
+# git 2.50.1 it does not — HEAD returns the requested oid and it is the WORKTREE that moves. The
+# fourth review's measurement is the correct one, and it is why this control now compares trees.
+_gate_tree_expected="$( cd "$ROOT" && git --no-replace-objects ls-tree -r --full-tree "$SUBJECT_SHA" 2>/dev/null \
+        | awk '$2=="blob"{print $4"\t"$3}' | LC_ALL=C sort | shasum -a 256 | awk '{print $1}' )"
+_gate_paths="$WORK/.gate-paths"; _gate_hashes="$WORK/.gate-hashes"
+_gate_tree_actual="$( cd "$BASECOPY" 2>/dev/null && \
+        git --no-replace-objects ls-files -s 2>/dev/null | awk '$1!="160000"{sub(/^[^\t]*\t/,""); print}' \
+          | LC_ALL=C sort > "$_gate_paths" && \
+        git hash-object --stdin-paths < "$_gate_paths" > "$_gate_hashes" 2>/dev/null && \
+        paste "$_gate_paths" "$_gate_hashes" | shasum -a 256 | awk '{print $1}' )"
+_gate_n="$($GREP -c . "$_gate_paths" 2>/dev/null || echo 0)"
 check CONTROL P3-provenance "$([ "$_clone_head" = "$SUBJECT_SHA" ] && [ "${#SUBJECT_SHA}" = "40" ] && \
-      [ "$_odb_type" = "commit" ] && echo 0 || echo 1)" \
-      "subject provenance is CONSISTENT (not independent): '$SUBJECT_OID' is an exact 40-hex oid of type '${_odb_type:-<none>}' and the clone is checked out at it"
+      [ "$_odb_type" = "commit" ] && [ -n "$_gate_tree_expected" ] && [ -n "$_gate_tree_actual" ] && \
+      [ "$_gate_tree_expected" = "$_gate_tree_actual" ] && echo 0 || echo 1)" \
+      "subject provenance is CONSISTENT (not independent): '$SUBJECT_OID' is an exact 40-hex oid of type '${_odb_type:-<none>}', HEAD is at it, and the clone's WORKTREE matches that commit's tree over ${_gate_n} tracked blob paths — expected ${_gate_tree_expected:0:12}…, worktree ${_gate_tree_actual:0:12}…"
 cp -R "$ROOT/ts/node_modules" "$BASECOPY/ts/node_modules" || die "cannot stage node_modules"
 for m in forge-std openzeppelin-contracts; do
     rm -rf "$BASECOPY/contracts/lib/$m"
@@ -400,7 +453,7 @@ dirty="$(cd "$ROOT" && git status --porcelain -- "$PROP_REL" scripts ts contract
 check CONTROL Z-clean "$([ "$dirty" = "0" ] && echo 0 || echo 1)" \
       "the repository under test was not modified by this run ($dirty changed path(s) in the production boundary)"
 s2_now="$(shasum -a 256 "$ROOT/docs/gate-s2-evidence.md" | awk '{print $1}')"
-s2_base="$(cd "$ROOT" && git show "$PRE_REPAIR_SHA:docs/gate-s2-evidence.md" | shasum -a 256 | awk '{print $1}')"
+s2_base="$(cd "$ROOT" && git --no-replace-objects show "$PRE_REPAIR_SHA:docs/gate-s2-evidence.md" | shasum -a 256 | awk '{print $1}')"
 check CONTROL Z-signed "$([ "$s2_now" = "$s2_base" ] && echo 0 || echo 1)" \
       "docs/gate-s2-evidence.md IN THE LIVE TREE is byte-identical to PRE_REPAIR_SHA — no signed document was read for change"
 

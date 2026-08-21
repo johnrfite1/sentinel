@@ -7,7 +7,7 @@
 > and is NOT general prose-consistency evidence."* — D-059(7)
 
 **Harness:** `a-extract-gate.sh`, sha256
-`9fd5790e9d445d2104251ab08a7e682e1ee315837e0903b9588f82fad9676e25`.
+`b1d8d4d287d67045cb892e048788edcbbb171b07ea4ce36c2ddfdec24680f296`.
 **Subject:** a private `git clone` of this repository checked out at
 `bb664c626d592d86391f644bf014e76f2bbf7db4`, with `ts/node_modules` and both submodule working
 trees copied in. **The live gate is never run, never edited, and never written to.** No signed or
@@ -48,6 +48,38 @@ mutation evidence is sufficient.** If the candidate SHA changes the control flow
 sufficiency lapses and the deep mutation runs become required.
 
 ---
+
+## RE-MEASURED AGAIN AFTER THE FOURTH REVIEW — `F2-4` AND THE D-065 HARDENING
+
+**Measured on the committed file, which recorded its own sha256 during the run:**
+
+```
+a-extract-gate.sh . bb664c626d592d86391f644bf014e76f2bbf7db4
+gate harness sha256 b1d8d4d287d67045cb892e048788edcbbb171b07ea4ce36c2ddfdec24680f296
+
+  REQUIRED : 7 of 7 held
+  CONTROL  : 10 of 10 held
+  exit 0
+```
+
+| Case | Kind | Verdict |
+|---|:--:|:--:|
+| `P3-provenance` | CONTROL | **PASS** — now verifies the clone's **WORKTREE** against the subject's tree, not just `HEAD` |
+| `G1` | REQUIRED | **PASS** — unchanged gate prints `GATE PASSED` (rc=0) |
+| `G1-stages`, `G1-order`, `G1-green` | CONTROL | PASS |
+| `G2-mut`, `G2-scope` | CONTROL | PASS |
+| `G2-named`, `G2-gate`, `G2-unmasked` | REQUIRED | **PASS** (rc=5) |
+| `G3-mut`, `G3-scope` | CONTROL | PASS |
+| `G3-named`, `G3-gate`, `G3-unmasked` | REQUIRED | **PASS** (rc=5) |
+| `Z-clean`, `Z-signed` | CONTROL | PASS |
+
+**Subject:** `bb664c626d592d86391f644bf014e76f2bbf7db4`, because `G1` requires the UNCHANGED gate to
+pass and HEAD is deliberately red (`cefc135` applied `TESTS.patch` and ratcheted the verifier
+floor). The exact-oid interface makes that choice explicit in the run's own identity block.
+
+**What changed in this harness since the previous measurement:** `--no-replace-objects` pinned on
+all 7 git commands (it was **0**); `P3-provenance` widened from a `HEAD` check to a whole-worktree
+tree comparison; `GIT_TEMPLATE_DIR` unset and `PATH` pinned by precedence under D-065(2).
 
 ## RE-MEASURED ON THE CURRENT FILE, AT A SUBJECT WHERE THE GATE IS GREEN
 
@@ -142,7 +174,7 @@ resolution wiring changed, and that is stated rather than glossed.**
 The earlier `7 of 7` / `9 of 9` figure was produced by the revision of `a-extract-gate.sh`
 immediately prior to the subject-selection correction, which checked out `bb664c6` from a
 hardcoded constant. **That revision's evidence is superseded here.** The corrected revision,
-sha256 `9fd5790e9d445d2104251ab08a7e682e1ee315837e0903b9588f82fad9676e25`, was re-run end to end
+sha256 `b1d8d4d287d67045cb892e048788edcbbb171b07ea4ce36c2ddfdec24680f296`, was re-run end to end
 through the new interface:
 
 ```

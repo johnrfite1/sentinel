@@ -25,6 +25,46 @@ already identifies frozen attempt-two evidence.
 or by the commit that carries it. `TESTS.patch` is supplied as a patch file and is **NOT
 applied**.
 
+## D-065 DECLARES THE THREAT MODEL, AND A FOURTH REVIEW'S THREE ITEMS
+
+**Four independent instrument reviews returned FAIL, FAIL, HOLD-with-residual and FAIL, and each
+cycle closed one caller-controlled door while the next found another** — `GIT_CONFIG_*`, then
+`refs/replace`, then `GIT_REPLACE_REF_BASE`, then `GIT_TEMPLATE_DIR`, with `PATH` named as next.
+**John ruled the regress unbounded by construction and declared the bar (D-065).**
+
+| | |
+|---|---|
+| **The bar** | the instrument must measure faithfully under a **NON-ADVERSARIAL** environment. A caller who can set arbitrary git environment variables **can equally edit this harness**, so that class is **out of scope** and a newly named variable is not by itself a defect |
+| **Known doors** | scrubbed as **cheap hardening, one line each — NOT a completeness claim** |
+| **Still in scope, the larger half** | a control that cannot fail; a comparison whose expected and actual sides move together; a counter that does not count; a snapshot that does not correspond to the requested commit under ordinary conditions; **a stated requirement silently removed**; a published figure that was never measured |
+
+**The reviewers were not wrong — the specification was silent.** D-065(5) reverses the bar if this
+harness is ever run where the caller is not the operator.
+
+### The three items, and one of them is mine
+
+**1 — Hardening (D-065(2), no completeness claimed).** `GIT_TEMPLATE_DIR` is unset and `PATH` is
+pinned by precedence in both harnesses. The template door is real: `git init` and `git clone` copy
+a caller-supplied template's `config` **and `hooks/`** into every repository the harness creates —
+the very repository-local layer the `GIT_CONFIG_*` scrub exists to keep the caller out of.
+**Paired control:** with hardening removed, a subject repository received the template's
+`hooks/pre-commit` and `core.fsmonitor=/bin/echo`; with it present, both absent.
+
+**2 — `F2-4`, in scope: the gate harness was structurally blind to replacement.** It pinned
+`--no-replace-objects` on **zero** commands and was protected only by the accident that clone's
+refspec skips `refs/replace`. **Protection by accident is not protection.** It now pins on every
+command, and `P3-provenance` verifies the clone's **WORKTREE** against the subject's tree rather
+than trusting what `HEAD` reports.
+
+**3 — A STATED REQUIREMENT SILENTLY REMOVED, AND IT WAS MINE.** The `d1fa16f` edit deleted the
+`SUBJECT IDENTITY` header and its `identity_block` call — `1 → 0` and `3 → 2` — so runs stopped
+printing the five identity facts John required, **and my report of that commit did not mention
+it.** Restored. **It was accidental, and the mechanism is recorded in the file rather than
+excused:** the edit replaced a text region bounded by "the next blank line after the control's
+description", and two lines sat inside that boundary. It went unnoticed because I verified the new
+control behaved rather than reading what the replacement had swallowed. **Under D-065(3) this is
+in scope regardless of threat model, and it is the class this project treats most seriously.**
+
 ## A THIRD REVIEW: OBJECT REPLACEMENT, A WEAK SENTINEL, AND A SELF-MASKING HARNESS
 
 **VERDICT: FAIL** (`INSTRUMENT-REVIEW-3.md`; that document and the two before it are the

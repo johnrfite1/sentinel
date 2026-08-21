@@ -7,15 +7,15 @@
 docs/review-2026-08-19-d057-targeted/batch-cards/A-EXTRACT-tests/a-extract.sh . bb664c626d592d86391f644bf014e76f2bbf7db4
 ```
 
-**Harness sha256:** `17d200d172f4a428379d6b60b6af5e62048f8eed3966fc106815cdb9ac856220` (`a-extract.sh`; printed by the harness itself).
-**Gate harness sha256:** `9fd5790e9d445d2104251ab08a7e682e1ee315837e0903b9588f82fad9676e25` (`a-extract-gate.sh`; see `GATE-BINDING.md`).
+**Harness sha256:** `2095c27732e05e40d3f574eddfb7a61ef1ed86c0913f6ba1b016ae9c264507df` (`a-extract.sh`; printed by the harness itself).
+**Gate harness sha256:** `b1d8d4d287d67045cb892e048788edcbbb171b07ea4ce36c2ddfdec24680f296` (`a-extract-gate.sh`; see `GATE-BINDING.md`).
 **Environment:** git 2.50.1 (Apple Git-155); bash 3.2.57; Python 3.9.6; node v26.3.0;
 `/usr/bin/grep` with a matched canary.
 
 **The five identity facts the run printed, twice — before any case and again in the summary:**
 
 ```
-  harness sha256   : 17d200d172f4a428379d6b60b6af5e62048f8eed3966fc106815cdb9ac856220
+  harness sha256   : 2095c27732e05e40d3f574eddfb7a61ef1ed86c0913f6ba1b016ae9c264507df
   repository       : ~/Projects/Sentinel
   requested subject: bb664c626d592d86391f644bf014e76f2bbf7db4
   resolved subject : bb664c626d592d86391f644bf014e76f2bbf7db4
@@ -28,6 +28,80 @@ docs/review-2026-08-19-d057-targeted/batch-cards/A-EXTRACT-tests/a-extract.sh . 
   REQUIRED : 21 of 52 held      (31 REQUIRED failures)
   CONTROL  : 74 of 74 held      (0 control failures)
   exit 1   — REQUIRED FAILURES with every control holding: the defects are observed.
+```
+
+## 0-D065. The threat model, the fourth review, and a requirement I removed without saying so
+
+**D-065 declares the bar: faithful measurement under a NON-ADVERSARIAL environment.** A caller who
+can set arbitrary git environment variables can equally edit the harness, so that class is out of
+scope; known doors are scrubbed as **hardening, not a completeness claim**. What stays in scope is
+the larger half — controls that cannot fail, sides that move together, counters that do not count,
+snapshots that do not correspond to the requested commit, **requirements silently removed**, and
+figures never measured.
+
+### The item that was mine: the identity block was silently removed
+
+**John's requirement is that every result print five facts separately** — harness hash, sanitized
+repository path, requested subject, resolved `SUBJECT_SHA`, pre-repair reference. Between
+`a9059dc` and `d1fa16f` the `SUBJECT IDENTITY` header went **1 → 0** and `identity_block`
+**3 → 2**. Verified against both commits, counting call sites rather than raw text:
+
+```
+a9059dc   hdr-call=1  identity_block(def+calls)=3
+d1fa16f   hdr-call=0  identity_block(def+calls)=2      <- the requirement stopped being met
+restored  hdr-call=1  identity_block(def+calls)=3
+```
+
+**Was it deliberate? No — it was accidental, and the mechanism is exact.** The `d1fa16f` edit
+replaced a region computed as *from the sentinel assignment to the next blank line after the
+control's description*. Two lines — `hdr "SUBJECT IDENTITY"` and `identity_block` — sat between
+the end of that control and the next blank line, so the slice consumed them along with the block
+it was meant to replace.
+
+**Why it went unreported is the part worth keeping:** I verified that the NEW control behaved, and
+never read what the replacement had swallowed. A boundary computed by searching for the next blank
+line is only as good as the assumption that nothing else lives inside it, and I did not check.
+**Under D-065(3) a silently removed requirement is in scope regardless of threat model** — the
+harness went on printing a complete-looking result with one of its five required facts missing
+from the header. Restored, with the mechanism recorded in the file itself.
+
+### Hardening applied under D-065(2) — not a completeness claim
+
+`GIT_TEMPLATE_DIR` unset and `PATH` pinned by precedence, in both harnesses. Paired control on the
+template door:
+
+| | subject `.git/hooks/pre-commit` | subject `core.fsmonitor` |
+|---|---|---|
+| hardening removed | **PRESENT** | `/bin/echo` |
+| hardening present | absent | unset |
+
+`PATH` is prepended, not replaced: a shadowing `git` is outranked while `forge` — needed by the
+gate harness and not in a system directory here — is still found. Stated as hardening; **no claim
+that the environment is exhaustively controlled**, and two sentences in these files that did imply
+that have been corrected.
+
+### `F2-4` — the gate harness pinned replacement on zero commands
+
+Now pinned on all 7, with `P3-provenance` verifying the clone's **WORKTREE** rather than `HEAD`.
+Paired control with `GIT_REPLACE_REF_BASE=refs/remotes/origin/`:
+
+| | expected | worktree | verdict |
+|---|---|---|---|
+| pins present | `d0a672e8…` | `d0a672e8…` | **PASS** |
+| pins removed | `d8fa9431…` | `d0a672e8…` | **FAIL** |
+
+**Correction to `INSTRUMENT-REVIEW-3`, recorded here because that record is history and is not
+edited:** it stated `rev-parse HEAD` returns the replacement target; on git 2.50.1 it does not —
+HEAD returns the requested oid and the WORKTREE moves. The fourth review's measurement is correct.
+
+**Correction to my own earlier count:** `a-extract.sh` pins on **2** commands, not 3; the third
+occurrence there is a comment.
+
+### Malformed-verdict counter, re-confirmed in BOTH harnesses
+
+```
+a-extract.sh        EMPTY-VERDICT FAIL + PLAIN-FAIL FAIL -> ctl_fail=2 -> COUNTED
+a-extract-gate.sh   EMPTY-VERDICT FAIL + PLAIN-FAIL FAIL -> ctl_fail=2 -> COUNTED
 ```
 
 ## 0-REPL. Object replacement, the one-blob sentinel, and a self-masking counter — third review, VERDICT FAIL
