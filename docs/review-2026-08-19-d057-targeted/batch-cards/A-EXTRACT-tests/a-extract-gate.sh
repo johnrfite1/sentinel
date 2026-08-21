@@ -199,9 +199,81 @@ for t in git node python3; do command -v "$t" >/dev/null 2>&1 || die "$t is requ
 command -v forge >/dev/null 2>&1 || die "forge is required — the gate's solidity stage cannot run without it"
 [ -n "$ROOT" ] || die "the repository path '$ROOT_ARG' does not exist or is not a directory"
 [ -d "$ROOT/.git" ] || die "$(sanitize_path "$ROOT") is not a git repository"
-SUBJECT_SHA="$(cd "$ROOT" && git rev-parse --verify --quiet "${SUBJECT_REF}^{commit}" 2>/dev/null)" || SUBJECT_SHA=""
+# SUBJECT RESOLUTION IS FAIL-CLOSED, AND `--verify` IS **NOT** WHAT MAKES IT SO.
+#
+# Same correction as `a-extract.sh`, for the same measured reason: on git 2.50.1
+# `git rev-parse --verify 'ambig^{commit}'` with a branch AND a tag named `ambig` returns the
+# TAG's commit, exit 0, warning on stderr. `--verify` guarantees one OBJECT NAME, not one REF.
+# `--quiet` then suppressed the warning and `2>/dev/null` discarded it.
+#
+# TWO INDEPENDENT MECHANISMS, each catching a case the other misses:
+#   1. ENUMERATION — count the refs the name could denote (catches branch+tag).
+#   2. STDERR — no `--quiet`, keep stderr, refuse on any ambiguity warning (catches a branch
+#      named like an abbreviated object id, which enumeration alone sees as a single ref).
+_ref_candidates() {
+    printf '%s\n' "$1" "refs/$1" "refs/tags/$1" "refs/heads/$1" "refs/remotes/$1" "refs/remotes/$1/HEAD"
+}
+_matching_refs() {
+    local c
+    while IFS= read -r c; do
+        [ -n "$c" ] || continue
+        if ( cd "$ROOT" && git show-ref --verify --quiet -- "$c" 2>/dev/null ); then printf '%s\n' "$c"; fi
+    done <<CANDIDATES
+$(_ref_candidates "$1")
+CANDIDATES
+}
+_peel_to_commit() {
+    local oid t i
+    oid="$1"; i=0
+    while [ "$i" -lt 8 ]; do
+        t="$( cd "$ROOT" && git cat-file -t "$oid" 2>/dev/null )" || return 1
+        case "$t" in
+            commit) printf '%s' "$oid"; return 0 ;;
+            tag)    oid="$( cd "$ROOT" && git cat-file tag "$oid" 2>/dev/null | awk '/^object /{print $2; exit}' )"
+                    [ -n "$oid" ] || return 1 ;;
+            *)      return 1 ;;
+        esac
+        i=$((i + 1))
+    done
+    return 1
+}
+_independent_subject_sha() {  # never calls rev-parse; declines to choose when ambiguous
+    local hits n oid
+    hits="$(_matching_refs "$SUBJECT_REF")"
+    n="$(printf '%s' "$hits" | $GREP -c . )" || n=0
+    if [ "$n" = "1" ]; then
+        oid="$( cd "$ROOT" && git show-ref --verify -- "$hits" 2>/dev/null | awk '{print $1; exit}' )"
+    elif [ "$n" = "0" ]; then
+        oid="$( cd "$ROOT" && printf '%s\n' "$SUBJECT_REF" | git cat-file --batch-check 2>/dev/null \
+                 | awk '$2 != "missing" && $2 != "ambiguous" {print $1; exit}' )"
+    else
+        return 1
+    fi
+    [ -n "$oid" ] || return 1
+    _peel_to_commit "$oid"
+}
+
+_ref_hits="$(_matching_refs "$SUBJECT_REF")"
+_ref_n="$(printf '%s' "$_ref_hits" | $GREP -c . )" || _ref_n=0
+if [ "$_ref_n" -gt 1 ]; then
+    die "subject ref '$SUBJECT_REF' is AMBIGUOUS in $(sanitize_path "$ROOT") — it names ${_ref_n} refs:
+$(printf '%s\n' "$_ref_hits" | sed 's/^/                       /')
+                     git would silently prefer one and warn on stderr. This harness refuses."
+fi
+
+_rev_err_file="$WORK/.rev-parse-stderr"
+SUBJECT_SHA="$( cd "$ROOT" && git rev-parse --verify "${SUBJECT_REF}^{commit}" 2>"$_rev_err_file" )" || SUBJECT_SHA=""
+_rev_err="$(head -3 "$_rev_err_file" 2>/dev/null)"
+rm -f "$_rev_err_file"
+
+if printf '%s' "$_rev_err" | $GREP -qi 'ambiguous'; then
+    die "subject ref '$SUBJECT_REF' is AMBIGUOUS in $(sanitize_path "$ROOT").
+                     git said: ${_rev_err}
+                     git resolved it anyway, to ${SUBJECT_SHA:-<none>}, by its own precedence
+                     order. This harness refuses rather than inherit that choice."
+fi
+
 if [ -z "$SUBJECT_SHA" ]; then
-    _rev_err="$(cd "$ROOT" && git rev-parse --verify "${SUBJECT_REF}^{commit}" 2>&1 >/dev/null | head -3)"
     die "cannot resolve subject ref '$SUBJECT_REF' to exactly one commit in $(sanitize_path "$ROOT").
                      git said: ${_rev_err:-(no diagnostic)}
                      Missing, ambiguous, or not-a-commit is a REFUSAL here, never a fallback."
@@ -222,8 +294,10 @@ git clone -q --no-hardlinks --local "$ROOT" "$BASECOPY" 2>/dev/null || die "cann
 # P3 IS A CONTROL: the clone is standing on the commit the caller NAMED, not on whatever the
 # source repository happened to have checked out and not on a constant compiled into this file.
 _clone_head="$(cd "$BASECOPY" && git rev-parse HEAD 2>/dev/null)" || _clone_head=""
-check CONTROL P3-subject "$([ "$_clone_head" = "$SUBJECT_SHA" ] && [ "${#SUBJECT_SHA}" = "40" ] && echo 0 || echo 1)" \
-      "the requested ref '$SUBJECT_REF' resolved to SUBJECT_SHA $SUBJECT_SHA and the clone is checked out at it"
+SUBJECT_SHA_INDEP="$(_independent_subject_sha)" || SUBJECT_SHA_INDEP=""
+check CONTROL P3-subject "$([ "$_clone_head" = "$SUBJECT_SHA" ] && [ "${#SUBJECT_SHA}" = "40" ] && \
+      [ -n "$SUBJECT_SHA_INDEP" ] && [ "$SUBJECT_SHA_INDEP" = "$SUBJECT_SHA" ] && echo 0 || echo 1)" \
+      "'$SUBJECT_REF' resolves identically by TWO independent routes (rev-parse=${SUBJECT_SHA:-<none>}, show-ref+cat-file=${SUBJECT_SHA_INDEP:-<none>}) and the clone is checked out at it"
 cp -R "$ROOT/ts/node_modules" "$BASECOPY/ts/node_modules" || die "cannot stage node_modules"
 for m in forge-std openzeppelin-contracts; do
     rm -rf "$BASECOPY/contracts/lib/$m"

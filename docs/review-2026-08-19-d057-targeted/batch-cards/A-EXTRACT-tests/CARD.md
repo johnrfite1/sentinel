@@ -25,6 +25,37 @@ already identifies frozen attempt-two evidence.
 or by the commit that carries it. `TESTS.patch` is supplied as a patch file and is **NOT
 applied**.
 
+## A SECOND INSTRUMENT DEFECT, FOUND BY INDEPENDENT REVIEW — VERDICT FAIL, now corrected
+
+**An independent instrument review of the corrected harness returned VERDICT: FAIL**
+(`INSTRUMENT-REVIEW.md`, committed at `7e4e5c0`; that document is the reviewer's record and is
+not edited here). John ruled: fix and re-verify inside this same instrument checkpoint. **Still
+an instrument correction, still not an implementation attempt.**
+
+**The finding, reproduced independently before fixing anything.** The subject-resolution fix
+rested on a false premise stated in the harness's own comment: that
+`git rev-parse --verify <ref>^{commit}` refuses an ambiguous ref. **It does not.** On git 2.50.1
+with a branch and a tag both named `ambig`, it returns the **tag's** commit, exit 0, with only a
+warning on stderr — and the harness suppressed that warning with `--quiet` and discarded it again
+with `2>/dev/null`. **A full 126-verdict measurement of the wrong commit completed on the
+ordinary path with all 74 controls green and `P3` reporting PASS.**
+
+**Three defects, all three corrected:**
+
+1. **The ambiguity fail-open.** Now caught by **two independent mechanisms** — enumerate the refs
+   the name could denote and refuse if more than one exists; and keep `rev-parse`'s stderr and
+   refuse on any ambiguity warning. **Each catches a case the other misses**, measured: a branch
+   named like an abbreviated object id is a single ref, so enumeration alone sees nothing, and
+   only the stderr mechanism catches it. Refusal is a preflight instrument failure — exit 2,
+   **zero scored verdicts**.
+2. **`P3` was unfalsifiable by construction** — it re-ran the identical command and compared the
+   answer to itself. It now compares two routes that can disagree, and **route B declines to
+   choose when a name is ambiguous rather than tie-breaking**. Demonstrated failing.
+3. **The false claim in the comment** is replaced by what `--verify` actually guarantees: one
+   object name, not one ref.
+
+Full interface and the measured mechanism table are in `COVERAGE.md` §0.
+
 ## AN INSTRUMENT DEFECT FOUND IN JOHN'S REVIEW — corrected, and NOT an implementation attempt
 
 **John reviewed this contract and found a BLOCKING defect in the harness itself.** It is recorded

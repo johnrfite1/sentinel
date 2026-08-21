@@ -431,32 +431,136 @@ check OBSERVED P2 0 "$GIT_V ; bash ${BASH_V#version } ; $(python3 --version 2>&1
 [ -n "$ROOT" ] || die "the repository path '$ROOT_ARG' does not exist or is not a directory"
 [ -d "$ROOT/.git" ] || die "$(sanitize_path "$ROOT") is not a git repository"
 
-# SUBJECT RESOLUTION IS FAIL-CLOSED, AND `--verify … ^{commit}` IS THE WHOLE POINT.
+# SUBJECT RESOLUTION IS FAIL-CLOSED, AND `--verify` IS **NOT** WHAT MAKES IT SO.
 #
-#   * `--verify` refuses an AMBIGUOUS ref — an abbreviated SHA matching two objects, a branch
-#     and a tag of the same name — instead of silently choosing one. A first-match tie-break in
-#     the instrument that exists to falsify first-match tie-breaks would be indefensible.
-#   * `^{commit}` refuses a ref that resolves to a tree, a blob or an unpeelable tag, so
-#     "resolved" cannot mean "resolved to something that is not a commit".
-#   * git's own diagnostic is captured and printed, because "could not resolve" without saying
-#     WHY is the shape of message this project keeps finding and correcting.
-_rev_err=""
-SUBJECT_SHA="$(cd "$ROOT" && git rev-parse --verify --quiet "${SUBJECT_REF}^{commit}" 2>/dev/null)" || SUBJECT_SHA=""
-if [ -z "$SUBJECT_SHA" ]; then
-    _rev_err="$(cd "$ROOT" && git rev-parse --verify "${SUBJECT_REF}^{commit}" 2>&1 >/dev/null | head -3)"
-    die "cannot resolve subject ref '$SUBJECT_REF' to exactly one commit in $(sanitize_path "$ROOT").
-                     git said: ${_rev_err:-(no diagnostic)}
-                     A ref that is missing, ambiguous, or not a commit is a REFUSAL here, never a fallback."
+# **CORRECTING A FALSE CLAIM THAT STOOD IN THIS FILE.** The previous comment here said
+# `--verify` "refuses an AMBIGUOUS ref — a branch and a tag of the same name — instead of
+# silently choosing one." **That is false, and an independent instrument review measured it
+# false on git 2.50.1:**
+#
+#     $ git rev-parse --verify 'ambig^{commit}'
+#     warning: refname 'ambig' is ambiguous.
+#     f1c0fdd…                                   <- the TAG, silently preferred
+#     exit 0
+#
+# `--verify` guarantees ONE OBJECT NAME, not one REF. It does refuse an ambiguous abbreviated
+# OBJECT id (`fatal: Needed a single revision`); it does NOT refuse an ambiguous REFNAME — it
+# applies the gitrevisions precedence order and warns on stderr. The old code then compounded
+# it twice: `--quiet` suppressed the warning, and `2>/dev/null` discarded what was left. The
+# harness measured the wrong commit through the ordinary path with every control green.
+#
+# **TWO INDEPENDENT MECHANISMS NOW, AND NEITHER IS A SINGLE POINT OF FAILURE — measured, because
+# each one catches a case the other misses:**
+#
+#   MECHANISM 1, ENUMERATION. Count the refs the name could denote, in git's own search order.
+#       branch `ambig` + tag `ambig`      -> 2 refs  -> CAUGHT
+#       branch named `bb664c6`            -> 1 ref   -> MISSED by this mechanism
+#   MECHANISM 2, STDERR. Run rev-parse WITHOUT `--quiet`, keep stderr, refuse on any ambiguity
+#   warning.
+#       branch `ambig` + tag `ambig`      -> warns   -> CAUGHT
+#       branch named `bb664c6`            -> warns   -> CAUGHT, and only here
+#
+# A refusal is a PREFLIGHT INSTRUMENT FAILURE: exit 2, and not one scored verdict emitted.
+
+_ref_candidates() {  # NAME -> the full ref paths git would search, in gitrevisions order
+    printf '%s\n' "$1" "refs/$1" "refs/tags/$1" "refs/heads/$1" "refs/remotes/$1" "refs/remotes/$1/HEAD"
+}
+
+_matching_refs() {  # NAME -> every candidate that actually exists, one per line
+    local c
+    while IFS= read -r c; do
+        [ -n "$c" ] || continue
+        if ( cd "$ROOT" && git show-ref --verify --quiet -- "$c" 2>/dev/null ); then printf '%s\n' "$c"; fi
+    done <<CANDIDATES
+$(_ref_candidates "$1")
+CANDIDATES
+}
+
+_peel_to_commit() {  # OID -> the commit it names, using cat-file ONLY (no rev-parse)
+    local oid t i
+    oid="$1"; i=0
+    while [ "$i" -lt 8 ]; do
+        t="$( cd "$ROOT" && git cat-file -t "$oid" 2>/dev/null )" || return 1
+        case "$t" in
+            commit) printf '%s' "$oid"; return 0 ;;
+            tag)    oid="$( cd "$ROOT" && git cat-file tag "$oid" 2>/dev/null | awk '/^object /{print $2; exit}' )"
+                    [ -n "$oid" ] || return 1 ;;
+            *)      return 1 ;;
+        esac
+        i=$((i + 1))
+    done
+    return 1
+}
+
+# THE INDEPENDENT ROUTE, which exists so `P3` can actually fail. It never calls `rev-parse`:
+# a name that denotes exactly one ref is read straight out of `show-ref` and peeled with
+# `cat-file`; a name that denotes no ref is resolved as an object through `cat-file
+# --batch-check`, which does not enter the ref-disambiguation path at all. **A name denoting
+# MORE THAN ONE ref returns NO ANSWER rather than tie-breaking** — declining to choose is the
+# whole point, and it is what makes `P3` catch an ambiguity even if the refusals above were
+# somehow bypassed.
+_independent_subject_sha() {
+    local hits n oid
+    hits="$(_matching_refs "$SUBJECT_REF")"
+    n="$(printf '%s' "$hits" | $GREP -c . )" || n=0
+    if [ "$n" = "1" ]; then
+        oid="$( cd "$ROOT" && git show-ref --verify -- "$hits" 2>/dev/null | awk '{print $1; exit}' )"
+    elif [ "$n" = "0" ]; then
+        oid="$( cd "$ROOT" && printf '%s\n' "$SUBJECT_REF" | git cat-file --batch-check 2>/dev/null \
+                 | awk '$2 != "missing" && $2 != "ambiguous" {print $1; exit}' )"
+    else
+        return 1
+    fi
+    [ -n "$oid" ] || return 1
+    _peel_to_commit "$oid"
+}
+
+# --- MECHANISM 1 -------------------------------------------------------------
+_ref_hits="$(_matching_refs "$SUBJECT_REF")"
+_ref_n="$(printf '%s' "$_ref_hits" | $GREP -c . )" || _ref_n=0
+if [ "$_ref_n" -gt 1 ]; then
+    die "subject ref '$SUBJECT_REF' is AMBIGUOUS in $(sanitize_path "$ROOT") — it names ${_ref_n} refs:
+$(printf '%s\n' "$_ref_hits" | sed 's/^/                       /')
+                     git would silently prefer one of these and warn on stderr. This harness
+                     refuses instead. Name the ref in full, e.g. refs/heads/$SUBJECT_REF."
 fi
 
-# P3 IS A CONTROL NOW, NOT A WARNING. Its predecessor was an OBSERVED line that could not fail,
-# beside a snapshot built from a constant — which is precisely how the instrument could have gone
-# on reporting a pre-repair number against a repaired tree. This asserts that the ref the caller
-# NAMED is the commit the run RECORDED, so every verdict below is attributable to a stated commit.
-_subject_recheck="$(cd "$ROOT" && git rev-parse --verify --quiet "${SUBJECT_REF}^{commit}" 2>/dev/null)" || _subject_recheck=""
-check CONTROL P3 "$([ -n "$SUBJECT_SHA" ] && [ "$_subject_recheck" = "$SUBJECT_SHA" ] && \
-      [ "${#SUBJECT_SHA}" = "40" ] && echo 0 || echo 1)" \
-      "the requested ref '$SUBJECT_REF' resolves to exactly one commit and that commit is the recorded SUBJECT_SHA $SUBJECT_SHA"
+# --- ROUTE A, with stderr KEPT (no --quiet, no 2>/dev/null) -------------------
+_rev_err_file="$WORK/.rev-parse-stderr"
+SUBJECT_SHA="$( cd "$ROOT" && git rev-parse --verify "${SUBJECT_REF}^{commit}" 2>"$_rev_err_file" )" || SUBJECT_SHA=""
+_rev_err="$(head -3 "$_rev_err_file" 2>/dev/null)"
+rm -f "$_rev_err_file"
+
+# --- MECHANISM 2 -------------------------------------------------------------
+if printf '%s' "$_rev_err" | $GREP -qi 'ambiguous'; then
+    die "subject ref '$SUBJECT_REF' is AMBIGUOUS in $(sanitize_path "$ROOT").
+                     git said: ${_rev_err}
+                     git resolved it anyway, to ${SUBJECT_SHA:-<none>}, by its own precedence
+                     order. This harness refuses rather than inherit that choice."
+fi
+
+if [ -z "$SUBJECT_SHA" ]; then
+    die "cannot resolve subject ref '$SUBJECT_REF' to exactly one commit in $(sanitize_path "$ROOT").
+                     git said: ${_rev_err:-(no diagnostic)}
+                     Missing, ambiguous, or not-a-commit is a REFUSAL here, never a fallback."
+fi
+
+# P3 IS A CONTROL, AND IT IS NOW FALSIFIABLE — WHICH IT PREVIOUSLY WAS NOT.
+#
+# Its previous form re-ran the IDENTICAL `rev-parse` command and compared the answer to itself.
+# That cannot fail: it could not catch the ambiguity defect above, or any other resolution
+# defect, and its remaining conjuncts were already guaranteed by the `die` above and by
+# rev-parse's own output format. An independent review named it unfalsifiable by construction
+# and was right.
+#
+# It now compares TWO ROUTES THAT CAN DISAGREE: `rev-parse --verify` against
+# `show-ref` + `cat-file`. The routes disagree, and this control FAILS, whenever the ref
+# denotes more than one ref, whenever the object cannot be peeled to a commit, and whenever
+# git's precedence order would pick something other than the single ref that exists.
+SUBJECT_SHA_INDEP="$(_independent_subject_sha)" || SUBJECT_SHA_INDEP=""
+check CONTROL P3 "$([ -n "$SUBJECT_SHA" ] && [ -n "$SUBJECT_SHA_INDEP" ] && \
+      [ "$SUBJECT_SHA" = "$SUBJECT_SHA_INDEP" ] && [ "${#SUBJECT_SHA}" = "40" ] && echo 0 || echo 1)" \
+      "'$SUBJECT_REF' resolves to the same commit by TWO independent routes — rev-parse=${SUBJECT_SHA:-<none>}, show-ref+cat-file=${SUBJECT_SHA_INDEP:-<none>}"
 
 # THE SNAPSHOT IS BUILT FROM THE SUBJECT, NEVER FROM THE HISTORICAL BASE.
 ( cd "$ROOT" && git archive --format=tar "$SUBJECT_SHA" ) > "$PRISTINE_TAR" 2>/dev/null \

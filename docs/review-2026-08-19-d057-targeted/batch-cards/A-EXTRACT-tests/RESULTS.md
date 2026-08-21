@@ -7,15 +7,15 @@
 docs/review-2026-08-19-d057-targeted/batch-cards/A-EXTRACT-tests/a-extract.sh . bb664c626d592d86391f644bf014e76f2bbf7db4
 ```
 
-**Harness sha256:** `ea661affb969eb075d84ca22400a18fa3ff2ee5966fea01e5d2c48a9be720a53` (`a-extract.sh`; printed by the harness itself).
-**Gate harness sha256:** `af66a45ebf9dfe0501e4e1743b6662392126e82cd462dcc3f3a11c1009330746` (`a-extract-gate.sh`; see `GATE-BINDING.md`).
+**Harness sha256:** `4ad1eb55de50ca23c23aa22c61f7b00c12514371c6e74c2c7206629ef7a7bb32` (`a-extract.sh`; printed by the harness itself).
+**Gate harness sha256:** `99c6d8d65fe08f5572c1ce63d6ad06a9742a2411a53ba5cbbbbb1e586bd5cf97` (`a-extract-gate.sh`; see `GATE-BINDING.md`).
 **Environment:** git 2.50.1 (Apple Git-155); bash 3.2.57; Python 3.9.6; node v26.3.0;
 `/usr/bin/grep` with a matched canary.
 
 **The five identity facts the run printed, twice — before any case and again in the summary:**
 
 ```
-  harness sha256   : ea661affb969eb075d84ca22400a18fa3ff2ee5966fea01e5d2c48a9be720a53
+  harness sha256   : 4ad1eb55de50ca23c23aa22c61f7b00c12514371c6e74c2c7206629ef7a7bb32
   repository       : ~/Projects/Sentinel
   requested ref    : bb664c626d592d86391f644bf014e76f2bbf7db4
   resolved subject : bb664c626d592d86391f644bf014e76f2bbf7db4
@@ -29,6 +29,101 @@ docs/review-2026-08-19-d057-targeted/batch-cards/A-EXTRACT-tests/a-extract.sh . 
   CONTROL  : 74 of 74 held      (0 control failures)
   exit 1   — REQUIRED FAILURES with every control holding: the defects are observed.
 ```
+
+## 0-AMB. The ambiguity fail-open — found by independent review, VERDICT FAIL, now corrected
+
+**An independent instrument review returned VERDICT: FAIL** (`INSTRUMENT-REVIEW.md`, `7e4e5c0`).
+I reproduced the finding before changing anything.
+
+### The defect
+
+`git rev-parse --verify <ref>^{commit}` **does not refuse an ambiguous refname.** Measured on
+git 2.50.1 in a private clone with `refs/heads/ambig` → `bb664c6` and `refs/tags/ambig` →
+`f1c0fdd`:
+
+```
+$ git rev-parse --verify 'ambig^{commit}'
+warning: refname 'ambig' is ambiguous.
+f1c0fddad382d34d589df3e0274e25363280abd8      <- the TAG, silently preferred
+exit 0
+
+$ git rev-parse --verify --quiet 'ambig^{commit}' 2>/dev/null    # what the harness ran
+f1c0fddad382d34d589df3e0274e25363280abd8
+exit 0
+```
+
+`--verify` guarantees one OBJECT NAME, not one REF. `--quiet` suppressed the warning and
+`2>/dev/null` discarded it again. **The harness would complete a full measurement of the wrong
+commit on the ordinary path, all controls green.**
+
+### The fix — two mechanisms, and neither is a single point of failure
+
+| Mechanism | branch+tag `ambig` | branch named `bb664c6` |
+|---|:--:|:--:|
+| **1 — enumerate the refs the name could denote**, refuse if more than one | **CAUGHT** (2 refs) | missed (1 ref) |
+| **2 — keep `rev-parse`'s stderr** (no `--quiet`), refuse on any ambiguity warning | **CAUGHT** | **CAUGHT** |
+
+**Each catches a case the other misses — measured, not asserted.** A branch named like an
+abbreviated object id is a single ref, so enumeration alone sees nothing wrong; git still warns.
+
+### Measured: every bad-subject shape refuses with ZERO scored verdicts
+
+| # | Shape | exit | scored verdicts |
+|---|---|:--:|:--:|
+| 1 | no arguments | 2 | **0** |
+| 2 | one argument | 2 | **0** |
+| 3 | repository path does not exist | 2 | **0** |
+| 4 | path is not a git repository | 2 | **0** |
+| 5 | missing ref | 2 | **0** |
+| 6 | ambiguous abbreviated object id (`0`) | 2 | **0** |
+| 7 | resolves to a tree, not a commit | 2 | **0** |
+| 8 | **branch/tag collision** — mechanism 1 | 2 | **0** |
+| 9 | **branch named like a SHA prefix** — mechanism 2 only | 2 | **0** |
+| 10 | `--help` | 2 | **0** |
+
+Case 8 names the colliding refs and tells the caller to qualify the name; case 9 quotes git's
+warning and states what git *would* have resolved it to. Both shapes refuse identically in
+`a-extract-gate.sh`.
+
+### Paired control — the fix is not "refuse everything"
+
+**Same repository, same colliding names, ref given in full:**
+
+```
+a-extract.sh <collision-clone> refs/heads/ambig
+
+  requested ref    : refs/heads/ambig
+  resolved subject : bb664c626d592d86391f644bf014e76f2bbf7db4
+  case P3  CONTROL PASS  both routes = bb664c626d592d86391f644bf014e76f2bbf7db4
+```
+
+**It resolves and it measures.** `ambig` is refused in that very repository; `refs/heads/ambig`
+proceeds into the case matrix and runs normally — 84 scored and observed lines at the point this
+was written, the run still in progress under load. **What the control exists to exclude — a fix
+satisfiable by refusing every subject — is excluded by this run having resolved at all and having
+gone on measuring.** The verdicts it had produced matched the baseline case for case.
+
+### `P3` is now falsifiable — it previously was not
+
+The old `P3` re-ran the identical `rev-parse` command and compared the answer to itself. It now
+compares **route A** (`rev-parse --verify`) against **route B** (`show-ref` + `cat-file`,
+never calling `rev-parse`, and **declining to answer at all when the name denotes more than one
+ref** rather than tie-breaking). Demonstrated with both preflight refusals deliberately disabled
+in a scratch copy, so `P3` is reached:
+
+```
+ambiguous   'ambig'             P3 CONTROL FAIL  rev-parse=f1c0fdd…  show-ref+cat-file=<none>
+unambiguous 'refs/heads/ambig'  P3 CONTROL PASS  both routes = bb664c626d5…
+```
+
+**Defence in depth: even with both refusals bypassed, `P3` catches it.** The scratch copy is a
+probe, not committed.
+
+### Count delta from this correction: NONE
+
+The baseline at `bb664c6` still measures **21 of 52 REQUIRED, 74 of 74 CONTROL**. No control was
+added or removed — `P3` changed its implementation, not its identity — so every delta against the
+previous instrument checkpoint is accounted for by zero.
 
 ## 0a. Reconciling against the previously recorded `21 of 49` / `70 of 70`
 

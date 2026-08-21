@@ -21,9 +21,35 @@ a-extract-gate.sh  <repository-path> <subject-ref>
 | `<repository-path>` | the Sentinel repository to measure. Resolved with `cd … && pwd -P`. |
 | `<subject-ref>` | the commit to measure. Any ref git can resolve: full or abbreviated SHA, branch, tag, `HEAD`. |
 
-**Resolution is `git rev-parse --verify --quiet "<ref>^{commit}"`, run inside the repository.**
-`--verify` refuses an ambiguous ref rather than choosing; `^{commit}` refuses a ref that resolves
-to a tree, a blob, or an unpeelable tag.
+**Resolution is fail-closed and uses TWO INDEPENDENT AMBIGUITY MECHANISMS.**
+
+**`--verify` does NOT refuse an ambiguous refname — that claim, which this harness previously
+made in a comment, is false.** Measured on git 2.50.1 with a branch and a tag both named
+`ambig`:
+
+```
+$ git rev-parse --verify 'ambig^{commit}'
+warning: refname 'ambig' is ambiguous.
+f1c0fdd…                                   <- the TAG, silently preferred
+exit 0
+```
+
+`--verify` guarantees one OBJECT NAME, not one REF. It *does* refuse an ambiguous abbreviated
+object id (`fatal: Needed a single revision`); it does not refuse an ambiguous refname. The old
+code then hid the evidence twice — `--quiet` suppressed the warning and `2>/dev/null` discarded
+it — and the harness measured the wrong commit through the ordinary path with all 74 controls
+green. **Found by an independent instrument review (`INSTRUMENT-REVIEW.md`, VERDICT FAIL).**
+
+| Mechanism | How | branch+tag `ambig` | branch named `bb664c6` |
+|---|---|:--:|:--:|
+| **1 — enumeration** | count the refs the name could denote, in gitrevisions order: `<name>`, `refs/<name>`, `refs/tags/<name>`, `refs/heads/<name>`, `refs/remotes/<name>`, `refs/remotes/<name>/HEAD`; refuse if more than one exists | **CAUGHT** (2 refs) | missed (1 ref) |
+| **2 — stderr** | run `rev-parse --verify` with **no `--quiet`** and stderr **kept**, then refuse on any `ambiguous` warning | **CAUGHT** | **CAUGHT** |
+
+**Neither is a single point of failure, and that is measured rather than asserted: each catches
+a case the other misses.** A branch named like an abbreviated object id is one ref, so
+enumeration alone sees nothing wrong; git still warns, so mechanism 2 catches it.
+
+`^{commit}` additionally refuses a ref that resolves to a tree, a blob, or an unpeelable tag.
 
 **What fails PREFLIGHT, and how** — every one of these exits **2** and measures nothing:
 
@@ -32,7 +58,9 @@ to a tree, a blob, or an unpeelable tag.
 | fewer than two arguments | `PREFLIGHT FAILED: an evidentiary run requires BOTH a repository and a subject ref.` followed by usage |
 | repository path does not exist | `the repository path '<arg>' does not exist or is not a directory` |
 | path is not a git repository | `<sanitized path> is not a git repository` |
-| ref missing, **ambiguous**, or not a commit | `cannot resolve subject ref '<ref>' to exactly one commit in <sanitized path>.` plus **git's own diagnostic**, plus `Missing, ambiguous, or not-a-commit is a REFUSAL here, never a fallback.` |
+| ref **ambiguous — names more than one ref** (mechanism 1) | `subject ref '<ref>' is AMBIGUOUS in <path> — it names N refs:` followed by each full ref path, and `Name the ref in full, e.g. refs/heads/<ref>.` |
+| ref **ambiguous — git warned** (mechanism 2) | `subject ref '<ref>' is AMBIGUOUS in <path>.` plus git's warning verbatim, plus what git *would* have resolved it to and `This harness refuses rather than inherit that choice.` |
+| ref missing or not a commit | `cannot resolve subject ref '<ref>' to exactly one commit in <sanitized path>.` plus **git's own diagnostic**, plus `Missing, ambiguous, or not-a-commit is a REFUSAL here, never a fallback.` |
 | snapshot of the subject cannot be built or is empty | `cannot build a snapshot of <SUBJECT_SHA>` / `the snapshot of <SUBJECT_SHA> is empty` |
 | `-h` / `--help` | usage, exit 2 |
 
@@ -58,11 +86,31 @@ a-extract.sh . bb664c626d592d86391f644bf014e76f2bbf7db4
 
 | Control | Claim | Compared against |
 |---|---|---|
-| `P3` | the requested ref resolves to exactly one commit and that commit is the recorded `SUBJECT_SHA` | the ref, re-resolved |
+| `P3` | the ref resolves to the same commit by **two independent routes** | route A `rev-parse --verify` vs route B `show-ref` + `cat-file` |
 | `Z-check-type-strings.sh`, `Z-check-eval-codes.sh`, `Z-check-vendor-honesty.sh`, `Z-test_verifier.py` | the snapshot's consumer is byte-identical to the subject's blob | **`SUBJECT_SHA`** |
 | `Z-clean` | this run changed nothing in the live repository's boundary | the live working tree |
 | `Z-gate5` | the live pin and live §2 table still hash to the certified value | the live tree, anchored on `PRE_REPAIR_SHA` |
 | `Z-signed` | `docs/gate-s2-evidence.md` in the live tree is unmoved | the live tree, anchored on `PRE_REPAIR_SHA` |
+
+**`P3` IS FALSIFIABLE, AND ITS PREDECESSOR WAS NOT.** The earlier `P3` re-ran the *identical*
+`rev-parse` command and compared the answer to itself — it could not fail, and could not catch
+the ambiguity defect or any other resolution defect. It now compares two routes that can
+disagree:
+
+- **route A** — `git rev-parse --verify "<ref>^{commit}"`, git's own precedence order;
+- **route B** — `git show-ref` for the single matching ref, peeled to a commit with
+  `git cat-file` (handling annotated tags), never calling `rev-parse`. **When the name denotes
+  more than one ref, route B returns NO ANSWER rather than tie-breaking.**
+
+Measured, with both preflight refusals deliberately bypassed in a scratch copy so `P3` is
+reached at all:
+
+```
+ambiguous  'ambig'              P3 CONTROL FAIL  rev-parse=f1c0fdd… show-ref+cat-file=<none>
+unambiguous 'refs/heads/ambig'  P3 CONTROL PASS  both routes = bb664c6…
+```
+
+**That is defence in depth: even with both refusals bypassed, `P3` still catches it.**
 
 **`Z-clean`, `Z-gate5` and `Z-signed` are about the LIVE TREE and are deliberately not folded
 into the subject comparison.** "The snapshot matches the commit I asked for" and "this run

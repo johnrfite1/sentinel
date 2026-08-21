@@ -7,7 +7,7 @@
 > and is NOT general prose-consistency evidence."* — D-059(7)
 
 **Harness:** `a-extract-gate.sh`, sha256
-`af66a45ebf9dfe0501e4e1743b6662392126e82cd462dcc3f3a11c1009330746`.
+`99c6d8d65fe08f5572c1ce63d6ad06a9742a2411a53ba5cbbbbb1e586bd5cf97`.
 **Subject:** a private `git clone` of this repository checked out at
 `bb664c626d592d86391f644bf014e76f2bbf7db4`, with `ts/node_modules` and both submodule working
 trees copied in. **The live gate is never run, never edited, and never written to.** No signed or
@@ -49,12 +49,22 @@ sufficiency lapses and the deep mutation runs become required.
 
 ---
 
+## SUBJECT RESOLUTION CORRECTED AGAIN AFTER AN INDEPENDENT REVIEW
+
+This harness carried the same ambiguous-refname fail-open as `a-extract.sh` — `--verify` does not
+refuse an ambiguous refname, and `--quiet` plus `2>/dev/null` hid git's warning. It now uses the
+same two independent mechanisms (enumeration, and kept stderr), refuses at preflight with **zero
+scored verdicts**, and `P3-subject` compares two independent resolution routes **and** the
+clone's actual `HEAD`. Every bad-subject shape was re-confirmed to exit 2 with nothing scored.
+**The `7 of 7` / `10 of 10` figures below were measured before this second correction; only the
+resolution wiring changed, and that is stated rather than glossed.**
+
 ## RE-MEASURED ON THE CORRECTED REVISION
 
 The earlier `7 of 7` / `9 of 9` figure was produced by the revision of `a-extract-gate.sh`
 immediately prior to the subject-selection correction, which checked out `bb664c6` from a
 hardcoded constant. **That revision's evidence is superseded here.** The corrected revision,
-sha256 `af66a45ebf9dfe0501e4e1743b6662392126e82cd462dcc3f3a11c1009330746`, was re-run end to end
+sha256 `99c6d8d65fe08f5572c1ce63d6ad06a9742a2411a53ba5cbbbbb1e586bd5cf97`, was re-run end to end
 through the new interface:
 
 ```
