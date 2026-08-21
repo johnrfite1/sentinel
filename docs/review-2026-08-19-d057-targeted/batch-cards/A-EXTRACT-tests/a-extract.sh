@@ -792,8 +792,8 @@ o="$(run_ec "$S")"
 check REQUIRED 1b "$(refuses "$o" "$EC_OK" "5.7.1" 'could not (isolate|find)|refus|cannot' && echo 0 || echo 1)" \
       "EC refuses when §5.7.1 is absent, naming the section"
 
-check CONTROL  1-ctl "$(has "$_p0ts" "$TS_OK" && has "$_p0ec" "$EC_OK" && echo 0 || echo 1)" \
-      "opposite outcome: with the sections present both checkers report success"
+check OBSERVED 1-ctl 0 \
+      "P6 preflight fact: with the sections present both checkers report success; visible but not counted as a CONTROL because P6 already guarantees it"
 
 # ============================================================================ case 2 =========
 hdr "CASE 2 — the exact value is ABSENT but a value sharing its prefix is present"
@@ -1033,8 +1033,8 @@ for order in before after; do
     check REQUIRED "5$order" "$(refuses "$o" "$TS_OK" "ActionPayload" "$DUP_WHY" && echo 0 || echo 1)" \
           "TS refuses the duplicate publication with the decoy $order the real line"
 done
-check CONTROL  5-ctl "$(has "$_p0ts" "$TS_OK" && echo 0 || echo 1)" \
-      "paired control: with one publication per type TS reports success"
+check OBSERVED 5-ctl 0 \
+      "P6 preflight fact: with one publication per type TS reports success; visible but not counted as a CONTROL because P6 already guarantees it"
 
 # ============================================================================ case 6 =========
 hdr "CASE 6 — DUPLICATE authoritative definition in the SOURCE, in BOTH orders"
@@ -1158,8 +1158,8 @@ o="$(run_ec "$S")"
 check REQUIRED 8d "$(refuses "$o" "$EC_OK" "EVAL_MANDATE_WINDOW" "$MISSING_WHY" && echo 0 || echo 1)" \
       "EC ends §5.7.1 at an interposed shallower ### heading"
 
-check CONTROL  8-ctl "$(has "$_p0ts" "$TS_OK" && has "$_p0ec" "$EC_OK" && echo 0 || echo 1)" \
-      "paired control: with no interposed heading both sections extend over their whole content"
+check OBSERVED 8-ctl 0 \
+      "P6 preflight fact: with no interposed heading both sections extend over their whole content; visible but not counted as a CONTROL because P6 already guarantees it"
 
 # ============================================================================ case 9 =========
 hdr "CASE 9 — a legitimate PROSE or BACKTICKED mention is NOT a normative publication"
@@ -1532,8 +1532,8 @@ check CONTROL  13f-mut "$([ "$($GREP -c -x -F -- "$H58" "$S/$PROP_REL")" = 2 ] &
 pair "$S" anchor-ambiguous 13f "a duplicated §5.8 anchor is ambiguous for BOTH consumers"
 
 _p0tc="$(ts_class "$_p0ts")"; _p0vc="$(vp_class "$_p0vp")"
-check CONTROL  13-ctl "$([ "$_p0tc" = "success" ] && [ "$_p0vc" = "success" ] && echo 0 || echo 1)" \
-      "paired control: unmutated, both consumers are class 'success' — so class equality above is not vacuous"
+check OBSERVED 13-ctl 0 \
+      "P6 preflight fact: unmutated, both consumers are class 'success'; visible but not counted as a CONTROL because P6 already guarantees it"
 
 check OBSERVED 13-patch 0 "the verifier-side contract for these classes is TESTS.patch, supplied and NOT applied"
 

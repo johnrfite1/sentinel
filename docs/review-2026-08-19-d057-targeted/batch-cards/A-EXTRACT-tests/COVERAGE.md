@@ -4,6 +4,12 @@
 evidence only for what it actually exercised. Everything below is a limit of this harness,
 stated so that nobody has to rediscover it from a passing line.
 
+**D-066 / fifth-review correction:** `1-ctl`, `5-ctl`, `8-ctl` and `13-ctl` are OBSERVED
+preflight-established facts, not controls. The current fast matrix therefore contains 52 REQUIRED,
+70 CONTROL and 14 OBSERVED lines. The gate harness refuses an absent or empty `forge-std` or
+`openzeppelin-contracts` tree before scoring. See `CARD.md` “FIFTH INSTRUMENT REVIEW” for the
+argument, sibling list and residual.
+
 ---
 
 ## 0. THE SUBJECT-SELECTION INTERFACE — read this before running either harness
@@ -95,8 +101,9 @@ the accident that clone's default refspec does not fetch `refs/replace`. **Prote
 is not protection**, and it is in scope under D-065(3) because it is a comparison that could move
 with its subject rather than a caller-controlled variable.
 
-It now pins on every command it runs, and `P3-provenance` verifies the clone's **WORKTREE** against
-the subject commit's tree instead of trusting `rev-parse HEAD`. **Paired control, with
+Seven of its ten git invocations are now pinned; the other three cannot be reached by object
+replacement. `P3-provenance` verifies the clone's **WORKTREE** against the subject commit's tree
+instead of trusting `rev-parse HEAD`. **Paired control, with
 `GIT_REPLACE_REF_BASE=refs/remotes/origin/` set:**
 
 | | expected | worktree | verdict |
@@ -221,19 +228,19 @@ we hashed is the file we ran" would be an inference.
 
 | Case | TS | EC | VH | VP |
 |---|:--:|:--:|:--:|:--:|
-| 1 — section absent | 1a | 1b | — | 1c, 1c-ctl |
+| 1 — section absent | 1a | 1b | — | 1c, 1c-ctl (OBSERVED baseline) |
 | 2 — prefix-sharing value | 2b | 2a, 2-ctl | — | — |
 | 3 — value only outside | 3b | 3a | — | — |
 | 4 — decoy before the section | 4a, 4c, 4d, 4e | 4b, 4f | — | — |
-| 5 — duplicate publication | 5before, 5after, 5-ctl | — | — | — |
+| 5 — duplicate publication | 5before, 5after, 5-ctl (OBSERVED baseline) | — | — | — |
 | 6 — duplicate source definition | 6before, 6after, 6-ctl | — | — | — |
 | 7 — deeper subsection stays in | 7a, 7c | 7b | — | — |
-| 8 — same/shallower ends | 8a, 8b | 8c, 8d | — | — |
+| 8 — same/shallower ends | 8a, 8b, 8-ctl (OBSERVED baseline) | 8c, 8d, 8-ctl (OBSERVED baseline) | — | — |
 | 9 — prose is not a publication | 9a, 9b, 9c | — | — | — |
 | 10 — §7.2 caveat + SECTION EXTENT | — | — | 10a–10h, 10-ctl | — |
 | 11 — report carries the caveat | — | — | 11a–11d, 11f-*, 11g | — |
 | 12 — one-character prefix | — | 12suffix, 12prefix, 12-ctl | — | — |
-| 13 — the two §5.8 consumers agree by CLASS | 13a–13f (paired) | — | — | 13a–13f, 13-ctl |
+| 13 — the two §5.8 consumers agree by CLASS | 13a–13f (paired) | — | — | 13a–13f, 13-ctl (OBSERVED baseline) |
 | 14 — certified §2 table + pin, isolated copy | — | — | 14a, 14b, 14-fixture, 14b-mut | — |
 | integrity | — | — | — | Z-*, incl. Z-gate5 and Z-signed |
 

@@ -7,7 +7,7 @@ and source uniqueness are TWO properties, not one primitive), D-060(1) (batch ca
 completeness is asserted only inside a declared boundary).
 
 **Pre-repair base SHA:** `bb664c626d592d86391f644bf014e76f2bbf7db4`, tree clean.
-**Demonstrated at:** the same commit. **Harnesses:** `a-extract.sh` (fast, 49 binding assertions)
+**Demonstrated at:** the same commit. **Harnesses:** `a-extract.sh` (fast, 52 binding assertions)
 and `a-extract-gate.sh` (D-059(7) gate binding). Each prints its own sha256 at preflight `P0`;
 both are recorded in `RESULTS.md` and `GATE-BINDING.md`.
 
@@ -24,6 +24,33 @@ already identifies frozen attempt-two evidence.
 **This is a test-only deliverable.** No production file is modified by this card, by its harness,
 or by the commit that carries it. `TESTS.patch` is supplied as a patch file and is **NOT
 applied**.
+
+## FIFTH INSTRUMENT REVIEW — D-066 DISPOSITION
+
+The fifth independent review returned **FAIL** on two classes D-065(3) explicitly keeps in scope,
+plus one wording defect. Neither finding could create a false green, but both made the instrument
+claim more evidence than it had.
+
+- **`F5-1`, silent removal:** the `bac7cd8 -> 4f1e6a3` replacement swallowed the gate harness's
+  empty-submodule refusal. `cp -R` accepts an empty directory, so an uninitialised dependency tree
+  reached G1 and appeared as a scored gate failure instead of an operator-precondition refusal.
+  **Argument:** the gate harness must refuse an incomplete dependency precondition before emitting
+  a REQUIRED or CONTROL verdict; it must never score that state as a gate defect. Both dependency
+  siblings — `forge-std` and `openzeppelin-contracts` — now have the same non-empty preflight.
+  The fast harness has no Forge stage; its only dependency copy is `ts/node_modules`, already
+  refused at P7, so there is no third sibling in this repair's boundary.
+- **`F5-2`, controls that could not fail:** `1-ctl`, `5-ctl`, `8-ctl` and `13-ctl` repeated facts
+  P6 had already required with unconditional `die`s. John approved their reclassification to
+  `OBSERVED`; they remain visible as baseline facts and no longer inflate the current CONTROL
+  tally. Current movement: CONTROL `74 -> 70`, OBSERVED `10 -> 14`; REQUIRED is unchanged at 52.
+- **`F5-3`, exhaustive wording:** the gate harness pins seven of its ten git invocations with
+  `--no-replace-objects`; the other three cannot be reached by object replacement. The earlier
+  wording that said “every command” is withdrawn.
+
+Residuals: the four historical `*-ctl` identifiers retain their names so old matrices remain
+readable, although their kind is now `OBSERVED`; P6 is the only enforcing positive baseline for
+those four facts. No production consumer, `TESTS.patch`, case semantics, reason vocabulary,
+expected outcome, exclusion, signed text or Gate 5 material changes.
 
 ## D-065 DECLARES THE THREAT MODEL, AND A FOURTH REVIEW'S THREE ITEMS
 
@@ -52,9 +79,10 @@ the very repository-local layer the `GIT_CONFIG_*` scrub exists to keep the call
 
 **2 — `F2-4`, in scope: the gate harness was structurally blind to replacement.** It pinned
 `--no-replace-objects` on **zero** commands and was protected only by the accident that clone's
-refspec skips `refs/replace`. **Protection by accident is not protection.** It now pins on every
-command, and `P3-provenance` verifies the clone's **WORKTREE** against the subject's tree rather
-than trusting what `HEAD` reports.
+refspec skips `refs/replace`. **Protection by accident is not protection.** Seven of the gate
+harness's ten git invocations are pinned; the other three cannot be reached by object replacement.
+`P3-provenance` verifies the clone's **WORKTREE** against the subject's tree rather than trusting
+what `HEAD` reports.
 
 **3 — A STATED REQUIREMENT SILENTLY REMOVED, AND IT WAS MINE.** The `d1fa16f` edit deleted the
 `SUBJECT IDENTITY` header and its `identity_block` call — `1 → 0` and `3 → 2` — so runs stopped
@@ -374,8 +402,10 @@ hash. They are NOT general prose-consistency evidence.**
   failed reads exactly like a pass, and this harness has already caught that in itself: an
   `awk -v` carrying a newline errored to stderr, the mutation did not apply, and case `11b`
   reported PASS against an unmutated fixture until the `*-mut` control was added.
-- **`1-ctl`, `5-ctl`, `6-ctl`, `8-ctl`, `10-ctl`, `13-ctl`** — the unmutated snapshot, where
-  every consumer reports success. Nothing here is satisfiable by a checker that always fails.
+- **`1-ctl`, `5-ctl`, `8-ctl`, `13-ctl`** — OBSERVED baseline facts established by P6's stricter
+  preflight; visible in the matrix but not counted as controls because they cannot fail after P6.
+- **`6-ctl`, `10-ctl`** — scored controls on the unmutated snapshot with additional predicates
+  P6 does not guarantee. Nothing here is satisfiable by a checker that always fails.
 - **`2-ctl`, `12-ctl`** — the identifier removed outright, where EC *does* name it missing. So
   the reporting path is live and `2a`/`12*` are about the matching rule, not about plumbing.
 - **`7c` against `7a`** — the SAME insertion at a deeper heading level already passes, so `7a`
@@ -429,7 +459,7 @@ repair chooses its words; it may not choose silence, success, or a message about
 | File | What it is |
 |---|---|
 | `CARD.md` | this card — the invariant, the boundary, the matrix, the controls, the exclusions, the stopping rule |
-| `a-extract.sh` | the fast harness: 49 binding assertions, 70 controls, ~2 minutes, no toolchain beyond git/bash/awk/python3/node |
+| `a-extract.sh` | the fast harness: 52 binding assertions, 70 controls, ~2 minutes, no toolchain beyond git/bash/awk/python3/node |
 | `a-extract-gate.sh` | the D-059(7) gate-binding harness: three full fast-gate runs in an isolated clone, ~10-20 minutes, needs forge and `ts/node_modules` |
 | `GATE-BINDING.md` | the measured gate-binding evidence |
 | `COVERAGE.md` | what is exercised, what is not, the interpretations, and **§7 — what was removed from the binding contract and why** |

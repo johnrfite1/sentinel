@@ -7,15 +7,15 @@
 docs/review-2026-08-19-d057-targeted/batch-cards/A-EXTRACT-tests/a-extract.sh . bb664c626d592d86391f644bf014e76f2bbf7db4
 ```
 
-**Harness sha256:** `2095c27732e05e40d3f574eddfb7a61ef1ed86c0913f6ba1b016ae9c264507df` (`a-extract.sh`; printed by the harness itself).
-**Gate harness sha256:** `b1d8d4d287d67045cb892e048788edcbbb171b07ea4ce36c2ddfdec24680f296` (`a-extract-gate.sh`; see `GATE-BINDING.md`).
+**Harness sha256:** `68dec333a34ecbc3186419ba2264af513c74058771772be24deee275f3c7e4c9` (`a-extract.sh`; printed by the harness itself).
+**Gate harness sha256:** `e4141c166353c941a479fa730dfaaaff2089dbb17df697aeffeb666271189fd3` (`a-extract-gate.sh`; see `GATE-BINDING.md`).
 **Environment:** git 2.50.1 (Apple Git-155); bash 3.2.57; Python 3.9.6; node v26.3.0;
 `/usr/bin/grep` with a matched canary.
 
 **The five identity facts the run printed, twice — before any case and again in the summary:**
 
 ```
-  harness sha256   : 2095c27732e05e40d3f574eddfb7a61ef1ed86c0913f6ba1b016ae9c264507df
+  harness sha256   : 68dec333a34ecbc3186419ba2264af513c74058771772be24deee275f3c7e4c9
   repository       : ~/Projects/Sentinel
   requested subject: bb664c626d592d86391f644bf014e76f2bbf7db4
   resolved subject : bb664c626d592d86391f644bf014e76f2bbf7db4
@@ -26,9 +26,30 @@ docs/review-2026-08-19-d057-targeted/batch-cards/A-EXTRACT-tests/a-extract.sh . 
 
 ```
   REQUIRED : 21 of 52 held      (31 REQUIRED failures)
-  CONTROL  : 74 of 74 held      (0 control failures)
+  CONTROL  : 70 of 70 held      (0 control failures)
   exit 1   — REQUIRED FAILURES with every control holding: the defects are observed.
 ```
+
+## 0-D066. Fifth-review correction — measured on the current files
+
+`INSTRUMENT-REVIEW-5.md` returned FAIL on a silently removed dependency preflight and four lines
+counted as controls although P6 already made their failure unreachable; it also corrected three
+exhaustive pinning claims. John approved the `OBSERVED` reclassification in D-066.
+
+**Fast harness, current sha256 `68dec333…e4c9`:** run twice at the exact pre-repair oid. Both
+captured logs and both matrices are byte-identical: **21 of 52 REQUIRED, 70 of 70 CONTROL, exit
+1**. The four reclassified facts print as OBSERVED; REQUIRED results, reason classes, execution
+witness counts, `Z-clean`, `Z-gate5` and `Z-signed` are unchanged.
+
+**Gate harness, current sha256 `e4141c16…fd3`:** **7 of 7 REQUIRED, 10 of 10 CONTROL, exit 0**,
+with the three top-level gate supervisor outcomes still rc `0/5/5`. Each of G1, G2 and G3 carries
+all three named consumer-stage banners; G1 prints one `GATE PASSED`, while G2 and G3 each print one
+`GATE FAILED` and no pass token. An empty `forge-std` and, independently, an empty
+`openzeppelin-contracts` tree each refuse at exit 2 with zero REQUIRED and zero CONTROL verdicts.
+
+Movement from the immediately preceding instrument: CONTROL `74 -> 70`, OBSERVED `10 -> 14`,
+REQUIRED unchanged at 52. No production path, `TESTS.patch`, signed text or certified table moved.
+The deep-profile invocation remains outstanding exactly as `GATE-BINDING.md` states.
 
 ## 0-D065. The threat model, the fourth review, and a requirement I removed without saying so
 
@@ -82,7 +103,8 @@ that have been corrected.
 
 ### `F2-4` — the gate harness pinned replacement on zero commands
 
-Now pinned on all 7, with `P3-provenance` verifying the clone's **WORKTREE** rather than `HEAD`.
+Seven of its ten git invocations are now pinned; the other three cannot be reached by object
+replacement. `P3-provenance` verifies the clone's **WORKTREE** rather than `HEAD`.
 Paired control with `GIT_REPLACE_REF_BASE=refs/remotes/origin/`:
 
 | | expected | worktree | verdict |
@@ -152,7 +174,7 @@ performs **no name resolution at all**. Grammar and diagnoses: `COVERAGE.md` §0
 
 | # | Falsification | Observed |
 |---|---|---|
-| 1 | exact 40-hex commit completes normally | **21 of 52 REQUIRED, 74 of 74 CONTROL**, exit 1 |
+| 1 | exact 40-hex commit completes normally | **21 of 52 REQUIRED, 70 of 70 CONTROL**, exit 1 |
 | 2 | short SHA refused | exit 2, 0 scored — *an ABBREVIATED object id (length 7, need exactly 40)* |
 | 3 | **branch/tag collision refused because NAMES ARE NOT ACCEPTED** | exit 2, 0 scored — *a NAME, not an object id*. No detector fired; there is nothing to detect |
 | 4 | fully qualified ref refused | exit 2, 0 scored — *a fully qualified ref; refs are not accepted* |
@@ -296,13 +318,14 @@ unambiguous 'refs/heads/ambig'  P3 CONTROL PASS  both routes = bb664c626d5…
 **Defence in depth: even with both refusals bypassed, `P3` catches it.** The scratch copy is a
 probe, not committed.
 
-### Count delta from this correction: NONE
+### Count delta from the exact-OID correction itself: NONE; D-066 later reclassified four controls
 
-The baseline at `bb664c6` still measures **21 of 52 REQUIRED, 74 of 74 CONTROL**. No control was
-added or removed — `P3` changed its implementation, not its identity — so every delta against the
-previous instrument checkpoint is accounted for by zero.
+At the exact-OID checkpoint the baseline at `bb664c6` measured **21 of 52 REQUIRED, 74 of 74
+CONTROL**. No control was added or removed by that correction — `P3` changed its implementation,
+not its identity. **D-066 later reclassified four unreachable controls as OBSERVED; the current
+measurement is 21 of 52 REQUIRED and 70 of 70 CONTROL.**
 
-## 0a. Reconciling against the previously recorded `21 of 49` / `70 of 70`
+## 0a. Reconciling the historical `21 of 49` / `70 of 70` with the current matrix
 
 **No verdict reversed and no case semantics changed.** Every count movement is accounted for by
 exactly two things, both mandated by John's review:
@@ -313,6 +336,8 @@ exactly two things, both mandated by John's review:
 | REQUIRED **held** `21 → 21` | unchanged — all three new cases FAIL, and no existing verdict moved |
 | CONTROL `70 → 74` | **+3** the three new tilde `-mut` proof-of-mutation controls, **+1** `P3` promoted from OBSERVED to CONTROL as Part 2 requires |
 | OBSERVED `11 → 10` | **-1**, exactly `P3` leaving. Nothing else was reclassified |
+| D-066 CONTROL `74 → 70` | **-4**: `1-ctl`, `5-ctl`, `8-ctl`, `13-ctl` were unreachable after P6 and are now OBSERVED |
+| D-066 OBSERVED `10 → 14` | **+4**, exactly those four lines; they remain visible and leave the enforcing baseline at P6 |
 
 **The `+1` CONTROL from `P3` is not a fence-sibling effect and is called out separately** — Part 2
 of the correction requires `P3` to become a control, and a control is counted where an OBSERVED
@@ -694,7 +719,9 @@ Verified against a throwaway extraction of `bb664c6`:
 > **PARTLY SUPERSEDED BY §0-OID.** Run 2 below used `HEAD`, which the current grammar REFUSES.
 > Runs 1 and 3 used exact 40-hex oids and remain valid as written.
 
-Three runs of the **same harness file**, differing only in the subject argument.
+Three historical runs of the same pre-D-066 harness file, differing only in the subject argument.
+Their `74 of 74` figures are preserved as measured history; the current harness is remeasured in
+§0-D066 at `70 of 70`.
 
 | # | requested ref | resolved subject | REQUIRED held | CONTROL |
 |---|---|---|---|---|

@@ -281,6 +281,14 @@ for t in git node python3; do command -v "$t" >/dev/null 2>&1 || die "$t is requ
 command -v forge >/dev/null 2>&1 || die "forge is required — the gate's solidity stage cannot run without it"
 [ -n "$ROOT" ] || die "the repository path '$ROOT_ARG' does not exist or is not a directory"
 [ -d "$ROOT/.git" ] || die "$(sanitize_path "$ROOT") is not a git repository"
+# `bac7cd8 -> 4f1e6a3` silently removed the original empty-submodule preflight while replacing
+# the adjacent subject-resolution block. `cp -R` accepts an empty directory, so the later staging
+# step cannot distinguish a usable dependency tree from an uninitialised submodule. Refuse here,
+# before any REQUIRED or CONTROL verdict, so an operator precondition is never scored as G1.
+for m in forge-std openzeppelin-contracts; do
+    [ -n "$(ls -A "$ROOT/contracts/lib/$m" 2>/dev/null)" ] || \
+        die "contracts/lib/$m is absent or empty; initialise the submodule working tree before running the gate harness"
+done
 # THERE IS NO SUBJECT RESOLUTION STEP. Same ruling, same reason as `a-extract.sh`: a name must
 # be resolved and resolution is what an ambiguous ref or an injected configuration setting gets
 # to influence; an exact object id is looked up, not resolved. Measured: a branch literally named

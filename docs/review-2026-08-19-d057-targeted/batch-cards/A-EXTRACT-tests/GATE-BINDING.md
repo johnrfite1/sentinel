@@ -7,7 +7,7 @@
 > and is NOT general prose-consistency evidence."* — D-059(7)
 
 **Harness:** `a-extract-gate.sh`, sha256
-`b1d8d4d287d67045cb892e048788edcbbb171b07ea4ce36c2ddfdec24680f296`.
+`e4141c166353c941a479fa730dfaaaff2089dbb17df697aeffeb666271189fd3`.
 **Subject:** a private `git clone` of this repository checked out at
 `bb664c626d592d86391f644bf014e76f2bbf7db4`, with `ts/node_modules` and both submodule working
 trees copied in. **The live gate is never run, never edited, and never written to.** No signed or
@@ -49,6 +49,34 @@ sufficiency lapses and the deep mutation runs become required.
 
 ---
 
+## RE-MEASURED AFTER THE FIFTH REVIEW — D-066
+
+The fifth review found the empty-submodule preflight silently removed at `4f1e6a3`. The restored
+loop covers both Forge dependency siblings before the first REQUIRED or CONTROL verdict. Paired
+negative probes established each branch independently: empty `forge-std` refuses at exit 2 with
+zero scored verdicts; with that sibling populated, empty `openzeppelin-contracts` does the same.
+
+The current committed-content harness hash during this working state is
+`e4141c166353c941a479fa730dfaaaff2089dbb17df697aeffeb666271189fd3`. Its full isolated run at
+`bb664c626d592d86391f644bf014e76f2bbf7db4` returned:
+
+```
+  REQUIRED : 7 of 7 held
+  CONTROL  : 10 of 10 held
+  exit 0
+```
+
+The three supervisor outcomes remain rc `0/5/5`. G1 contains exactly one `GATE PASSED` and no
+failure token; G2 and G3 each contain exactly one `GATE FAILED` and no pass token. Every one of
+the three logs contains exactly one instance of each named TS, EC and VH stage banner. `Z-clean`
+and `Z-signed` pass. The fast-profile binding is therefore unchanged by the preflight repair.
+
+This run still does not invoke `--gate`; the STATUS above remains authoritative and the eventual
+post-repair verification must capture the three banners from a deep run at the exact candidate
+SHA.
+
+---
+
 ## RE-MEASURED AGAIN AFTER THE FOURTH REVIEW — `F2-4` AND THE D-065 HARDENING
 
 **Measured on the committed file, which recorded its own sha256 during the run:**
@@ -77,9 +105,10 @@ gate harness sha256 b1d8d4d287d67045cb892e048788edcbbb171b07ea4ce36c2ddfdec24680
 pass and HEAD is deliberately red (`cefc135` applied `TESTS.patch` and ratcheted the verifier
 floor). The exact-oid interface makes that choice explicit in the run's own identity block.
 
-**What changed in this harness since the previous measurement:** `--no-replace-objects` pinned on
-all 7 git commands (it was **0**); `P3-provenance` widened from a `HEAD` check to a whole-worktree
-tree comparison; `GIT_TEMPLATE_DIR` unset and `PATH` pinned by precedence under D-065(2).
+**What changed in this harness since the previous measurement:** seven of its ten git invocations
+are pinned with `--no-replace-objects` (it was **0**); the other three cannot be reached by object
+replacement. `P3-provenance` widened from a `HEAD` check to a whole-worktree tree comparison;
+`GIT_TEMPLATE_DIR` is unset and `PATH` pinned by precedence under D-065(2).
 
 ## RE-MEASURED ON THE CURRENT FILE, AT A SUBJECT WHERE THE GATE IS GREEN
 
