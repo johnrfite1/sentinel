@@ -87,7 +87,7 @@ warning and states what git *would* have resolved it to. Both shapes refuse iden
 
 ### Paired control — the fix is not "refuse everything"
 
-**Same repository, same colliding names, ref given in full:**
+**Same repository, same colliding names, ref given in full — run to completion:**
 
 ```
 a-extract.sh <collision-clone> refs/heads/ambig
@@ -95,13 +95,16 @@ a-extract.sh <collision-clone> refs/heads/ambig
   requested ref    : refs/heads/ambig
   resolved subject : bb664c626d592d86391f644bf014e76f2bbf7db4
   case P3  CONTROL PASS  both routes = bb664c626d592d86391f644bf014e76f2bbf7db4
+
+  REQUIRED : 21 of 52 held
+  CONTROL  : 74 of 74 held      (0 control failures)
 ```
 
-**It resolves and it measures.** `ambig` is refused in that very repository; `refs/heads/ambig`
-proceeds into the case matrix and runs normally — 84 scored and observed lines at the point this
-was written, the run still in progress under load. **What the control exists to exclude — a fix
-satisfiable by refusing every subject — is excluded by this run having resolved at all and having
-gone on measuring.** The verdicts it had produced matched the baseline case for case.
+**`ambig` is refused in that very repository; `refs/heads/ambig` resolves and measures — and its
+verdicts are IDENTICAL to the `bb664c6` baseline case for case.** That is the control's whole
+job: a fix satisfiable by refusing every subject would have produced no measurement at all, and a
+fix that refused selectively but measured the wrong thing would have produced different verdicts.
+Neither happened.
 
 ### `P3` is now falsifiable — it previously was not
 
