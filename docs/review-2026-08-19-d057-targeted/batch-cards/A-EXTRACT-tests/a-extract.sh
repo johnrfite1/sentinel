@@ -187,12 +187,24 @@ say() { printf '        %s\n' "$*"; }
 
 check() {   # KIND CASE HELD DESC   — HELD is 0 when the asserted behaviour was observed.
     local kind case_id held desc status; kind="$1"; case_id="$2"; held="$3"; desc="$4"
-    if [ "$kind" = "OBSERVED" ]; then status="...."
-    elif [ "$held" -eq 0 ]; then status="PASS"; else status="FAIL"; fi
+    # A MALFORMED VERDICT IS A FAILURE — NOT A PASS, AND NOT SILENTLY UNCOUNTED.
+    #
+    # This used arithmetic (`[ "$held" -eq 0 ]`) on a value that can be EMPTY when the command
+    # substitution producing it died — for instance on an unbound variable under `set -u`. Empty
+    # made both `-eq` and the later `-ne` error with "integer expression expected", so the case
+    # printed FAIL and then the failure counter was never incremented: the run reported its
+    # controls held and exited 0 beside a printed FAIL. An independent review found exactly that
+    # in the sibling gate harness. **String comparison, no arithmetic, and anything that is not
+    # a literal 0 is a failure.**
+    case "$held" in
+        0) status="PASS" ;;
+        *) status="FAIL" ;;
+    esac
+    if [ "$kind" = "OBSERVED" ]; then status="...."; fi
     printf '  case %-10s %-8s %s  %s\n' "$case_id" "$kind" "$status" "$desc"
     MATRIX_TSV="${MATRIX_TSV}${case_id}	${kind}	${status}	${desc}
 "
-    if [ "$held" -ne 0 ] && [ "$kind" != "OBSERVED" ]; then
+    if [ "$status" = "FAIL" ]; then
         if [ "$kind" = "REQUIRED" ]; then req_fail=$((req_fail + 1)); else ctl_fail=$((ctl_fail + 1)); fi
     fi
 }
@@ -237,6 +249,31 @@ _scrub_git_config_env() {
     done
     unset GIT_CONFIG_COUNT GIT_CONFIG_PARAMETERS 2>/dev/null || true
 }
+
+# OBJECT REPLACEMENT IS NEUTRALISED BEFORE THE FIRST GIT INVOCATION.
+#
+# `refs/replace/<oid>` silently substitutes one object for another in `git archive`,
+# `git show <oid>:<path>` and `git cat-file blob <oid>:<path>` — every command that DELIVERS
+# bytes — while `git cat-file --batch-all-objects`, the command chosen for the existence check
+# precisely because it does no name resolution, is the ONE command immune to it. **So the
+# command that VERIFIED and the commands that MEASURED did not share resolution semantics, and
+# the verification said nothing about the bytes delivered.** An independent review obtained a
+# complete run of a different commit's tree with every control green.
+#
+# MEASURED, both doors, before this repair:
+#   plain                         verifier/test_verifier.py -> 924749d5…
+#   refs/replace in the repo      same path                 -> 9ebb7fa7…   (another commit's bytes)
+#   caller GIT_REPLACE_REF_BASE   same path                 -> 9ebb7fa7…
+#   --batch-all-objects still reported the original present: 1
+#
+# `GIT_NO_REPLACE_OBJECTS=1` restores 924749d5… on every one of those routes, so ONE semantics
+# now governs the existence check, the archive and the blob reads alike. The base variable is
+# scrubbed as well: setting it is the caller's other door into the same mechanism.
+_neutralise_object_replacement() {
+    unset GIT_REPLACE_REF_BASE 2>/dev/null || true
+    export GIT_NO_REPLACE_OBJECTS=1
+}
+_neutralise_object_replacement
 _scrub_git_config_env
 unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_PREFIX 2>/dev/null || true
 # The private empty global/system configuration set above is RETAINED — scrubbing the injection
@@ -593,15 +630,36 @@ check OBSERVED P4 0 "snapshot of SUBJECT_SHA $SUBJECT_SHA built; four consumers 
 # It can fail: a mismatched sentinel blob, an absent object, a non-commit, or a subject that is
 # not an exact oid all make it fail — and (a) and (b) are re-asserted here rather than assumed
 # from the earlier `die`, so that a future edit removing a refusal cannot leave this silent.
-_sentinel_rel="scripts/check-type-strings.sh"
-_sentinel_snap="$(shasum -a 256 "$P0/$_sentinel_rel" 2>/dev/null | awk '{print $1}')"
-_sentinel_commit="$( cd "$ROOT" && git cat-file blob "$SUBJECT_SHA:$_sentinel_rel" 2>/dev/null | shasum -a 256 | awk '{print $1}')"
+# THE PROVENANCE CHECK IS OVER THE WHOLE TREE, NOT ONE FILE.
+#
+# It compared ONE sentinel blob. An independent review established that **21 commits already in
+# this repository carry an identical `scripts/check-type-strings.sh` blob with a DIFFERENT
+# tree** — measured here, not taken on trust — so every one of them would have satisfied it. A
+# one-blob sentinel cannot establish that the archived tree is the subject's tree, and that is
+# true independently of the replacement hole above.
+#
+# Both sides are reduced to one digest over `path<TAB>blob-oid` for every blob:
+#   expected — `git ls-tree -r --full-tree <oid>`, filtered to blobs (gitlinks are not archived);
+#   actual   — every regular file in the snapshot, hashed with `git hash-object --stdin-paths`.
+# The path list is compared too, so an EXTRA file in the snapshot moves the digest as surely as
+# a changed one. 498 paths at the pre-repair commit; a one-line edit to any of them moves it.
+# THE EXPECTED SIDE IS PINNED WITH `--no-replace-objects` ON THE COMMAND, NOT LEFT TO THE
+# ENVIRONMENT. Without this the control is self-consistent under replacement and passes: the
+# paired control measured exactly that — with the scrub removed, BOTH sides moved together to the
+# replaced commit's tree (529 paths, digest d8fa9431…) and the control reported PASS. Pinning the
+# expected side means the control itself detects the hole rather than relying on the scrub.
+_tree_expected="$( cd "$ROOT" && git --no-replace-objects ls-tree -r --full-tree "$SUBJECT_SHA" 2>/dev/null \
+                   | awk '$2=="blob"{print $4"\t"$3}' | LC_ALL=C sort | shasum -a 256 | awk '{print $1}' )"
+_tree_paths="$WORK/.tree-paths"; _tree_hashes="$WORK/.tree-hashes"
+_tree_actual="$( cd "$P0" 2>/dev/null && \
+                 find . -type f -not -path './.git/*' | sed 's|^\./||' | LC_ALL=C sort > "$_tree_paths" && \
+                 git hash-object --stdin-paths < "$_tree_paths" > "$_tree_hashes" 2>/dev/null && \
+                 paste "$_tree_paths" "$_tree_hashes" | shasum -a 256 | awk '{print $1}' )"
+_tree_n="$($GREP -c . "$_tree_paths" 2>/dev/null || echo 0)"
 check CONTROL P3-provenance "$( printf '%s' "$SUBJECT_OID" | $GREP -qE '^[0-9a-f]{40}$' && \
-      [ "$_odb_type" = "commit" ] && [ -n "$_sentinel_snap" ] && \
-      [ "$_sentinel_snap" = "$_sentinel_commit" ] && echo 0 || echo 1 )" \
-      "subject provenance is CONSISTENT (not independent): '$SUBJECT_OID' is an exact 40-hex oid, the odb reports it type '${_odb_type:-<none>}', and the archived tree's sentinel blob matches that commit's"
-hdr "SUBJECT IDENTITY"
-identity_block
+      [ "$_odb_type" = "commit" ] && [ -n "$_tree_expected" ] && [ -n "$_tree_actual" ] && \
+      [ "$_tree_expected" = "$_tree_actual" ] && echo 0 || echo 1 )" \
+      "subject provenance is CONSISTENT (not independent): '$SUBJECT_OID' is an exact 40-hex oid of odb type '${_odb_type:-<none>}', and the archived tree matches that commit's tree over all ${_tree_n} blob paths (${_tree_actual:0:12}…)"
 
 for h in "$H58" "$H59" "$H56" "$H571" "$H6" "$H72"; do
     n="$($GREP -c -x -F -- "$h" "$P0/$PROP_REL")"
@@ -1461,7 +1519,7 @@ hdr "HARNESS INTEGRITY"
 # that only compared two files on disk would leave "and it was the file we ran" as an inference.
 for f in scripts/check-type-strings.sh scripts/check-eval-codes.sh scripts/check-vendor-honesty.sh verifier/test_verifier.py; do
     a="$(shasum -a 256 "$P0/$f" | awk '{print $1}')"
-    b="$(cd "$ROOT" && git show "$SUBJECT_SHA:$f" | shasum -a 256 | awk '{print $1}')"
+    b="$(cd "$ROOT" && git --no-replace-objects show "$SUBJECT_SHA:$f" | shasum -a 256 | awk '{print $1}')"
     execs="$(awk -F'\t' -v k="$f" '$1==k{n++} END{print n+0}' "$WITNESS_LOG" 2>/dev/null)"
     distinct="$(awk -F'\t' -v k="$f" '$1==k{print $2}' "$WITNESS_LOG" 2>/dev/null | sort -u | wc -l | tr -d ' ')"
     matched="$(awk -F'\t' -v k="$f" -v h="$a" '$1==k && $2==h{n++} END{print n+0}' "$WITNESS_LOG" 2>/dev/null)"

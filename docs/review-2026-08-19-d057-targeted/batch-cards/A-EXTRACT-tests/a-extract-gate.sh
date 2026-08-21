@@ -136,12 +136,24 @@ say() { printf '        %s\n' "$*"; }
 check() {
     local kind case_id held desc status
     kind="$1"; case_id="$2"; held="$3"; desc="$4"
-    if [ "$kind" = "OBSERVED" ]; then status="...."
-    elif [ "$held" -eq 0 ]; then status="PASS"; else status="FAIL"; fi
+    # A MALFORMED VERDICT IS A FAILURE — NOT A PASS, AND NOT SILENTLY UNCOUNTED.
+    #
+    # This used arithmetic (`[ "$held" -eq 0 ]`) on a value that can be EMPTY when the command
+    # substitution producing it died — for instance on an unbound variable under `set -u`. Empty
+    # made both `-eq` and the later `-ne` error with "integer expression expected", so the case
+    # printed FAIL and then the failure counter was never incremented: the run reported its
+    # controls held and exited 0 beside a printed FAIL. An independent review found exactly that
+    # in the sibling gate harness. **String comparison, no arithmetic, and anything that is not
+    # a literal 0 is a failure.**
+    case "$held" in
+        0) status="PASS" ;;
+        *) status="FAIL" ;;
+    esac
+    if [ "$kind" = "OBSERVED" ]; then status="...."; fi
     printf '  case %-10s %-8s %s  %s\n' "$case_id" "$kind" "$status" "$desc"
     MATRIX_TSV="${MATRIX_TSV}${case_id}	${kind}	${status}	${desc}
 "
-    if [ "$held" -ne 0 ] && [ "$kind" != "OBSERVED" ]; then
+    if [ "$status" = "FAIL" ]; then
         if [ "$kind" = "REQUIRED" ]; then req_fail=$((req_fail + 1)); else ctl_fail=$((ctl_fail + 1)); fi
     fi
 }
@@ -174,6 +186,31 @@ _scrub_git_config_env() {
     done
     unset GIT_CONFIG_COUNT GIT_CONFIG_PARAMETERS 2>/dev/null || true
 }
+
+# OBJECT REPLACEMENT IS NEUTRALISED BEFORE THE FIRST GIT INVOCATION.
+#
+# `refs/replace/<oid>` silently substitutes one object for another in `git archive`,
+# `git show <oid>:<path>` and `git cat-file blob <oid>:<path>` — every command that DELIVERS
+# bytes — while `git cat-file --batch-all-objects`, the command chosen for the existence check
+# precisely because it does no name resolution, is the ONE command immune to it. **So the
+# command that VERIFIED and the commands that MEASURED did not share resolution semantics, and
+# the verification said nothing about the bytes delivered.** An independent review obtained a
+# complete run of a different commit's tree with every control green.
+#
+# MEASURED, both doors, before this repair:
+#   plain                         verifier/test_verifier.py -> 924749d5…
+#   refs/replace in the repo      same path                 -> 9ebb7fa7…   (another commit's bytes)
+#   caller GIT_REPLACE_REF_BASE   same path                 -> 9ebb7fa7…
+#   --batch-all-objects still reported the original present: 1
+#
+# `GIT_NO_REPLACE_OBJECTS=1` restores 924749d5… on every one of those routes, so ONE semantics
+# now governs the existence check, the archive and the blob reads alike. The base variable is
+# scrubbed as well: setting it is the caller's other door into the same mechanism.
+_neutralise_object_replacement() {
+    unset GIT_REPLACE_REF_BASE 2>/dev/null || true
+    export GIT_NO_REPLACE_OBJECTS=1
+}
+_neutralise_object_replacement
 _scrub_git_config_env
 unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_PREFIX 2>/dev/null || true
 
@@ -237,6 +274,7 @@ git clone -q --no-hardlinks --local "$ROOT" "$BASECOPY" 2>/dev/null || die "cann
 # A SUBJECT-PROVENANCE CONSISTENCY CONTROL — NOT an independence proof. The claim that two git
 # commands are independent is withdrawn (R2): they share git's object resolver. What is asserted
 # is that the clone is standing on the exact oid that was supplied.
+_clone_head="$( cd "$BASECOPY" && git rev-parse HEAD 2>/dev/null )" || _clone_head=""
 check CONTROL P3-provenance "$([ "$_clone_head" = "$SUBJECT_SHA" ] && [ "${#SUBJECT_SHA}" = "40" ] && \
       [ "$_odb_type" = "commit" ] && echo 0 || echo 1)" \
       "subject provenance is CONSISTENT (not independent): '$SUBJECT_OID' is an exact 40-hex oid of type '${_odb_type:-<none>}' and the clone is checked out at it"

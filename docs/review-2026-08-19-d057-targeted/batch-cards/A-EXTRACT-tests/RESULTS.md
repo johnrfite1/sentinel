@@ -7,15 +7,15 @@
 docs/review-2026-08-19-d057-targeted/batch-cards/A-EXTRACT-tests/a-extract.sh . bb664c626d592d86391f644bf014e76f2bbf7db4
 ```
 
-**Harness sha256:** `ead0bf0cbda8711a742f003b77db1401df8c7df40b37b91e045c66ce57454dca` (`a-extract.sh`; printed by the harness itself).
-**Gate harness sha256:** `105f4f6ba0fa2e60abcdd54b9f547b5a109622f17acad6ffaa2b71791f20cc14` (`a-extract-gate.sh`; see `GATE-BINDING.md`).
+**Harness sha256:** `17d200d172f4a428379d6b60b6af5e62048f8eed3966fc106815cdb9ac856220` (`a-extract.sh`; printed by the harness itself).
+**Gate harness sha256:** `9fd5790e9d445d2104251ab08a7e682e1ee315837e0903b9588f82fad9676e25` (`a-extract-gate.sh`; see `GATE-BINDING.md`).
 **Environment:** git 2.50.1 (Apple Git-155); bash 3.2.57; Python 3.9.6; node v26.3.0;
 `/usr/bin/grep` with a matched canary.
 
 **The five identity facts the run printed, twice — before any case and again in the summary:**
 
 ```
-  harness sha256   : ead0bf0cbda8711a742f003b77db1401df8c7df40b37b91e045c66ce57454dca
+  harness sha256   : 17d200d172f4a428379d6b60b6af5e62048f8eed3966fc106815cdb9ac856220
   repository       : ~/Projects/Sentinel
   requested subject: bb664c626d592d86391f644bf014e76f2bbf7db4
   resolved subject : bb664c626d592d86391f644bf014e76f2bbf7db4
@@ -28,6 +28,37 @@ docs/review-2026-08-19-d057-targeted/batch-cards/A-EXTRACT-tests/a-extract.sh . 
   REQUIRED : 21 of 52 held      (31 REQUIRED failures)
   CONTROL  : 74 of 74 held      (0 control failures)
   exit 1   — REQUIRED FAILURES with every control holding: the defects are observed.
+```
+
+## 0-REPL. Object replacement, the one-blob sentinel, and a self-masking counter — third review, VERDICT FAIL
+
+All three reproduced before repair. Full mechanism and paired controls in `COVERAGE.md` §0 and
+`GATE-BINDING.md`; the measured essentials:
+
+**F1/F1b — replacement.** `refs/replace` moved `verifier/test_verifier.py` from `924749d5…` to
+`9ebb7fa7…` through `git archive`, `git show` and `git cat-file blob`, while
+`--batch-all-objects` still reported the original present (`1`). Caller `GIT_REPLACE_REF_BASE`
+opened the same door. **Both closed** by unsetting `GIT_REPLACE_REF_BASE` and exporting
+`GIT_NO_REPLACE_OBJECTS=1` before the first git call, in both harnesses.
+
+| | archived + executed | `P3-provenance` |
+|---|---|---|
+| fix present, `refs/replace` in the repo | `924749d5…` | PASS, 498 paths |
+| fix present, caller `GIT_REPLACE_REF_BASE` | `924749d5…` | PASS, 498 paths |
+| **fix removed** (paired control) | `9ebb7fa7…` | **FAIL**, 529 paths |
+
+**F1c — the sentinel.** One blob could not establish a tree: **21 commits here share it with a
+different tree.** The control now digests all 498 blob paths. Failing condition demonstrated —
+one line appended to `HANDOFF.md`, sentinel untouched: digest `d0a672e8…` → `bebde551…`, **FAIL**.
+
+**F2 — the self-masking counter.** `_clone_head`'s assignment was deleted; the verdict became
+empty; `check()`'s arithmetic errored; the printed FAIL was never counted and the run exited 0.
+Restored, and `check()` now counts anything that is not a literal `0` as a failure, in both
+harnesses. Demonstrated:
+
+```
+DELIBERATE-EMPTY CONTROL FAIL     DELIBERATE-FAIL CONTROL FAIL
+ctl_fail=2  -> would exit 2       (before the fix: ctl_fail=0 -> "CONTROLS HELD", exit 0)
 ```
 
 ## 0-OID. `R1` closed structurally — the subject is an exact commit OID and nothing else

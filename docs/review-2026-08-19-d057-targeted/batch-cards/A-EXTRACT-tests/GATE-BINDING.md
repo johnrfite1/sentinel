@@ -7,7 +7,7 @@
 > and is NOT general prose-consistency evidence."* — D-059(7)
 
 **Harness:** `a-extract-gate.sh`, sha256
-`105f4f6ba0fa2e60abcdd54b9f547b5a109622f17acad6ffaa2b71791f20cc14`.
+`9fd5790e9d445d2104251ab08a7e682e1ee315837e0903b9588f82fad9676e25`.
 **Subject:** a private `git clone` of this repository checked out at
 `bb664c626d592d86391f644bf014e76f2bbf7db4`, with `ts/node_modules` and both submodule working
 trees copied in. **The live gate is never run, never edited, and never written to.** No signed or
@@ -49,6 +49,67 @@ sufficiency lapses and the deep mutation runs become required.
 
 ---
 
+## RE-MEASURED ON THE CURRENT FILE, AT A SUBJECT WHERE THE GATE IS GREEN
+
+**Every figure below this section was carried from an earlier revision and at least one of them
+was false. These are measured on the committed file.**
+
+```
+a-extract-gate.sh . bb664c626d592d86391f644bf014e76f2bbf7db4
+
+  REQUIRED : 7 of 7 held
+  CONTROL  : 10 of 10 held
+  exit 0
+```
+
+**Subject choice, and why it is not a convenience.** `G1` requires the UNCHANGED gate to pass, and
+HEAD is deliberately red — `cefc135` applied `TESTS.patch` and ratcheted the verifier floor, so the
+suite and the fast gate fail by design. The measurement is therefore taken at
+`bb664c626d592d86391f644bf014e76f2bbf7db4`, where the gate is green, and the exact-oid interface
+makes that choice explicit in the run's own identity block rather than implicit in a ref.
+
+| Case | Kind | Verdict |
+|---|:--:|:--:|
+| `P3-provenance` | CONTROL | **PASS** — the control whose assignment had been deleted; restored and now genuinely evaluated |
+| `G1` | REQUIRED | **PASS** — unchanged gate prints `GATE PASSED` (rc=0) |
+| `G1-stages`, `G1-order`, `G1-green` | CONTROL | PASS |
+| `G2-mut`, `G2-scope` | CONTROL | PASS |
+| `G2-named`, `G2-gate`, `G2-unmasked` | REQUIRED | **PASS** (rc=5) |
+| `G3-mut`, `G3-scope` | CONTROL | PASS |
+| `G3-named`, `G3-gate`, `G3-unmasked` | REQUIRED | **PASS** (rc=5) |
+| `Z-clean`, `Z-signed` | CONTROL | PASS |
+
+**`CONTROL` is 10, not 9, because `P3-provenance` is now counted** — under the counting bug a
+failing control was not counted at all.
+
+## A FALSE `PASS` IN THIS DOCUMENT, AND THE BUG THAT PRODUCED IT
+
+**An independent review (`INSTRUMENT-REVIEW-3.md`, VERDICT FAIL) found that this file recorded a
+`PASS` for a control that had printed `FAIL`.** Reproduced before fixing:
+
+- the `_clone_head` assignment was **deleted** by the `4f1e6a3` edit — zero occurrences, while
+  line 240 still read it. Under `set -u` that is an unbound variable;
+- the command substitution producing the verdict therefore yielded an **empty string**;
+- `check()` did arithmetic on it (`[ "$held" -eq 0 ]`, then `[ "$held" -ne 0 ]`), which errored
+  with *integer expression expected* — so the case **printed FAIL and the failure was never
+  counted**. The run reported its controls held and exited 0.
+
+**That is a self-masking harness, and it would have swallowed any future control failure, not
+just this one.** Three separate fixes, all applied: the assignment is restored; `check()` now
+uses string comparison with **anything that is not a literal `0` counted as a failure**, in
+**both** harnesses; and the false row in the table below is corrected rather than quietly
+overwritten.
+
+**Demonstrated, with a deliberately failing control injected into the gate harness:**
+
+```
+case DELIBERATE-EMPTY CONTROL FAIL   a control whose verdict is EMPTY, as an unbound variable produces
+case DELIBERATE-FAIL  CONTROL FAIL   a control that plainly fails
+ctl_fail=2 req_fail=0   -> would exit 2 (harness untrustworthy)
+```
+
+Before the fix the same injection produced `ctl_fail=0` and *"reports CONTROLS HELD and exits 0"*.
+
 ## THE SUBJECT IS NOW AN EXACT COMMIT OID — SUPERSEDES THE PARAGRAPH BELOW
 
 **John's ruling on the second review closed `R1` structurally.** This harness now takes
@@ -81,7 +142,7 @@ resolution wiring changed, and that is stated rather than glossed.**
 The earlier `7 of 7` / `9 of 9` figure was produced by the revision of `a-extract-gate.sh`
 immediately prior to the subject-selection correction, which checked out `bb664c6` from a
 hardcoded constant. **That revision's evidence is superseded here.** The corrected revision,
-sha256 `105f4f6ba0fa2e60abcdd54b9f547b5a109622f17acad6ffaa2b71791f20cc14`, was re-run end to end
+sha256 `9fd5790e9d445d2104251ab08a7e682e1ee315837e0903b9588f82fad9676e25`, was re-run end to end
 through the new interface:
 
 ```
@@ -125,7 +186,7 @@ No case semantics changed and no verdict moved.
 | `G3-scope` | CONTROL | PASS | targeted |
 | `Z-clean` | CONTROL | PASS | **0 changed paths** in the live repository's production boundary |
 | `Z-signed` | CONTROL | PASS | `docs/gate-s2-evidence.md` byte-identical to `PRE_REPAIR_SHA` |
-| `P3-provenance` (was `P3-subject`) | CONTROL | PASS | the supplied exact oid is a commit and the clone is checked out at it |
+| `P3-provenance` (was `P3-subject`) | **see below** | **THIS ROW WAS FALSE** | at `4f1e6a3` the control's `_clone_head` assignment had been deleted; it printed **FAIL**, the counting bug then swallowed the failure, and this table recorded PASS. Corrected and re-measured — see *Re-measured after the third review*. |
 
 **The gate's own exit status is recorded (`rc=0`, `rc=5`, `rc=5`) and used in no assertion.**
 `rc=5` is the completion-token supervisor refusing a run that did not reach completion — a fact

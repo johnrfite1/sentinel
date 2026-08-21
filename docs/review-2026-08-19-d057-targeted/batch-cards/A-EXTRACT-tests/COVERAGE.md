@@ -51,6 +51,41 @@ and cost it its only remaining fail-open.
 The existence-and-type check goes further and performs **no name resolution at all** — it reads
 `git cat-file --batch-all-objects --batch-check`, which enumerates the object database.
 
+### Object replacement is neutralised before the first git invocation
+
+**`refs/replace/<oid>` silently substitutes one object for another in every command that
+DELIVERS bytes** — `git archive`, `git show <oid>:<path>`, `git cat-file blob <oid>:<path>` —
+while `git cat-file --batch-all-objects`, chosen for the existence check precisely because it
+does no name resolution, is **the one command immune to it**. The command that verified and the
+commands that measured did not share resolution semantics, so the verification said nothing about
+the bytes delivered. An independent review obtained a complete run of a different commit's tree
+with every control green.
+
+**Measured here before repairing anything:**
+
+| route | `verifier/test_verifier.py` |
+|---|---|
+| plain | `924749d5…` |
+| `refs/replace` installed in the measured repository | `9ebb7fa7…` — another commit's bytes |
+| caller `GIT_REPLACE_REF_BASE` pointing at another namespace | `9ebb7fa7…` |
+| `--batch-all-objects` | still reported the original present: **1** |
+
+**The repair:** `GIT_REPLACE_REF_BASE` is unset and `GIT_NO_REPLACE_OBJECTS=1` is exported before
+the first git invocation, in **both** harnesses, so one semantics governs the existence check, the
+archive and every blob read. **Both doors verified closed, with a paired control that moves:**
+
+| | archived + executed bytes | `P3-provenance` |
+|---|---|---|
+| fix present, `refs/replace` in the repo | `924749d5…` | PASS, 498 paths |
+| fix present, caller `GIT_REPLACE_REF_BASE` | `924749d5…` | PASS, 498 paths |
+| **fix removed**, `refs/replace` in the repo | `9ebb7fa7…` | **FAIL**, 529 paths |
+
+**The expected side of the provenance digest is pinned with `--no-replace-objects` on the command
+itself, not left to the environment.** Without that the control is self-consistent under
+replacement and passes — measured: with the scrub removed, *both* sides moved together to the
+replaced tree and the control reported PASS. Pinning it means the control detects the hole even
+if the scrub were removed. `Z-<consumer>` pins its side the same way.
+
 ### Caller configuration injection is neutralised before the first git invocation
 
 `GIT_CONFIG_COUNT`, **every** `GIT_CONFIG_KEY_<n>` / `GIT_CONFIG_VALUE_<n>` — **enumerated from
@@ -93,10 +128,20 @@ What the provenance chain establishes, each link measured:
 |---|---|
 | the string supplied is an exact full 40-hex oid — no name was resolved | `P3-provenance` |
 | that exact object is present with type `commit`, by odb enumeration | `P3-provenance` |
-| the archived tree was produced from that oid (sentinel blob) | `P3-provenance` |
+| the archived tree is the subject commit's tree — **all 498 blob paths**, not one sentinel | `P3-provenance` |
 | the consumers actually **EXECUTED** carry that commit's bytes | `Z-<consumer>` ×4 |
 | the source repository is unchanged by the run | `Z-clean` |
 | Gate 5 material and the signed pack are unmoved | `Z-gate5`, `Z-signed` |
+
+**`P3-provenance` compares WHOLE TREES, not one file.** It used a single sentinel blob, and
+**21 commits already in this repository carry an identical `scripts/check-type-strings.sh` blob
+with a different tree** — measured, not assumed — so any of them would have satisfied it. Both
+sides are now one digest over `path<TAB>blob-oid` for every blob: the expected side from
+`git --no-replace-objects ls-tree -r --full-tree <oid>`, the actual side from every regular file
+in the snapshot hashed with `git hash-object --stdin-paths`. The path list is compared too, so an
+extra file moves the digest as surely as a changed one. **Failing condition demonstrated:** one
+line appended to `HANDOFF.md` in the archived tree, sentinel untouched, moved the digest from
+`d0a672e8…` to `bebde551…` and the control reported FAIL.
 
 **The execution witness is the strongest property this instrument has.** Each consumer
 invocation records the sha256 of the file it is about to run; the four `Z-<consumer>` controls

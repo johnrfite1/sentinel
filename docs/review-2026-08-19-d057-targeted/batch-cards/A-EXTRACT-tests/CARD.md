@@ -25,6 +25,23 @@ already identifies frozen attempt-two evidence.
 or by the commit that carries it. `TESTS.patch` is supplied as a patch file and is **NOT
 applied**.
 
+## A THIRD REVIEW: OBJECT REPLACEMENT, A WEAK SENTINEL, AND A SELF-MASKING HARNESS
+
+**VERDICT: FAIL** (`INSTRUMENT-REVIEW-3.md`; that document and the two before it are the
+reviewers' records and none is edited here). **John ruled: fix all three and re-verify.** Still
+instrument only; still not an implementation attempt. All three were reproduced independently
+before anything was changed.
+
+| | Finding | Repair |
+|---|---|---|
+| **F1 / F1b** | `refs/replace` substitutes objects in `git archive`, `git show <oid>:<path>` and `git cat-file blob <oid>:<path>` — every command that DELIVERS bytes — while `--batch-all-objects`, the existence check, is the one command immune. **The verifying and the measuring commands did not share semantics.** Reachable from the caller's environment alone; neither harness scrubbed `GIT_REPLACE_REF_BASE` or `GIT_NO_REPLACE_OBJECTS` | both scrubbed/exported before the first git call in **both** harnesses; the provenance and witness comparisons additionally pin `--no-replace-objects` on the command so they detect the hole even if the scrub were removed |
+| **F1c** | `P3-provenance`'s sentinel was **one file**, and **21 commits in this repository share that blob with a different tree** | the control now compares **whole trees** — a digest over `path<TAB>blob-oid` for all 498 blob paths, plus the path list itself |
+| **F2** | the `4f1e6a3` edit **deleted** `_clone_head`'s assignment while line 240 still read it; under `set -u` the verdict became empty, `check()`'s arithmetic errored, and **the printed FAIL was never counted** — the run reported controls held at rc 0, and `GATE-BINDING.md` recorded a false `PASS` | assignment restored; `check()` rewritten to string comparison with **anything not a literal `0` counted as a failure**, in **both** harnesses; the false row corrected |
+
+**F2 is the one worth dwelling on: a harness that prints FAIL and then reports "all controls
+held" is this project's named defect class, and it would have masked any future control failure,
+not just this one.** It is demonstrated fixed with a deliberately failing control.
+
 ## THE SUBJECT INTERFACE IS NARROWED TO AN EXACT COMMIT OID — `R1` CLOSED STRUCTURALLY
 
 **A second independent review returned VERDICT: HOLD with residual `R1` open**
