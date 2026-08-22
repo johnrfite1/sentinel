@@ -278,12 +278,17 @@ for number, raw in enumerate(gate.splitlines(), 1):
 
 failed = False
 values = {}
+inventory = "inspected constants: " + " ".join(names)
 if DIAGNOSTIC_MODE == "uncorrelated":
-    print("inspected constants: " + " ".join(names))
+    print(inventory)
 
 def emit_duplicate(target):
     if DIAGNOSTIC_MODE == "uncorrelated":
         print("UNRELATED_CONSTANT: duplicate executable assignment")
+    elif DIAGNOSTIC_MODE == "uncorrelated-oneline":
+        print(inventory + "; UNRELATED_CONSTANT: duplicate executable assignment")
+    elif DIAGNOSTIC_MODE == "uncorrelated-json":
+        print('{"names": "' + " ".join(names) + '", "class": "duplicate executable assignment"}')
     else:
         print(f"{target}: duplicate executable assignment")
 
@@ -395,6 +400,14 @@ def install_uncorrelated_diagnostic_sibling(root: Path) -> None:
     install_sibling(root, r"[1-9][0-9]*", "finite", diagnostic_mode="uncorrelated")
 
 
+def install_uncorrelated_oneline_sibling(root: Path) -> None:
+    install_sibling(root, r"[1-9][0-9]*", "finite", diagnostic_mode="uncorrelated-oneline")
+
+
+def install_uncorrelated_json_sibling(root: Path) -> None:
+    install_sibling(root, r"[1-9][0-9]*", "finite", diagnostic_mode="uncorrelated-json")
+
+
 def make_fixture(root: Path) -> None:
     (root / "scripts/test.sh").write_text(VALID_TEST_SH)
     (root / "scripts/test.sh").chmod(0o755)
@@ -441,14 +454,30 @@ def synthetic_result(output: str, rc: int = 1) -> subprocess.CompletedProcess[st
     return subprocess.CompletedProcess(args=[], returncode=rc, stdout=output, stderr="")
 
 
+def refusal_records(output: str) -> list[str]:
+    records: list[str] = []
+    for line in output.splitlines():
+        for part in line.split(";"):
+            text = part.strip()
+            if text:
+                records.append(text)
+    return records
+
+
 def source_refusal(result: subprocess.CompletedProcess[str], name: str, reason: str) -> bool:
     if result.returncode == 0:
         return False
     name_l = name.lower()
     reason_l = reason.lower()
-    for line in result.stdout.splitlines():
-        low = line.lower()
-        if name_l in low and reason_l in low:
+    subject = re.compile(rf"^{re.escape(name)}\s*:", re.IGNORECASE)
+    for record in refusal_records(result.stdout):
+        match = subject.match(record)
+        if match is None:
+            continue
+        head = record[: match.end() - 1].strip()
+        if head.lower() != name_l:
+            continue
+        if reason_l in record[match.end():].lower():
             return True
     return False
 
@@ -521,6 +550,7 @@ def main() -> int:
         "baseline", "digits-zero-sibling", "flawed-heredoc-sibling",
         "review3-failclosed-sibling", "all-token-failclosed-sibling",
         "exact-positive-control", "uncorrelated-diagnostic-sibling",
+        "uncorrelated-oneline-sibling", "uncorrelated-json-sibling",
     ):
         print("preflight: unknown A_FLOORS_VARIANT", file=sys.stderr)
         return 2
@@ -549,6 +579,10 @@ def main() -> int:
             install_exact_positive_control(root)
         elif variant == "uncorrelated-diagnostic-sibling":
             install_uncorrelated_diagnostic_sibling(root)
+        elif variant == "uncorrelated-oneline-sibling":
+            install_uncorrelated_oneline_sibling(root)
+        elif variant == "uncorrelated-json-sibling":
+            install_uncorrelated_json_sibling(root)
 
         print("A-FLOORS focused frozen contract")
         print(f"subject={subject}")
@@ -598,23 +632,49 @@ def main() -> int:
         )
 
         print("\n== diagnostic-correlation oracle ==")
-        hostile_output = (
-            "inspected constants: " + " ".join(FLOORS) + "\n"
-            "UNRELATED_CONSTANT: duplicate executable assignment\n"
+        inventory = "inspected constants: " + " ".join(FLOORS)
+        unrelated = "UNRELATED_CONSTANT: duplicate executable assignment"
+        hostile_twoline = inventory + "\n" + unrelated + "\n"
+        hostile_oneline = inventory + "; " + unrelated + "\n"
+        hostile_json = (
+            '{"names": "' + " ".join(FLOORS)
+            + '", "class": "duplicate executable assignment"}\n'
+        )
+        prefix_long = synthetic_result(
+            "VERIFIER_MIN_TAMPER_MODES: duplicate executable assignment\n"
         )
         for name in FLOORS:
             legit = synthetic_result(f"{name}: duplicate executable assignment\n")
             record(
                 "CONTROL", f"DR-legit-{name}",
                 source_refusal(legit, name, "duplicate"),
-                "same-record named duplicate diagnostic satisfies the oracle",
+                "named-subject duplicate diagnostic satisfies the oracle",
             )
-            hostile = synthetic_result(hostile_output)
             record(
                 "CONTROL", f"DR-uncorrelated-{name}",
-                not source_refusal(hostile, name, "duplicate"),
-                "inventory plus unrelated duplicate record does not name this constant",
+                not source_refusal(synthetic_result(hostile_twoline), name, "duplicate"),
+                "Review-4 two-line inventory plus unrelated class does not name this constant",
             )
+            record(
+                "CONTROL", f"DR-oneline-{name}",
+                not source_refusal(synthetic_result(hostile_oneline), name, "duplicate"),
+                "semicolon-joined inventory plus unrelated class does not name this constant",
+            )
+            record(
+                "CONTROL", f"DR-json-{name}",
+                not source_refusal(synthetic_result(hostile_json), name, "duplicate"),
+                "JSON inventory plus unrelated class does not name this constant",
+            )
+        record(
+            "CONTROL", "DR-prefix-TAMPER",
+            not source_refusal(prefix_long, "VERIFIER_MIN_TAMPER", "duplicate"),
+            "TAMPER_MODES named subject is not a TAMPER refusal",
+        )
+        record(
+            "CONTROL", "DR-prefix-TAMPER-MODES",
+            source_refusal(prefix_long, "VERIFIER_MIN_TAMPER_MODES", "duplicate"),
+            "TAMPER_MODES named subject remains a TAMPER_MODES refusal",
+        )
 
         fake_only_routes: list[tuple[str, str]] = []
         paired_routes: list[tuple[str, str]] = []

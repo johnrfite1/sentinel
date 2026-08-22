@@ -26,11 +26,18 @@
 | third correction | `fa92ff7729287b10d6e140a6955b9740248600a6`; tree `e01f89342315611f42edd42ee6400b34ea0da56e` |
 | independent Review-4 FAIL | `0bf739b5be645abe6c8171c005a7181aaaadc5c8`; tree `2b7265c78e549ba290f0ec2c138c7bc5718b7fcf` |
 | preserved `INSTRUMENT-REVIEW-4.md` | sha256 `cfdf80b4c49a5716565fae5254652174c360226e005720402aaba8fb37d28437` |
+| fourth correction | `178347dbf33ab70923a6fd0278ea61c5dec5e6b6`; tree `1b5f028aa217da5e389c28a062d43b5350c60d96` |
+| independent Review-5 FAIL of record | `30d6257f806276a24cb6a40319b5bbb858fa9a5d`; tree `80769f8b18ab3b716bb51d40463e153a840c10e6` |
+| preserved `INSTRUMENT-REVIEW-5.md` | sha256 `4d742aded60fce42d30ec49dbb4d7a443fe0f0dbfc04ab9cafcc06987c4bd6fa` |
+| concurrent independent Review-5 FAIL | `bd0c43321e7bb2e8200513fb4e97666fccdab697`; tree `846c19667cff38edb2a8f8976cc82c50ccedecdd` |
+| preserved `INSTRUMENT-REVIEW-5-concurrent.md` | sha256 `10bc8231f5d9e3f309a3bf87190d1340f60176c8fdc1644bb1bf8bd2e585dbb7` |
 
-The shared worktree was clean at the Review-4 parent. Fourth-corrected focused probes used the
+The shared worktree was clean at the Review-5 parent. Fifth-corrected focused probes used the
 external dirty harness against a disposable clean clone at that exact commit; every source
 mutation remained there. The shared repository correction changes only files under this evidence
-directory and preserves all four review records and every earlier matrix/summary byte-for-byte.
+directory and preserves all five review records, the concurrent Review-5 blob, and every earlier
+matrix/summary byte-for-byte. Two reviewers committed `INSTRUMENT-REVIEW-5.md` in succession
+(D-037); both FAILs name the same hole, and both blobs are retained.
 
 ## Governing and source material read
 
@@ -87,6 +94,16 @@ decision entries, signed packs and dated narration were classified as controls, 
 | v4 expanded all-token matrix/raw | `1ff40412804a481264dd01cb0bf74164e5104e66291403ae5f06ac299128e600` / `b4dd45521ede35165a532725a4c4a1573905898dac516c200f96fdb63ff0be1a` |
 | v4 uncorrelated-diagnostic matrix/raw | `15c540c565050b427d4e97486ba34a2d7d020aede82d2aa6e61e2086820f3be9` / `6c6bc07ca9b59bb9214dcaa865cc6c9926e4addd54bad906bc0ad9691a1c908b` |
 | v4 exact-positive matrix/raw | `63dbb5577a5a9d40c5f4df06367f77901305d26e858e6d16386c4118451e1ff5` / `d8d3a9b9f5c1c63c16bca04131b1c17d755a72da2a99794aafd980d0bbe7c809` |
+| fifth-corrected focused harness, 1035 lines | `3f347ecf482b7f249275dec87b70c6f94f9a3b3a329a4dd02e4db4a68742a42a` |
+| v5 baseline matrix/raw | `b7dabf0e3ea0ede2c0fdf6bca70feeafa2d911b77e55c06e8db625078f1283e0` / `242d0098cbf8045ce52e80c12f376581d2c3e01ac1ae11b1316ba093aa80f217` |
+| v5 digits-zero matrix/raw | `3eac8a9e4657f518870ce53110c23ad4f97b229e689629184dfe712d40aab62b` / `7748cc056b7adcfff77a24a1ad0aa9abd1008a7edf759d2df1c7845b334fc84b` |
+| v5 Review-2 raw-reader matrix/raw | `16766991f633d81c8753cc2502475b90a9ca81b5f533aefbd90615ee7013d7c2` / `c388f7404f15c515289f1c25c1c6c2e47f2f3198e48ee999ad7c987f9f64e798` |
+| v5 exact Review-3 non-comment matrix/raw | `325b2323d55acbca4da494f11c82e617317c97fbfeb8fb96fab9745f9b9cce6d` / `49ff71ac22da4683fc90d77366749078b2d4c9f19a03733749e557f413c5c17f` |
+| v5 expanded all-token matrix/raw | `1b7d8c79585314734ee48f0ad932541fb15255e63c1eed673fd6d8c671f462d5` / `104e3b732562ce4acf9f5a326ef69c60cc86f3b3cdb9598e392f89912a0fc21a` |
+| v5 two-line uncorrelated matrix/raw | `b464ae62dcff31da51f5bd6391b7bc8c35c17e39fb540aa03a6c39162b522e2d` / `8b24e85949063a041aced443937329d1bfca8d9a7499a4191f0d4b8a5152f36b` |
+| v5 oneline uncorrelated matrix/raw | `b464ae62dcff31da51f5bd6391b7bc8c35c17e39fb540aa03a6c39162b522e2d` / `99edf1dc6d2789cd30c57ad16460fa391f70c86b5d2c58fc6560c86ef2f2de5a` |
+| v5 JSON uncorrelated matrix/raw | `b464ae62dcff31da51f5bd6391b7bc8c35c17e39fb540aa03a6c39162b522e2d` / `1598e55137f9a5a49e2b5ffde0339d74d5aa84f0295384cc8006fe8ebb5942e6` |
+| v5 exact-positive matrix/raw | `ea972bff0f769c8acb177134d1ce5ddbcc03fcc18d89d704af2579f10d5e212a` / `c362678e42aa26d67ad1206cff5b5077cae6969c375f751417c02dc374278adc` |
 | serial gate harness, 328 lines | `fb389fdd33e981a356436cf37e453158787288c6d64530c28c695fcec83cd8d0` |
 | gate matrix | `0b4d9c127e7230c7266960fe073f92f9551da9a68005cb936850993d803d1c58` |
 | gate wrapper raw output, external | `c4a41ddc58b73c7c23932556a37c7c955968298553fcbbd94314c550c01a6cb2` |
@@ -110,8 +127,9 @@ and matrices contain no such path.
 
 - No production, existing test, script, gate, floor, maintained claim, prior evidence or decision
   file changed.
-- `INSTRUMENT-REVIEW-1.md`, `INSTRUMENT-REVIEW-2.md`, `INSTRUMENT-REVIEW-3.md` and
-  `INSTRUMENT-REVIEW-4.md` remain byte-identical at the hashes above.
+- `INSTRUMENT-REVIEW-1.md`, `INSTRUMENT-REVIEW-2.md`, `INSTRUMENT-REVIEW-3.md`,
+  `INSTRUMENT-REVIEW-4.md` and `INSTRUMENT-REVIEW-5.md` remain byte-identical at the hashes above.
+  `INSTRUMENT-REVIEW-5-concurrent.md` is the exact `bd0c433` review blob.
 - Both frozen B/C test files remain byte-identical at the hashes above.
 - Signed Gate S2 material remains byte-identical.
 - No test patch was applied, no floor lowered, and no historical record rewritten.

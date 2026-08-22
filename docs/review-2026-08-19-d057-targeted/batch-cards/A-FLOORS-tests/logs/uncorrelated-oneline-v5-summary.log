@@ -1,0 +1,14 @@
+A-FLOORS Review-5 semicolon-joined uncorrelated-diagnostic sibling under fifth correction
+subject=30d6257f806276a24cb6a40319b5bbb858fa9a5d
+variant=uncorrelated-oneline-sibling
+harness_sha256=3f347ecf482b7f249275dec87b70c6f94f9a3b3a329a4dd02e4db4a68742a42a
+finite_lexer=exact-positive
+duplicate_policy=semicolon-joined inventory plus UNRELATED_CONSTANT record
+REQUIRED 41/131
+CONTROL 200/200
+required_failures=90
+failure_families=DA:6,DB:6,DC:6,IA:6,IB:6,TF:48,FC-comment:6,HR-post:6
+PRE-REPAIR DEFECTS OBSERVED
+exit=1
+raw_sha256=99edf1dc6d2789cd30c57ad16460fa391f70c86b5d2c58fc6560c86ef2f2de5a
+matrix_sha256=b464ae62dcff31da51f5bd6391b7bc8c35c17e39fb540aa03a6c39162b522e2d

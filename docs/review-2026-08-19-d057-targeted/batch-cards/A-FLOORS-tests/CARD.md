@@ -1,7 +1,7 @@
-# A-FLOORS — fourth-corrected frozen independent test contract
+# A-FLOORS — fifth-corrected frozen independent test contract
 
-**Verdict: HOLD for fourth-corrected test-contract readiness only, pending fresh independent
-Review 5.** This is not implementation approval, a gate signature, certification, ratification,
+**Verdict: HOLD for fifth-corrected test-contract readiness only, pending fresh independent
+Review 6.** This is not implementation approval, a gate signature, certification, ratification,
 publication, rename, D-055 assessment or push authorization.
 
 **Behavioral baseline:** `1a133301533e9d959dbafbbcc7ffe05e7eb78df3` (tree
@@ -12,9 +12,15 @@ publication, rename, D-055 assessment or push authorization.
 `12a35d2c3f30c77250b3ebde0bf82c25591dce10`; Review-3 FAIL parent
 `cd12ac26fb718a9bd02971db1f09f4fe1189bba7`; third correction
 `fa92ff7729287b10d6e140a6955b9740248600a6`; Review-4 FAIL
-`0bf739b5be645abe6c8171c005a7181aaaadc5c8`. This correction changes only this evidence
-directory. All four review records remain byte-identical. Fourth-corrected focused probes used
-the external dirty harness against a disposable clean clone of Review-4 commit `0bf739b`.
+`0bf739b5be645abe6c8171c005a7181aaaadc5c8`; fourth correction
+`178347dbf33ab70923a6fd0278ea61c5dec5e6b6`; Review-5 FAIL of record
+`30d6257f806276a24cb6a40319b5bbb858fa9a5d`. A concurrent independent Review-5 FAIL at
+`bd0c43321e7bb2e8200513fb4e97666fccdab697` named the same hole plus JSON and TAMPER/TAMPER_MODES
+prefix collision; its exact blob is preserved as `INSTRUMENT-REVIEW-5-concurrent.md` because two
+reviewers committed `INSTRUMENT-REVIEW-5.md` in succession. This correction changes only this
+evidence directory. Reviews 1–5 and the concurrent Review-5 blob remain byte-identical.
+Fifth-corrected focused probes used the external dirty harness against a disposable clean clone
+of Review-5 commit `30d6257`.
 
 **Authority:** D-058(1), (2), (6), (8)C and (9); D-059(5), (7) and (8); D-060(1); D-066(2)–(4).
 `N-TESTSH-FLOORS` remains a duplicate of `R4-F4`, not a seventh item. C3 supplies the confirmed
@@ -47,13 +53,16 @@ implementation, current claim or existing script is edited by this correction.
 | `VERIFIER_MIN_TAMPER_MODES` | 30 | 30 | 30 |
 
 For every name, exactly one executable column-zero assignment with a positive decimal value is
-accepted and reported. Refusals name the constant and exact class on **one refusal record or
-line**: absent → `missing`; empty → `empty`; spaced/non-assignment spelling → `malformed`;
-assigned non-number → `numeric`; zero → `positive`; and a second executable assignment in the
-enumerated direct, inline-conditional or standalone-indented forms → `duplicate`. An inventory
-line that lists every constant, paired with an unrelated record that carries only the class,
-does not satisfy that assertion. Ordinary `NAME=1` and the
-`VERIFIER_MIN_TAMPER`/`VERIFIER_MIN_TAMPER_MODES` prefix relationship remain controls.
+accepted and reported. Refusals name the constant as the **subject** of one refusal record
+(`{NAME}:` then the class). Absent → `missing`; empty → `empty`; spaced/non-assignment spelling →
+`malformed`; assigned non-number → `numeric`; zero → `positive`; and a second executable
+assignment in the enumerated direct, inline-conditional or standalone-indented forms →
+`duplicate`. Newline and semicolon are both record boundaries. An inventory of every constant,
+whether split across two lines, joined by `;`, joined by space, or wrapped in JSON beside an
+unrelated class word, does not satisfy that assertion. Class-first live wording such as
+`MISSING: $v is not defined` is not a named-subject refusal. Ordinary `NAME=1` and the
+`VERIFIER_MIN_TAMPER`/`VERIFIER_MIN_TAMPER_MODES` prefix relationship remain controls: a
+`TAMPER_MODES` subject is not a `TAMPER` refusal.
 
 Direct duplicates remain in both orders with independent legacy-first and Bash-last witnesses.
 Inline conditionals remain separate `DC/DCW` rows. Standalone indented before/after rows require
@@ -104,45 +113,63 @@ inspected constants: FOUNDRY_MIN_TESTS TS_MIN_TESTS VERIFIER_MIN_TESTS VERIFIER_
 UNRELATED_CONSTANT: duplicate executable assignment
 ```
 
-The fourth correction requires one refusal record or line to carry both the mutated constant and
-the expected class. Twelve new CONTROLS pin that oracle directly:
+The fourth correction required both tokens on one `splitlines()` record. Review 5 showed that
+joining those two records with `;` (or listing the same names in JSON beside the class) scored
+317/317 against that matcher, with a matrix byte-identical to the satisfying control. The
+mutated constant was never the subject of the refusal.
+
+The fifth correction requires `{NAME}:` as the named subject and treats newline and semicolon as
+record boundaries. Direct controls:
 
 - six `DR-legit-*` rows accept `{NAME}: duplicate executable assignment`;
-- six `DR-uncorrelated-*` rows reject the Review-4 inventory-plus-unrelated payload for that name.
+- six `DR-uncorrelated-*` rows reject Review 4's two-line payload for that name;
+- six `DR-oneline-*` rows reject the Review-5 semicolon-joined payload for that name;
+- six `DR-json-*` rows reject the compact JSON inventory-plus-class payload for that name;
+- `DR-prefix-TAMPER` rejects a `VERIFIER_MIN_TAMPER_MODES: duplicate executable assignment`
+  record as a `TAMPER` refusal;
+- `DR-prefix-TAMPER-MODES` accepts that same record as a `TAMPER_MODES` refusal.
 
-The embedded `uncorrelated-diagnostic-sibling` is the Review-4 candidate: the exact-positive
-finite lexer, with only duplicate diagnostics rewritten to that hostile policy. It must fail
-exactly the 90 named-duplicate REQUIRED rows and hold every CONTROL, including the twelve new
-oracle rows.
+Three embedded siblings bind those rejected grammars to live candidates, not only harness-local
+strings. Each is the exact-positive finite lexer with only duplicate diagnostics rewritten:
+
+- `uncorrelated-diagnostic-sibling` emits Review 4's two-line payload;
+- `uncorrelated-oneline-sibling` emits Review 5's semicolon-joined payload;
+- `uncorrelated-json-sibling` emits the compact JSON payload.
+
+Each must fail exactly the 90 named-duplicate REQUIRED rows and hold every CONTROL, including the
+twenty-six diagnostic-oracle rows.
 
 ## 5. Causal sibling calibration
 
-All current variants execute the same 317 uniquely named rows: 131 REQUIRED and 186 CONTROL.
+All current variants execute the same 331 uniquely named rows: 131 REQUIRED and 200 CONTROL.
 
 - `digits-zero-sibling` uses the corrected finite opener lexer but accepts `[0-9]+`. It passes all
-  transition, prior and diagnostic-oracle rows and fails exactly six `Z-*` rows: 125/131, 186/186.
+  transition, prior and diagnostic-oracle rows and fails exactly six `Z-*` rows: 125/131, 200/200.
 - `flawed-heredoc-sibling` reconstructs Review 2's raw-text marker search before quote/context
   classification. Its earlier 83/131 REQUIRED outcome remains intact; inverse controls expose 40
-  additional false reader states; the twelve diagnostic controls pass, so current calibration is
-  83/131 and 146/186.
+  additional false reader states; the twenty-six diagnostic controls pass, so current calibration
+  is 83/131 and 160/200.
 - `review3-failclosed-sibling` exactly preserves Review 3's non-comment policy. It passes all 251
-  prior rows, every REQUIRED assertion, the twelve diagnostic controls and six comment-only
-  controls, then fails exactly 48 non-comment `FA-*` rows: 131/131, 138/186.
+  prior rows, every REQUIRED assertion, the twenty-six diagnostic controls and six comment-only
+  controls, then fails exactly 48 non-comment `FA-*` rows: 131/131, 152/200.
 - `all-token-failclosed-sibling` is separately named expanded calibration, not the exact Review-3
-  candidate. It passes all prior rows/REQUIRED assertions and the twelve diagnostic controls but
-  rejects comments too, failing all 54 `FA-*` rows: 131/131, 132/186.
-- `uncorrelated-diagnostic-sibling` is the Review-4 hostile diagnostic policy on the satisfying
-  lexer. It passes every CONTROL and fails exactly 90 named-duplicate REQUIRED rows: 41/131,
-  186/186, exit 1.
-- `exact-positive-control` uses `[1-9][0-9]*` and the finite lexer with named same-record
-  diagnostics. It passes 131/131 and 186/186.
+  candidate. It passes all prior rows/REQUIRED assertions and the twenty-six diagnostic controls
+  but rejects comments too, failing all 54 `FA-*` rows: 131/131, 146/200.
+- `uncorrelated-diagnostic-sibling`, `uncorrelated-oneline-sibling` and
+  `uncorrelated-json-sibling` each pass every CONTROL and fail exactly 90 named-duplicate
+  REQUIRED rows: 41/131, 200/200, exit 1. Their matrices are byte-identical to each other and
+  distinct from the satisfying control.
+- `exact-positive-control` uses `[1-9][0-9]*` and the finite lexer with named-subject
+  diagnostics. It passes 131/131 and 200/200.
 
-The baseline/current reader also passes all 54 fake-only controls and all twelve diagnostic
-controls. Control failures in deliberate siblings return exit 2 by harness design: they establish
-that the candidate is inadmissible, not a product verdict. The satisfying control proves the
-matrix is achievable. These embedded candidates calibrate observable behavior; they do not
-prescribe production structure. `P-reader-restore` continues to require unchanged candidate-reader
-bytes plus identical restored exit/output after fixtures.
+The baseline/current reader passes all 54 fake-only controls and all twenty-six diagnostic
+controls. It no longer receives credit for class-first `MISSING: $v` wording, so held REQUIRED
+rows are the four already-correct verifier floors: 4/131, 200/200. Control failures in
+deliberate siblings return exit 2 by harness design: they establish that the candidate is
+inadmissible, not a product verdict. The satisfying control proves the matrix is achievable.
+These embedded candidates calibrate observable behavior; they do not prescribe production
+structure. `P-reader-restore` continues to require unchanged candidate-reader bytes plus
+identical restored exit/output after fixtures.
 
 ## 6. Finite reader-publication contract
 
@@ -156,19 +183,19 @@ and unrelated numbers outside these roles remain controls. This is not a generic
 
 The seven-case serial gate harness remains byte-identical at
 `fb389fdd33e981a356436cf37e453158787288c6d64530c28c695fcec83cd8d0`; `gate-matrix.tsv` remains
-`0b4d9c127e7230c7266960fe073f92f9551da9a68005cb936850993d803d1c58`. The fourth correction
+`0b4d9c127e7230c7266960fe073f92f9551da9a68005cb936850993d803d1c58`. The fifth correction
 changes only focused diagnostic-correlation stimuli, so no expensive gate was rerun. Earlier serial
 results remain historical design reliance, not refreshed execution/timing evidence.
 
 | File | Role |
 |---|---|
-| `a-floors.py` | fourth-corrected 131 REQUIRED / 186 CONTROL instrument and six calibration/control variants |
-| `*-matrix-v4.tsv` | current seven-variant baseline/calibration matrices |
-| matrices/logs without `v4` | preserved earlier historical evidence |
+| `a-floors.py` | fifth-corrected 131 REQUIRED / 200 CONTROL instrument and eight calibration/control variants |
+| `*-matrix-v5.tsv` | current nine-variant baseline/calibration matrices |
+| matrices/logs without `v5` | preserved earlier historical evidence |
 | `a-floors-gate.py`, `gate-matrix.tsv` | byte-unchanged seven serial fast/deep cases |
 | `RUNBOOK.md` | reproduction and setup/verdict rules |
 
-A future implementation is contract-ready only if focused is 131/131 and 186/186, unchanged gate
+A future implementation is contract-ready only if focused is 131/131 and 200/200, unchanged gate
 binding is 4/4 and 3/3 when replayed for implementation verification, frozen B/C/protected bytes
 hold, and repository/workspace guards report no new finding. A product failure permits only
 D-058(9)'s bounded product correction, not a test rewrite or lower floor.
