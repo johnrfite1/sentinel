@@ -20,11 +20,14 @@
 | first correction | `69e4fda92401e29c0cd4c717538fc278a5e59e26`; tree `fc5c63583be28683b53ced20ccc42f697d1494bc` |
 | independent Review-2 FAIL | `9889289cb730a7ef23b2b9d11c0e84110dce84f6`; tree `f82ec033136c383cfad667497f06bc5b1e588c43` |
 | preserved `INSTRUMENT-REVIEW-2.md` | sha256 `978d09f669cb6c5037d0de0e903f678ea7015f394670692698305b2f821ae7ae` |
+| second correction | `12a35d2c3f30c77250b3ebde0bf82c25591dce10`; tree `b75b7173793b2ea31305698d43a0d81f147e2540` |
+| independent Review-3 FAIL | `cd12ac26fb718a9bd02971db1f09f4fe1189bba7`; tree `6da663764db80488e67e49e8505b4d9bd2106e02` |
+| preserved `INSTRUMENT-REVIEW-3.md` | sha256 `27e8e8da48fe34a07c750023296c11b82d937279f65b058fe4c5d2e78523bf86` |
 
-The shared worktree was clean at the Review-2 parent. Second-corrected focused probes cloned that
-exact commit into private temporary roots; every source mutation remained there. The shared
-repository correction changes only files under this evidence directory and preserves both review
-records and every earlier matrix/summary byte-for-byte.
+The shared worktree was clean at the Review-3 parent. Third-corrected focused probes used the
+external dirty harness against a disposable clean clone at that exact commit; every source
+mutation remained there. The shared repository correction changes only files under this evidence
+directory and preserves all three review records and every earlier matrix/summary byte-for-byte.
 
 ## Governing and source material read
 
@@ -66,12 +69,19 @@ decision entries, signed packs and dated narration were classified as controls, 
 | v2 digits-zero matrix/raw | `93444b6b196518050ef16948743459112f1550ca7008a6a231cf9d42ae26ec08` / `6b11d16b4d56040e78b2305b5bdc95a3be18451ee5fbb3c8899f3ff57d7f3350` |
 | v2 Review-2 raw-reader matrix/raw | `a49891dcfcfc5da17e0003a7ed1148901d7437d123e8e2b6347d4c6575babfc7` / `33a0b2d3b12cdb8f89b2b45b30774baee93f488797573b11033d056c5178fbc4` |
 | v2 exact-positive matrix/raw | `5d390a4fe8a1600d3430abb340e28e0f0f22e3389ad2f87e61636fa49a9244c1` / `9044d8e72217b9bc03c023ff109b22663852c12f07d45f38bed70359efa84fd9` |
+| third-corrected focused harness, 926 lines | `4bc09b9c4f835f28fcfc114a6f9b78c6bb3e102d3513eae545bdb1ad5996bb80` |
+| v3 baseline matrix/raw | `98a3f66489827f8632be5b32395d2e02841fc456099f5f179e213eeda71f95ca` / `cb2e9e89edc3d032483a5241df06d7d0fcae499de49c85acd3f40d763061d7f4` |
+| v3 digits-zero matrix/raw | `bbeaaf8a18d4ee08e9990b339ea3e5f426d19c3198adcfb9ae6ca9c27761c3e1` / `d9f08c88bed66e38b6789114fd4a20d7da104d5c2d138097e7ec6d935c67f47e` |
+| v3 Review-2 raw-reader matrix/raw | `9456409625b1f49570c34580adbe1c0b7fc45d834965cfdeb3710d80aae97ecf` / `65e1cf30e3c123a5485741e8544d3da6e45a6225d8ee73827046628bb85a778d` |
+| v3 exact Review-3 non-comment matrix/raw | `feb1ede79e3cff8ca38d34e1a747116daeac73589c982fa12be1781c2347f2f4` / `b7950c4b1e4ca075ca6a32e525f5e1ea108f6c205cd6f862c378871e3eea101e` |
+| v3 expanded all-token matrix/raw | `c9f40f79b8acac473701a1c17d2d928a93905369bbe3c41734c29afbaa4f5101` / `6e9daec8628d84707d1f7b1485fd85d1f6ca4eb29e7bb26071329f83e020ef2f` |
+| v3 exact-positive matrix/raw | `15e53549138fb45d19c8b89d8f2dd676abdeb576aa735b195c20218e858bfe2d` / `a3a1c390ab03a53d19596d473fcbdfc3b38852d5775a3f7a1edc6ee45685bf16` |
 | serial gate harness, 328 lines | `fb389fdd33e981a356436cf37e453158787288c6d64530c28c695fcec83cd8d0` |
 | gate matrix | `0b4d9c127e7230c7266960fe073f92f9551da9a68005cb936850993d803d1c58` |
 | gate wrapper raw output, external | `c4a41ddc58b73c7c23932556a37c7c955968298553fcbbd94314c550c01a6cb2` |
 
 The seven full gate-log hashes remain in unchanged tracked `logs/gate-summary.log`; gate design
-and reliance limits remain in `GATE-BINDING.md`. They were not rerun for either focused-only
+and reliance limits remain in `GATE-BINDING.md`. They were not rerun for any focused-only
 correction. Full logs remain external because the
 pre-existing rename stage prints a machine-specific absolute repository path. Tracked summaries
 and matrices contain no such path.
@@ -89,7 +99,8 @@ and matrices contain no such path.
 
 - No production, existing test, script, gate, floor, maintained claim, prior evidence or decision
   file changed.
-- `INSTRUMENT-REVIEW-1.md` and `INSTRUMENT-REVIEW-2.md` remain byte-identical at the hashes above.
+- `INSTRUMENT-REVIEW-1.md`, `INSTRUMENT-REVIEW-2.md` and `INSTRUMENT-REVIEW-3.md` remain
+  byte-identical at the hashes above.
 - Both frozen B/C test files remain byte-identical at the hashes above.
 - Signed Gate S2 material remains byte-identical.
 - No test patch was applied, no floor lowered, and no historical record rewritten.

@@ -1,0 +1,306 @@
+case	kind	status	description
+P-B-EVENTS	CONTROL	PASS	frozen eleven-test B-EVENTS implementation bytes
+P-C-SNAPSHOT	CONTROL	PASS	frozen twenty-three-test C-SNAPSHOT implementation bytes
+V-reader-alive	CONTROL	PASS	unchanged baseline reader executes successfully
+V-FOUNDRY_MIN_TESTS	REQUIRED	PASS	canonical value 103; observed 103
+V-TS_MIN_TESTS	REQUIRED	PASS	canonical value 550; observed 550
+V-VERIFIER_MIN_TESTS	REQUIRED	PASS	canonical value 221; observed 221
+V-VERIFIER_MIN_SAMPLES	REQUIRED	PASS	canonical value 7; observed 7
+V-VERIFIER_MIN_TAMPER	REQUIRED	PASS	canonical value 78; observed 78
+V-VERIFIER_MIN_TAMPER_MODES	REQUIRED	PASS	canonical value 30; observed 30
+S-valid	CONTROL	PASS	six exact positive-decimal definitions are accepted and reported
+S-prefix	CONTROL	PASS	TAMPER does not consume the legitimate TAMPER_MODES sibling
+M-FOUNDRY_MIN_TESTS	REQUIRED	PASS	missing definition refuses by constant and reason
+E-FOUNDRY_MIN_TESTS	REQUIRED	PASS	empty definition refuses distinctly
+X-FOUNDRY_MIN_TESTS	REQUIRED	PASS	malformed assignment refuses by constant and reason
+N-FOUNDRY_MIN_TESTS	REQUIRED	PASS	assigned non-numeric value refuses by constant and reason
+Z-FOUNDRY_MIN_TESTS	REQUIRED	PASS	zero refuses by constant and positive-decimal reason
+ONE-FOUNDRY_MIN_TESTS	CONTROL	PASS	ordinary positive decimal one remains accepted and reported
+DAW-FOUNDRY_MIN_TESTS	CONTROL	PASS	after witness: legacy first-line projection differs from Bash last-wins 999
+DA-FOUNDRY_MIN_TESTS	REQUIRED	PASS	duplicate after the canonical definition refuses by name
+DBW-FOUNDRY_MIN_TESTS	CONTROL	PASS	before witness: legacy first-line projection 999 differs from Bash 103
+DB-FOUNDRY_MIN_TESTS	REQUIRED	PASS	duplicate before the canonical definition refuses by name
+DCW-FOUNDRY_MIN_TESTS	CONTROL	PASS	conditional duplicate executes and shadows the canonical value
+DC-FOUNDRY_MIN_TESTS	REQUIRED	PASS	inline conditional assignment token refuses as duplicate
+IAW-FOUNDRY_MIN_TESTS	CONTROL	PASS	indented-after executes after canonical and Bash last-wins 999
+IA-FOUNDRY_MIN_TESTS	REQUIRED	PASS	standalone indented duplicate after canonical refuses by name
+IBW-FOUNDRY_MIN_TESTS	CONTROL	PASS	indented-before executes first; canonical later restores 103
+IB-FOUNDRY_MIN_TESTS	REQUIRED	PASS	standalone indented duplicate before canonical refuses by name
+IC-FOUNDRY_MIN_TESTS	CONTROL	PASS	indented commented assignment-shaped text is inert and accepted
+IQ-FOUNDRY_MIN_TESTS	CONTROL	PASS	quoted assignment-shaped string is inert and accepted
+IH-FOUNDRY_MIN_TESTS	CONTROL	PASS	quoted-heredoc assignment-shaped body is inert and accepted
+FA-comment-FOUNDRY_MIN_TESTS	CONTROL	PASS	comment alone is accepted with all six canonical values reported
+FCW-comment-FOUNDRY_MIN_TESTS	CONTROL	PASS	comment token is inert; Bash executes canonical then indented 999
+FC-comment-FOUNDRY_MIN_TESTS	REQUIRED	PASS	comment fake opener cannot mask following executable duplicate
+FA-printf-sq-FOUNDRY_MIN_TESTS	CONTROL	FAIL	printf-sq alone is accepted with all six canonical values reported
+TFW-printf-sq-FOUNDRY_MIN_TESTS	CONTROL	PASS	printf-sq token is inert; Bash executes canonical then indented 999
+TF-printf-sq-FOUNDRY_MIN_TESTS	REQUIRED	FAIL	printf-sq fake opener cannot mask following executable duplicate
+FA-printf-dq-FOUNDRY_MIN_TESTS	CONTROL	FAIL	printf-dq alone is accepted with all six canonical values reported
+TFW-printf-dq-FOUNDRY_MIN_TESTS	CONTROL	PASS	printf-dq token is inert; Bash executes canonical then indented 999
+TF-printf-dq-FOUNDRY_MIN_TESTS	REQUIRED	FAIL	printf-dq fake opener cannot mask following executable duplicate
+FA-echo-sq-FOUNDRY_MIN_TESTS	CONTROL	FAIL	echo-sq alone is accepted with all six canonical values reported
+TFW-echo-sq-FOUNDRY_MIN_TESTS	CONTROL	PASS	echo-sq token is inert; Bash executes canonical then indented 999
+TF-echo-sq-FOUNDRY_MIN_TESTS	REQUIRED	FAIL	echo-sq fake opener cannot mask following executable duplicate
+FA-echo-dq-FOUNDRY_MIN_TESTS	CONTROL	FAIL	echo-dq alone is accepted with all six canonical values reported
+TFW-echo-dq-FOUNDRY_MIN_TESTS	CONTROL	PASS	echo-dq token is inert; Bash executes canonical then indented 999
+TF-echo-dq-FOUNDRY_MIN_TESTS	REQUIRED	FAIL	echo-dq fake opener cannot mask following executable duplicate
+FA-assign-sq-FOUNDRY_MIN_TESTS	CONTROL	FAIL	assign-sq alone is accepted with all six canonical values reported
+TFW-assign-sq-FOUNDRY_MIN_TESTS	CONTROL	PASS	assign-sq token is inert; Bash executes canonical then indented 999
+TF-assign-sq-FOUNDRY_MIN_TESTS	REQUIRED	FAIL	assign-sq fake opener cannot mask following executable duplicate
+FA-assign-dq-FOUNDRY_MIN_TESTS	CONTROL	FAIL	assign-dq alone is accepted with all six canonical values reported
+TFW-assign-dq-FOUNDRY_MIN_TESTS	CONTROL	PASS	assign-dq token is inert; Bash executes canonical then indented 999
+TF-assign-dq-FOUNDRY_MIN_TESTS	REQUIRED	FAIL	assign-dq fake opener cannot mask following executable duplicate
+FA-herestring-sq-FOUNDRY_MIN_TESTS	CONTROL	FAIL	herestring-sq alone is accepted with all six canonical values reported
+TFW-herestring-sq-FOUNDRY_MIN_TESTS	CONTROL	PASS	herestring-sq token is inert; Bash executes canonical then indented 999
+TF-herestring-sq-FOUNDRY_MIN_TESTS	REQUIRED	FAIL	herestring-sq fake opener cannot mask following executable duplicate
+FA-herestring-dq-FOUNDRY_MIN_TESTS	CONTROL	FAIL	herestring-dq alone is accepted with all six canonical values reported
+TFW-herestring-dq-FOUNDRY_MIN_TESTS	CONTROL	PASS	herestring-dq token is inert; Bash executes canonical then indented 999
+TF-herestring-dq-FOUNDRY_MIN_TESTS	REQUIRED	FAIL	herestring-dq fake opener cannot mask following executable duplicate
+HR-post-FOUNDRY_MIN_TESTS	REQUIRED	PASS	real heredoc body is inert and parsing resumes for post-terminator duplicate
+M-TS_MIN_TESTS	REQUIRED	PASS	missing definition refuses by constant and reason
+E-TS_MIN_TESTS	REQUIRED	PASS	empty definition refuses distinctly
+X-TS_MIN_TESTS	REQUIRED	PASS	malformed assignment refuses by constant and reason
+N-TS_MIN_TESTS	REQUIRED	PASS	assigned non-numeric value refuses by constant and reason
+Z-TS_MIN_TESTS	REQUIRED	PASS	zero refuses by constant and positive-decimal reason
+ONE-TS_MIN_TESTS	CONTROL	PASS	ordinary positive decimal one remains accepted and reported
+DAW-TS_MIN_TESTS	CONTROL	PASS	after witness: legacy first-line projection differs from Bash last-wins 999
+DA-TS_MIN_TESTS	REQUIRED	PASS	duplicate after the canonical definition refuses by name
+DBW-TS_MIN_TESTS	CONTROL	PASS	before witness: legacy first-line projection 999 differs from Bash 550
+DB-TS_MIN_TESTS	REQUIRED	PASS	duplicate before the canonical definition refuses by name
+DCW-TS_MIN_TESTS	CONTROL	PASS	conditional duplicate executes and shadows the canonical value
+DC-TS_MIN_TESTS	REQUIRED	PASS	inline conditional assignment token refuses as duplicate
+IAW-TS_MIN_TESTS	CONTROL	PASS	indented-after executes after canonical and Bash last-wins 999
+IA-TS_MIN_TESTS	REQUIRED	PASS	standalone indented duplicate after canonical refuses by name
+IBW-TS_MIN_TESTS	CONTROL	PASS	indented-before executes first; canonical later restores 550
+IB-TS_MIN_TESTS	REQUIRED	PASS	standalone indented duplicate before canonical refuses by name
+IC-TS_MIN_TESTS	CONTROL	PASS	indented commented assignment-shaped text is inert and accepted
+IQ-TS_MIN_TESTS	CONTROL	PASS	quoted assignment-shaped string is inert and accepted
+IH-TS_MIN_TESTS	CONTROL	PASS	quoted-heredoc assignment-shaped body is inert and accepted
+FA-comment-TS_MIN_TESTS	CONTROL	PASS	comment alone is accepted with all six canonical values reported
+FCW-comment-TS_MIN_TESTS	CONTROL	PASS	comment token is inert; Bash executes canonical then indented 999
+FC-comment-TS_MIN_TESTS	REQUIRED	PASS	comment fake opener cannot mask following executable duplicate
+FA-printf-sq-TS_MIN_TESTS	CONTROL	FAIL	printf-sq alone is accepted with all six canonical values reported
+TFW-printf-sq-TS_MIN_TESTS	CONTROL	PASS	printf-sq token is inert; Bash executes canonical then indented 999
+TF-printf-sq-TS_MIN_TESTS	REQUIRED	FAIL	printf-sq fake opener cannot mask following executable duplicate
+FA-printf-dq-TS_MIN_TESTS	CONTROL	FAIL	printf-dq alone is accepted with all six canonical values reported
+TFW-printf-dq-TS_MIN_TESTS	CONTROL	PASS	printf-dq token is inert; Bash executes canonical then indented 999
+TF-printf-dq-TS_MIN_TESTS	REQUIRED	FAIL	printf-dq fake opener cannot mask following executable duplicate
+FA-echo-sq-TS_MIN_TESTS	CONTROL	FAIL	echo-sq alone is accepted with all six canonical values reported
+TFW-echo-sq-TS_MIN_TESTS	CONTROL	PASS	echo-sq token is inert; Bash executes canonical then indented 999
+TF-echo-sq-TS_MIN_TESTS	REQUIRED	FAIL	echo-sq fake opener cannot mask following executable duplicate
+FA-echo-dq-TS_MIN_TESTS	CONTROL	FAIL	echo-dq alone is accepted with all six canonical values reported
+TFW-echo-dq-TS_MIN_TESTS	CONTROL	PASS	echo-dq token is inert; Bash executes canonical then indented 999
+TF-echo-dq-TS_MIN_TESTS	REQUIRED	FAIL	echo-dq fake opener cannot mask following executable duplicate
+FA-assign-sq-TS_MIN_TESTS	CONTROL	FAIL	assign-sq alone is accepted with all six canonical values reported
+TFW-assign-sq-TS_MIN_TESTS	CONTROL	PASS	assign-sq token is inert; Bash executes canonical then indented 999
+TF-assign-sq-TS_MIN_TESTS	REQUIRED	FAIL	assign-sq fake opener cannot mask following executable duplicate
+FA-assign-dq-TS_MIN_TESTS	CONTROL	FAIL	assign-dq alone is accepted with all six canonical values reported
+TFW-assign-dq-TS_MIN_TESTS	CONTROL	PASS	assign-dq token is inert; Bash executes canonical then indented 999
+TF-assign-dq-TS_MIN_TESTS	REQUIRED	FAIL	assign-dq fake opener cannot mask following executable duplicate
+FA-herestring-sq-TS_MIN_TESTS	CONTROL	FAIL	herestring-sq alone is accepted with all six canonical values reported
+TFW-herestring-sq-TS_MIN_TESTS	CONTROL	PASS	herestring-sq token is inert; Bash executes canonical then indented 999
+TF-herestring-sq-TS_MIN_TESTS	REQUIRED	FAIL	herestring-sq fake opener cannot mask following executable duplicate
+FA-herestring-dq-TS_MIN_TESTS	CONTROL	FAIL	herestring-dq alone is accepted with all six canonical values reported
+TFW-herestring-dq-TS_MIN_TESTS	CONTROL	PASS	herestring-dq token is inert; Bash executes canonical then indented 999
+TF-herestring-dq-TS_MIN_TESTS	REQUIRED	FAIL	herestring-dq fake opener cannot mask following executable duplicate
+HR-post-TS_MIN_TESTS	REQUIRED	PASS	real heredoc body is inert and parsing resumes for post-terminator duplicate
+M-VERIFIER_MIN_TESTS	REQUIRED	PASS	missing definition refuses by constant and reason
+E-VERIFIER_MIN_TESTS	REQUIRED	PASS	empty definition refuses distinctly
+X-VERIFIER_MIN_TESTS	REQUIRED	PASS	malformed assignment refuses by constant and reason
+N-VERIFIER_MIN_TESTS	REQUIRED	PASS	assigned non-numeric value refuses by constant and reason
+Z-VERIFIER_MIN_TESTS	REQUIRED	PASS	zero refuses by constant and positive-decimal reason
+ONE-VERIFIER_MIN_TESTS	CONTROL	PASS	ordinary positive decimal one remains accepted and reported
+DAW-VERIFIER_MIN_TESTS	CONTROL	PASS	after witness: legacy first-line projection differs from Bash last-wins 999
+DA-VERIFIER_MIN_TESTS	REQUIRED	PASS	duplicate after the canonical definition refuses by name
+DBW-VERIFIER_MIN_TESTS	CONTROL	PASS	before witness: legacy first-line projection 999 differs from Bash 221
+DB-VERIFIER_MIN_TESTS	REQUIRED	PASS	duplicate before the canonical definition refuses by name
+DCW-VERIFIER_MIN_TESTS	CONTROL	PASS	conditional duplicate executes and shadows the canonical value
+DC-VERIFIER_MIN_TESTS	REQUIRED	PASS	inline conditional assignment token refuses as duplicate
+IAW-VERIFIER_MIN_TESTS	CONTROL	PASS	indented-after executes after canonical and Bash last-wins 999
+IA-VERIFIER_MIN_TESTS	REQUIRED	PASS	standalone indented duplicate after canonical refuses by name
+IBW-VERIFIER_MIN_TESTS	CONTROL	PASS	indented-before executes first; canonical later restores 221
+IB-VERIFIER_MIN_TESTS	REQUIRED	PASS	standalone indented duplicate before canonical refuses by name
+IC-VERIFIER_MIN_TESTS	CONTROL	PASS	indented commented assignment-shaped text is inert and accepted
+IQ-VERIFIER_MIN_TESTS	CONTROL	PASS	quoted assignment-shaped string is inert and accepted
+IH-VERIFIER_MIN_TESTS	CONTROL	PASS	quoted-heredoc assignment-shaped body is inert and accepted
+FA-comment-VERIFIER_MIN_TESTS	CONTROL	PASS	comment alone is accepted with all six canonical values reported
+FCW-comment-VERIFIER_MIN_TESTS	CONTROL	PASS	comment token is inert; Bash executes canonical then indented 999
+FC-comment-VERIFIER_MIN_TESTS	REQUIRED	PASS	comment fake opener cannot mask following executable duplicate
+FA-printf-sq-VERIFIER_MIN_TESTS	CONTROL	FAIL	printf-sq alone is accepted with all six canonical values reported
+TFW-printf-sq-VERIFIER_MIN_TESTS	CONTROL	PASS	printf-sq token is inert; Bash executes canonical then indented 999
+TF-printf-sq-VERIFIER_MIN_TESTS	REQUIRED	FAIL	printf-sq fake opener cannot mask following executable duplicate
+FA-printf-dq-VERIFIER_MIN_TESTS	CONTROL	FAIL	printf-dq alone is accepted with all six canonical values reported
+TFW-printf-dq-VERIFIER_MIN_TESTS	CONTROL	PASS	printf-dq token is inert; Bash executes canonical then indented 999
+TF-printf-dq-VERIFIER_MIN_TESTS	REQUIRED	FAIL	printf-dq fake opener cannot mask following executable duplicate
+FA-echo-sq-VERIFIER_MIN_TESTS	CONTROL	FAIL	echo-sq alone is accepted with all six canonical values reported
+TFW-echo-sq-VERIFIER_MIN_TESTS	CONTROL	PASS	echo-sq token is inert; Bash executes canonical then indented 999
+TF-echo-sq-VERIFIER_MIN_TESTS	REQUIRED	FAIL	echo-sq fake opener cannot mask following executable duplicate
+FA-echo-dq-VERIFIER_MIN_TESTS	CONTROL	FAIL	echo-dq alone is accepted with all six canonical values reported
+TFW-echo-dq-VERIFIER_MIN_TESTS	CONTROL	PASS	echo-dq token is inert; Bash executes canonical then indented 999
+TF-echo-dq-VERIFIER_MIN_TESTS	REQUIRED	FAIL	echo-dq fake opener cannot mask following executable duplicate
+FA-assign-sq-VERIFIER_MIN_TESTS	CONTROL	FAIL	assign-sq alone is accepted with all six canonical values reported
+TFW-assign-sq-VERIFIER_MIN_TESTS	CONTROL	PASS	assign-sq token is inert; Bash executes canonical then indented 999
+TF-assign-sq-VERIFIER_MIN_TESTS	REQUIRED	FAIL	assign-sq fake opener cannot mask following executable duplicate
+FA-assign-dq-VERIFIER_MIN_TESTS	CONTROL	FAIL	assign-dq alone is accepted with all six canonical values reported
+TFW-assign-dq-VERIFIER_MIN_TESTS	CONTROL	PASS	assign-dq token is inert; Bash executes canonical then indented 999
+TF-assign-dq-VERIFIER_MIN_TESTS	REQUIRED	FAIL	assign-dq fake opener cannot mask following executable duplicate
+FA-herestring-sq-VERIFIER_MIN_TESTS	CONTROL	FAIL	herestring-sq alone is accepted with all six canonical values reported
+TFW-herestring-sq-VERIFIER_MIN_TESTS	CONTROL	PASS	herestring-sq token is inert; Bash executes canonical then indented 999
+TF-herestring-sq-VERIFIER_MIN_TESTS	REQUIRED	FAIL	herestring-sq fake opener cannot mask following executable duplicate
+FA-herestring-dq-VERIFIER_MIN_TESTS	CONTROL	FAIL	herestring-dq alone is accepted with all six canonical values reported
+TFW-herestring-dq-VERIFIER_MIN_TESTS	CONTROL	PASS	herestring-dq token is inert; Bash executes canonical then indented 999
+TF-herestring-dq-VERIFIER_MIN_TESTS	REQUIRED	FAIL	herestring-dq fake opener cannot mask following executable duplicate
+HR-post-VERIFIER_MIN_TESTS	REQUIRED	PASS	real heredoc body is inert and parsing resumes for post-terminator duplicate
+M-VERIFIER_MIN_SAMPLES	REQUIRED	PASS	missing definition refuses by constant and reason
+E-VERIFIER_MIN_SAMPLES	REQUIRED	PASS	empty definition refuses distinctly
+X-VERIFIER_MIN_SAMPLES	REQUIRED	PASS	malformed assignment refuses by constant and reason
+N-VERIFIER_MIN_SAMPLES	REQUIRED	PASS	assigned non-numeric value refuses by constant and reason
+Z-VERIFIER_MIN_SAMPLES	REQUIRED	PASS	zero refuses by constant and positive-decimal reason
+ONE-VERIFIER_MIN_SAMPLES	CONTROL	PASS	ordinary positive decimal one remains accepted and reported
+DAW-VERIFIER_MIN_SAMPLES	CONTROL	PASS	after witness: legacy first-line projection differs from Bash last-wins 999
+DA-VERIFIER_MIN_SAMPLES	REQUIRED	PASS	duplicate after the canonical definition refuses by name
+DBW-VERIFIER_MIN_SAMPLES	CONTROL	PASS	before witness: legacy first-line projection 999 differs from Bash 7
+DB-VERIFIER_MIN_SAMPLES	REQUIRED	PASS	duplicate before the canonical definition refuses by name
+DCW-VERIFIER_MIN_SAMPLES	CONTROL	PASS	conditional duplicate executes and shadows the canonical value
+DC-VERIFIER_MIN_SAMPLES	REQUIRED	PASS	inline conditional assignment token refuses as duplicate
+IAW-VERIFIER_MIN_SAMPLES	CONTROL	PASS	indented-after executes after canonical and Bash last-wins 999
+IA-VERIFIER_MIN_SAMPLES	REQUIRED	PASS	standalone indented duplicate after canonical refuses by name
+IBW-VERIFIER_MIN_SAMPLES	CONTROL	PASS	indented-before executes first; canonical later restores 7
+IB-VERIFIER_MIN_SAMPLES	REQUIRED	PASS	standalone indented duplicate before canonical refuses by name
+IC-VERIFIER_MIN_SAMPLES	CONTROL	PASS	indented commented assignment-shaped text is inert and accepted
+IQ-VERIFIER_MIN_SAMPLES	CONTROL	PASS	quoted assignment-shaped string is inert and accepted
+IH-VERIFIER_MIN_SAMPLES	CONTROL	PASS	quoted-heredoc assignment-shaped body is inert and accepted
+FA-comment-VERIFIER_MIN_SAMPLES	CONTROL	PASS	comment alone is accepted with all six canonical values reported
+FCW-comment-VERIFIER_MIN_SAMPLES	CONTROL	PASS	comment token is inert; Bash executes canonical then indented 999
+FC-comment-VERIFIER_MIN_SAMPLES	REQUIRED	PASS	comment fake opener cannot mask following executable duplicate
+FA-printf-sq-VERIFIER_MIN_SAMPLES	CONTROL	FAIL	printf-sq alone is accepted with all six canonical values reported
+TFW-printf-sq-VERIFIER_MIN_SAMPLES	CONTROL	PASS	printf-sq token is inert; Bash executes canonical then indented 999
+TF-printf-sq-VERIFIER_MIN_SAMPLES	REQUIRED	FAIL	printf-sq fake opener cannot mask following executable duplicate
+FA-printf-dq-VERIFIER_MIN_SAMPLES	CONTROL	FAIL	printf-dq alone is accepted with all six canonical values reported
+TFW-printf-dq-VERIFIER_MIN_SAMPLES	CONTROL	PASS	printf-dq token is inert; Bash executes canonical then indented 999
+TF-printf-dq-VERIFIER_MIN_SAMPLES	REQUIRED	FAIL	printf-dq fake opener cannot mask following executable duplicate
+FA-echo-sq-VERIFIER_MIN_SAMPLES	CONTROL	FAIL	echo-sq alone is accepted with all six canonical values reported
+TFW-echo-sq-VERIFIER_MIN_SAMPLES	CONTROL	PASS	echo-sq token is inert; Bash executes canonical then indented 999
+TF-echo-sq-VERIFIER_MIN_SAMPLES	REQUIRED	FAIL	echo-sq fake opener cannot mask following executable duplicate
+FA-echo-dq-VERIFIER_MIN_SAMPLES	CONTROL	FAIL	echo-dq alone is accepted with all six canonical values reported
+TFW-echo-dq-VERIFIER_MIN_SAMPLES	CONTROL	PASS	echo-dq token is inert; Bash executes canonical then indented 999
+TF-echo-dq-VERIFIER_MIN_SAMPLES	REQUIRED	FAIL	echo-dq fake opener cannot mask following executable duplicate
+FA-assign-sq-VERIFIER_MIN_SAMPLES	CONTROL	FAIL	assign-sq alone is accepted with all six canonical values reported
+TFW-assign-sq-VERIFIER_MIN_SAMPLES	CONTROL	PASS	assign-sq token is inert; Bash executes canonical then indented 999
+TF-assign-sq-VERIFIER_MIN_SAMPLES	REQUIRED	FAIL	assign-sq fake opener cannot mask following executable duplicate
+FA-assign-dq-VERIFIER_MIN_SAMPLES	CONTROL	FAIL	assign-dq alone is accepted with all six canonical values reported
+TFW-assign-dq-VERIFIER_MIN_SAMPLES	CONTROL	PASS	assign-dq token is inert; Bash executes canonical then indented 999
+TF-assign-dq-VERIFIER_MIN_SAMPLES	REQUIRED	FAIL	assign-dq fake opener cannot mask following executable duplicate
+FA-herestring-sq-VERIFIER_MIN_SAMPLES	CONTROL	FAIL	herestring-sq alone is accepted with all six canonical values reported
+TFW-herestring-sq-VERIFIER_MIN_SAMPLES	CONTROL	PASS	herestring-sq token is inert; Bash executes canonical then indented 999
+TF-herestring-sq-VERIFIER_MIN_SAMPLES	REQUIRED	FAIL	herestring-sq fake opener cannot mask following executable duplicate
+FA-herestring-dq-VERIFIER_MIN_SAMPLES	CONTROL	FAIL	herestring-dq alone is accepted with all six canonical values reported
+TFW-herestring-dq-VERIFIER_MIN_SAMPLES	CONTROL	PASS	herestring-dq token is inert; Bash executes canonical then indented 999
+TF-herestring-dq-VERIFIER_MIN_SAMPLES	REQUIRED	FAIL	herestring-dq fake opener cannot mask following executable duplicate
+HR-post-VERIFIER_MIN_SAMPLES	REQUIRED	PASS	real heredoc body is inert and parsing resumes for post-terminator duplicate
+M-VERIFIER_MIN_TAMPER	REQUIRED	PASS	missing definition refuses by constant and reason
+E-VERIFIER_MIN_TAMPER	REQUIRED	PASS	empty definition refuses distinctly
+X-VERIFIER_MIN_TAMPER	REQUIRED	PASS	malformed assignment refuses by constant and reason
+N-VERIFIER_MIN_TAMPER	REQUIRED	PASS	assigned non-numeric value refuses by constant and reason
+Z-VERIFIER_MIN_TAMPER	REQUIRED	PASS	zero refuses by constant and positive-decimal reason
+ONE-VERIFIER_MIN_TAMPER	CONTROL	PASS	ordinary positive decimal one remains accepted and reported
+DAW-VERIFIER_MIN_TAMPER	CONTROL	PASS	after witness: legacy first-line projection differs from Bash last-wins 999
+DA-VERIFIER_MIN_TAMPER	REQUIRED	PASS	duplicate after the canonical definition refuses by name
+DBW-VERIFIER_MIN_TAMPER	CONTROL	PASS	before witness: legacy first-line projection 999 differs from Bash 78
+DB-VERIFIER_MIN_TAMPER	REQUIRED	PASS	duplicate before the canonical definition refuses by name
+DCW-VERIFIER_MIN_TAMPER	CONTROL	PASS	conditional duplicate executes and shadows the canonical value
+DC-VERIFIER_MIN_TAMPER	REQUIRED	PASS	inline conditional assignment token refuses as duplicate
+IAW-VERIFIER_MIN_TAMPER	CONTROL	PASS	indented-after executes after canonical and Bash last-wins 999
+IA-VERIFIER_MIN_TAMPER	REQUIRED	PASS	standalone indented duplicate after canonical refuses by name
+IBW-VERIFIER_MIN_TAMPER	CONTROL	PASS	indented-before executes first; canonical later restores 78
+IB-VERIFIER_MIN_TAMPER	REQUIRED	PASS	standalone indented duplicate before canonical refuses by name
+IC-VERIFIER_MIN_TAMPER	CONTROL	PASS	indented commented assignment-shaped text is inert and accepted
+IQ-VERIFIER_MIN_TAMPER	CONTROL	PASS	quoted assignment-shaped string is inert and accepted
+IH-VERIFIER_MIN_TAMPER	CONTROL	PASS	quoted-heredoc assignment-shaped body is inert and accepted
+FA-comment-VERIFIER_MIN_TAMPER	CONTROL	PASS	comment alone is accepted with all six canonical values reported
+FCW-comment-VERIFIER_MIN_TAMPER	CONTROL	PASS	comment token is inert; Bash executes canonical then indented 999
+FC-comment-VERIFIER_MIN_TAMPER	REQUIRED	PASS	comment fake opener cannot mask following executable duplicate
+FA-printf-sq-VERIFIER_MIN_TAMPER	CONTROL	FAIL	printf-sq alone is accepted with all six canonical values reported
+TFW-printf-sq-VERIFIER_MIN_TAMPER	CONTROL	PASS	printf-sq token is inert; Bash executes canonical then indented 999
+TF-printf-sq-VERIFIER_MIN_TAMPER	REQUIRED	FAIL	printf-sq fake opener cannot mask following executable duplicate
+FA-printf-dq-VERIFIER_MIN_TAMPER	CONTROL	FAIL	printf-dq alone is accepted with all six canonical values reported
+TFW-printf-dq-VERIFIER_MIN_TAMPER	CONTROL	PASS	printf-dq token is inert; Bash executes canonical then indented 999
+TF-printf-dq-VERIFIER_MIN_TAMPER	REQUIRED	FAIL	printf-dq fake opener cannot mask following executable duplicate
+FA-echo-sq-VERIFIER_MIN_TAMPER	CONTROL	FAIL	echo-sq alone is accepted with all six canonical values reported
+TFW-echo-sq-VERIFIER_MIN_TAMPER	CONTROL	PASS	echo-sq token is inert; Bash executes canonical then indented 999
+TF-echo-sq-VERIFIER_MIN_TAMPER	REQUIRED	FAIL	echo-sq fake opener cannot mask following executable duplicate
+FA-echo-dq-VERIFIER_MIN_TAMPER	CONTROL	FAIL	echo-dq alone is accepted with all six canonical values reported
+TFW-echo-dq-VERIFIER_MIN_TAMPER	CONTROL	PASS	echo-dq token is inert; Bash executes canonical then indented 999
+TF-echo-dq-VERIFIER_MIN_TAMPER	REQUIRED	FAIL	echo-dq fake opener cannot mask following executable duplicate
+FA-assign-sq-VERIFIER_MIN_TAMPER	CONTROL	FAIL	assign-sq alone is accepted with all six canonical values reported
+TFW-assign-sq-VERIFIER_MIN_TAMPER	CONTROL	PASS	assign-sq token is inert; Bash executes canonical then indented 999
+TF-assign-sq-VERIFIER_MIN_TAMPER	REQUIRED	FAIL	assign-sq fake opener cannot mask following executable duplicate
+FA-assign-dq-VERIFIER_MIN_TAMPER	CONTROL	FAIL	assign-dq alone is accepted with all six canonical values reported
+TFW-assign-dq-VERIFIER_MIN_TAMPER	CONTROL	PASS	assign-dq token is inert; Bash executes canonical then indented 999
+TF-assign-dq-VERIFIER_MIN_TAMPER	REQUIRED	FAIL	assign-dq fake opener cannot mask following executable duplicate
+FA-herestring-sq-VERIFIER_MIN_TAMPER	CONTROL	FAIL	herestring-sq alone is accepted with all six canonical values reported
+TFW-herestring-sq-VERIFIER_MIN_TAMPER	CONTROL	PASS	herestring-sq token is inert; Bash executes canonical then indented 999
+TF-herestring-sq-VERIFIER_MIN_TAMPER	REQUIRED	FAIL	herestring-sq fake opener cannot mask following executable duplicate
+FA-herestring-dq-VERIFIER_MIN_TAMPER	CONTROL	FAIL	herestring-dq alone is accepted with all six canonical values reported
+TFW-herestring-dq-VERIFIER_MIN_TAMPER	CONTROL	PASS	herestring-dq token is inert; Bash executes canonical then indented 999
+TF-herestring-dq-VERIFIER_MIN_TAMPER	REQUIRED	FAIL	herestring-dq fake opener cannot mask following executable duplicate
+HR-post-VERIFIER_MIN_TAMPER	REQUIRED	PASS	real heredoc body is inert and parsing resumes for post-terminator duplicate
+M-VERIFIER_MIN_TAMPER_MODES	REQUIRED	PASS	missing definition refuses by constant and reason
+E-VERIFIER_MIN_TAMPER_MODES	REQUIRED	PASS	empty definition refuses distinctly
+X-VERIFIER_MIN_TAMPER_MODES	REQUIRED	PASS	malformed assignment refuses by constant and reason
+N-VERIFIER_MIN_TAMPER_MODES	REQUIRED	PASS	assigned non-numeric value refuses by constant and reason
+Z-VERIFIER_MIN_TAMPER_MODES	REQUIRED	PASS	zero refuses by constant and positive-decimal reason
+ONE-VERIFIER_MIN_TAMPER_MODES	CONTROL	PASS	ordinary positive decimal one remains accepted and reported
+DAW-VERIFIER_MIN_TAMPER_MODES	CONTROL	PASS	after witness: legacy first-line projection differs from Bash last-wins 999
+DA-VERIFIER_MIN_TAMPER_MODES	REQUIRED	PASS	duplicate after the canonical definition refuses by name
+DBW-VERIFIER_MIN_TAMPER_MODES	CONTROL	PASS	before witness: legacy first-line projection 999 differs from Bash 30
+DB-VERIFIER_MIN_TAMPER_MODES	REQUIRED	PASS	duplicate before the canonical definition refuses by name
+DCW-VERIFIER_MIN_TAMPER_MODES	CONTROL	PASS	conditional duplicate executes and shadows the canonical value
+DC-VERIFIER_MIN_TAMPER_MODES	REQUIRED	PASS	inline conditional assignment token refuses as duplicate
+IAW-VERIFIER_MIN_TAMPER_MODES	CONTROL	PASS	indented-after executes after canonical and Bash last-wins 999
+IA-VERIFIER_MIN_TAMPER_MODES	REQUIRED	PASS	standalone indented duplicate after canonical refuses by name
+IBW-VERIFIER_MIN_TAMPER_MODES	CONTROL	PASS	indented-before executes first; canonical later restores 30
+IB-VERIFIER_MIN_TAMPER_MODES	REQUIRED	PASS	standalone indented duplicate before canonical refuses by name
+IC-VERIFIER_MIN_TAMPER_MODES	CONTROL	PASS	indented commented assignment-shaped text is inert and accepted
+IQ-VERIFIER_MIN_TAMPER_MODES	CONTROL	PASS	quoted assignment-shaped string is inert and accepted
+IH-VERIFIER_MIN_TAMPER_MODES	CONTROL	PASS	quoted-heredoc assignment-shaped body is inert and accepted
+FA-comment-VERIFIER_MIN_TAMPER_MODES	CONTROL	PASS	comment alone is accepted with all six canonical values reported
+FCW-comment-VERIFIER_MIN_TAMPER_MODES	CONTROL	PASS	comment token is inert; Bash executes canonical then indented 999
+FC-comment-VERIFIER_MIN_TAMPER_MODES	REQUIRED	PASS	comment fake opener cannot mask following executable duplicate
+FA-printf-sq-VERIFIER_MIN_TAMPER_MODES	CONTROL	PASS	printf-sq alone is accepted with all six canonical values reported
+TFW-printf-sq-VERIFIER_MIN_TAMPER_MODES	CONTROL	PASS	printf-sq token is inert; Bash executes canonical then indented 999
+TF-printf-sq-VERIFIER_MIN_TAMPER_MODES	REQUIRED	FAIL	printf-sq fake opener cannot mask following executable duplicate
+FA-printf-dq-VERIFIER_MIN_TAMPER_MODES	CONTROL	PASS	printf-dq alone is accepted with all six canonical values reported
+TFW-printf-dq-VERIFIER_MIN_TAMPER_MODES	CONTROL	PASS	printf-dq token is inert; Bash executes canonical then indented 999
+TF-printf-dq-VERIFIER_MIN_TAMPER_MODES	REQUIRED	FAIL	printf-dq fake opener cannot mask following executable duplicate
+FA-echo-sq-VERIFIER_MIN_TAMPER_MODES	CONTROL	PASS	echo-sq alone is accepted with all six canonical values reported
+TFW-echo-sq-VERIFIER_MIN_TAMPER_MODES	CONTROL	PASS	echo-sq token is inert; Bash executes canonical then indented 999
+TF-echo-sq-VERIFIER_MIN_TAMPER_MODES	REQUIRED	FAIL	echo-sq fake opener cannot mask following executable duplicate
+FA-echo-dq-VERIFIER_MIN_TAMPER_MODES	CONTROL	PASS	echo-dq alone is accepted with all six canonical values reported
+TFW-echo-dq-VERIFIER_MIN_TAMPER_MODES	CONTROL	PASS	echo-dq token is inert; Bash executes canonical then indented 999
+TF-echo-dq-VERIFIER_MIN_TAMPER_MODES	REQUIRED	FAIL	echo-dq fake opener cannot mask following executable duplicate
+FA-assign-sq-VERIFIER_MIN_TAMPER_MODES	CONTROL	PASS	assign-sq alone is accepted with all six canonical values reported
+TFW-assign-sq-VERIFIER_MIN_TAMPER_MODES	CONTROL	PASS	assign-sq token is inert; Bash executes canonical then indented 999
+TF-assign-sq-VERIFIER_MIN_TAMPER_MODES	REQUIRED	FAIL	assign-sq fake opener cannot mask following executable duplicate
+FA-assign-dq-VERIFIER_MIN_TAMPER_MODES	CONTROL	PASS	assign-dq alone is accepted with all six canonical values reported
+TFW-assign-dq-VERIFIER_MIN_TAMPER_MODES	CONTROL	PASS	assign-dq token is inert; Bash executes canonical then indented 999
+TF-assign-dq-VERIFIER_MIN_TAMPER_MODES	REQUIRED	FAIL	assign-dq fake opener cannot mask following executable duplicate
+FA-herestring-sq-VERIFIER_MIN_TAMPER_MODES	CONTROL	PASS	herestring-sq alone is accepted with all six canonical values reported
+TFW-herestring-sq-VERIFIER_MIN_TAMPER_MODES	CONTROL	PASS	herestring-sq token is inert; Bash executes canonical then indented 999
+TF-herestring-sq-VERIFIER_MIN_TAMPER_MODES	REQUIRED	FAIL	herestring-sq fake opener cannot mask following executable duplicate
+FA-herestring-dq-VERIFIER_MIN_TAMPER_MODES	CONTROL	PASS	herestring-dq alone is accepted with all six canonical values reported
+TFW-herestring-dq-VERIFIER_MIN_TAMPER_MODES	CONTROL	PASS	herestring-dq token is inert; Bash executes canonical then indented 999
+TF-herestring-dq-VERIFIER_MIN_TAMPER_MODES	REQUIRED	FAIL	herestring-dq fake opener cannot mask following executable duplicate
+HR-post-VERIFIER_MIN_TAMPER_MODES	REQUIRED	PASS	real heredoc body is inert and parsing resumes for post-terminator duplicate
+T-route-complete	CONTROL	PASS	54/54 fake-only controls map one-to-one to 54/54 paired requirements
+P-history	CONTROL	PASS	dated numbers inside both enumerated D-010 logical paragraphs remain controls
+P-session-stable	REQUIRED	PASS	wrapped live §3 floor paragraph refuses with named reader diagnostic
+P-wrap-witness	CONTROL	PASS	wrapped and unwrapped mutations normalize to one logical paragraph
+P-session-stable-flat	REQUIRED	PASS	equivalent unwrapped live §3 paragraph receives the same diagnostic class
+P-session-d010	REQUIRED	PASS	wrapped current D-010 paragraph refuses with named reader diagnostic
+P-coverage-d010	REQUIRED	PASS	wrapped current gate coverage paragraph refuses with named reader diagnostic
+P-name-mentions	CONTROL	PASS	constant-name mentions without values are legitimate
+P-unrelated	CONTROL	PASS	unrelated numbers outside enumerated floor paragraphs remain controls
+W-common	REQUIRED	PASS	one real-gate targeted-guard invocation; observed 1
+W-positive	CONTROL	PASS	frozen candidate text survives fixtures and one direct invocation increments the oracle
+P-reader-restore	CONTROL	PASS	fixture transforms leave candidate reader bytes and restored behavior identical

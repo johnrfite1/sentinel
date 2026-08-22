@@ -1,0 +1,15 @@
+A-FLOORS exact Review-3 non-comment fail-closed/raw-state sibling
+subject=cd12ac26fb718a9bd02971db1f09f4fe1189bba7
+variant=review3-failclosed-sibling
+harness_sha256=4bc09b9c4f835f28fcfc114a6f9b78c6bb3e102d3513eae545bdb1ad5996bb80
+prior_v2_rows=251
+prior_missing=0
+prior_nonpass=0
+REQUIRED 131/131
+CONTROL 126/174
+new_fake_only_pass=6/54 (full-line comments)
+new_fake_only_fail=48/54 (printf,echo,assignment,here-string)
+INSTRUMENT INVALID: control failure
+exit=2
+raw_sha256=b7950c4b1e4ca075ca6a32e525f5e1ea108f6c205cd6f862c378871e3eea101e
+matrix_sha256=feb1ede79e3cff8ca38d34e1a747116daeac73589c982fa12be1781c2347f2f4

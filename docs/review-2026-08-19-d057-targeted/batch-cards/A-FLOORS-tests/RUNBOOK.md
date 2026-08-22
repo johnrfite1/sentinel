@@ -13,9 +13,9 @@ git submodule status
 test -d ts/node_modules
 ```
 
-Behavioral baseline is `1a133301533e9d959dbafbbcc7ffe05e7eb78df3`; second-corrected pre-repair
-evidence was driven against clean Review-2 commit
-`9889289cb730a7ef23b2b9d11c0e84110dce84f6` by the external harness.
+Behavioral baseline is `1a133301533e9d959dbafbbcc7ffe05e7eb78df3`; third-corrected pre-repair
+evidence was driven against clean Review-3 commit
+`cd12ac26fb718a9bd02971db1f09f4fe1189bba7` by the external harness.
 
 ## 2. Focused contract
 
@@ -30,9 +30,9 @@ shasum -a 256 "$matrix_out"
 printf 'focused_rc=%s\n' "$focused_rc"
 ```
 
-At the frozen pre-repair subject, expected verdict is exit 1, REQUIRED 10/131, CONTROL 120/120,
-with `T-route-complete` reporting 54/54. Exit 2 is an invalid instrument/setup state and must not
-be reported as a product verdict.
+At the frozen pre-repair subject, expected verdict is exit 1, REQUIRED 10/131, CONTROL 174/174,
+with `T-route-complete` reporting a 54/54 inverse-to-paired mapping. Exit 2 is an invalid
+instrument/setup state and must not be reported as a product verdict.
 
 ## 3. Causal sibling and satisfying control
 
@@ -47,16 +47,26 @@ A_FLOORS_VARIANT=flawed-heredoc-sibling A_FLOORS_MATRIX="$flawed_matrix" \
   "$evidence/a-floors.py" "$(pwd -P)" "$subject"
 flawed_rc=$?
 
+A_FLOORS_VARIANT=review3-failclosed-sibling A_FLOORS_MATRIX="$review3_matrix" \
+  "$evidence/a-floors.py" "$(pwd -P)" "$subject"
+review3_rc=$?
+
+A_FLOORS_VARIANT=all-token-failclosed-sibling A_FLOORS_MATRIX="$all_token_matrix" \
+  "$evidence/a-floors.py" "$(pwd -P)" "$subject"
+all_token_rc=$?
+
 A_FLOORS_VARIANT=exact-positive-control A_FLOORS_MATRIX="$positive_matrix" \
   "$evidence/a-floors.py" "$(pwd -P)" "$subject"
 positive_rc=$?
 ```
 
-The corrected zero sibling must return 125/131 and 120/120, failing exactly six `Z-*` rows. The
-exact Review-2 raw sibling must return 83/131 and 120/120, passing all 136 prior rows and failing
-exactly 48 `TF-*` rows: 12 each for `printf`, `echo`, quoted assignment and here-string. Compare
-both by case name to `exact-positive-matrix.tsv`; every prior row must be present and PASS. The
-corrected exact-positive control must return 131/131, 120/120 and completion.
+The corrected zero sibling returns 125/131 and 174/174, failing exactly six `Z-*` rows. The
+Review-2 raw sibling returns 83/131 and 134/174: prior 48 `TF-*` misses plus 40 new `FA-*` control
+misses. Exact Review 3 returns 131/131 and 126/174, failing exactly 48 non-comment `FA-*` rows;
+the separately named expanded sibling returns 131/131 and 120/174, failing all 54 `FA-*` rows.
+Both deliberate control-breaking candidates exit 2. Compare their prior row names to
+`exact-positive-matrix-v2.tsv`; every prior Review-3 row must remain PASS for the Review-3 and
+expanded siblings. The corrected exact-positive control returns 131/131, 174/174 and completion.
 
 ## 4. Serial top-level gate contract
 
@@ -73,14 +83,15 @@ shasum -a 256 "$gate_logs"/*.raw.log "$gate_logs/matrix.tsv"
 printf 'gate_rc=%s\n' "$gate_rc"
 ```
 
-Historical baseline expectation is exit 1, REQUIRED 2/4, CONTROL 3/3. The cases execute in this fixed order:
-unchanged fast, wrong-reader fast, unchanged deep, wrong-reader deep, raised-floor control,
-B-EVENTS deletion, C-SNAPSHOT deletion.
+Historical baseline expectation is exit 1, REQUIRED 2/4, CONTROL 3/3. The cases execute in this
+fixed order: unchanged fast, wrong-reader fast, unchanged deep, wrong-reader deep, raised-floor
+control, B-EVENTS deletion, C-SNAPSHOT deletion.
 
 The harness timeout, clone failure, missing dependency, dirty tracked source or non-empty log
-directory is exit 2 before final scoring. Do not convert it to HOLD/FAIL. Neither focused
-correction changed this harness; do not present a rerun-free correction as refreshed gate/timing
-evidence.
+directory is exit 2 before final scoring. Deliberate sibling control failures are also exit 2 but
+are recorded only as calibration rejection, never a product verdict. None of the focused
+corrections changed the gate harness; do not present a rerun-free correction as refreshed
+gate/timing evidence.
 
 ## 5. Inspect material output
 
@@ -111,7 +122,7 @@ machine-state findings and must report zero new.
 
 ## 7. Post-repair fixed target
 
-A conforming implementation subject must return focused REQUIRED 131/131 and CONTROL 120/120, then
+A conforming implementation subject must return focused REQUIRED 131/131 and CONTROL 174/174, then
 gate REQUIRED 4/4 and CONTROL 3/3 with the same frozen harness hashes. Re-run repository/workspace
 guards and obtain a different independent verifier at that exact subject. Do not edit the
 instruments to fit the implementation.

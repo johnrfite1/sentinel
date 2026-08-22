@@ -163,6 +163,7 @@ names = (
 )
 VALUE_PATTERN = r"__VALUE_PATTERN__"
 MARKER_MODE = "__MARKER_MODE__"
+FAILCLOSE_MODE = "__FAILCLOSE_MODE__"
 
 def shell_code(line):
     out = []
@@ -249,12 +250,21 @@ def heredoc_opener(raw):
     return None
 
 tokens = {name: [] for name in names}
+forced_duplicates = set()
 heredoc = None
 for number, raw in enumerate(gate.splitlines(), 1):
     if heredoc is not None:
         if raw.strip() == heredoc:
             heredoc = None
         continue
+    if "A_FLOOR_MASK" in raw:
+        is_comment = raw.lstrip().startswith("#")
+        if FAILCLOSE_MODE == "all" or (FAILCLOSE_MODE == "non-comment" and not is_comment):
+            named = {
+                name for name in names
+                if re.search(rf"(?<![A-Za-z0-9_]){re.escape(name)}\s*=", raw)
+            }
+            forced_duplicates.update(named or names)
     marker = heredoc_opener(raw)
     if marker is not None:
         heredoc = marker
@@ -267,6 +277,10 @@ for number, raw in enumerate(gate.splitlines(), 1):
 
 failed = False
 values = {}
+for name in names:
+    if name in forced_duplicates:
+        print(f"{name}: duplicate executable assignment")
+        failed = True
 for name in names:
     found = tokens[name]
     if not found:
@@ -311,7 +325,9 @@ PY
 '''
 
 
-def install_sibling(root: Path, value_pattern: str, marker_mode: str) -> None:
+def install_sibling(
+    root: Path, value_pattern: str, marker_mode: str, failclose_mode: str = "none",
+) -> None:
     gate = root / "scripts/test.sh"
     text = gate.read_text()
     for name, value in FLOORS.items():
@@ -328,10 +344,16 @@ def install_sibling(root: Path, value_pattern: str, marker_mode: str) -> None:
     ))
     reader = root / "scripts/check-suite-floors.sh"
     sibling = SIBLING_TEMPLATE
-    if sibling.count("__VALUE_PATTERN__") != 1 or sibling.count("__MARKER_MODE__") != 1:
+    if (
+        sibling.count("__VALUE_PATTERN__") != 1
+        or sibling.count("__MARKER_MODE__") != 1
+        or sibling.count("__FAILCLOSE_MODE__") != 1
+    ):
         raise RuntimeError("sibling template anchors")
     reader.write_text(
-        sibling.replace("__VALUE_PATTERN__", value_pattern).replace("__MARKER_MODE__", marker_mode)
+        sibling.replace("__VALUE_PATTERN__", value_pattern)
+        .replace("__MARKER_MODE__", marker_mode)
+        .replace("__FAILCLOSE_MODE__", failclose_mode)
     )
     reader.chmod(0o755)
 
@@ -342,6 +364,14 @@ def install_zero_accepting_sibling(root: Path) -> None:
 
 def install_flawed_heredoc_sibling(root: Path) -> None:
     install_sibling(root, r"[1-9][0-9]*", "raw")
+
+
+def install_review3_failclosed_sibling(root: Path) -> None:
+    install_sibling(root, r"[1-9][0-9]*", "raw", "non-comment")
+
+
+def install_all_token_failclosed_sibling(root: Path) -> None:
+    install_sibling(root, r"[1-9][0-9]*", "raw", "all")
 
 
 def install_exact_positive_control(root: Path) -> None:
@@ -393,6 +423,20 @@ def shell_assignment_trace(script: Path, name: str) -> tuple[int, list[str]]:
 def source_refusal(result: subprocess.CompletedProcess[str], name: str, reason: str) -> bool:
     output = result.stdout.lower()
     return result.returncode != 0 and name.lower() in output and reason in output
+
+
+def reader_accepts_all_values(result: subprocess.CompletedProcess[str]) -> bool:
+    output = result.stdout.lower()
+    refusal_markers = (
+        "duplicate", "missing definition", "malformed assignment",
+        "empty assignment", "numeric positive decimal required", "must derive", "numeric copy",
+        "refus",
+    )
+    return (
+        result.returncode == 0
+        and not any(marker in output for marker in refusal_markers)
+        and all(printed_value(result.stdout, name) == str(value) for name, value in FLOORS.items())
+    )
 
 
 def reader_refusal(result: subprocess.CompletedProcess[str], surface: str) -> bool:
@@ -447,6 +491,7 @@ def main() -> int:
     variant = os.environ.get("A_FLOORS_VARIANT", "baseline")
     if variant not in (
         "baseline", "digits-zero-sibling", "flawed-heredoc-sibling",
+        "review3-failclosed-sibling", "all-token-failclosed-sibling",
         "exact-positive-control",
     ):
         print("preflight: unknown A_FLOORS_VARIANT", file=sys.stderr)
@@ -468,6 +513,10 @@ def main() -> int:
             install_zero_accepting_sibling(root)
         elif variant == "flawed-heredoc-sibling":
             install_flawed_heredoc_sibling(root)
+        elif variant == "review3-failclosed-sibling":
+            install_review3_failclosed_sibling(root)
+        elif variant == "all-token-failclosed-sibling":
+            install_all_token_failclosed_sibling(root)
         elif variant == "exact-positive-control":
             install_exact_positive_control(root)
 
@@ -518,6 +567,7 @@ def main() -> int:
             "TAMPER does not consume the legitimate TAMPER_MODES sibling",
         )
 
+        fake_only_routes: list[tuple[str, str]] = []
         paired_routes: list[tuple[str, str]] = []
         for name, value in FLOORS.items():
             line = f"{name}={value}"
@@ -673,6 +723,19 @@ def main() -> int:
                 make_fixture(root)
                 replace_once(
                     root / "scripts/test.sh", line,
+                    line + f"\n{opener}",
+                )
+                fake_only = checker(root)
+                record(
+                    "CONTROL", f"FA-{opener_id}-{name}",
+                    reader_accepts_all_values(fake_only),
+                    f"{opener_id} alone is accepted with all six canonical values reported",
+                )
+                fake_only_routes.append((opener_id, name))
+
+                make_fixture(root)
+                replace_once(
+                    root / "scripts/test.sh", line,
                     line + f"\n{opener}\n    {name}=999",
                 )
                 result = checker(root)
@@ -723,11 +786,15 @@ def main() -> int:
         }
         record(
             "CONTROL", "T-route-complete",
-            len(paired_routes) == 54
+            len(fake_only_routes) == 54
+            and len(set(fake_only_routes)) == 54
+            and set(fake_only_routes) == expected_routes
+            and len(paired_routes) == 54
             and len(set(paired_routes)) == 54
             and set(paired_routes) == expected_routes
+            and set(fake_only_routes) == set(paired_routes)
             and all(count == 6 for count in route_counts.values()),
-            "nine exact inert opener forms each executed once for all six constants (54/54)",
+            "54/54 fake-only controls map one-to-one to 54/54 paired requirements",
         )
 
         print("\n== enumerated logical-paragraph matrix ==")

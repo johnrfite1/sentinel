@@ -1,15 +1,17 @@
-# A-FLOORS — second-corrected frozen independent test contract
+# A-FLOORS — third-corrected frozen independent test contract
 
-**Verdict: HOLD for second-corrected test-contract readiness only, pending fresh independent
-Review 3.** This is not implementation approval, a gate signature, certification, ratification,
+**Verdict: HOLD for third-corrected test-contract readiness only, pending fresh independent
+Review 4.** This is not implementation approval, a gate signature, certification, ratification,
 publication, rename, D-055 assessment or push authorization.
 
 **Behavioral baseline:** `1a133301533e9d959dbafbbcc7ffe05e7eb78df3` (tree
 `07cdc103133525f42b95018fabb802caa7cd8af3`). Original evidence subject
 `e8b4d29641c47f0099482c9a9ac5da86c9255197`; first correction
-`69e4fda92401e29c0cd4c717538fc278a5e59e26`; Review-2 FAIL parent
-`9889289cb730a7ef23b2b9d11c0e84110dce84f6`. This correction changes only this evidence
-directory. Both review records remain byte-identical.
+`69e4fda92401e29c0cd4c717538fc278a5e59e26`; Review-2 FAIL
+`9889289cb730a7ef23b2b9d11c0e84110dce84f6`; second correction
+`12a35d2c3f30c77250b3ebde0bf82c25591dce10`; Review-3 FAIL parent
+`cd12ac26fb718a9bd02971db1f09f4fe1189bba7`. This correction changes only this evidence
+directory. All three review records remain byte-identical.
 
 **Authority:** D-058(1), (2), (6), (8)C and (9); D-059(5), (7) and (8); D-060(1); D-066(2)–(4).
 `N-TESTSH-FLOORS` remains a duplicate of `R4-F4`, not a seventh item. C3 supplies the confirmed
@@ -70,10 +72,13 @@ by a standalone indented `NAME=999` and executed for all six constants:
 | `herestring-sq` | `: <<< 'A_FLOOR_MASK'` | yes |
 | `herestring-dq` | `: <<< "A_FLOOR_MASK"` | yes |
 
-Thus `T-route-complete` requires 54/54 unique paired routes, six per spelling. Every pair has a
-separate Bash witness proving the fake opener was inert and the canonical then indented-999
-assignments actually executed. A REQUIRED row additionally demands a named duplicate refusal;
-the reader cannot satisfy it by rejecting an inert token for an unrelated reason.
+For every form/constant route, an `FA-*` CONTROL first places the exact opener at the same position
+without the indented duplicate. It requires reader exit 0, no refusal/duplicate diagnostic and
+all six canonical values reported exactly. The existing paired route then adds indented 999: its
+Bash control proves canonical then 999 actually executed, and its REQUIRED row demands a named
+duplicate refusal. `T-route-complete` requires 54/54 unique fake-only controls to map one-to-one
+to 54/54 paired requirements, six per spelling. The inverse plus paired sides establish that the
+real assignment—not the inert opener—caused the outcome transition.
 
 For each constant, a genuine `: <<'A_FLOOR_REAL'` body containing `NAME=888` remains inert, and
 parsing must resume after the terminator so a following indented `NAME=999` is caught. The old
@@ -86,20 +91,27 @@ this correction does not widen into them.
 
 ## 4. Causal sibling calibration
 
-All current variants execute the same 251 uniquely named rows: 131 REQUIRED and 120 CONTROL.
+All current variants execute the same 305 uniquely named rows: 131 REQUIRED and 174 CONTROL.
 
 - `digits-zero-sibling` uses the corrected finite opener lexer but accepts `[0-9]+`. It passes all
-  transition and prior rows and fails exactly six `Z-*` rows: 125/131, 120/120.
+  transition and prior rows and fails exactly six `Z-*` rows: 125/131, 174/174.
 - `flawed-heredoc-sibling` reconstructs Review 2's raw-text marker search before quote/context
-  classification with a positive predicate. It passes all 136 prior rows, all controls, all six
-  full-line-comment pairs and all six genuine-heredoc post rows, but fails exactly the 48 target
-  rows (`printf`, `echo`, quoted assignment and here-string; single/double × six): 83/131,
-  120/120.
-- `exact-positive-control` uses `[1-9][0-9]*` and the finite lexer. It passes 131/131 and 120/120.
+  classification. Its earlier 83/131 and 120/120 outcome remains intact; inverse controls expose
+  40 additional false reader states, so current calibration is 83/131 and 134/174.
+- `review3-failclosed-sibling` exactly preserves Review 3's non-comment policy. It passes all 251
+  prior rows and every REQUIRED assertion, passes six comment-only controls, and fails exactly 48
+  new fake-only controls: 131/131, 126/174.
+- `all-token-failclosed-sibling` is separately named expanded calibration, not the exact Review-3
+  candidate. It passes all prior rows/REQUIRED assertions but rejects comments too, failing all
+  54 fake-only controls: 131/131, 120/174.
+- `exact-positive-control` uses `[1-9][0-9]*` and the finite lexer. It passes 131/131 and 174/174.
 
-The satisfying control proves the matrix is achievable. These embedded candidates calibrate
-observable behavior; they do not prescribe production structure. `P-reader-restore` continues to
-require unchanged candidate-reader bytes plus identical restored exit/output after fixtures.
+The baseline/current reader also passes all 54 new controls. Control failures in deliberate
+siblings return exit 2 by harness design: they establish that the candidate is inadmissible, not a
+product verdict. The satisfying control proves the matrix is achievable. These embedded
+candidates calibrate observable behavior; they do not prescribe production structure.
+`P-reader-restore` continues to require unchanged candidate-reader bytes plus identical restored
+exit/output after fixtures.
 
 ## 5. Finite reader-publication contract
 
@@ -113,19 +125,19 @@ and unrelated numbers outside these roles remain controls. This is not a generic
 
 The seven-case serial gate harness remains byte-identical at
 `fb389fdd33e981a356436cf37e453158787288c6d64530c28c695fcec83cd8d0`; `gate-matrix.tsv` remains
-`0b4d9c127e7230c7266960fe073f92f9551da9a68005cb936850993d803d1c58`. The second correction
-changes only focused parser-state stimuli, so no expensive gate was rerun. Earlier serial results
+`0b4d9c127e7230c7266960fe073f92f9551da9a68005cb936850993d803d1c58`. The third correction
+changes only focused reader-acceptance stimuli, so no expensive gate was rerun. Earlier serial results
 remain historical design reliance, not refreshed execution/timing evidence.
 
 | File | Role |
 |---|---|
-| `a-floors.py` | second-corrected 131 REQUIRED / 120 CONTROL instrument and three variants |
-| `*-matrix-v2.tsv` | current baseline, zero, flawed-reader and satisfying-control matrices |
-| matrices/logs without `v2` | preserved Review-1/Review-2 historical evidence |
+| `a-floors.py` | third-corrected 131 REQUIRED / 174 CONTROL instrument and five calibration/control variants |
+| `*-matrix-v3.tsv` | current six-variant baseline/calibration matrices |
+| matrices/logs without `v3` | preserved earlier historical evidence |
 | `a-floors-gate.py`, `gate-matrix.tsv` | byte-unchanged seven serial fast/deep cases |
 | `RUNBOOK.md` | reproduction and setup/verdict rules |
 
-A future implementation is contract-ready only if focused is 131/131 and 120/120, unchanged gate
+A future implementation is contract-ready only if focused is 131/131 and 174/174, unchanged gate
 binding is 4/4 and 3/3 when replayed for implementation verification, frozen B/C/protected bytes
 hold, and repository/workspace guards report no new finding. A product failure permits only
 D-058(9)'s bounded product correction, not a test rewrite or lower floor.

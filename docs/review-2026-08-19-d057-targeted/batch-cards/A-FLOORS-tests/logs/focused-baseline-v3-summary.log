@@ -1,0 +1,15 @@
+A-FLOORS third-corrected focused baseline
+subject=cd12ac26fb718a9bd02971db1f09f4fe1189bba7
+variant=baseline
+harness_sha256=4bc09b9c4f835f28fcfc114a6f9b78c6bb3e102d3513eae545bdb1ad5996bb80
+fake_only_reader_routes=54/54
+paired_required_routes=54/54
+route_bijection=54/54
+matrix_rows=305
+unique_case_names=305
+REQUIRED 10/131
+CONTROL 174/174
+PRE-REPAIR DEFECTS OBSERVED
+exit=1
+raw_sha256=cb2e9e89edc3d032483a5241df06d7d0fcae499de49c85acd3f40d763061d7f4
+matrix_sha256=98a3f66489827f8632be5b32395d2e02841fc456099f5f179e213eeda71f95ca

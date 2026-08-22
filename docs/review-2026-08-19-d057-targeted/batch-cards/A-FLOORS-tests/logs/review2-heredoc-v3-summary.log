@@ -1,0 +1,16 @@
+A-FLOORS Review-2 raw-heredoc sibling under third correction
+subject=cd12ac26fb718a9bd02971db1f09f4fe1189bba7
+variant=flawed-heredoc-sibling
+harness_sha256=4bc09b9c4f835f28fcfc114a6f9b78c6bb3e102d3513eae545bdb1ad5996bb80
+prior_v2_required=83/131
+prior_v2_controls=120/120
+new_fake_only_pass=14/54
+new_fake_only_fail=40/54
+REQUIRED 83/131
+CONTROL 134/174
+required_failures=48 TF rows
+control_failures=40 FA rows (8 vulnerable forms x 5 non-last constants)
+INSTRUMENT INVALID: control failure
+exit=2
+raw_sha256=65e1cf30e3c123a5485741e8544d3da6e45a6225d8ee73827046628bb85a778d
+matrix_sha256=9456409625b1f49570c34580adbe1c0b7fc45d834965cfdeb3710d80aae97ecf
