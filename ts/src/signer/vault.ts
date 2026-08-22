@@ -128,23 +128,49 @@ export const SNAPSHOT_ATTEMPTS = 5;
 /** Thrown when no attempt produced a snapshot whose block was still the head afterwards. */
 export class ChainUnstableError extends Error {
     /**
-     * `pendingOnly` distinguishes the two conditions this error covers (R2-F6). Every attempt
-     * saw a hashless (pending) head, versus the head actually moving under the reads. Same
-     * tier and same remedy, different fact — and reporting one as the other is the substitution
-     * this project exists to study.
+     * `pendingOnly` remains true only when every attempt stopped at a hashless head before any
+     * reads. The message distinguishes that cause from a moved/replaced head after pinned reads
+     * and a hashless confirmation after pinned reads. Same tier and remedy, different facts —
+     * and reporting one as another is the substitution this project exists to study.
      */
-    constructor(attempts: number, pendingOnly = false) {
-        super(
-            pendingOnly
-                ? `no finalised head after ${attempts} attempts: every observation returned a ` +
-                      "pending block with no hash, so there was nothing to anchor to"
-                : `no stable block after ${attempts} attempts: the head moved or was replaced ` +
-                      "under each pinned read",
-        );
+    constructor(attempts: number, pendingOnly = false, causeMask?: number) {
+        const causes = causeMask ?? (pendingOnly ? 1 : 2);
+        super(ChainUnstableError.messageFor(attempts, causes));
         this.name = "ChainUnstableError";
-        this.pendingOnly = pendingOnly;
+        this.pendingOnly = causes === 1;
     }
     readonly pendingOnly: boolean = false;
+
+    /** One exact truthful sentence for each non-empty B1/B2/B3 cause set. */
+    private static messageFor(attempts: number, causes: number): string {
+        switch (causes) {
+            case 1:
+                return `no finalised head after ${attempts} attempts: every observation returned a ` +
+                    "pending block with no hash, so there was nothing to anchor to";
+            case 2:
+                return `no stable block after ${attempts} attempts: the head moved or was replaced ` +
+                    "under each pinned read";
+            case 4:
+                return `no finalised confirmation after ${attempts} attempts: every pinned snapshot ` +
+                    "was followed by a pending confirmation with no hash";
+            case 3:
+                return `no stable block after ${attempts} attempts: the run observed a pending head ` +
+                    "before reads and a head that moved or was replaced after pinned reads";
+            case 5:
+                return `no finalised snapshot after ${attempts} attempts: the run observed a pending ` +
+                    "head before reads and a pending confirmation with no hash after pinned reads";
+            case 6:
+                return `no stable snapshot after ${attempts} attempts: the run observed a head that ` +
+                    "moved or was replaced after pinned reads and a pending confirmation with no hash " +
+                    "after pinned reads";
+            case 7:
+                return `no stable snapshot after ${attempts} attempts: the run observed a pending head ` +
+                    "before reads, a head that moved or was replaced after pinned reads, and a pending " +
+                    "confirmation with no hash after pinned reads";
+            default:
+                throw new Error(`invalid chain-instability cause mask: ${causes}`);
+        }
+    }
 }
 
 /**
@@ -169,8 +195,10 @@ export function createChainReader(rpcUrl: string): ChainReader {
         },
 
         async readVaultState(vault: Hex, target: Hex, selector: Hex): Promise<VaultState> {
-            // Tracks whether EVERY attempt failed for the pending-head reason (R2-F6).
-            let pendingOnly = true;
+            // B1=1: pending head before reads. B2=2: moved/replaced after reads.
+            // B3=4: pending confirmation after reads. OR preserves every observed cause
+            // regardless of order, repetition, first-arrival position or B2 mechanism.
+            let causeMask = 0;
             for (let attempt = 0; attempt < SNAPSHOT_ATTEMPTS; attempt += 1) {
                 // Number and hash from ONE response. Deriving the hash from a second request
                 // would reintroduce, in the identifier of the pin itself, exactly the
@@ -178,7 +206,8 @@ export function createChainReader(rpcUrl: string): ChainReader {
                 const head = await client.getBlock();
                 if (head.hash === null) {
                     // A pending block. It has no hash to anchor to and its contents are not
-                    // final; there is nothing here to attest against. `pendingOnly` stays true.
+                    // final; there is nothing here to attest against.
+                    causeMask |= 1;
                     continue;
                 }
                 const at = head.number;
@@ -225,11 +254,12 @@ export function createChainReader(rpcUrl: string): ChainReader {
                     // head to confirm against, which is condition (b), not (a). Attributing it
                     // to movement is the same substitution R2-F6 was raised about, one level
                     // in; found by the D-057(5) verifier after the first repair.
+                    causeMask |= 4;
                     continue;
                 }
                 if (confirm.number !== at || confirm.hash.toLowerCase() !== headHash) {
                     // The head genuinely moved or was replaced: condition (a).
-                    pendingOnly = false;
+                    causeMask |= 2;
                     continue;
                 }
 
@@ -253,7 +283,7 @@ export function createChainReader(rpcUrl: string): ChainReader {
                 };
             }
 
-            throw new ChainUnstableError(SNAPSHOT_ATTEMPTS, pendingOnly);
+            throw new ChainUnstableError(SNAPSHOT_ATTEMPTS, causeMask === 1, causeMask);
         },
 
         async blockHashAt(blockNumber: bigint): Promise<Hex | null> {

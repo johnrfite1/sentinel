@@ -1,0 +1,603 @@
+import {describe, it} from "node:test";
+import assert from "node:assert/strict";
+import {createServer, type Server} from "node:http";
+import {
+    encodeAbiParameters,
+    keccak256,
+    parseAbiParameters,
+    stringToBytes,
+    toFunctionSelector,
+    toHex,
+} from "viem";
+import {
+    ChainUnstableError,
+    SNAPSHOT_ATTEMPTS,
+    createChainReader,
+} from "../src/signer/vault.ts";
+import type {Hex} from "../src/signer/protocol.ts";
+
+/**
+ * Frozen C-SNAPSHOT test contract.
+ *
+ * Boundary: ChainUnstableError and createChainReader(...).readVaultState only. These tests
+ * deliberately do not inspect a signed refusal: protocol.ts carries no detail field, and that
+ * false maintained claim is Batch D-owned. The unchanged public reason remains the single
+ * SIGNER_CHAIN_UNSTABLE code with its existing tier/remedy.
+ *
+ * The oracle observes the actual RPC route as well as the error. A generic rejection would not
+ * pass: every exhaustion case asserts independently declared latest-lookup and pinned-read
+ * counts, then requires one finite full message for its exact nonempty cause set. Bidirectional
+ * pairs, all six triple first-occurrence orders, repetitions and explicit negative-oracle controls
+ * make lexical negation, false universals, extra causes and order-dependent accumulation fail at
+ * their named case rather than merely throw. One aggregate test also exhausts all 3^5 category
+ * sequences under both alternating B2a/B2b starting polarities: 486 real reader routes total.
+ */
+
+const VAULT: Hex = "0x1111111111111111111111111111111111111111";
+const TARGET: Hex = "0x2222222222222222222222222222222222222222";
+const SELECTOR: Hex = "0xc188528b";
+const PINNED_READS = 11;
+
+const ADDRESS_WORD = encodeAbiParameters(parseAbiParameters("address"), [
+    "0x3333333333333333333333333333333333333333",
+]);
+const BYTES32_WORD = encodeAbiParameters(parseAbiParameters("bytes32"), [
+    keccak256(stringToBytes("snapshot-classification")),
+]);
+const UINT_WORD = encodeAbiParameters(parseAbiParameters("uint256"), [7n]);
+const BOOL_WORD = encodeAbiParameters(parseAbiParameters("bool"), [true]);
+
+const RETURNS: Record<string, Hex> = {
+    [toFunctionSelector("owner() view returns (address)")]: ADDRESS_WORD,
+    [toFunctionSelector("signer() view returns (address)")]: ADDRESS_WORD,
+    [toFunctionSelector("activeMandateHash() view returns (bytes32)")]: BYTES32_WORD,
+    [toFunctionSelector("activePolicyHash() view returns (bytes32)")]: BYTES32_WORD,
+    [toFunctionSelector("actionNonce() view returns (uint256)")]: UINT_WORD,
+    [toFunctionSelector("paused() view returns (bool)")]: BOOL_WORD,
+    [toFunctionSelector("maxNativeValueWei() view returns (uint256)")]: UINT_WORD,
+    [toFunctionSelector("allowedTarget(address) view returns (bool)")]: BOOL_WORD,
+    [toFunctionSelector("allowedSelector(bytes4) view returns (bool)")]: BOOL_WORD,
+    [toFunctionSelector("domainSeparator() view returns (bytes32)")]: BYTES32_WORD,
+};
+
+type AttemptEnd = "pending-head" | "moved-height" | "same-height-reorg" | "confirmation-pending";
+type Cause = "B1" | "B2" | "B3";
+
+const CAUSE_ORDER: readonly Cause[] = ["B1", "B2", "B3"];
+const EXACT_MESSAGES: Readonly<Record<string, string>> = {
+    B1:
+        `no finalised head after ${SNAPSHOT_ATTEMPTS} attempts: every observation returned a ` +
+        "pending block with no hash, so there was nothing to anchor to",
+    B2:
+        `no stable block after ${SNAPSHOT_ATTEMPTS} attempts: the head moved or was replaced ` +
+        "under each pinned read",
+    B3:
+        `no finalised confirmation after ${SNAPSHOT_ATTEMPTS} attempts: every pinned snapshot ` +
+        "was followed by a pending confirmation with no hash",
+    "B1+B2":
+        `no stable block after ${SNAPSHOT_ATTEMPTS} attempts: the run observed a pending head ` +
+        "before reads and a head that moved or was replaced after pinned reads",
+    "B1+B3":
+        `no finalised snapshot after ${SNAPSHOT_ATTEMPTS} attempts: the run observed a pending ` +
+        "head before reads and a pending confirmation with no hash after pinned reads",
+    "B2+B3":
+        `no stable snapshot after ${SNAPSHOT_ATTEMPTS} attempts: the run observed a head that ` +
+        "moved or was replaced after pinned reads and a pending confirmation with no hash after " +
+        "pinned reads",
+    "B1+B2+B3":
+        `no stable snapshot after ${SNAPSHOT_ATTEMPTS} attempts: the run observed a pending head ` +
+        "before reads, a head that moved or was replaced after pinned reads, and a pending " +
+        "confirmation with no hash after pinned reads",
+};
+
+interface Head {
+    number: bigint;
+    hash: Hex | null;
+}
+
+interface Recorded {
+    method: string;
+    blockTag: string | undefined;
+}
+
+interface MockNode {
+    url: string;
+    calls: Recorded[];
+    stop(): Promise<void>;
+}
+
+interface ExhaustionObservation {
+    returned: boolean;
+    caught: unknown;
+    calls: Recorded[];
+}
+
+function hash(label: string): Hex {
+    return keccak256(stringToBytes(label));
+}
+
+function blockAt(number: bigint, blockHash: Hex | null): Record<string, unknown> {
+    return {
+        number: toHex(number),
+        hash: blockHash,
+        parentHash: hash(`parent:${number}`),
+        nonce: "0x0000000000000000",
+        sha3Uncles: hash("uncles"),
+        logsBloom: `0x${"00".repeat(256)}`,
+        transactionsRoot: hash("txroot"),
+        stateRoot: hash("stateroot"),
+        receiptsRoot: hash("receiptsroot"),
+        miner: "0x0000000000000000000000000000000000000000",
+        difficulty: "0x0",
+        totalDifficulty: "0x0",
+        extraData: "0x",
+        size: "0x0",
+        gasLimit: "0x1c9c380",
+        gasUsed: "0x0",
+        timestamp: toHex(1_800_000_000n),
+        transactions: [],
+        uncles: [],
+        baseFeePerGas: "0x7",
+    };
+}
+
+function headsFor(attempts: AttemptEnd[]): Head[] {
+    return attempts.flatMap((outcome, index): Head[] => {
+        const n = 1_000n + BigInt(index * 10);
+        const anchored: Head = {number: n, hash: hash(`anchor:${index}`)};
+        switch (outcome) {
+            case "pending-head":
+                return [{number: n, hash: null}];
+            case "moved-height":
+                return [anchored, {number: n + 1n, hash: hash(`advanced:${index}`)}];
+            case "same-height-reorg":
+                return [anchored, {number: n, hash: hash(`reorg:${index}`)}];
+            case "confirmation-pending":
+                return [anchored, {number: n, hash: null}];
+        }
+    });
+}
+
+async function mockNode(heads: Head[], failReads = false): Promise<MockNode> {
+    const calls: Recorded[] = [];
+    let headIndex = 0;
+    const server: Server = createServer((req, res) => {
+        let body = "";
+        req.on("data", (chunk) => (body += chunk));
+        req.on("end", () => {
+            const request = JSON.parse(body) as {id: number; method: string; params?: unknown[]};
+            const params = request.params ?? [];
+            let result: unknown = null;
+            let blockTag: string | undefined;
+
+            if (request.method === "eth_getBlockByNumber") {
+                blockTag = params[0] as string;
+                const head = heads[Math.min(headIndex, heads.length - 1)]!;
+                headIndex += 1;
+                result = blockAt(head.number, head.hash);
+            } else if (request.method === "eth_call") {
+                blockTag = params[1] as string;
+                const call = params[0] as {data: Hex};
+                if (failReads) {
+                    calls.push({method: request.method, blockTag});
+                    res.writeHead(200, {"content-type": "application/json"});
+                    res.end(JSON.stringify({
+                        jsonrpc: "2.0",
+                        id: request.id,
+                        error: {code: -32601, message: "scripted ordinary read failure"},
+                    }));
+                    return;
+                }
+                result = RETURNS[call.data.slice(0, 10)] ?? "0x";
+            } else if (request.method === "eth_getCode") {
+                blockTag = params[1] as string;
+                result = "0x6080";
+            }
+
+            calls.push({method: request.method, blockTag});
+            res.writeHead(200, {"content-type": "application/json"});
+            res.end(JSON.stringify({jsonrpc: "2.0", id: request.id, result}));
+        });
+    });
+
+    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+    const address = server.address();
+    if (address === null || typeof address === "string") throw new Error("no port");
+    return {
+        url: `http://127.0.0.1:${address.port}`,
+        calls,
+        async stop() {
+            await new Promise<void>((resolve) => server.close(() => resolve()));
+        },
+    };
+}
+
+function occurred(attempts: AttemptEnd[]): Set<Cause> {
+    const causes = new Set<Cause>();
+    for (const attempt of attempts) {
+        if (attempt === "pending-head") causes.add("B1");
+        else if (attempt === "confirmation-pending") causes.add("B3");
+        else causes.add("B2");
+    }
+    return causes;
+}
+
+function causeKey(causes: ReadonlySet<Cause>): string {
+    return CAUSE_ORDER.filter((cause) => causes.has(cause)).join("+");
+}
+
+function assertExactMessage(error: ChainUnstableError, causes: ReadonlySet<Cause>): void {
+    const key = causeKey(causes);
+    const expected = EXACT_MESSAGES[key];
+    assert.ok(expected !== undefined, `missing exact-message contract for ${key || "empty set"}`);
+    assert.match(
+        error.message,
+        new RegExp(`\\b${SNAPSHOT_ATTEMPTS} attempts\\b`),
+        "attempt budget must be bound to the word attempts",
+    );
+    assert.equal(error.message, expected, `exact ${key} cause-set message mismatch`);
+}
+
+function fabricatedError(message: string): ChainUnstableError {
+    const error = new ChainUnstableError(SNAPSHOT_ATTEMPTS);
+    error.message = message;
+    return error;
+}
+
+async function observeExhaustion(attempts: AttemptEnd[]): Promise<ExhaustionObservation> {
+    const node = await mockNode(headsFor(attempts));
+    try {
+        let caught: unknown;
+        let returned = false;
+        try {
+            await createChainReader(node.url).readVaultState(VAULT, TARGET, SELECTOR);
+            returned = true;
+        } catch (error) {
+            caught = error;
+        }
+        return {returned, caught, calls: [...node.calls]};
+    } finally {
+        await node.stop();
+    }
+}
+
+function assertRoute(
+    observation: ExhaustionObservation,
+    attempts: AttemptEnd[],
+    expectedLatest: number,
+    expectedReads: number,
+): void {
+    assert.equal(attempts.length, SNAPSHOT_ATTEMPTS, "fixture must consume the exact retry budget");
+    const readsExpected = attempts.filter((a) => a !== "pending-head").length * PINNED_READS;
+    const latestExpected = attempts.reduce(
+        (count, a) => count + (a === "pending-head" ? 1 : 2),
+        0,
+    );
+    assert.equal(readsExpected, expectedReads, "declared pinned-read count drifted");
+    assert.equal(latestExpected, expectedLatest, "declared latest-lookup count drifted");
+    const pinned = observation.calls.filter(
+        (c) => c.method === "eth_call" || c.method === "eth_getCode",
+    );
+    const latest = observation.calls.filter(
+        (c) => c.method === "eth_getBlockByNumber" && c.blockTag === "latest",
+    );
+    assert.equal(pinned.length, readsExpected, "fixture did not drive its declared read routes");
+    assert.equal(latest.length, latestExpected, "fixture did not drive its declared head routes");
+}
+
+function assertClassification(
+    observation: ExhaustionObservation,
+    attempts: AttemptEnd[],
+): ChainUnstableError {
+    assert.equal(observation.returned, false, "expected exhaustion instead of a returned snapshot");
+    assert.ok(observation.caught instanceof ChainUnstableError,
+        `expected ChainUnstableError, got ${String(observation.caught)}`);
+    const causes = occurred(attempts);
+    assert.equal(observation.caught.pendingOnly, causes.size === 1 && causes.has("B1"),
+        "pendingOnly means all attempts ended at the pre-read pending-head branch");
+    assertExactMessage(observation.caught, causes);
+    return observation.caught;
+}
+
+async function assertExhaustion(
+    attempts: AttemptEnd[],
+    expectedLatest: number,
+    expectedReads: number,
+): Promise<ChainUnstableError> {
+    const observation = await observeExhaustion(attempts);
+    assertRoute(observation, attempts, expectedLatest, expectedReads);
+    return assertClassification(observation, attempts);
+}
+
+const CATEGORY_SEQUENCE_COUNT = CAUSE_ORDER.length ** SNAPSHOT_ATTEMPTS;
+const EXHAUSTIVE_ROUTE_COUNT = CATEGORY_SEQUENCE_COUNT * 2;
+
+function categorySequence(index: number): Cause[] {
+    return Array.from({length: SNAPSHOT_ATTEMPTS}, (_, position): Cause => {
+        const divisor = CAUSE_ORDER.length ** (SNAPSHOT_ATTEMPTS - position - 1);
+        return CAUSE_ORDER[Math.floor(index / divisor) % CAUSE_ORDER.length]!;
+    });
+}
+
+function mechanismSequence(categories: Cause[], b2StartsAsReorg: boolean): AttemptEnd[] {
+    let b2Index = 0;
+    return categories.map((cause): AttemptEnd => {
+        if (cause === "B1") return "pending-head";
+        if (cause === "B3") return "confirmation-pending";
+        const reorg = (b2Index + Number(b2StartsAsReorg)) % 2 === 1;
+        b2Index += 1;
+        return reorg ? "same-height-reorg" : "moved-height";
+    });
+}
+
+function firstLine(error: unknown): string {
+    return (error instanceof Error ? error.message : String(error)).split("\n", 1)[0]!;
+}
+
+describe("C-SNAPSHOT exhaustive branch classification", () => {
+    it("CONTROL stable success returns the hashed pin after exactly eleven pinned reads", async () => {
+        const head = {number: 4242n, hash: hash("stable")};
+        const node = await mockNode([head, head]);
+        try {
+            const state = await createChainReader(node.url).readVaultState(VAULT, TARGET, SELECTOR);
+            assert.equal(state.observedAtBlock, head.number);
+            assert.equal(state.observedBlockHash, head.hash);
+            assert.equal(node.calls.filter(
+                (c) => c.method === "eth_call" || c.method === "eth_getCode",
+            ).length, PINNED_READS);
+            assert.equal(node.calls.filter(
+                (c) => c.method === "eth_getBlockByNumber" && c.blockTag === "latest",
+            ).length, 2);
+        } finally {
+            await node.stop();
+        }
+    });
+
+    it("CONTROL pure B1: pending head is rejected before reads and named accurately", async () => {
+        await assertExhaustion(
+            Array<AttemptEnd>(SNAPSHOT_ATTEMPTS).fill("pending-head"),
+            5,
+            0,
+        );
+    });
+
+    it("CONTROL pure B2 movement: advanced height after reads is named accurately", async () => {
+        await assertExhaustion(
+            Array<AttemptEnd>(SNAPSHOT_ATTEMPTS).fill("moved-height"),
+            10,
+            55,
+        );
+    });
+
+    it("CONTROL pure B2 reorg: same-height replacement after reads is named accurately", async () => {
+        await assertExhaustion(
+            Array<AttemptEnd>(SNAPSHOT_ATTEMPTS).fill("same-height-reorg"),
+            10,
+            55,
+        );
+    });
+
+    it("R2-F6 pure B3: pending confirmation is neither pre-read pending nor movement", async () => {
+        await assertExhaustion(
+            Array<AttemptEnd>(SNAPSHOT_ATTEMPTS).fill("confirmation-pending"),
+            10,
+            55,
+        );
+    });
+
+    it("R2-F6 pair order B1→B2: retains both causes after repeats", async () => {
+        await assertExhaustion([
+            "pending-head", "moved-height", "pending-head", "same-height-reorg", "moved-height",
+        ], 8, 33);
+    });
+
+    it("R2-F6 pair order B2→B1: retains both causes after repeats", async () => {
+        await assertExhaustion([
+            "moved-height", "pending-head", "same-height-reorg", "pending-head", "moved-height",
+        ], 8, 33);
+    });
+
+    it("R2-F6 pair order B1→B3: retains both causes after repeats", async () => {
+        await assertExhaustion([
+            "pending-head", "confirmation-pending", "pending-head",
+            "confirmation-pending", "confirmation-pending",
+        ], 8, 33);
+    });
+
+    it("R2-F6 pair order B3→B1: retains both causes after repeats", async () => {
+        await assertExhaustion([
+            "confirmation-pending", "pending-head", "confirmation-pending",
+            "pending-head", "confirmation-pending",
+        ], 8, 33);
+    });
+
+    it("R2-F6 pair order B2→B3: retains both causes after B2a/B2b", async () => {
+        await assertExhaustion([
+            "moved-height", "confirmation-pending", "same-height-reorg",
+            "confirmation-pending", "moved-height",
+        ], 10, 55);
+    });
+
+    it("R2-F6 pair order B3→B2: retains both causes after B2a/B2b", async () => {
+        await assertExhaustion([
+            "confirmation-pending", "moved-height", "confirmation-pending",
+            "same-height-reorg", "confirmation-pending",
+        ], 10, 55);
+    });
+
+    it("R2-F6 triple order B1→B2→B3: retains all causes after B2a/B2b", async () => {
+        await assertExhaustion([
+            "pending-head", "moved-height", "confirmation-pending", "same-height-reorg",
+            "pending-head",
+        ], 8, 33);
+    });
+
+    it("R2-F6 triple order B1→B3→B2: retains all causes after B2a/B2b", async () => {
+        await assertExhaustion([
+            "pending-head", "confirmation-pending", "moved-height", "pending-head",
+            "same-height-reorg",
+        ], 8, 33);
+    });
+
+    it("R2-F6 triple order B2→B1→B3: retains all causes after B2a/B2b", async () => {
+        await assertExhaustion([
+            "moved-height", "pending-head", "confirmation-pending", "pending-head",
+            "same-height-reorg",
+        ], 8, 33);
+    });
+
+    it("R2-F6 triple order B2→B3→B1: retains all causes after B2a/B2b", async () => {
+        await assertExhaustion([
+            "moved-height", "confirmation-pending", "pending-head", "same-height-reorg",
+            "pending-head",
+        ], 8, 33);
+    });
+
+    it("R2-F6 triple order B3→B1→B2: retains all causes after B2a/B2b", async () => {
+        await assertExhaustion([
+            "confirmation-pending", "pending-head", "moved-height", "pending-head",
+            "same-height-reorg",
+        ], 8, 33);
+    });
+
+    it("R2-F6 triple order B3→B2→B1: retains all causes after B2a/B2b", async () => {
+        await assertExhaustion([
+            "confirmation-pending", "moved-height", "pending-head", "pending-head",
+            "same-height-reorg",
+        ], 8, 33);
+    });
+
+    it("CONTROL ordinary RPC/read failure is not reclassified as chain instability", async () => {
+        const head = {number: 5000n, hash: hash("read-failure")};
+        const node = await mockNode([head], true);
+        try {
+            await assert.rejects(
+                () => createChainReader(node.url).readVaultState(VAULT, TARGET, SELECTOR),
+                (error: unknown) =>
+                    error instanceof Error &&
+                    !(error instanceof ChainUnstableError) &&
+                    /scripted ordinary read failure/.test(error.message),
+                "ordinary read failure must propagate for SIGNER_VAULT_UNREACHABLE classification",
+            );
+            assert.equal(node.calls.filter(
+                (c) => c.method === "eth_getBlockByNumber" && c.blockTag === "latest",
+            ).length, 1, "ordinary read failure must not be retried as an unstable snapshot");
+        } finally {
+            await node.stop();
+        }
+    });
+
+    it("ORACLE CONTROL rejects a message that negates the expected cause", () => {
+        assert.throws(
+            () => assertExactMessage(
+                fabricatedError(
+                    `no finalised head after ${SNAPSHOT_ATTEMPTS} attempts: no pending block ` +
+                    "with no hash was observed",
+                ),
+                new Set<Cause>(["B1"]),
+            ),
+            /exact B1 cause-set message mismatch/,
+        );
+    });
+
+    it("ORACLE CONTROL rejects an unrelated 50 instead of the five-attempt budget", () => {
+        assert.throws(
+            () => assertExactMessage(
+                fabricatedError(
+                    "no finalised head after 50 attempts: every observation returned a pending " +
+                    "block with no hash, so there was nothing to anchor to",
+                ),
+                new Set<Cause>(["B1"]),
+            ),
+            /attempt budget must be bound to the word attempts/,
+        );
+    });
+
+    it("ORACLE CONTROL rejects a message that adds an unobserved cause", () => {
+        assert.throws(
+            () => assertExactMessage(
+                fabricatedError(EXACT_MESSAGES["B1+B2"]!),
+                new Set<Cause>(["B1"]),
+            ),
+            /exact B1 cause-set message mismatch/,
+        );
+    });
+
+    it("ORACLE CONTROL rejects false universal wording for a mixed run", () => {
+        assert.throws(
+            () => assertExactMessage(
+                fabricatedError(
+                    `no stable block after ${SNAPSHOT_ATTEMPTS} attempts: every attempt had a ` +
+                    "pending head before reads and a head that moved after pinned reads",
+                ),
+                new Set<Cause>(["B1", "B2"]),
+            ),
+            /exact B1\+B2 cause-set message mismatch/,
+        );
+    });
+
+    it("EXHAUSTIVE CONTROL traverses and classifies all 486/486 real reader routes", async () => {
+        assert.equal(CATEGORY_SEQUENCE_COUNT, 243, "category matrix must remain exactly 3^5");
+        assert.equal(EXHAUSTIVE_ROUTE_COUNT, 486, "two B2 polarities must run per category sequence");
+
+        const failures: string[] = [];
+        let attempted = 0;
+        let observed = 0;
+        let routeVerified = 0;
+        let classificationChecked = 0;
+
+        for (let sequenceIndex = 0; sequenceIndex < CATEGORY_SEQUENCE_COUNT; sequenceIndex += 1) {
+            const categories = categorySequence(sequenceIndex);
+            const pendingCount = categories.filter((cause) => cause === "B1").length;
+            const expectedLatest = pendingCount + (SNAPSHOT_ATTEMPTS - pendingCount) * 2;
+            const expectedReads = (SNAPSHOT_ATTEMPTS - pendingCount) * PINNED_READS;
+
+            for (const b2StartsAsReorg of [false, true]) {
+                const polarity = b2StartsAsReorg ? "B2b-first" : "B2a-first";
+                const label = `${categories.join("")}/${polarity}`;
+                const attempts = mechanismSequence(categories, b2StartsAsReorg);
+                attempted += 1;
+
+                let observation: ExhaustionObservation;
+                try {
+                    observation = await observeExhaustion(attempts);
+                    observed += 1;
+                } catch (error) {
+                    failures.push(`${label} execution: ${firstLine(error)}`);
+                    continue;
+                }
+
+                try {
+                    assertRoute(observation, attempts, expectedLatest, expectedReads);
+                    routeVerified += 1;
+                } catch (error) {
+                    failures.push(`${label} route: ${firstLine(error)}`);
+                }
+
+                classificationChecked += 1;
+                try {
+                    assertClassification(observation, attempts);
+                } catch (error) {
+                    failures.push(`${label} classification: ${firstLine(error)}`);
+                }
+            }
+        }
+
+        const traversal =
+            `attempted=${attempted}/${EXHAUSTIVE_ROUTE_COUNT} ` +
+            `observed=${observed}/${EXHAUSTIVE_ROUTE_COUNT} ` +
+            `route-verified=${routeVerified}/${EXHAUSTIVE_ROUTE_COUNT} ` +
+            `classification-checked=${classificationChecked}/${EXHAUSTIVE_ROUTE_COUNT}`;
+        if (attempted !== EXHAUSTIVE_ROUTE_COUNT || observed !== EXHAUSTIVE_ROUTE_COUNT ||
+            routeVerified !== EXHAUSTIVE_ROUTE_COUNT ||
+            classificationChecked !== EXHAUSTIVE_ROUTE_COUNT) {
+            failures.unshift(`incomplete traversal: ${traversal}`);
+        }
+        assert.equal(
+            failures.length,
+            0,
+            `exhaustive matrix ${traversal}; aggregated failures=${failures.length}\n` +
+            failures.join("\n"),
+        );
+    });
+});
