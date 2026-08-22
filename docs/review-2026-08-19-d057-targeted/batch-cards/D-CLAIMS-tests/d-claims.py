@@ -2,7 +2,8 @@
 """Frozen focused test contract for Sentinel D-CLAIMS.
 
 Clones the named exact commit and mutates only that private clone.
-First correction closes INSTRUMENT-REVIEW-1.md without editing that review.
+First correction closes INSTRUMENT-REVIEW-1.md; second closes INSTRUMENT-REVIEW-2.md.
+Neither review is edited.
 """
 
 from __future__ import annotations
@@ -97,6 +98,11 @@ VARIANTS = {
     "break-bevents",
     "break-d014",
     "break-reason-split",
+    "break-reason-quoted",
+    "break-reason-space",
+    "break-reason-comment",
+    "break-reason-newline",
+    "break-live-strike",
 }
 
 required_total = required_held = control_total = control_held = 0
@@ -153,9 +159,118 @@ def comment_norm(text: str) -> str:
     return wrap_norm(re.sub(r"(?m)^\s*\*", " ", text))
 
 
-def live_text(norm: str) -> str:
-    """Wrap-normalized text with ~~struck~~ spans removed. Unstruck oracles use this."""
-    return wrap_norm(re.sub(r"~~.*?~~", " ", norm))
+def phrase_is_live(norm: str, phrase: str) -> bool:
+    """True when `phrase` is human-readable in wrap-normalized Markdown.
+
+    A closed `~~…~~` span may keep the words for drift. The phrase is live if any
+    occurrence has at least one unstruck character (interior `exi~~t~~`, split
+    `~~this alone ~~blocks exit`), or if a `~~` span is left unclosed.
+    """
+    chars: list[tuple[str, bool]] = []
+    i = 0
+    struck = False
+    while i < len(norm):
+        if norm.startswith("~~", i):
+            struck = not struck
+            i += 2
+            continue
+        chars.append((norm[i], struck))
+        i += 1
+    unclosed = struck
+    text = "".join(ch for ch, _ in chars)
+    start = 0
+    plen = len(phrase)
+    while True:
+        found = text.find(phrase, start)
+        if found < 0:
+            return False
+        span = chars[found:found + plen]
+        if unclosed or not all(flag for _, flag in span):
+            return True
+        start = found + 1
+
+
+def _skip_ws_comments(body: str, i: int) -> int:
+    n = len(body)
+    while i < n:
+        ch = body[i]
+        if ch in " \t\n\r":
+            i += 1
+            continue
+        if body.startswith("//", i):
+            nl = body.find("\n", i)
+            i = n if nl < 0 else nl + 1
+            continue
+        if body.startswith("/*", i):
+            end = body.find("*/", i + 2)
+            i = n if end < 0 else end + 2
+            continue
+        break
+    return i
+
+
+def _read_quoted(body: str, i: int) -> tuple[str, int]:
+    quote = body[i]
+    i += 1
+    start = i
+    n = len(body)
+    while i < n and body[i] != quote:
+        i += 2 if body[i] == "\\" else 1
+    return body[start:i], (i + 1 if i < n else i)
+
+
+def reason_object_keys(body: str) -> frozenset[str]:
+    """Finite REASON_SEVERITY key grammar, not a TypeScript parser.
+
+    Keys: unquoted IDENT, "IDENT" / 'IDENT', or ["IDENT"] / ['IDENT'].
+    Whitespace and // or /* */ comments may sit between the key and `:`.
+    IDENT scored here is [A-Z][A-Z0-9_]*.
+    """
+    keys: list[str] = []
+    i = 0
+    n = len(body)
+    ident = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+    scored = re.compile(r"[A-Z][A-Z0-9_]*")
+    while True:
+        i = _skip_ws_comments(body, i)
+        if i >= n or body[i] == "}":
+            break
+        key: str | None = None
+        if body[i] in "\"'":
+            key, i = _read_quoted(body, i)
+        elif body[i] == "[":
+            i += 1
+            i = _skip_ws_comments(body, i)
+            if i < n and body[i] in "\"'":
+                key, i = _read_quoted(body, i)
+            i = _skip_ws_comments(body, i)
+            if i < n and body[i] == "]":
+                i += 1
+        else:
+            match = ident.match(body, i)
+            if match:
+                key = match.group(0)
+                i = match.end()
+            else:
+                i += 1
+                continue
+        i = _skip_ws_comments(body, i)
+        if i >= n or body[i] != ":":
+            continue
+        i += 1
+        if key and scored.fullmatch(key):
+            keys.append(key)
+        i = _skip_ws_comments(body, i)
+        if i < n and body[i] in "\"'":
+            _, i = _read_quoted(body, i)
+        else:
+            match = ident.match(body, i)
+            if match:
+                i = match.end()
+        i = _skip_ws_comments(body, i)
+        if i < n and body[i] == ",":
+            i += 1
+    return frozenset(keys)
 
 
 def replace_once(path: Path, old: str, new: str) -> None:
@@ -183,7 +298,36 @@ def refusal_record_has_detail(src: str) -> bool:
 def reason_codes(src: str) -> frozenset[str]:
     start = src.index("export const REASON_SEVERITY = {")
     end = src.index("} as const satisfies Record<string, Severity>;", start)
-    return frozenset(re.findall(r"(?m)^\s+([A-Z][A-Z0-9_]+):", src[start:end]))
+    inner = src[src.index("{", start) + 1:end]
+    return reason_object_keys(inner)
+
+
+def insert_reason_after_unstable(root: Path, entry: str) -> None:
+    replace_once(
+        root / "ts/src/signer/protocol.ts",
+        '    SIGNER_CHAIN_UNSTABLE: "FATAL",\n',
+        '    SIGNER_CHAIN_UNSTABLE: "FATAL",\n' + entry,
+    )
+
+
+def apply_live_strike(root: Path) -> None:
+    """Review 2: interior/split ~~ spans that leave the watched claim readable."""
+    apply_all(root)
+    replace_once(
+        root / "docs/exit-criterion-packet.md",
+        "~~Under C1 condition 4 this alone blocks exit.~~",
+        "Under C1 condition 4 this alone blocks exi~~t~~.",
+    )
+    replace_once(
+        root / "docs/gate-s2-evidence.md",
+        D2_FIVE_NEW,
+        D2_FIVE_OLD.replace("FIVE OF THESE TEN", "FI~~V~~E OF THESE TEN", 1),
+    )
+    replace_once(
+        root / "docs/exit-criterion-packet.md",
+        PACKET_SIX_NEW,
+        PACKET_SIX_NEW + "\n- The t~~e~~n §11.0 accepted limits — subject to **T1**.",
+    )
 
 
 D6_OLD = (
@@ -266,12 +410,9 @@ def score(root: Path) -> None:
     checks = (root / "ts/test/evaluate.checks.test.ts").read_text()
     packet = (root / "docs/exit-criterion-packet.md").read_text()
     packet_n = wrap_norm(packet)
-    packet_live = live_text(packet_n)
     blocker = wrap_norm(region(packet, BLOCKER1_START, BLOCKER1_END))
-    blocker_live = live_text(blocker)
     s2 = (root / "docs/gate-s2-evidence.md").read_text()
     s2_n = wrap_norm(s2)
-    s2_live = live_text(s2_n)
     s1 = root / "docs/gate-s1-evidence.md"
     register = wrap_norm((root / "docs/v1-1-register.md").read_text())
     session = wrap_norm((root / "docs/session-state.md").read_text())
@@ -282,19 +423,19 @@ def score(root: Path) -> None:
     adj2 = wrap_norm((root / "docs/review-2026-08-19-d057-targeted/adjudication/new-findings/ADJ2.md").read_text())
     v3 = wrap_norm((root / "docs/review-2026-08-19-d057-targeted/reviewers/v3/REPORT.md").read_text())
 
-    record("REQUIRED", "R-D6-absent", D6_FALSE not in protocol_n, "protocol.ts lacks the false detail claim")
+    record("REQUIRED", "R-D6-absent", not phrase_is_live(protocol_n, D6_FALSE), "protocol.ts has no live false detail claim")
     record("REQUIRED", "R-D6-truth", D6_TRUTH in protocol_n, "protocol.ts carries D6_TRUTH")
     record("REQUIRED", "R-D4a-absent", "EVAL_ACTION_TARGET_MATCHES_MANDATE" not in checks, "evaluate.checks.test.ts lacks the fictitious code")
-    record("REQUIRED", "R-D4b-neither", D4B_NEITHER not in decode_n, "decode/index.ts lacks NEITHER signer nor verifier")
-    record("REQUIRED", "R-D4b-open", D4B_OPEN not in decode_n, "decode/index.ts lacks Both are open")
+    record("REQUIRED", "R-D4b-neither", not phrase_is_live(decode_n, D4B_NEITHER), "decode/index.ts has no live NEITHER signer nor verifier")
+    record("REQUIRED", "R-D4b-open", not phrase_is_live(decode_n, D4B_OPEN), "decode/index.ts has no live Both are open")
     record("REQUIRED", "R-D4b-truth", D4B_TRUTH_A in decode_n and D4B_TRUTH_B in decode_n, "decode/index.ts carries both D4B_TRUTH fragments")
-    record("REQUIRED", "R-D1-absent", D1_FALSE not in blocker_live, "unstruck BLOCKER 1 lacks ; it does not.")
-    record("REQUIRED", "R-D1-blocks", D1_BLOCKS not in blocker_live, "unstruck BLOCKER 1 lacks this alone blocks exit")
+    record("REQUIRED", "R-D1-absent", not phrase_is_live(blocker, "it does not."), "BLOCKER 1 has no live it does not.")
+    record("REQUIRED", "R-D1-blocks", not phrase_is_live(blocker, D1_BLOCKS), "BLOCKER 1 has no live this alone blocks exit")
     record("REQUIRED", "R-D1-truth", D1_TRUTH in blocker, "packet BLOCKER 1 carries D1_TRUTH")
-    record("REQUIRED", "R-D1-ten", PACKET_TEN not in packet_live, "unstruck packet lacks The ten §11.0 accepted limits")
+    record("REQUIRED", "R-D1-ten", not phrase_is_live(packet_n, PACKET_TEN), "packet has no live The ten §11.0 accepted limits")
     record("REQUIRED", "R-D1-six", PACKET_SIX in packet_n, "packet carries The six §11.0 accepted limits")
-    record("REQUIRED", "R-D2-absent", D2_FALSE not in s2_live, "unstruck gate-s2 lacks Ten minus the five")
-    record("REQUIRED", "R-D2-five", D2_FIVE not in s2_live, "unstruck gate-s2 lacks FIVE OF THESE TEN heading")
+    record("REQUIRED", "R-D2-absent", not phrase_is_live(s2_n, D2_FALSE), "gate-s2 has no live Ten minus the five")
+    record("REQUIRED", "R-D2-five", not phrase_is_live(s2_n, D2_FIVE), "gate-s2 has no live FIVE OF THESE TEN heading")
     record("REQUIRED", "R-D2-truth", D2_TRUTH in s2_n and D2_D09 in s2_n, "gate-s2 carries full D2_TRUTH including D-09 in both sets")
 
     record("CONTROL", "C-D6-a", "(a) the head MOVED" in protocol_n, "(a) chain-moved condition remains")
@@ -390,12 +531,27 @@ def main() -> int:
                 "conformance remains out of the signer.",
             )
         elif variant == "break-reason-split":
-            replace_once(
-                root / "ts/src/signer/protocol.ts",
-                '    SIGNER_CHAIN_UNSTABLE: "FATAL",\n',
-                '    SIGNER_CHAIN_UNSTABLE: "FATAL",\n'
-                '    SIGNER_CHAIN_PENDING_HEAD: "FATAL",\n',
+            insert_reason_after_unstable(
+                root, '    SIGNER_CHAIN_PENDING_HEAD: "FATAL",\n',
             )
+        elif variant == "break-reason-quoted":
+            insert_reason_after_unstable(
+                root, '    "SIGNER_CHAIN_PENDING_HEAD": "FATAL",\n',
+            )
+        elif variant == "break-reason-space":
+            insert_reason_after_unstable(
+                root, '    SIGNER_CHAIN_PENDING_HEAD : "FATAL",\n',
+            )
+        elif variant == "break-reason-comment":
+            insert_reason_after_unstable(
+                root, '    SIGNER_CHAIN_PENDING_HEAD /*split*/: "FATAL",\n',
+            )
+        elif variant == "break-reason-newline":
+            insert_reason_after_unstable(
+                root, '    SIGNER_CHAIN_PENDING_HEAD\n    : "FATAL",\n',
+            )
+        elif variant == "break-live-strike":
+            apply_live_strike(root)
         score(root)
     print(
         f"REQUIRED {required_held}/{required_total}  "

@@ -31,16 +31,42 @@ edited. This correction closes its three findings:
 Unstruck oracles are the scored check for D1/D2 live false headings and for packet “ten”.
 Struck copies may remain so drift stays visible. Review 1 stays byte-identical.
 
+## SECOND INSTRUMENT REVIEW — TWO DEFECTS CLOSED
+
+`INSTRUMENT-REVIEW-2.md` returned **FAIL** on `c9a19e4`. That review is historical and is not
+edited. This correction closes its two findings:
+
+- **F2-1, `C-D6-codes` missed TypeScript-legal keys.** The scored tokeniser was
+  `(?m)^\\s+([A-Z][A-Z0-9_]+):`, so quoted keys, space/comment/newline before `:`, and
+  `["IDENT"]` were invisible. `reason_object_keys` is a finite grammar: unquoted IDENT,
+  `"IDENT"` / `'IDENT'`, or that IDENT in brackets; whitespace and `//` or `/* */` may sit
+  between the key and `:`; scored IDENT is `[A-Z][A-Z0-9_]*`. It is not a TypeScript
+  parser. Sibling objects and `ReasonCode` union widen remain outside the freeze (Review 2
+  §4). Committed variants: `break-reason-quoted`, `break-reason-space`,
+  `break-reason-comment`, `break-reason-newline`, plus existing `break-reason-split`.
+- **F2-2, interior/split `~~` still COMPLETE.** Deleting whole `~~…~~` spans made
+  `this alone blocks exi~~t~~` and `~~this alone ~~blocks exit` look absent. REQUIRED
+  absence now uses `phrase_is_live`: the phrase is live if any occurrence has at least one
+  unstruck character, or if a `~~` span is left unclosed. A fully closed span covering
+  every character of the phrase may remain for drift. `break-live-strike` applies `fix-all`
+  then Review 2's interior D1 / FIVE / packet-ten edits and must fail exactly those three
+  REQUIRED rows. Extra tildes, `<del>`, and unclosed `~~` stay fail-closed.
+
+Reviews 1 and 2 stay byte-identical.
+
 **Authority:** D-058(1), (6), (8)D and (9); D-059(5)–(6); D-060(1); D-066(2)–(3). D-F3 is
 Batch A (closed at A-094). D-F5 is a dependency on that reader, not a second checker.
 
 **This is a test-only deliverable.** This commit must not modify any production file. There is
 no new `scripts/check-*.sh`. `d-claims.py` is an independent instrument and must not be wired
 into `scripts/test.sh`. Markdown oracles are wrap-normalized (`\s+` → one space) over a named
-file or named region; a line-oriented grep is not the scored check (D-058(6)). Unstruck
-oracles delete `~~…~~` spans from wrap-normalized text, then search. TypeScript
-oracles strip leading `^\s*\*` on each line, then wrap-normalize, so a comment-continuation
-star is not a word in the phrase.
+file or named region; a line-oriented grep is not the scored check (D-058(6)). A watched
+false claim is absent only when `phrase_is_live` is false on that wrap-normalized region:
+every occurrence of the phrase has all of its characters inside a closed `~~…~~` span.
+An interior or split span, or an unclosed `~~`, leaves the claim live. TypeScript oracles
+strip leading `^\s*\*` on each line, then wrap-normalize, so a comment-continuation star
+is not a word in the phrase. `REASON_SEVERITY` keys are read with the finite grammar in
+`reason_object_keys`, not with a line-anchored `IDENT:` regex.
 
 Failed global contracts under `docs/review-2026-08-19-d057-targeted/contract/` are not this
 spec. Historical reviews, A-077, and dated round-five prose are not rewritten (D-058(8)D).
@@ -54,7 +80,7 @@ Exactly five files, comment or unsigned maintained prose only:
 | D6 | `ts/src/signer/protocol.ts` NatSpec on `SIGNER_CHAIN_UNSTABLE` | `so the refusal detail now distinguishes them.` | Replace that clause with `D6_TRUTH` below. Keep `(a)`/`(b)`, `D-057(4)`, and the single FATAL code. |
 | D4a | `ts/test/evaluate.checks.test.ts` comment | `` `EVAL_ACTION_TARGET_MATCHES_MANDATE` must PASS. `` | `` `EVAL_TARGET_BOUND` must PASS. `` |
 | D4b | `ts/src/decode/index.ts` NatSpec | `NEITHER the signer nor the verifier` and `Both are open (v1.1 register)` | `D4B_TRUTH` below. Keep `D-014 deliberately kept conformance out of the signer`. |
-| D1 | `docs/exit-criterion-packet.md` §7 BLOCKER 1 and NON-BLOCKERS | unstruck `; it does not.` and unstruck `this alone blocks exit`; present-tense `The ten §11.0 accepted limits` | `D1_TRUTH` in BLOCKER 1; strike the blocks-exit sentence; `The six §11.0 accepted limits` in NON-BLOCKERS. |
+| D1 | `docs/exit-criterion-packet.md` §7 BLOCKER 1 and NON-BLOCKERS | live `it does not.` and live `this alone blocks exit`; present-tense `The ten §11.0 accepted limits` | `D1_TRUTH` in BLOCKER 1; closed-span strike of the blocks-exit sentence; `The six §11.0 accepted limits` in NON-BLOCKERS. Interior or split `~~` is not a repair. |
 | D2 | `docs/gate-s2-evidence.md` §11.0 | `Ten minus the five fixed leaves six`; unstruck `FIVE OF THESE TEN ARE NO LONGER ACCEPTED LIMITS` | Full `D2_TRUTH` below, including the D-09-in-both-sets clause. Strike the FIVE heading rather than requiring it to remain. §11.0 post-dates the 2026-08-16 S2 signature and is authorised at D-057; it is not retrospectively signed. |
 
 Frozen replacement strings (exact; wrap-normalized search):
@@ -106,29 +132,30 @@ Live floors remain 103/550/221/7/78/30.
 only that clone. The source worktree must have no tracked changes. Variant
 `D_CLAIMS_VARIANT` (default `baseline`).
 
-**14 REQUIRED** (PASS only when the named live false claim is gone from *unstruck* text
+**14 REQUIRED** (PASS only when the named live false claim is gone per `phrase_is_live`
 where noted, *and* the frozen truth is present, each scoped to its surface/region):
 
 | Row | PASS when |
 |---|---|
-| `R-D6-absent` | `protocol.ts` wrap-norm lacks `so the refusal detail now distinguishes them` |
+| `R-D6-absent` | `protocol.ts` has no live `so the refusal detail now distinguishes them` |
 | `R-D6-truth` | `protocol.ts` wrap-norm contains `D6_TRUTH` |
 | `R-D4a-absent` | `evaluate.checks.test.ts` lacks `EVAL_ACTION_TARGET_MATCHES_MANDATE` |
-| `R-D4b-neither` | `decode/index.ts` wrap-norm lacks `NEITHER the signer nor the verifier` |
-| `R-D4b-open` | `decode/index.ts` wrap-norm lacks `Both are open (v1.1 register)` |
+| `R-D4b-neither` | `decode/index.ts` has no live `NEITHER the signer nor the verifier` |
+| `R-D4b-open` | `decode/index.ts` has no live `Both are open (v1.1 register)` |
 | `R-D4b-truth` | `decode/index.ts` wrap-norm contains both `D4B_TRUTH` fragments |
-| `R-D1-absent` | unstruck BLOCKER 1 lacks `; it does not.` |
-| `R-D1-blocks` | unstruck BLOCKER 1 lacks `this alone blocks exit` |
+| `R-D1-absent` | BLOCKER 1 has no live `it does not.` (`phrase_is_live`) |
+| `R-D1-blocks` | BLOCKER 1 has no live `this alone blocks exit` |
 | `R-D1-truth` | BLOCKER 1 wrap-norm contains `D1_TRUTH` |
-| `R-D1-ten` | unstruck packet lacks `The ten §11.0 accepted limits` |
+| `R-D1-ten` | packet has no live `The ten §11.0 accepted limits` |
 | `R-D1-six` | packet wrap-norm contains `The six §11.0 accepted limits` |
-| `R-D2-absent` | unstruck `gate-s2-evidence.md` lacks `Ten minus the five fixed leaves six` |
-| `R-D2-five` | unstruck `gate-s2-evidence.md` lacks `FIVE OF THESE TEN ARE NO LONGER ACCEPTED LIMITS` |
+| `R-D2-absent` | `gate-s2-evidence.md` has no live `Ten minus the five fixed leaves six` |
+| `R-D2-five` | `gate-s2-evidence.md` has no live `FIVE OF THESE TEN ARE NO LONGER ACCEPTED LIMITS` |
 | `R-D2-truth` | wrap-norm contains the full `D2_TRUTH` string, including the D-09-in-both-sets clause |
 
 **CONTROL** rows (must PASS at baseline and after a conforming repair): `(a)`/`(b)` remain;
 `RefusalRecord` body has no `detail` field; `SIGNER_CHAIN_UNSTABLE` stays FATAL; the
-`REASON_SEVERITY` key set stays the frozen 35 codes; `D-057(4)` remains; `EVAL_TARGET_BOUND`
+`REASON_SEVERITY` key set stays the frozen 35 codes under the finite key grammar (quoted,
+unquoted, bracket-quoted, with whitespace or comments before `:`); `D-057(4)` remains; `EVAL_TARGET_BOUND`
 remains; `D-014 deliberately kept conformance out of the signer` remains; register E4 signer
 half remains deliberately unbuilt; packet §3b `FALSE SINCE A-074; CORRECTED 2026-08-19`
 remains; signed S1 bytes and S2 prefix hash remain; `WHAT IS ACCEPTED TODAY IS SIX` and `G-3`
@@ -154,6 +181,11 @@ Pre-repair `baseline` must FAIL every REQUIRED and PASS every CONTROL. Completio
 | `break-bevents` | B-EVENTS hash CONTROL FAIL. |
 | `break-d014` | D-014 CONTROL FAIL. |
 | `break-reason-split` | `C-D6-codes` FAIL; REQUIRED unchanged. |
+| `break-reason-quoted` | `C-D6-codes` FAIL (`"SIGNER_CHAIN_PENDING_HEAD"`). |
+| `break-reason-space` | `C-D6-codes` FAIL (space before `:`). |
+| `break-reason-comment` | `C-D6-codes` FAIL (`/*split*/` before `:`). |
+| `break-reason-newline` | `C-D6-codes` FAIL (newline before `:`). |
+| `break-live-strike` | after `fix-all`, Review 2 interior/split `~~` on D1 / FIVE / packet-ten: exactly `R-D1-blocks`, `R-D2-five`, `R-D1-ten` FAIL (11/14 REQUIRED), CONTROL PASS. |
 
 No gate harness: this card adds no targeted guard, so D-059(7) does not apply. D-059(5)
 forbids a second floor/claim checker.
