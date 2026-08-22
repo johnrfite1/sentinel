@@ -16,8 +16,8 @@ git -C "$PATCHED" apply --check "$EVIDENCE/TESTS.patch"
 git -C "$PATCHED" apply "$EVIDENCE/TESTS.patch"
 ```
 
-If the isolated clone has no dependency directory, provision an ignored symlink without
-committing it:
+If the isolated clone has no dependency directory, provision a temporary untracked symlink
+without committing it:
 
 ```bash
 ln -s "$REPO/ts/node_modules" "$PATCHED/ts/node_modules"
@@ -31,8 +31,10 @@ node --test --test-concurrency=1 \
   "$PATCHED/ts/test/vault.snapshot.classification.test.ts"
 ```
 
-Expected: typecheck exit 0; ten tests, five controls pass and the five named R2-F6 tests fail.
-The failing status is the intended pre-repair observation, not a post-repair success claim.
+Expected: typecheck exit 0; 22 tests, nine controls pass and the thirteen named R2-F6 tests fail.
+The passing set is stable, pure B1, both pure B2 variants, ordinary RPC failure and four
+oracle-negative controls. The failing status is the intended pre-repair observation, not a
+post-repair success claim.
 
 ## 2. Exact baseline oracle mutations
 
@@ -47,8 +49,10 @@ done
 git -C "$PATCHED" restore ts/src/signer/vault.ts
 ```
 
-Every mutant must typecheck and fail its named assertion as recorded in
-`mutation-matrix.tsv`. Do not count a typecheck failure as a behavioral catch.
+All eight mutants must typecheck and fail their named assertions as recorded in
+`mutation-matrix.tsv`. In particular, the rank accumulator must return 14/8 and reset-on-repeat
+10/12 with their documented passing controls. Do not count a typecheck failure as a behavioral
+catch.
 
 ## 3. Top-level fast-gate binding
 
@@ -71,11 +75,12 @@ git -C "$PATCHED" status --short
 (cd "$PATCHED" && ./scripts/test.sh)
 ```
 
-`PATCHED` already contains only the patch applied in the setup block; do not reapply it. Its
-status must show only `ts/test/vault.snapshot.classification.test.ts`. Expected pre-repair result:
-Foundry 103/103; TypeScript 532/537 with only the five named C-SNAPSHOT failures; later
-ablation/verifier consumers green; top-level exit 5 and supervisor refusal. No deep profile or
-post-repair pass is part of this card.
+`PATCHED` already contains only the test patch plus any untracked dependency plumbing from setup;
+do not reapply it. The only source/test change must be
+`ts/test/vault.snapshot.classification.test.ts`. Expected pre-repair result: Foundry 103/103;
+TypeScript 536/549 with only the thirteen named C-SNAPSHOT failures and all four negative-oracle
+controls passing; later ablation/verifier consumers green; top-level exit 5 and supervisor
+refusal. No deep profile or post-repair pass is part of this card.
 
 ## 4. Evidence integrity and guards
 

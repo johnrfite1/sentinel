@@ -1,9 +1,9 @@
 diff --git a/ts/test/vault.snapshot.classification.test.ts b/ts/test/vault.snapshot.classification.test.ts
 new file mode 100644
-index 0000000..a7c14f7
+index 0000000..3cfb2ec
 --- /dev/null
 +++ b/ts/test/vault.snapshot.classification.test.ts
-@@ -0,0 +1,329 @@
+@@ -0,0 +1,485 @@
 +import {describe, it} from "node:test";
 +import assert from "node:assert/strict";
 +import {createServer, type Server} from "node:http";
@@ -31,9 +31,11 @@ index 0000000..a7c14f7
 + * SIGNER_CHAIN_UNSTABLE code with its existing tier/remedy.
 + *
 + * The oracle observes the actual RPC route as well as the error. A generic rejection would not
-+ * pass: every exhaustion case asserts exact latest-lookups and pinned-read counts, then checks
-+ * that the message names every cause that occurred and no cause that did not. This makes a
-+ * collapsed or swapped classification fail at its named case rather than merely throw.
++ * pass: every exhaustion case asserts independently declared latest-lookup and pinned-read
++ * counts, then requires one finite full message for its exact nonempty cause set. Bidirectional
++ * pairs, all six triple first-occurrence orders, repetitions and explicit negative-oracle controls
++ * make lexical negation, false universals, extra causes and order-dependent accumulation fail at
++ * their named case rather than merely throw.
 + */
 +
 +const VAULT: Hex = "0x1111111111111111111111111111111111111111";
@@ -64,7 +66,34 @@ index 0000000..a7c14f7
 +};
 +
 +type AttemptEnd = "pending-head" | "moved-height" | "same-height-reorg" | "confirmation-pending";
-+type Cause = "pending" | "movement" | "confirmation";
++type Cause = "B1" | "B2" | "B3";
++
++const CAUSE_ORDER: readonly Cause[] = ["B1", "B2", "B3"];
++const EXACT_MESSAGES: Readonly<Record<string, string>> = {
++    B1:
++        `no finalised head after ${SNAPSHOT_ATTEMPTS} attempts: every observation returned a ` +
++        "pending block with no hash, so there was nothing to anchor to",
++    B2:
++        `no stable block after ${SNAPSHOT_ATTEMPTS} attempts: the head moved or was replaced ` +
++        "under each pinned read",
++    B3:
++        `no finalised confirmation after ${SNAPSHOT_ATTEMPTS} attempts: every pinned snapshot ` +
++        "was followed by a pending confirmation with no hash",
++    "B1+B2":
++        `no stable block after ${SNAPSHOT_ATTEMPTS} attempts: the run observed a pending head ` +
++        "before reads and a head that moved or was replaced after pinned reads",
++    "B1+B3":
++        `no finalised snapshot after ${SNAPSHOT_ATTEMPTS} attempts: the run observed a pending ` +
++        "head before reads and a pending confirmation with no hash after pinned reads",
++    "B2+B3":
++        `no stable snapshot after ${SNAPSHOT_ATTEMPTS} attempts: the run observed a head that ` +
++        "moved or was replaced after pinned reads and a pending confirmation with no hash after " +
++        "pinned reads",
++    "B1+B2+B3":
++        `no stable snapshot after ${SNAPSHOT_ATTEMPTS} attempts: the run observed a pending head ` +
++        "before reads, a head that moved or was replaced after pinned reads, and a pending " +
++        "confirmation with no hash after pinned reads",
++};
 +
 +interface Head {
 +    number: bigint;
@@ -185,33 +214,40 @@ index 0000000..a7c14f7
 +function occurred(attempts: AttemptEnd[]): Set<Cause> {
 +    const causes = new Set<Cause>();
 +    for (const attempt of attempts) {
-+        if (attempt === "pending-head") causes.add("pending");
-+        else if (attempt === "confirmation-pending") causes.add("confirmation");
-+        else causes.add("movement");
++        if (attempt === "pending-head") causes.add("B1");
++        else if (attempt === "confirmation-pending") causes.add("B3");
++        else causes.add("B2");
 +    }
 +    return causes;
 +}
 +
-+function assertMessageNamesExactly(error: ChainUnstableError, causes: Set<Cause>): void {
-+    const message = error.message.toLowerCase();
-+    const namesPendingHead = /pending (?:block with no hash|head[^.]*before[^.]*read)/.test(message);
-+    const namesMovement = /head moved|head[^.]*replaced|same-height reorg/.test(message);
-+    const namesConfirmation = /pending confirmation|confirmation[^.]*pending/.test(message);
-+
-+    assert.equal(namesPendingHead, causes.has("pending"),
-+        `pending-head classification mismatch: ${error.message}`);
-+    assert.equal(namesMovement, causes.has("movement"),
-+        `movement classification mismatch: ${error.message}`);
-+    assert.equal(namesConfirmation, causes.has("confirmation"),
-+        `confirmation-pending classification mismatch: ${error.message}`);
-+
-+    if (causes.size > 1) {
-+        assert.doesNotMatch(message, /every observation|under each pinned read/,
-+            "mixed exhaustion must not use a universal claim from one pure cause");
-+    }
++function causeKey(causes: ReadonlySet<Cause>): string {
++    return CAUSE_ORDER.filter((cause) => causes.has(cause)).join("+");
 +}
 +
-+async function assertExhaustion(attempts: AttemptEnd[]): Promise<ChainUnstableError> {
++function assertExactMessage(error: ChainUnstableError, causes: ReadonlySet<Cause>): void {
++    const key = causeKey(causes);
++    const expected = EXACT_MESSAGES[key];
++    assert.ok(expected !== undefined, `missing exact-message contract for ${key || "empty set"}`);
++    assert.match(
++        error.message,
++        new RegExp(`\\b${SNAPSHOT_ATTEMPTS} attempts\\b`),
++        "attempt budget must be bound to the word attempts",
++    );
++    assert.equal(error.message, expected, `exact ${key} cause-set message mismatch`);
++}
++
++function fabricatedError(message: string): ChainUnstableError {
++    const error = new ChainUnstableError(SNAPSHOT_ATTEMPTS);
++    error.message = message;
++    return error;
++}
++
++async function assertExhaustion(
++    attempts: AttemptEnd[],
++    expectedLatest: number,
++    expectedReads: number,
++): Promise<ChainUnstableError> {
 +    assert.equal(attempts.length, SNAPSHOT_ATTEMPTS, "fixture must consume the exact retry budget");
 +    const node = await mockNode(headsFor(attempts));
 +    try {
@@ -230,6 +266,8 @@ index 0000000..a7c14f7
 +            (count, a) => count + (a === "pending-head" ? 1 : 2),
 +            0,
 +        );
++        assert.equal(readsExpected, expectedReads, "declared pinned-read count drifted");
++        assert.equal(latestExpected, expectedLatest, "declared latest-lookup count drifted");
 +        const pinned = node.calls.filter(
 +            (c) => c.method === "eth_call" || c.method === "eth_getCode",
 +        );
@@ -240,11 +278,9 @@ index 0000000..a7c14f7
 +        assert.equal(latest.length, latestExpected, "fixture did not drive its declared head routes");
 +
 +        const causes = occurred(attempts);
-+        assert.equal(caught.pendingOnly, causes.size === 1 && causes.has("pending"),
++        assert.equal(caught.pendingOnly, causes.size === 1 && causes.has("B1"),
 +            "pendingOnly means all attempts ended at the pre-read pending-head branch");
-+        assert.match(caught.message, new RegExp(String(SNAPSHOT_ATTEMPTS)),
-+            "the error must retain the exhausted attempt count");
-+        assertMessageNamesExactly(caught, causes);
++        assertExactMessage(caught, causes);
 +        return caught;
 +    } finally {
 +        await node.stop();
@@ -271,46 +307,117 @@ index 0000000..a7c14f7
 +    });
 +
 +    it("CONTROL pure B1: pending head is rejected before reads and named accurately", async () => {
-+        await assertExhaustion(Array<AttemptEnd>(SNAPSHOT_ATTEMPTS).fill("pending-head"));
++        await assertExhaustion(
++            Array<AttemptEnd>(SNAPSHOT_ATTEMPTS).fill("pending-head"),
++            5,
++            0,
++        );
 +    });
 +
 +    it("CONTROL pure B2 movement: advanced height after reads is named accurately", async () => {
-+        await assertExhaustion(Array<AttemptEnd>(SNAPSHOT_ATTEMPTS).fill("moved-height"));
++        await assertExhaustion(
++            Array<AttemptEnd>(SNAPSHOT_ATTEMPTS).fill("moved-height"),
++            10,
++            55,
++        );
 +    });
 +
 +    it("CONTROL pure B2 reorg: same-height replacement after reads is named accurately", async () => {
-+        await assertExhaustion(Array<AttemptEnd>(SNAPSHOT_ATTEMPTS).fill("same-height-reorg"));
++        await assertExhaustion(
++            Array<AttemptEnd>(SNAPSHOT_ATTEMPTS).fill("same-height-reorg"),
++            10,
++            55,
++        );
 +    });
 +
 +    it("R2-F6 pure B3: pending confirmation is neither pre-read pending nor movement", async () => {
-+        await assertExhaustion(Array<AttemptEnd>(SNAPSHOT_ATTEMPTS).fill("confirmation-pending"));
++        await assertExhaustion(
++            Array<AttemptEnd>(SNAPSHOT_ATTEMPTS).fill("confirmation-pending"),
++            10,
++            55,
++        );
 +    });
 +
-+    it("R2-F6 mixed B1+B3: names pre-read pending and pending confirmation only", async () => {
++    it("R2-F6 pair order B1→B2: retains both causes after repeats", async () => {
++        await assertExhaustion([
++            "pending-head", "moved-height", "pending-head", "same-height-reorg", "moved-height",
++        ], 8, 33);
++    });
++
++    it("R2-F6 pair order B2→B1: retains both causes after repeats", async () => {
++        await assertExhaustion([
++            "moved-height", "pending-head", "same-height-reorg", "pending-head", "moved-height",
++        ], 8, 33);
++    });
++
++    it("R2-F6 pair order B1→B3: retains both causes after repeats", async () => {
 +        await assertExhaustion([
 +            "pending-head", "confirmation-pending", "pending-head",
 +            "confirmation-pending", "confirmation-pending",
-+        ]);
++        ], 8, 33);
 +    });
 +
-+    it("R2-F6 mixed B1+B2: names pending-before-read and changed-after-read without universals", async () => {
++    it("R2-F6 pair order B3→B1: retains both causes after repeats", async () => {
 +        await assertExhaustion([
-+            "pending-head", "moved-height", "pending-head", "same-height-reorg", "moved-height",
-+        ]);
++            "confirmation-pending", "pending-head", "confirmation-pending",
++            "pending-head", "confirmation-pending",
++        ], 8, 33);
 +    });
 +
-+    it("R2-F6 mixed B2+B3: names changed head and pending confirmation without conflation", async () => {
++    it("R2-F6 pair order B2→B3: retains both causes after B2a/B2b", async () => {
 +        await assertExhaustion([
 +            "moved-height", "confirmation-pending", "same-height-reorg",
 +            "confirmation-pending", "moved-height",
-+        ]);
++        ], 10, 55);
 +    });
 +
-+    it("R2-F6 mixed B1+B2+B3: names all and only causes actually exhausted", async () => {
++    it("R2-F6 pair order B3→B2: retains both causes after B2a/B2b", async () => {
++        await assertExhaustion([
++            "confirmation-pending", "moved-height", "confirmation-pending",
++            "same-height-reorg", "confirmation-pending",
++        ], 10, 55);
++    });
++
++    it("R2-F6 triple order B1→B2→B3: retains all causes after B2a/B2b", async () => {
 +        await assertExhaustion([
 +            "pending-head", "moved-height", "confirmation-pending", "same-height-reorg",
 +            "pending-head",
-+        ]);
++        ], 8, 33);
++    });
++
++    it("R2-F6 triple order B1→B3→B2: retains all causes after B2a/B2b", async () => {
++        await assertExhaustion([
++            "pending-head", "confirmation-pending", "moved-height", "pending-head",
++            "same-height-reorg",
++        ], 8, 33);
++    });
++
++    it("R2-F6 triple order B2→B1→B3: retains all causes after B2a/B2b", async () => {
++        await assertExhaustion([
++            "moved-height", "pending-head", "confirmation-pending", "pending-head",
++            "same-height-reorg",
++        ], 8, 33);
++    });
++
++    it("R2-F6 triple order B2→B3→B1: retains all causes after B2a/B2b", async () => {
++        await assertExhaustion([
++            "moved-height", "confirmation-pending", "pending-head", "same-height-reorg",
++            "pending-head",
++        ], 8, 33);
++    });
++
++    it("R2-F6 triple order B3→B1→B2: retains all causes after B2a/B2b", async () => {
++        await assertExhaustion([
++            "confirmation-pending", "pending-head", "moved-height", "pending-head",
++            "same-height-reorg",
++        ], 8, 33);
++    });
++
++    it("R2-F6 triple order B3→B2→B1: retains all causes after B2a/B2b", async () => {
++        await assertExhaustion([
++            "confirmation-pending", "moved-height", "pending-head", "pending-head",
++            "same-height-reorg",
++        ], 8, 33);
 +    });
 +
 +    it("CONTROL ordinary RPC/read failure is not reclassified as chain instability", async () => {
@@ -331,5 +438,54 @@ index 0000000..a7c14f7
 +        } finally {
 +            await node.stop();
 +        }
++    });
++
++    it("ORACLE CONTROL rejects a message that negates the expected cause", () => {
++        assert.throws(
++            () => assertExactMessage(
++                fabricatedError(
++                    `no finalised head after ${SNAPSHOT_ATTEMPTS} attempts: no pending block ` +
++                    "with no hash was observed",
++                ),
++                new Set<Cause>(["B1"]),
++            ),
++            /exact B1 cause-set message mismatch/,
++        );
++    });
++
++    it("ORACLE CONTROL rejects an unrelated 50 instead of the five-attempt budget", () => {
++        assert.throws(
++            () => assertExactMessage(
++                fabricatedError(
++                    "no finalised head after 50 attempts: every observation returned a pending " +
++                    "block with no hash, so there was nothing to anchor to",
++                ),
++                new Set<Cause>(["B1"]),
++            ),
++            /attempt budget must be bound to the word attempts/,
++        );
++    });
++
++    it("ORACLE CONTROL rejects a message that adds an unobserved cause", () => {
++        assert.throws(
++            () => assertExactMessage(
++                fabricatedError(EXACT_MESSAGES["B1+B2"]!),
++                new Set<Cause>(["B1"]),
++            ),
++            /exact B1 cause-set message mismatch/,
++        );
++    });
++
++    it("ORACLE CONTROL rejects false universal wording for a mixed run", () => {
++        assert.throws(
++            () => assertExactMessage(
++                fabricatedError(
++                    `no stable block after ${SNAPSHOT_ATTEMPTS} attempts: every attempt had a ` +
++                    "pending head before reads and a head that moved after pinned reads",
++                ),
++                new Set<Cause>(["B1", "B2"]),
++            ),
++            /exact B1\+B2 cause-set message mismatch/,
++        );
 +    });
 +});

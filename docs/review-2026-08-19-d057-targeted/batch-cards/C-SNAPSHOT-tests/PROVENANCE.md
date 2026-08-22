@@ -1,22 +1,28 @@
 # C-SNAPSHOT — provenance and isolation record
 
-## Frozen identity
+## Frozen identity and correction chain
 
 | Item | Identity |
 |---|---|
-| subject commit | `1655b120a653b60ccb5b3a22583c0001d59ea7a4` |
-| subject tree | `b2c8fb1e53d35ea40655dc83faa61f8a76dd4f78` |
-| parent | `060af4ee1ff1718edbf7772dc15050ccb88b3d29` |
-| subject timestamp | `2026-08-21T23:25:48-07:00` |
-| subject title | `A-091: record B-EVENTS implementation HOLD` |
+| behavioral baseline commit | `1655b120a653b60ccb5b3a22583c0001d59ea7a4` |
+| behavioral baseline tree | `b2c8fb1e53d35ea40655dc83faa61f8a76dd4f78` |
+| behavioral baseline parent | `060af4ee1ff1718edbf7772dc15050ccb88b3d29` |
+| baseline timestamp/title | `2026-08-21T23:25:48-07:00`; `A-091: record B-EVENTS implementation HOLD` |
+| original instrument | `30d1466cde0e47899740818e574a75e575d75b9d` (tree `09c29b98b17468ba937c8c6a87094a1ea1215b71`) |
+| independent FAIL review | `8834d9b868657fbccfe1009bf139e23dc8e06db1` |
+| preserved review file | sha256 `ffad26f2c8307aa7fcf9e2c7e18dd971eace47b955132f65222bbb1c335febf0` |
+| corrected `TESTS.patch` | sha256 `c2a53a4707d62c3e6632405037d684216c8319dd79fdaad15da2c15de6c69de1` |
+| corrected extracted test | 485 lines; sha256 `eea8876c38545db864df36f8d75e7a10e53b47ee730d805dc4ed984f88d6c1f7` |
+| corrected mutation driver | 270 lines; sha256 `223e784d3804aad8fb7e9a12424c94d19a60418ad4905c3959bcfc707123b4f8` |
 | frozen `vault.ts` sha256 | `dbff956fc2fdf6698e6c94ce4261626dc40cf219b6095ff8afcda8afcadc1185` |
 | frozen `protocol.ts` sha256 | `87fc5204c561d986c04cc61eb4ae9e880db113187707f7e92e2df7a334b29b33` |
 | pre-existing TypeScript-test tree | `e29397245dadfe8c9250905d99c26c036013aacf` |
 | pre-existing `scripts/test.sh` blob | `0c6c38ed746925d52720468865ca61eb31ae7ddd` |
 | signed Gate S2 blob | `baab3e7809a46f22131ef2b609f30af1ed8eeada` |
 
-All patch application, source mutation, focused tests and top-level gates ran in private detached
-clones. The shared repository received only new files under this evidence directory. The author
+All patch application, source mutation, focused tests and top-level gates ran in a private
+detached checkout. The shared repository received only bounded corrections to existing files
+under this evidence directory. The first independent review record is byte-untouched. The author
 made no production repair and authored none of the future Batch C implementation.
 
 ## Governing and source material read
@@ -72,6 +78,7 @@ recorded in tracked evidence.
 ## Preserved boundaries
 
 - `TESTS.patch` is not applied in this evidence commit.
+- `INSTRUMENT-REVIEW-1.md` remains byte-identical at the preserved sha256 above.
 - `ts/src`, existing tests, `ts/package.json`, scripts, floors, claims and prior evidence remain
   byte-untouched.
 - `protocol.ts` remains outside Batch C ownership and unchanged at its frozen sha256 above.
@@ -81,7 +88,8 @@ recorded in tracked evidence.
 
 ## Measurement hygiene
 
-One mutation typecheck was first invoked from the repository root, where no `package.json`
-exists. It exited before any test and is excluded. Final mutation runs used the exact frozen test
-source and correct `npm --prefix ts` command. Raw path-bearing outputs were hashed outside the
-repository before tracked summaries were written.
+The original contract's one mutation typecheck invoked from the repository root remains excluded
+historical measurement; it exited before any test and is not reused. Every corrected final
+mutation used the exact corrected test source and `npm --prefix ts run typecheck`, exited 0, and
+then ran behaviorally. Raw path-bearing outputs were hashed outside the repository before tracked
+summaries were written.

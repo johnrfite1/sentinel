@@ -1,31 +1,39 @@
-# C-SNAPSHOT — frozen independent test contract
+# C-SNAPSHOT — corrected frozen independent test contract
 
-**Verdict: HOLD for test-contract readiness only.** This is not an implementation approval,
-gate signature, certification, ratification, publication, or authorization to push.
+**Verdict: HOLD for corrected test-contract readiness only, pending fresh independent review.**
+This is not implementation approval, a gate signature, certification, ratification, publication,
+rename, D-055 assessment or push authorization.
 
-**Frozen subject:** `1655b120a653b60ccb5b3a22583c0001d59ea7a4` (tree
-`b2c8fb1e53d35ea40655dc83faa61f8a76dd4f78`). The subject was clean when authorship began.
-The independent test author wrote none of the future Batch C implementation.
+**Behavioral baseline:** `1655b120a653b60ccb5b3a22583c0001d59ea7a4` (tree
+`b2c8fb1e53d35ea40655dc83faa61f8a76dd4f78`). The independent test author wrote none of the
+future Batch C implementation.
+
+**Correction basis:** first independent review
+`8834d9b868657fbccfe1009bf139e23dc8e06db1` returned instrument-readiness FAIL with F1
+(lexical message oracle) and F2 (canonical-only first-occurrence order). This is the one bounded
+instrument correction required by that review and consumes no D-058(9) implementation attempt.
+`INSTRUMENT-REVIEW-1.md` is preserved byte-unchanged.
 
 **Authority:** D-058(1), (8)C and (9); D-059(5)–(6); D-060(1); D-066(2)–(3).
 
 This directory is the complete test-only deliverable. `TESTS.patch` is preserved but not applied
 in this commit. No production source, existing test, `scripts/test.sh`, `protocol.ts`, maintained
-claim, floor, prior evidence, or signed material is changed.
+claim, floor, prior evidence, review record or signed material is changed.
 
 ## 1. Declared production boundary
 
 Completeness is claimed only for `ChainUnstableError` and
-`createChainReader(...).readVaultState` in `ts/src/signer/vault.ts`, at the frozen subject. The
-contract covers the three exhaustion causes, their pure and required mixed sequences, stable
-success, and ordinary RPC/read failure.
+`createChainReader(...).readVaultState` in `ts/src/signer/vault.ts`, at the behavioral baseline.
+The contract covers B1/B2/B3 exhaustion causes, every nonempty cause set, both first-occurrence
+orders for each pair, all six first-occurrence orders for three causes, stable success and
+ordinary RPC/read failure.
 
 The false `ts/src/signer/protocol.ts` claim that a signed refusal “detail” distinguishes chain
 conditions is an explicit **excluded dependency owned by Batch D / D-F6 / C5**. There is no such
 wire field. Batch C must not edit it, invent a signed detail, or split
 `SIGNER_CHAIN_UNSTABLE` into new public reason codes. Its current FATAL tier and remedy remain.
 
-## 2. Independently derived branch matrix
+## 2. Independently derived branches
 
 `SNAPSHOT_ATTEMPTS` is five and each successful pin drives eleven state/code reads.
 
@@ -36,68 +44,88 @@ wire field. Batch C must not edit it, invent a signed detail, or split
 | B2a | confirmation height differs | 11 | head moved after pinned reads |
 | B2b | height equal, confirmation hash differs | 11 | same-height reorg after pinned reads |
 | B3 | hashed head + reads + `confirm.hash === null` | 11 | pending confirmation after pinned reads; not movement |
-| B4 | five attempts exhausted | sum of attempts | error truthfully aggregates all and only observed causes |
+| B4 | five attempts exhausted | sum of attempts | exact message for the complete observed cause set |
 | B5 | confirmation height/hash match | 11 | return the exact hashed pin and snapshot |
 
-The eight exhaustion scenarios frozen by the patch are pure B1, pure B2 movement, pure B2 reorg,
-pure B3, B1+B3, B1+B2, B2+B3, and B1+B2+B3. Stable success and ordinary read failure are the two
-additional controls, for ten tests total.
+`pendingOnly` remains `true` exactly for pure B1. Any hashed-head attempt, including B3, makes the
+exhausted run non-pure and therefore `false`.
 
-## 3. Smallest admissible classification contract
+## 3. Finite exact full-message contract
 
-The frozen tests do not prescribe a counter, set, flags, helper, or constructor rewrite. They
-require only these externally observable facts:
+The corrected oracle accepts exactly one complete message for each nonempty cause set. It does not
+attempt to infer semantic truth from keyword presence. `${SNAPSHOT_ATTEMPTS}` below is the runtime
+constant and must appear as the exact component `${SNAPSHOT_ATTEMPTS} attempts`.
 
-1. Preserve the exported `ChainUnstableError` class and compatible existing API.
-2. Preserve `pendingOnly`; it is `true` **only** when all exhausted attempts ended at B1. A hashed
-   head followed by B3 makes it `false`, even when no B2 movement occurred.
-3. Preserve the attempt count in the message.
-4. The message semantically names all and only the cause categories observed: pre-read pending
-   head, changed/replaced head after reads, and pending confirmation after reads.
-5. A mixed run may not inherit pure wording such as “every observation” or “under each pinned
-   read” when some attempts contradict that universal.
-6. Stable success, eleven-read pinning, same-height reorg detection, and ordinary read-error
-   propagation remain unchanged.
+| Cause set | Exact full message |
+|---|---|
+| B1 | `no finalised head after 5 attempts: every observation returned a pending block with no hash, so there was nothing to anchor to` |
+| B2 | `no stable block after 5 attempts: the head moved or was replaced under each pinned read` |
+| B3 | `no finalised confirmation after 5 attempts: every pinned snapshot was followed by a pending confirmation with no hash` |
+| B1+B2 | `no stable block after 5 attempts: the run observed a pending head before reads and a head that moved or was replaced after pinned reads` |
+| B1+B3 | `no finalised snapshot after 5 attempts: the run observed a pending head before reads and a pending confirmation with no hash after pinned reads` |
+| B2+B3 | `no stable snapshot after 5 attempts: the run observed a head that moved or was replaced after pinned reads and a pending confirmation with no hash after pinned reads` |
+| B1+B2+B3 | `no stable snapshot after 5 attempts: the run observed a pending head before reads, a head that moved or was replaced after pinned reads, and a pending confirmation with no hash after pinned reads` |
 
-The oracle deliberately accepts equivalent truthful wording rather than one exact sentence. It
-does not require a new exported classification object or any wire-format change.
+The B1 and B2 messages are byte-compatible with the current implementation and its existing pure
+tests. The four explicit oracle-negative controls prove the helper rejects: a negated expected
+cause, `50 attempts`, a message adding an unobserved cause, and false universal wording for a
+mixed run.
 
-## 4. Frozen instruments
+## 4. Exhaustive order and repetition matrix
+
+The patch contains 22 tests:
+
+- one stable-success control;
+- pure B1, pure B2a, pure B2b and pure B3;
+- B1→B2 and B2→B1, B1→B3 and B3→B1, B2→B3 and B3→B2;
+- all six first-occurrence permutations of B1/B2/B3;
+- one ordinary RPC/read-failure control; and
+- four oracle-negative controls.
+
+Every five-attempt route declares its exact latest-lookup and pinned-read totals independently of
+the helper's arithmetic. Every mixed route repeats causes after an order change. Every mixed route
+containing B2 drives both moved-height B2a and same-height-reorg B2b. This catches rank-gated,
+reset-on-repeat and drop-on-later-cause accumulators instead of generalising from one canonical
+ordering.
+
+## 5. Frozen instruments
 
 | File | Role |
 |---|---|
-| `TESTS.patch` | Adds one independent 329-line TypeScript test file containing the ten cases above. |
-| `mutate.py` | Applies five exact, typecheck-clean baseline oracle mutations: B1, B2 and B3 path substitutions, pure-message swap, and generic-message collapse. |
-| `mutation-matrix.tsv` | Exact final case totals, intended named catches, and raw-output hashes. |
+| `TESTS.patch` | Adds one independent 485-line TypeScript file with the 22 cases above; sha256 `c2a53a4707d62c3e6632405037d684216c8319dd79fdaad15da2c15de6c69de1`. |
+| `mutate.py` | Applies eight exact typecheck-clean baseline oracle mutations, including negation, rank-order and reset-on-repeat; sha256 `223e784d3804aad8fb7e9a12424c94d19a60418ad4905c3959bcfc707123b4f8`. |
+| `mutation-matrix.tsv` | Exact final totals, intended named catches and raw-output hashes. |
 | `RUNBOOK.md` | Reproduction commands for isolated clones only. |
 
-The current baseline itself is the live collapse mutant for B3 and all four mixed families. The
-exact path/message mutants establish that existing pure controls and new defect tests move for
-their named assertions, rather than treating any rejection as a catch.
+The behavioral baseline remains the live collapse mutant for B3 and every mixed cause set. The
+otherwise-correct rank and reset accumulator mutants establish that the expanded routes, rather
+than generic baseline rejection, observe F2 and repetition loss causally.
 
-## 5. Contract the implementer receives
+## 6. Contract the implementer receives
 
 The implementer may:
 
 1. apply `TESTS.patch` unchanged; and
 2. make the smallest coherent change inside the two declared `vault.ts` symbols that satisfies
-   the semantic classification contract.
+   the finite message and order-independent accumulation contract.
 
-The implementer may not edit the frozen test, any existing test, `protocol.ts`, `attest.ts`, the
-public reason vocabulary or tiers, `scripts/test.sh`, floors, maintained claims, prior evidence,
-or signed material. No post-repair pass is claimed here; it is deliberately deferred to the
-implementation attempt.
+The tests prescribe no counter, set, flags, helper, constructor rewrite or new exported cause
+object. The implementer must preserve the exported class, compatible current constructor call
+shapes and `pendingOnly`. The implementer may not edit the frozen test, any existing test,
+`protocol.ts`, `attest.ts`, public reason vocabulary or tiers, `scripts/test.sh`, floors,
+maintained claims, prior evidence, review record or signed material.
 
-## 6. Fixed success condition
+## 7. Fixed success condition
 
-The Batch C implementation holds only if:
+Batch C implementation readiness holds only if:
 
-- `TESTS.patch` applies unchanged and all ten new tests pass;
+- `TESTS.patch` applies unchanged and all 22 new tests pass;
 - the full TypeScript suite and typecheck pass without shrinking or weakening tests;
-- every B1/B2/B3 pure and required mixed semantic mutant is caught at a named assertion;
+- all eight typecheck-clean mutants are caught at their named assertion;
 - the unchanged top-level fast gate passes with the new tests included;
-- protected/excluded files stay unchanged; and
+- protected and excluded files stay unchanged; and
 - repository/workspace guards report no new finding.
 
-Per D-058(9), a failure permits one bounded correction under this same contract, not a test edit
-or scope expansion.
+No post-repair pass is claimed here; it is deferred to implementation. Per D-058(9), a future
+implementation failure permits one bounded product-code correction under this same contract, not
+a test edit or scope expansion.
