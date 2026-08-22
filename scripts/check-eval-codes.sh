@@ -46,10 +46,8 @@ SPEC="$ROOT/Sentinel_Protocol_Lab_Proposal_v0_2.md"
 # as documented in a section that never mentioned it. Demonstrated by a reviewer.
 SPEC_SECTION="$(mktemp)"
 trap 'rm -f "$SPEC_SECTION"' EXIT
-awk '/^#### 5\.7\.1 /{f=1;next} f && /^#{1,4} /{exit} f' "$SPEC" > "$SPEC_SECTION"
-if [ ! -s "$SPEC_SECTION" ]; then
-    echo "eval codes: COULD NOT ISOLATE §5.7.1 from the proposal."
-    echo "  Refusing to report coverage against a section this guard could not find."
+if ! python3 "$ROOT/scripts/extract-markdown-section.py" "$SPEC" \
+        '#### 5.7.1 Check coverage (auditable; the identifiers are not normative)' > "$SPEC_SECTION"; then
     exit 1
 fi
 CHECKS="$ROOT/ts/src/evaluate/checks.ts"
@@ -67,7 +65,8 @@ missing=""
 total=0
 for code in $codes; do
     total=$((total + 1))
-    grep -q "$code" "$SPEC_SECTION" || missing="$missing $code"
+    grep -qE "(^|[^A-Za-z0-9_])${code}([^A-Za-z0-9_]|$)" "$SPEC_SECTION" \
+        || missing="$missing $code"
 done
 
 if [ -n "$missing" ]; then

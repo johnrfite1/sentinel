@@ -51,11 +51,8 @@ SPEC="$ROOT/Sentinel_Protocol_Lab_Proposal_v0_2.md"
 # the distinction is recorded rather than blurred.
 SPEC_SECTION="$(mktemp)"
 trap 'rm -f "$SPEC_SECTION"' EXIT
-awk '/^### 5\.8 /{f=1;next} f && /^#{1,4} /{exit} f' "$SPEC" > "$SPEC_SECTION"
-if [ ! -s "$SPEC_SECTION" ]; then
-    echo "type strings: COULD NOT ISOLATE §5.8 from the proposal."
-    echo "  Refusing to certify a section this guard could not find — an empty scope would"
-    echo "  make every comparison vacuously fail, or worse, pass against nothing."
+if ! python3 "$ROOT/scripts/extract-markdown-section.py" "$SPEC" \
+        '### 5.8 EIP-712 Type Strings (normative)' > "$SPEC_SECTION"; then
     exit 1
 fi
 SRC="$ROOT/ts/src/signer/eip712.ts"
@@ -81,13 +78,20 @@ for name in EIP712Domain MandatePayload PolicyPayload ActionPayload \
         continue
     fi
     spec_line="$(grep -oE "^ {4}${name}\([^)]*\)$" "$SPEC_SECTION" | head -1 | sed 's/^ *//')"
-    src_line="$(grep -oE "\"${name}\([^\"]*\)\"" "$SRC" | head -1 | sed 's/^"//; s/"$//')"
+    src_hits="$(grep -oE "\"${name}\([^\"]*\)\"" "$SRC" | wc -l | tr -d ' ')"
 
     if [ -z "$spec_line" ]; then
         echo "type strings: §5.8 does not publish ${name}"
         fail=1
         continue
     fi
+    if [ "$src_hits" -gt 1 ]; then
+        echo "type strings: source defines ${name} ${src_hits} different times."
+        echo "  Refusing a duplicate source definition; there is no authoritative one to choose."
+        fail=1
+        continue
+    fi
+    src_line="$(grep -oE "\"${name}\([^\"]*\)\"" "$SRC" | sed 's/^"//; s/"$//')"
     if [ -z "$src_line" ]; then
         echo "type strings: ${name} not found in ts/src/signer/eip712.ts"
         fail=1

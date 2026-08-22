@@ -966,13 +966,52 @@ def published_type_strings(text, anchor=SPEC_5_8_ANCHOR):
     it; that is what makes them a contract rather than a description.
     """
     import re
-    parts = text.split("### 5.8 EIP-712 Type Strings")
-    block = parts[1].split("---")[0]
+    lines = text.splitlines()
+    heading_re = re.compile(r"^ {0,3}(#{1,6})(?:[ \t]+|$)(?!#)")
+    fence_re = re.compile(r"^ {0,3}(`{3,}|~{3,})(.*)$")
+    headings = []
+    fence_char = None
+    fence_length = 0
+    for index, line in enumerate(lines):
+        if fence_char is not None:
+            if re.match(r"^ {0,3}" + re.escape(fence_char) +
+                        r"{%d,}[ \t]*$" % fence_length, line):
+                fence_char = None
+                fence_length = 0
+            continue
+        opening = fence_re.match(line)
+        if opening:
+            marker = opening.group(1)
+            fence_char = marker[0]
+            fence_length = len(marker)
+            continue
+        heading = heading_re.match(line)
+        if heading:
+            headings.append((index, len(heading.group(1))))
+
+    anchors = [(index, depth) for index, depth in headings
+               if lines[index] == anchor]
+    if not anchors:
+        raise ValueError("§5.8 could not isolate section: anchor not found")
+    if len(anchors) != 1:
+        raise ValueError("§5.8 ambiguous section: %d headings claim the anchor" %
+                         len(anchors))
+
+    start, depth = anchors[0]
+    end = len(lines)
+    for index, candidate_depth in headings:
+        if index > start and candidate_depth <= depth:
+            end = index
+            break
+
     out = {}
-    for line in block.split("\n"):
-        m = re.match(r"^([A-Za-z0-9]+)\((.*)\)$", line.strip())
+    for line in lines[start + 1:end]:
+        m = re.match(r"^ {4}([A-Za-z0-9]+)\((.*)\)$", line)
         if m:
-            out[m.group(1)] = line.strip()
+            name = m.group(1)
+            if name in out:
+                raise ValueError("§5.8 duplicate publication: %s published 2 times" % name)
+            out[name] = line.strip()
     return out
 
 

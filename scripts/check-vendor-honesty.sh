@@ -277,24 +277,68 @@ fi
 # own caveat anywhere in it. The caveat was added; this is what stops it being dropped again
 # by a regeneration nobody reads.
 #
-# The expected text is EXTRACTED FROM THE SPECIFICATION, not transcribed here — the same
-# shape as `check-type-strings.sh`, and for the same reason: a guard holding its own copy of
-# the thing it guards can only ever confirm that copy. Whitespace is normalised on both
-# sides because the caveat is a SENTENCE and the report is line-wrapped; comparing raw lines
-# would fail on a rewrap, and the repair for that failure would be to weaken the guard.
-norm() { tr '\n' ' ' <"$1" | tr -s ' '; }
+# The expected text is EXTRACTED FROM §7.2, not transcribed here — the same shape as
+# `check-type-strings.sh`, and for the same reason: a guard holding its own copy of the thing
+# it guards can only ever confirm that copy. Both sides are split into logical paragraphs,
+# then whitespace-normalised within each paragraph. That tolerates hard wraps without letting
+# a tail fragment of the caveat stand in for the whole paragraph.
+VH_SECTION="$(mktemp)"
+VH_PROPOSAL_PARAS="$(mktemp)"
+VH_REPORT_PARAS="$(mktemp)"
+trap 'rm -f "$VH_SECTION" "$VH_PROPOSAL_PARAS" "$VH_REPORT_PARAS"' EXIT
 
-CAVEAT="$(grep -F 'is not evidence that current vendors miss Case 3' "$PROPOSAL" | head -1 | sed 's/^ *//;s/ *$//')"
-if [ -z "$CAVEAT" ]; then
-    echo "  FAIL  §7.2's caveat is missing from $PROPOSAL, so there is nothing to enforce"
-    fail=1
-elif norm docs/ablation-report.md | grep -qF "$CAVEAT"; then
-    echo "  ok    the ablation report carries §7.2's caveat verbatim, as §7.2 words it"
+normalize_paragraphs() {
+    awk '
+        function flush_paragraph() {
+            if (paragraph != "") {
+                gsub(/[[:space:]]+/, " ", paragraph)
+                sub(/^ /, "", paragraph)
+                sub(/ $/, "", paragraph)
+                print paragraph
+                paragraph = ""
+            }
+        }
+        /^[[:space:]]*$/ { flush_paragraph(); next }
+        {
+            line = $0
+            gsub(/[[:space:]]+/, " ", line)
+            sub(/^ /, "", line)
+            sub(/ $/, "", line)
+            paragraph = (paragraph == "" ? line : paragraph " " line)
+        }
+        END { flush_paragraph() }
+    ' "$1"
+}
+
+CAVEAT_PHRASE='is not evidence that current vendors miss Case 3'
+CAVEAT=""
+if python3 "$ROOT/scripts/extract-markdown-section.py" "$PROPOSAL" \
+        '### 7.2 Fair Baselines' > "$VH_SECTION"; then
+    normalize_paragraphs "$VH_SECTION" > "$VH_PROPOSAL_PARAS"
+    normalize_paragraphs docs/ablation-report.md > "$VH_REPORT_PARAS"
+    caveat_hits="$(grep -cF "$CAVEAT_PHRASE" "$VH_PROPOSAL_PARAS")"
+    if [ "$caveat_hits" -eq 1 ]; then
+        CAVEAT="$(grep -F "$CAVEAT_PHRASE" "$VH_PROPOSAL_PARAS")"
+    elif [ "$caveat_hits" -eq 0 ]; then
+        echo "  FAIL  §7.2's caveat is missing from $PROPOSAL, so there is nothing to enforce"
+        fail=1
+    else
+        echo "  FAIL  §7.2's caveat is ambiguous: ${caveat_hits} logical paragraphs carry its identifying phrase"
+        fail=1
+    fi
 else
-    echo "  FAIL  docs/ablation-report.md no longer carries §7.2's caveat:"
-    echo "        \"$CAVEAT\""
-    echo "        The report's own generator must emit it; do not paste it into the output file."
     fail=1
+fi
+
+if [ -n "$CAVEAT" ]; then
+    if grep -qF "$CAVEAT" "$VH_REPORT_PARAS"; then
+        echo "  ok    the ablation report carries §7.2's caveat verbatim, as §7.2 words it"
+    else
+        echo "  FAIL  docs/ablation-report.md no longer carries §7.2's caveat:"
+        echo "        \"$CAVEAT\""
+        echo "        The report's own generator must emit it; do not paste it into the output file."
+        fail=1
+    fi
 fi
 
 # --- (1) and (3): the certification half, never reported as a pass ----------
