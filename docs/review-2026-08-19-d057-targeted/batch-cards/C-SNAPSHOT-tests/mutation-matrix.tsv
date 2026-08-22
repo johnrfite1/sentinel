@@ -1,0 +1,7 @@
+case	kind	typecheck	tests	pass	fail	intended_named_observation	raw_test_log_sha256
+live_baseline_collapse	BASELINE	PASS	10	5	5	pure B3; B1+B3; B1+B2; B2+B3; B1+B2+B3 all fail their own classification/property assertion	de9d70a0c592227dd562787829b182c3b564bba69348b324f46a38be3ee3f00d
+path_b1_as_movement	MUTANT	PASS	10	4	6	CONTROL pure B1 fails pendingOnly exact-semantics assertion	a19e7b7e5e0fdfbcd9c9a6544308c04add6f54ff9973321de11ef2ff51d04d8d
+path_b2_as_pending	MUTANT	PASS	10	3	7	CONTROL pure B2 movement and pure B2 reorg fail pendingOnly exact-semantics assertion	df468acf36f7f4ae73a793cf6ed36f8e8b6184f5a8dc426ae2adfed2c6890648
+path_b3_as_movement	MUTANT	PASS	10	5	5	R2-F6 pure B3 fails movement classification mismatch assertion	3b629e7dbca9bd01447de49f04d2f62ff0fe68838e22c10748a1c514c0ba4b5c
+message_swap_pure_causes	MUTANT	PASS	10	2	8	pure B1 and both pure B2 tests fail exact cause-recognizer assertions	0cbd25e370e9d1fa693a9b5d6c897289b61b5a9986436fd7aeddc03700ed5b83
+message_collapse_generic	MUTANT	PASS	10	2	8	all eight exhaustion tests fail their cause-recognizer assertion	e1a7c4a87c20fac1aefdb7f80fddad58c299eededa309689b3f078621f28fce4

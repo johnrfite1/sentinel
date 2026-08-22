@@ -1,0 +1,335 @@
+diff --git a/ts/test/vault.snapshot.classification.test.ts b/ts/test/vault.snapshot.classification.test.ts
+new file mode 100644
+index 0000000..a7c14f7
+--- /dev/null
++++ b/ts/test/vault.snapshot.classification.test.ts
+@@ -0,0 +1,329 @@
++import {describe, it} from "node:test";
++import assert from "node:assert/strict";
++import {createServer, type Server} from "node:http";
++import {
++    encodeAbiParameters,
++    keccak256,
++    parseAbiParameters,
++    stringToBytes,
++    toFunctionSelector,
++    toHex,
++} from "viem";
++import {
++    ChainUnstableError,
++    SNAPSHOT_ATTEMPTS,
++    createChainReader,
++} from "../src/signer/vault.ts";
++import type {Hex} from "../src/signer/protocol.ts";
++
++/**
++ * Frozen C-SNAPSHOT test contract.
++ *
++ * Boundary: ChainUnstableError and createChainReader(...).readVaultState only. These tests
++ * deliberately do not inspect a signed refusal: protocol.ts carries no detail field, and that
++ * false maintained claim is Batch D-owned. The unchanged public reason remains the single
++ * SIGNER_CHAIN_UNSTABLE code with its existing tier/remedy.
++ *
++ * The oracle observes the actual RPC route as well as the error. A generic rejection would not
++ * pass: every exhaustion case asserts exact latest-lookups and pinned-read counts, then checks
++ * that the message names every cause that occurred and no cause that did not. This makes a
++ * collapsed or swapped classification fail at its named case rather than merely throw.
++ */
++
++const VAULT: Hex = "0x1111111111111111111111111111111111111111";
++const TARGET: Hex = "0x2222222222222222222222222222222222222222";
++const SELECTOR: Hex = "0xc188528b";
++const PINNED_READS = 11;
++
++const ADDRESS_WORD = encodeAbiParameters(parseAbiParameters("address"), [
++    "0x3333333333333333333333333333333333333333",
++]);
++const BYTES32_WORD = encodeAbiParameters(parseAbiParameters("bytes32"), [
++    keccak256(stringToBytes("snapshot-classification")),
++]);
++const UINT_WORD = encodeAbiParameters(parseAbiParameters("uint256"), [7n]);
++const BOOL_WORD = encodeAbiParameters(parseAbiParameters("bool"), [true]);
++
++const RETURNS: Record<string, Hex> = {
++    [toFunctionSelector("owner() view returns (address)")]: ADDRESS_WORD,
++    [toFunctionSelector("signer() view returns (address)")]: ADDRESS_WORD,
++    [toFunctionSelector("activeMandateHash() view returns (bytes32)")]: BYTES32_WORD,
++    [toFunctionSelector("activePolicyHash() view returns (bytes32)")]: BYTES32_WORD,
++    [toFunctionSelector("actionNonce() view returns (uint256)")]: UINT_WORD,
++    [toFunctionSelector("paused() view returns (bool)")]: BOOL_WORD,
++    [toFunctionSelector("maxNativeValueWei() view returns (uint256)")]: UINT_WORD,
++    [toFunctionSelector("allowedTarget(address) view returns (bool)")]: BOOL_WORD,
++    [toFunctionSelector("allowedSelector(bytes4) view returns (bool)")]: BOOL_WORD,
++    [toFunctionSelector("domainSeparator() view returns (bytes32)")]: BYTES32_WORD,
++};
++
++type AttemptEnd = "pending-head" | "moved-height" | "same-height-reorg" | "confirmation-pending";
++type Cause = "pending" | "movement" | "confirmation";
++
++interface Head {
++    number: bigint;
++    hash: Hex | null;
++}
++
++interface Recorded {
++    method: string;
++    blockTag: string | undefined;
++}
++
++interface MockNode {
++    url: string;
++    calls: Recorded[];
++    stop(): Promise<void>;
++}
++
++function hash(label: string): Hex {
++    return keccak256(stringToBytes(label));
++}
++
++function blockAt(number: bigint, blockHash: Hex | null): Record<string, unknown> {
++    return {
++        number: toHex(number),
++        hash: blockHash,
++        parentHash: hash(`parent:${number}`),
++        nonce: "0x0000000000000000",
++        sha3Uncles: hash("uncles"),
++        logsBloom: `0x${"00".repeat(256)}`,
++        transactionsRoot: hash("txroot"),
++        stateRoot: hash("stateroot"),
++        receiptsRoot: hash("receiptsroot"),
++        miner: "0x0000000000000000000000000000000000000000",
++        difficulty: "0x0",
++        totalDifficulty: "0x0",
++        extraData: "0x",
++        size: "0x0",
++        gasLimit: "0x1c9c380",
++        gasUsed: "0x0",
++        timestamp: toHex(1_800_000_000n),
++        transactions: [],
++        uncles: [],
++        baseFeePerGas: "0x7",
++    };
++}
++
++function headsFor(attempts: AttemptEnd[]): Head[] {
++    return attempts.flatMap((outcome, index): Head[] => {
++        const n = 1_000n + BigInt(index * 10);
++        const anchored: Head = {number: n, hash: hash(`anchor:${index}`)};
++        switch (outcome) {
++            case "pending-head":
++                return [{number: n, hash: null}];
++            case "moved-height":
++                return [anchored, {number: n + 1n, hash: hash(`advanced:${index}`)}];
++            case "same-height-reorg":
++                return [anchored, {number: n, hash: hash(`reorg:${index}`)}];
++            case "confirmation-pending":
++                return [anchored, {number: n, hash: null}];
++        }
++    });
++}
++
++async function mockNode(heads: Head[], failReads = false): Promise<MockNode> {
++    const calls: Recorded[] = [];
++    let headIndex = 0;
++    const server: Server = createServer((req, res) => {
++        let body = "";
++        req.on("data", (chunk) => (body += chunk));
++        req.on("end", () => {
++            const request = JSON.parse(body) as {id: number; method: string; params?: unknown[]};
++            const params = request.params ?? [];
++            let result: unknown = null;
++            let blockTag: string | undefined;
++
++            if (request.method === "eth_getBlockByNumber") {
++                blockTag = params[0] as string;
++                const head = heads[Math.min(headIndex, heads.length - 1)]!;
++                headIndex += 1;
++                result = blockAt(head.number, head.hash);
++            } else if (request.method === "eth_call") {
++                blockTag = params[1] as string;
++                const call = params[0] as {data: Hex};
++                if (failReads) {
++                    calls.push({method: request.method, blockTag});
++                    res.writeHead(200, {"content-type": "application/json"});
++                    res.end(JSON.stringify({
++                        jsonrpc: "2.0",
++                        id: request.id,
++                        error: {code: -32601, message: "scripted ordinary read failure"},
++                    }));
++                    return;
++                }
++                result = RETURNS[call.data.slice(0, 10)] ?? "0x";
++            } else if (request.method === "eth_getCode") {
++                blockTag = params[1] as string;
++                result = "0x6080";
++            }
++
++            calls.push({method: request.method, blockTag});
++            res.writeHead(200, {"content-type": "application/json"});
++            res.end(JSON.stringify({jsonrpc: "2.0", id: request.id, result}));
++        });
++    });
++
++    await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
++    const address = server.address();
++    if (address === null || typeof address === "string") throw new Error("no port");
++    return {
++        url: `http://127.0.0.1:${address.port}`,
++        calls,
++        async stop() {
++            await new Promise<void>((resolve) => server.close(() => resolve()));
++        },
++    };
++}
++
++function occurred(attempts: AttemptEnd[]): Set<Cause> {
++    const causes = new Set<Cause>();
++    for (const attempt of attempts) {
++        if (attempt === "pending-head") causes.add("pending");
++        else if (attempt === "confirmation-pending") causes.add("confirmation");
++        else causes.add("movement");
++    }
++    return causes;
++}
++
++function assertMessageNamesExactly(error: ChainUnstableError, causes: Set<Cause>): void {
++    const message = error.message.toLowerCase();
++    const namesPendingHead = /pending (?:block with no hash|head[^.]*before[^.]*read)/.test(message);
++    const namesMovement = /head moved|head[^.]*replaced|same-height reorg/.test(message);
++    const namesConfirmation = /pending confirmation|confirmation[^.]*pending/.test(message);
++
++    assert.equal(namesPendingHead, causes.has("pending"),
++        `pending-head classification mismatch: ${error.message}`);
++    assert.equal(namesMovement, causes.has("movement"),
++        `movement classification mismatch: ${error.message}`);
++    assert.equal(namesConfirmation, causes.has("confirmation"),
++        `confirmation-pending classification mismatch: ${error.message}`);
++
++    if (causes.size > 1) {
++        assert.doesNotMatch(message, /every observation|under each pinned read/,
++            "mixed exhaustion must not use a universal claim from one pure cause");
++    }
++}
++
++async function assertExhaustion(attempts: AttemptEnd[]): Promise<ChainUnstableError> {
++    assert.equal(attempts.length, SNAPSHOT_ATTEMPTS, "fixture must consume the exact retry budget");
++    const node = await mockNode(headsFor(attempts));
++    try {
++        let caught: unknown;
++        try {
++            await createChainReader(node.url).readVaultState(VAULT, TARGET, SELECTOR);
++            assert.fail("expected ChainUnstableError");
++        } catch (error) {
++            caught = error;
++        }
++        assert.ok(caught instanceof ChainUnstableError,
++            `expected ChainUnstableError, got ${String(caught)}`);
++
++        const readsExpected = attempts.filter((a) => a !== "pending-head").length * PINNED_READS;
++        const latestExpected = attempts.reduce(
++            (count, a) => count + (a === "pending-head" ? 1 : 2),
++            0,
++        );
++        const pinned = node.calls.filter(
++            (c) => c.method === "eth_call" || c.method === "eth_getCode",
++        );
++        const latest = node.calls.filter(
++            (c) => c.method === "eth_getBlockByNumber" && c.blockTag === "latest",
++        );
++        assert.equal(pinned.length, readsExpected, "fixture did not drive its declared read routes");
++        assert.equal(latest.length, latestExpected, "fixture did not drive its declared head routes");
++
++        const causes = occurred(attempts);
++        assert.equal(caught.pendingOnly, causes.size === 1 && causes.has("pending"),
++            "pendingOnly means all attempts ended at the pre-read pending-head branch");
++        assert.match(caught.message, new RegExp(String(SNAPSHOT_ATTEMPTS)),
++            "the error must retain the exhausted attempt count");
++        assertMessageNamesExactly(caught, causes);
++        return caught;
++    } finally {
++        await node.stop();
++    }
++}
++
++describe("C-SNAPSHOT exhaustive branch classification", () => {
++    it("CONTROL stable success returns the hashed pin after exactly eleven pinned reads", async () => {
++        const head = {number: 4242n, hash: hash("stable")};
++        const node = await mockNode([head, head]);
++        try {
++            const state = await createChainReader(node.url).readVaultState(VAULT, TARGET, SELECTOR);
++            assert.equal(state.observedAtBlock, head.number);
++            assert.equal(state.observedBlockHash, head.hash);
++            assert.equal(node.calls.filter(
++                (c) => c.method === "eth_call" || c.method === "eth_getCode",
++            ).length, PINNED_READS);
++            assert.equal(node.calls.filter(
++                (c) => c.method === "eth_getBlockByNumber" && c.blockTag === "latest",
++            ).length, 2);
++        } finally {
++            await node.stop();
++        }
++    });
++
++    it("CONTROL pure B1: pending head is rejected before reads and named accurately", async () => {
++        await assertExhaustion(Array<AttemptEnd>(SNAPSHOT_ATTEMPTS).fill("pending-head"));
++    });
++
++    it("CONTROL pure B2 movement: advanced height after reads is named accurately", async () => {
++        await assertExhaustion(Array<AttemptEnd>(SNAPSHOT_ATTEMPTS).fill("moved-height"));
++    });
++
++    it("CONTROL pure B2 reorg: same-height replacement after reads is named accurately", async () => {
++        await assertExhaustion(Array<AttemptEnd>(SNAPSHOT_ATTEMPTS).fill("same-height-reorg"));
++    });
++
++    it("R2-F6 pure B3: pending confirmation is neither pre-read pending nor movement", async () => {
++        await assertExhaustion(Array<AttemptEnd>(SNAPSHOT_ATTEMPTS).fill("confirmation-pending"));
++    });
++
++    it("R2-F6 mixed B1+B3: names pre-read pending and pending confirmation only", async () => {
++        await assertExhaustion([
++            "pending-head", "confirmation-pending", "pending-head",
++            "confirmation-pending", "confirmation-pending",
++        ]);
++    });
++
++    it("R2-F6 mixed B1+B2: names pending-before-read and changed-after-read without universals", async () => {
++        await assertExhaustion([
++            "pending-head", "moved-height", "pending-head", "same-height-reorg", "moved-height",
++        ]);
++    });
++
++    it("R2-F6 mixed B2+B3: names changed head and pending confirmation without conflation", async () => {
++        await assertExhaustion([
++            "moved-height", "confirmation-pending", "same-height-reorg",
++            "confirmation-pending", "moved-height",
++        ]);
++    });
++
++    it("R2-F6 mixed B1+B2+B3: names all and only causes actually exhausted", async () => {
++        await assertExhaustion([
++            "pending-head", "moved-height", "confirmation-pending", "same-height-reorg",
++            "pending-head",
++        ]);
++    });
++
++    it("CONTROL ordinary RPC/read failure is not reclassified as chain instability", async () => {
++        const head = {number: 5000n, hash: hash("read-failure")};
++        const node = await mockNode([head], true);
++        try {
++            await assert.rejects(
++                () => createChainReader(node.url).readVaultState(VAULT, TARGET, SELECTOR),
++                (error: unknown) =>
++                    error instanceof Error &&
++                    !(error instanceof ChainUnstableError) &&
++                    /scripted ordinary read failure/.test(error.message),
++                "ordinary read failure must propagate for SIGNER_VAULT_UNREACHABLE classification",
++            );
++            assert.equal(node.calls.filter(
++                (c) => c.method === "eth_getBlockByNumber" && c.blockTag === "latest",
++            ).length, 1, "ordinary read failure must not be retried as an unstable snapshot");
++        } finally {
++            await node.stop();
++        }
++    });
++});

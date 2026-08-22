@@ -1,0 +1,13 @@
+f60d91405886aad0c1d445a89ccddad16efb6d379fa4050b0c9913c064463af0  docs/review-2026-08-19-d057-targeted/batch-cards/C-SNAPSHOT-tests/CARD.md
+569c0c3235b781453047a1059ff2275ba7e72bb1b1c5dbe59db71bf5dad68875  docs/review-2026-08-19-d057-targeted/batch-cards/C-SNAPSHOT-tests/COVERAGE.md
+413c64e54b8cb76259ba452e0ee475008dcfcf35019c64e4e50dbf66c168d8fa  docs/review-2026-08-19-d057-targeted/batch-cards/C-SNAPSHOT-tests/GATE-BINDING.md
+34c49b1ef8ad230b894058a5ddc5bb993df241758a85d8f0ea45b2577ea5bf32  docs/review-2026-08-19-d057-targeted/batch-cards/C-SNAPSHOT-tests/PROVENANCE.md
+535d91a13beb80badcabaac3a97c6da57131b61d212a440e256475c1e31ee818  docs/review-2026-08-19-d057-targeted/batch-cards/C-SNAPSHOT-tests/RESULTS.md
+fc883b23173e08337f2d927cbaebcbe9592d5ad548a209a9944a1be5908c3ea5  docs/review-2026-08-19-d057-targeted/batch-cards/C-SNAPSHOT-tests/RUNBOOK.md
+51fba356e71fe648e78e85d551b6092b649d843645dde4338f64ca6b932450df  docs/review-2026-08-19-d057-targeted/batch-cards/C-SNAPSHOT-tests/TESTS.patch
+200862551e98ecb8cdd377217ee53b36b555c2183ba052f97f25f61cb1476fcb  docs/review-2026-08-19-d057-targeted/batch-cards/C-SNAPSHOT-tests/logs/README.md
+07e8c10b6fd7ee5601cdb31f777e6a54422b66970883cf1d193f8ac73ca462f8  docs/review-2026-08-19-d057-targeted/batch-cards/C-SNAPSHOT-tests/logs/fast-gate-control-summary.log
+0c8345feb64f727bc4886dc1c89bc69cc12f9f228b77c37d2fc5684299cedd63  docs/review-2026-08-19-d057-targeted/batch-cards/C-SNAPSHOT-tests/logs/fast-gate-patched-summary.log
+c3b08e437da578517d2b881745cc4f8b1d0487dff880bb059caf1c2a8b671cb1  docs/review-2026-08-19-d057-targeted/batch-cards/C-SNAPSHOT-tests/logs/focused-baseline-summary.log
+bee4a18f56e99fca812cbeddbb3515272845b63eb73f77c99235a730ec126997  docs/review-2026-08-19-d057-targeted/batch-cards/C-SNAPSHOT-tests/mutate.py
+9f78e5708356cd874849a175989285a3b0239755cb33104894f396abe5fd88f7  docs/review-2026-08-19-d057-targeted/batch-cards/C-SNAPSHOT-tests/mutation-matrix.tsv
