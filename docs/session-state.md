@@ -3,16 +3,17 @@
 Rewritten at the end of each working session. **This file, not the conversation, is the
 memory.** If it disagrees with anything an agent remembers, this file wins.
 
-Last updated: **2026-08-20 (post-A-086, closure maintenance). BATCH A1 IS CLOSED. Its two
-ordinary implementation attempts BOTH FAILED; what closed is one named regression, under the
-explicit D-062 containment exception, and NOT either attempt on its merits.** Branch
-`step-3/isolated-signer`.
+Last updated: **2026-08-22 (post-A-095). D-058 confirmed batches HOLD inside their
+declared boundaries. Batch A1 remains closed through the D-062 exception, not on the merits.
+D-055 is not assessed.** Branch `step-3/isolated-signer`.
 
 > ## READ THIS BEFORE ANYTHING ELSE
 >
 > **YOUR JOB IS NOTHING WITHOUT AN INSTRUCTION FROM JOHN.** A1 is closed and **no A1 reopening,
-> no further A1 test and no further A1 production change is authorised.** Do not assess D-055.
-> Report the state below and wait.
+> no further A1 test and no further A1 production change is authorised.** The D-058 confirmed
+> batches (A-EXTRACT, B-EVENTS, C-SNAPSHOT, A-FLOORS, D-CLAIMS) independently HOLD. **Do not
+> assess D-055. Do not sign or reopen a gate. Do not publish, rename, or push.** Report the
+> state below and wait.
 >
 > **THE `GIT_INDEX_FILE` FAIL-OPEN IS FIXED — the warning that stood here is withdrawn.**
 > It was real: clearing the variable made the pre-commit guard read `.git/index` while git was
@@ -54,6 +55,10 @@ only on John's explicit direction for a specific state.**
    **§10 is the authoritative residual list**, and `IMPLEMENTATION.md` is the implementer's own
    claim rather than evidence. **D-063 withdrew standing force authorization: any forced removal
    now needs new, exact approval after every stated precondition holds.**
+7. **`docs/decisions.md`: D-066, then A-089, A-091, A-093, A-094, A-095.** The five confirmed
+   D-058 batches after A1, each independently HOLD. D-058(10) is the remaining mechanical
+   closeout at the freeze of this rewrite; do not treat a later conversation as having signed
+   D-055.
 
 **DO NOT QUOTE COUNTS FROM THIS FILE.** Suite floors: `./scripts/check-suite-floors.sh`.
 Findings: `./scripts/check-findings-ledger.sh`. Review verdicts:
@@ -206,10 +211,10 @@ autonomy *none*).
 
 ### YOUR JOB: NOTHING, WITHOUT AN INSTRUCTION FROM JOHN. Say so and stop.
 
-Batch A1 is closed and its closure is accepted by John. **NO SUBSEQUENT BATCH HAS BEGUN.**
+The D-058 confirmed batches HOLD inside their declared boundaries. **D-055 is not assessed.**
 If you arrived with no instruction, report the state below and wait.
 
-### WHERE THE PROJECT IS, 2026-08-20
+### WHERE THE PROJECT IS, 2026-08-22
 
 | | |
 |---|---|
@@ -217,8 +222,9 @@ If you arrived with no instruction, report the state below and wait.
 | Review arc | **COMPLETE.** Rounds five and six adjudicated; D-055(e) ran four reviewers, 23 findings, one CRITICAL in the gate itself; D-057 ruled every one |
 | Remediation | **A-081 reverified 11 items — 3 held, 8 FAILED.** The convergence reset (D-058/059/060) replaced the method with batch cards. **Batch A1's two ordinary attempts BOTH FAILED and stay failed** |
 | Batch A1 | **CLOSED — through the D-062 containment exception, NOT on the merits of either attempt.** One named regression repaired and independently verified HOLD. **Neither ordinary attempt is relabelled successful (D-061(4)).** |
-| D-055 exit | **NOT MET.** Conditions 1 and 2 MET; condition 3 is John's to confirm; **condition 4 NOT MET — known false claims still stand.** Nothing in the D-062 arc changes this |
-| Next batch | **NONE STARTED.** No batch is open and none is authorised without John |
+| Confirmed D-058 batches | **HOLD**, each inside its card: A-EXTRACT (A-089), B-EVENTS (A-091), C-SNAPSHOT (A-093), A-FLOORS (A-094), D-CLAIMS (A-095) |
+| D-055 exit | **NOT ASSESSED.** Conditions 1 and 2 were already MET; condition 3 is John's to confirm; **condition 4 is John's.** Batch D repaired the five named live false claims in its declared boundary. That is not a D-055 verdict |
+| Next | **NOTHING without an instruction from John.** Push, publication, rename, gate signatures, and D-055 remain his |
 | Publication | **BLOCKED and untouched.** D-048 precondition unmet; Gate 8 needs the D-009 dashboard and John's five held questions; D-016 blocks everything |
 
 ### HOW BATCH A1 ACTUALLY CLOSED — the record, stated so it cannot be rounded up
@@ -241,32 +247,44 @@ modified, not re-scoped, not relabelled. **The verifier independently confirmed 
 assertions moved and no third, so D-064's reversal condition did not fire; the rest of A2 remained
 stable.**
 
-### WHAT IS OPEN, AND NONE OF IT IS REPAIRED
+### WHAT THE CONFIRMED BATCHES CLOSED, AND WHAT THEY DID NOT
 
-1. **The eight D-055(e) obligations that failed A-081.** `R3-F7` (vault events), `R2-F6` (signer
-   state), `R4-F3` (type strings), `R4-F4` (floors), `R2-F4` (a false BLOCKER in
-   `exit-criterion-packet.md` §7), `V3-N1`, and A-080's count and handoff corrections. **Held:**
-   `R3-F6`, `R3-F4`, and A-080's rejected-design correction. Derived from `VERDICT-LEDGER.tsv`.
-2. **Sixteen adjudicated findings in `NEW-FINDINGS.tsv`.** Five were repaired inside Batch A1's
-   commit; the rest are open. **`V3-N2` reaches a §7.5 Gate 5 condition** — see below.
-3. **Batch A1's code is on this branch and its own verification FAILED at `f61ecca`.** That
-   record stands unaltered: the verifier held 8 of 9 items and the one failure was the
-   `GIT_INDEX_FILE` fail-open. **That single failure — and only that one — was subsequently
-   repaired under the D-062 exception and independently verified HOLD.** The other eight items
-   were never re-verified after `f61ecca` and nothing here claims they were.
+Each HOLD is completeness inside a declared boundary, not repository-wide closure.
 
-4. **RESIDUALS CARRIED FROM THE D-062 VERIFICATION — carried, not accepted.**
+1. **A-EXTRACT (A-089)** — section extraction, exact-membership, source-uniqueness, vendor-caveat.
+2. **B-EVENTS (A-091)** — vault event evidence on both routes and truthful F7-R1 NatSpec.
+3. **C-SNAPSHOT (A-093)** — signer snapshot-exhaustion classification.
+4. **A-FLOORS (A-094)** — six suite floors, named-subject reader, one common gate invocation.
+5. **D-CLAIMS (A-095)** — five comment / unsigned-prose surfaces. No signed-pack edit, no
+   `RefusalRecord.detail`, no public reason-code split.
+
+**A-081's eight FAILED items were the inventory those batches were built from.** Do not re-list
+them as unrepaired current work. Do not treat the HOLDs as a D-055 assessment.
+
+### WHAT IS STILL OPEN, AND NONE OF IT IS THIS INSTANCE'S TO CLOSE
+
+1. **D-055.** Not assessed. Condition 4 is John's. An agent does not flip it to MET because Batch
+   D's named claims are repaired.
+2. **RESIDUALS CARRIED FROM THE D-062 VERIFICATION — carried, not accepted.**
    **`V-1` is stated in full in the header above and has NO regression test.** **`V-2` through
    `V-10` are NOT reproduced here** — read them in
    `docs/review-2026-08-19-d057-targeted/batch-cards/D062-containment-tests/VERIFICATION.md` §10,
    which is the authoritative record. Copying their prose into this file is how this file has
    drifted before.
-
-5. **DEFERRED AND UNRESOLVED — `R2`, `R3`, `R5`.** `R2` (`check-vendor-honesty.sh` quotePath),
+3. **DEFERRED AND UNRESOLVED — `R2`, `R3`, `R5`.** `R2` (`check-vendor-honesty.sh` quotePath),
    `R3` (the inert Case 4 scorer residual) and `R5` (`check-rename-gate.sh` exiting zero while
    printing `UNVERIFIED`) were deferred by D-061(2) and **are still deferred and still
    unresolved.** D-062 did not reach them. `R5` in particular means the rename gate's exit status
    is not evidence — read its output.
+4. **Gate 5's status fork.** `V3-N2` is CONFIRMED. Per D-059(1) the certification **STANDS**,
+   but **`check-vendor-honesty.sh` is NOT admissible as evidence for that supplementary
+   condition until repaired and independently reverified.** An agent may not revoke, reaffirm or
+   recertify it.
+5. **D-058(10) final verification** is owed at the freeze of this rewrite: focused suites, fast
+   gate, isolated exact-commit deep gate, scope/ledger/secret/workspace guards, committed views
+   file-by-file, ratcheted debt and coverage exclusions. **Do not quote those results from this
+   file.** If any tracked file changes after that freeze, the verification is invalid and must
+   be rerun.
 
 ### WHAT IS WAITING ON JOHN — all of it is his
 
@@ -275,27 +293,24 @@ stable.**
    and untested** and is the live piece of this item.
 2. ~~**Whether Batch A1 is recarded.**~~ **RULED: it is not.** A1's closure is accepted and **no
    A1 reopening, no further A1 test and no further A1 production change is authorised.**
-3. **Gate 5's status fork.** `V3-N2` is CONFIRMED. Per D-059(1) the certification **STANDS** —
-   the guarded §7.2 property was measured true at this commit, independently of the broken
-   guard — but **`check-vendor-honesty.sh` is NOT admissible as evidence for that supplementary
-   condition until repaired and independently reverified.** An agent may not revoke, reaffirm or
-   recertify it.
-4. ~~**The push.**~~ **DONE at John's direction, twice, as private backup** — the branch and its
-   remote were confirmed synchronized. Count anything outstanding with `git log --oneline
-   origin/step-3/isolated-signer..HEAD`; **do not quote a number from this file.** D-016 is
-   unchanged and the repository is still PRIVATE: backup is not publication.
-5. **How the remaining open work is organised**, now that the global-contract method is
-   abandoned and cards are the replacement.
+3. **Gate 5's status fork**, as above.
+4. ~~**The push.**~~ Prior private backups happened at John's direction. Count anything
+   outstanding with `git log --oneline origin/step-3/isolated-signer..HEAD`; **do not quote a
+   number from this file.** D-016 is unchanged and the repository is still PRIVATE: backup is
+   not publication. **The freeze that includes A-095 has not been pushed unless John directed
+   that exact state.**
+5. **D-055**, publication, rename, and any gate signature or reopening.
 
 ### WHAT IS NOT AUTHORISED, and none of it has changed
 
 - **NO A1 REOPENING OF ANY KIND** — no third implementation attempt (D-061(4)), and after the
   closure was accepted, **no further A1 test and no further A1 production change either.**
-- **No other batch started**, no D-055 assessment, no gate signed or reopened, no public claim
-  certified, no correction ratified.
+- **No D-055 assessment**, no gate signed or reopened, no public claim certified, no correction
+  ratified.
 - **D-016 blocks all publication**; the repository is PRIVATE and the rename gate checks it.
 - **No pre-publication.** D-048 makes a clean result a PRECONDITION, never a trigger.
 - **The five D-008 comprehension questions stay unseen.**
+- **No push** without John's explicit direction for a specific state.
 
 ### THE METHOD THAT NOW GOVERNS REMEDIATION (D-060(1))
 

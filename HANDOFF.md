@@ -57,10 +57,18 @@ index` honours `GIT_INDEX_FILE`, so the repair is correct only because both file
 variable before resolving the canonical index — reverse that ordering and the hole reopens with
 **no harness failing.** `V-2`–`V-10` are carried by reference in
 `.../batch-cards/D062-containment-tests/VERIFICATION.md` §10; `R2`, `R3` and `R5` remain
-**deferred and unresolved.** **D-055's exit is UNCHANGED at NOT MET, NO SUBSEQUENT BATCH HAS
-BEGUN**, D-063 withdrew standing force authorization, and nothing is signed, certified, published
+**deferred and unresolved.** **D-055's exit is UNCHANGED at NOT MET,** ~~NO SUBSEQUENT BATCH HAS
+BEGUN~~ **— that present-tense claim was true of A-086's date and is false now (A-095).** D-063 withdrew standing force authorization, and nothing is signed, certified, published
 or renamed under D-016. **Do not quote suite counts from any handoff file — run
 `./scripts/test.sh` and read its output, or `./scripts/check-suite-floors.sh`.**
+
+**2026-08-22 — THE D-058 CONFIRMED BATCHES HOLD; D-055 IS STILL JOHN'S.** Start at
+`docs/session-state.md` §1. Batch A1's closure through the D-062 exception is unchanged and is
+not relabelled successful. Independently verified HOLD, each inside its declared boundary:
+A-EXTRACT (A-089), B-EVENTS (A-091), C-SNAPSHOT (A-093), A-FLOORS (A-094), D-CLAIMS (A-095).
+**That is not a D-055 assessment, not a gate signature, not certification, not publication, and
+not a push.** D-016 still blocks all publication; the repository is PRIVATE; an agent pushes
+only on John's explicit direction for a specific state. Held D-008 questions remain unseen.
 
 Amended 2026-07-27 by Opus 5 at build start: D-007…D-011 (delegated rulings) resolve four open forks and the labeling blind spot. Sections below reflect them. Proposal mirror: §14.9.
 
