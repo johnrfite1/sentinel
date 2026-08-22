@@ -1,123 +1,126 @@
-# A-FLOORS — measured pre-repair results
+# A-FLOORS — corrected measured pre-repair results
 
 ## Verdict
 
-**HOLD for test-contract readiness, pending fresh independent review.** The baseline product is
-supposed to fail the required repair assertions. Controls establish the instrument remains live.
-No production repair has been made or approved.
+**HOLD for corrected test-contract readiness, pending fresh independent Review 2.** No production
+repair, post-repair pass or approval exists.
 
-## 1. Focused baseline
+## 1. Review-1 evidence retained as historical measurement
 
-Against exact baseline `1a133301533e9d959dbafbbcc7ffe05e7eb78df3`:
+The original author subject measured focused REQUIRED 10/53, CONTROL 28/28. Its harness and
+matrix were `4782ff02…5200f` and `a704290d…47ca5`; raw output was `8a34c604…57478`.
+`focused-matrix-review1.tsv` and `logs/focused-baseline-review1-summary.log` preserve those bytes.
+Review 1 independently reproduced all 81 rows and returned FAIL because zero and standalone
+indented assignments were absent. `INSTRUMENT-REVIEW-1.md` is unchanged.
+
+## 2. Corrected baseline
+
+Against exact clean subject `e3b8a76cff7a002b3211bb8f8a75f2d14b86a37e` with the corrected
+harness executed externally:
 
 ```text
-REQUIRED 10/53
-CONTROL 28/28
+REQUIRED 10/71
+CONTROL 65/65
 PRE-REPAIR DEFECTS OBSERVED
 exit=1
 ```
 
-The ten required baseline satisfactions are the already-current verifier quartet
-`221/7/78/30` and all six missing-definition refusals. Every intended open defect remains
-observable:
+The ten required passes remain the six existing missing-definition refusals and current verifier
+quartet. Newly added outcomes:
 
-- stale Foundry and TypeScript canonical values (`92`, `527` rather than `103`, `550`);
-- empty, malformed and non-numeric definitions are not distinctly refused for all six names;
-- duplicate-before, duplicate-after and conditional duplicates are not refused;
-- both duplicate orders prove reader first-wins against Bash last-wins;
-- wrapped/unwrapped live §3 publication, current D-010 session publication and current D-010
-  coverage publication are not rejected; and
-- `scripts/test.sh` contains zero common-path invocations of the targeted checker.
+- six `Z-*` zero refusals: all fail at the current reader;
+- six `ONE-*` positive-one controls: all pass;
+- twelve standalone-indented refusals (`IA/IB`): all fail;
+- twelve Bash trace/order witnesses (`IAW/IBW`): all pass;
+- eighteen inert comment/quote/heredoc controls: all pass; and
+- `P-reader-restore`: passes exact reader hash plus restored exit/output identity.
 
-All 28 controls pass. They include frozen B/C hashes, unchanged reader execution, exact valid
-six-source acceptance, prefix discrimination, twelve direct-order witnesses, six conditional
-Bash witnesses, wrap equivalence, dated numbers inside enumerated logical paragraphs,
-constant-name mentions, unrelated numbers and a positive wiring witness against frozen candidate
-text.
+All 136 case names are unique. Raw output sha256:
+`d90500cd684d245bdc79324f3562a92cabbc935b79595e65976878322ba20931`.
+Matrix sha256: `f0ab8dcd63efe98bbacfc353dd0e849b6b9f91bbdccd6288fa90c80a524b63a0`.
 
-Final raw focused log sha256:
-`8a34c604d0a9ce814a55715a1f1775fcb9f01eff76a90b7ad4d33174c7d57478`.
-Complete path-free matrix sha256:
-`a704290d198f14ab85db1a66149b5dd03ff3d7096ad04646f05f5c6980247ca5`.
+## 3. Causal zero sibling
 
-## 2. Serial top-level gate baseline
-
-No final case overlapped another gate. Each case used an independent exact-commit clone.
-
-| Case | Result | Seconds | Exact baseline observation |
-|---|---|---:|---|
-| G0 unchanged fast | CONTROL PASS | 152.670 | 103 Foundry / 550 TypeScript / verifier 221, samples 7, tamper 78/30; `GATE PASSED` |
-| G1 wrong current paragraph, fast | REQUIRED FAIL | 150.318 | identical measured success and `GATE PASSED`; current gate does not invoke the reader guard |
-| G2 unchanged deep | CONTROL PASS | 286.512 | same counts; 50 corpus fixtures and committed views file-by-file; deep profile; `GATE PASSED` |
-| G3 wrong current paragraph, deep | REQUIRED FAIL | 289.146 | identical deep success including corpus/views and `GATE PASSED`; deep path has the same wiring hole |
-| G4 raised 103/550, unchanged suites | CONTROL PASS | 153.205 | Foundry 103 floor 103; TypeScript 550 floor 550; verifier green; `GATE PASSED` |
-| G5 raised floors + delete B-EVENTS file | REQUIRED PASS | 145.689 | Foundry 92 floor 103 breach; TypeScript/verifier green; `GATE FAILED`; no completion |
-| G6 raised floors + delete C-SNAPSHOT file | REQUIRED PASS | 143.293 | Foundry green; TypeScript 527 floor 550 breach; verifier green; `GATE FAILED`; no completion |
-
-Final score:
+The digits-only zero-accepting sibling returns:
 
 ```text
-REQUIRED 2/4
-CONTROL 3/3
-PRE-REPAIR GATE DEFECTS OBSERVED
+REQUIRED 65/71
+CONTROL 65/65
 exit=1
 ```
 
-The two required failures are the intended fast/deep reader-wiring holes. The two required passes
-prove the planned floors catch exactly the B/C deletion deltas. Full raw-log hashes:
+Comparison against the preserved Review-1 matrix proves 81/81 old rows pass, with zero missing
+names and zero old non-passes. The complete corrected matrix has 136/136 unique names. Its exact
+failure set is only:
 
-| Case | sha256 |
-|---|---|
-| G0 | `27fa0430af50e662f2fee339057cd824703d8cc964e8bdc9b5d1447977a07ee0` |
-| G1 | `691748637047827f629fb65f131777774131f4958a54af77bbf87382ac37260f` |
-| G2 | `ebb9d73577f6e4888ac8b2579883c7aa46bf9cc06e1803748c37a6b495a81275` |
-| G3 | `9c0321dcccdd7477b0ba487f8fbdeb0c541d121f09978b0a588b874639265d20` |
-| G4 | `79b14aa7537ec233ae2b60f61fcb1e390ff19ae7a589042cdffd82a2f2cb4edf` |
-| G5 | `42e061acabb661a3d34d94abaf8227f455ad7ad6c0d2b574e886473d991f5fdc` |
-| G6 | `954940da794f0afe6b4d014f34aaf5861f88325f2563cc35f08565791e3577c6` |
+```text
+Z-FOUNDRY_MIN_TESTS
+Z-TS_MIN_TESTS
+Z-VERIFIER_MIN_TESTS
+Z-VERIFIER_MIN_SAMPLES
+Z-VERIFIER_MIN_TAMPER
+Z-VERIFIER_MIN_TAMPER_MODES
+```
 
-Harness raw log sha256:
-`c4a41ddc58b73c7c23932556a37c7c955968298553fcbbd94314c550c01a6cb2`.
-Path-free gate matrix sha256:
-`0b4d9c127e7230c7266960fe073f92f9551da9a68005cb936850993d803d1c58`.
+Raw sha256: `2085505bdcd6db3004b5e82cb424da45cc658bcc47caf78ce3b7a522d6275e2c`.
+Matrix sha256: `2094fba903c6ad9ef7f8be4cdba1bc5dfc0bc841b7f34fc70070b6787c6bf46c`.
 
-## 3. Excluded setup/calibration runs
+## 4. Exact-positive satisfying control
 
-- One preliminary deep run overlapped another gate and was cancelled immediately. Its only
-  durable result is `gate: cancelled; the body was stopped with it.` It is neither gate evidence
-  nor timing evidence.
-- One preliminary fast run overlapped that setup interval. Although it returned green, it is not
-  used as final evidence or timing.
-- The first serial-wrapper launch stopped before a case because the temporary harness lacked its
-  executable bit. No gate ran; this is setup failure, not a verdict.
-- The next calibration completed a green unchanged fast gate but the wrapper expected verifier
-  `verdict PASS` while the actual exact word is `verdict clean`. That control failure invalidated
-  the wrapper run; the active next case was cancelled. The oracle was corrected and all seven
-  final cases rerun from the beginning.
+The sibling differing only in `[1-9][0-9]*` returns:
 
-These exclusions implement D-066(4): incomplete dependency/precondition states never contribute
-a REQUIRED or CONTROL verdict.
+```text
+REQUIRED 71/71
+CONTROL 65/65
+A_FLOORS_FOCUSED_COMPLETE
+exit=0
+```
 
-## 4. Repository and workspace guards
+Raw sha256: `34980d90b09909c698abf7e8f2c88d02e81755325d03ba61325756fef2de0d11`.
+Matrix sha256: `3db1d06abbcec760aa4ce80f68aacaed7ed17df3fc998adf3c74707b86695bdb`.
 
-With only this new evidence directory present:
+## 5. Historical serial gate reliance
+
+The gate harness is byte-unchanged, and F1/F2 add no gate-path semantic. No expensive gate was
+rerun. Historical final evidence remains:
+
+| Case | Historical result | Seconds |
+|---|---|---:|
+| G0 unchanged fast | CONTROL PASS | 152.670 |
+| G1 wrong paragraph fast | REQUIRED FAIL, expected baseline hole | 150.318 |
+| G2 unchanged isolated deep | CONTROL PASS | 286.512 |
+| G3 wrong paragraph deep | REQUIRED FAIL, expected baseline hole | 289.146 |
+| G4 planned 103/550 unchanged | CONTROL PASS | 153.205 |
+| G5 delete B 11-test file | REQUIRED PASS, exact 92 < 103 | 145.689 |
+| G6 delete C 23-test file | REQUIRED PASS, exact 527 < 550 | 143.293 |
+
+Historical score is REQUIRED 2/4, CONTROL 3/3. Gate harness/matrix hashes are
+`fb389fdd…fc39` / `0b4d9c12…c58`; the seven full raw hashes remain in unchanged tracked
+`logs/gate-summary.log`. This correction does not refresh those timings or raw logs.
+
+## 6. Measurement hygiene and limits
+
+The corrected harness ran normal, zero-sibling and exact-positive variants in disposable clean
+clones. A provisional sibling run exposed that its heredoc detector mistook the comment
+`# <<< GATE BOOTSTRAP <<<` for a heredoc and failed the live-reader control; it was not counted.
+After excluding full-line comments and adding `P-reader-restore`, all three final runs have every
+control green. Setup/calibration failures are not verdicts under D-066(4).
+
+Full raw focused logs remain external and are hash-bound. Prior gate raw logs remain external due
+the pre-existing machine path in the rename stage. This establishes instrument discrimination,
+not implementation, generic parsing/Markdown completeness, historical truth, certification,
+signing, publication or D-055 closure.
+
+## 7. Guards
+
+With the correction confined to this directory:
 
 - secret guard, worktree and staged modes: `clean`;
-- review scope: pass before staging at 588/588 (R1 389 / R2 47 / R3 152), then pass with
-  this directory staged at 602/602 (R1 403 / R2 47 / R3 152);
-- findings ledger: pass, 23 IDs and D-057(1) totals unchanged;
-- suite-floor reader: exit 0 and exact baseline `92/527/221/7/78/30`;
-- vendor-honesty mechanical guard: pass, while D-008(1)/(3) remain John's authority exactly as
-  printed; and
-- workspace guards: pass with 13 pre-existing machine-state findings baselined and zero new.
+- review scope: worktree pass at 603/603 (R1 404 / R2 47 / R3 152), then staged pass at
+  609/609 tracked files (R1 410 / R2 47 / R3 152);
+- findings ledger: pass with 23 IDs and D-057(1) totals unchanged;
+- live suite-floor reader: exit 0 at `92/527/221/7/78/30`;
+- vendor-honesty mechanical guard: pass, with D-008 authority left exactly as printed; and
+- workspace guard: pass with 13 pre-existing machine-state findings baselined and zero new.
 
-A green workspace guard is ratcheted evidence: it permits the 13 pre-existing Sentinel
-machine-state findings and does not claim those findings are absent.
-
-## 5. Limits
-
-The baseline gate logs contain a machine-specific repository path in the pre-existing rename
-stage. Full logs therefore remain outside the repository and are bound by sha256; tracked logs
-preserve the exact scored lines only. This evidence does not establish a repaired pass, generic
-shell parsing, generic Markdown consistency, correctness of historical records, a signed/public
-claim, or any fact outside the card boundary.
+A workspace pass remains ratcheted: the 13 pre-existing findings are accepted debt, not absent.

@@ -13,8 +13,9 @@ git submodule status
 test -d ts/node_modules
 ```
 
-Expected baseline HEAD:
-`1a133301533e9d959dbafbbcc7ffe05e7eb78df3`.
+Behavioral baseline is `1a133301533e9d959dbafbbcc7ffe05e7eb78df3`; the corrected pre-repair
+focused evidence was driven against clean Review-1 commit
+`e3b8a76cff7a002b3211bb8f8a75f2d14b86a37e` by the corrected external harness.
 
 ## 2. Focused contract
 
@@ -29,10 +30,29 @@ shasum -a 256 "$matrix_out"
 printf 'focused_rc=%s\n' "$focused_rc"
 ```
 
-At the frozen baseline, expected verdict is exit 1, REQUIRED 10/53, CONTROL 28/28. Exit 2 is an
+At the frozen pre-repair subject, expected verdict is exit 1, REQUIRED 10/71, CONTROL 65/65.
+Exit 2 is an
 invalid instrument/setup state and must not be reported as a product verdict.
 
-## 3. Serial top-level gate contract
+## 3. Causal sibling and satisfying control
+
+Use the same clean source/subject and a fresh output path for each:
+
+```bash
+A_FLOORS_VARIANT=digits-zero-sibling A_FLOORS_MATRIX="$zero_matrix" \
+  "$evidence/a-floors.py" "$(pwd -P)" "$subject"
+zero_rc=$?
+
+A_FLOORS_VARIANT=exact-positive-control A_FLOORS_MATRIX="$positive_matrix" \
+  "$evidence/a-floors.py" "$(pwd -P)" "$subject"
+positive_rc=$?
+```
+
+The zero sibling must return REQUIRED 65/71 and CONTROL 65/65, with exactly six `Z-*` failures.
+Compare its matrix by case name to `focused-matrix-review1.tsv`: all 81 old rows must be present
+and PASS. The exact-positive control must return 71/71, 65/65 and completion.
+
+## 4. Serial top-level gate contract
 
 First confirm no competing Sentinel gate is running. Use a new empty log directory. The harness
 runs seven gates synchronously and must not be launched in parallel with any other final gate:
@@ -47,14 +67,15 @@ shasum -a 256 "$gate_logs"/*.raw.log "$gate_logs/matrix.tsv"
 printf 'gate_rc=%s\n' "$gate_rc"
 ```
 
-Baseline expectation is exit 1, REQUIRED 2/4, CONTROL 3/3. The cases execute in this fixed order:
+Historical baseline expectation is exit 1, REQUIRED 2/4, CONTROL 3/3. The cases execute in this fixed order:
 unchanged fast, wrong-reader fast, unchanged deep, wrong-reader deep, raised-floor control,
 B-EVENTS deletion, C-SNAPSHOT deletion.
 
 The harness timeout, clone failure, missing dependency, dirty tracked source or non-empty log
-directory is exit 2 before final scoring. Do not convert it to HOLD/FAIL.
+directory is exit 2 before final scoring. Do not convert it to HOLD/FAIL. Review-1 F1/F2 did not
+change this harness; do not present a rerun-free correction as refreshed gate/timing evidence.
 
-## 4. Inspect material output
+## 5. Inspect material output
 
 For every raw gate log read, rather than infer:
 
@@ -66,7 +87,7 @@ G1/G3 are green at the pre-repair baseline and therefore fail their required ass
 conforming repair they must name the reader-publication defect, show later success, and fail
 closed. G5/G6 must keep their exact 92/527 deletion deltas.
 
-## 5. Repository and workspace guards
+## 6. Repository and workspace guards
 
 ```bash
 ./scripts/check-secrets.sh --worktree
@@ -81,9 +102,9 @@ closed. G5/G6 must keep their exact 92/527 deletion deltas.
 Read all output. The workspace guard's pass is ratcheted; it reports 13 pre-existing baselined
 machine-state findings and must report zero new.
 
-## 6. Post-repair fixed target
+## 7. Post-repair fixed target
 
-A conforming implementation subject must return focused REQUIRED 53/53 and CONTROL 28/28, then
+A conforming implementation subject must return focused REQUIRED 71/71 and CONTROL 65/65, then
 gate REQUIRED 4/4 and CONTROL 3/3 with the same frozen harness hashes. Re-run repository/workspace
 guards and obtain a different independent verifier at that exact subject. Do not edit the
 instruments to fit the implementation.

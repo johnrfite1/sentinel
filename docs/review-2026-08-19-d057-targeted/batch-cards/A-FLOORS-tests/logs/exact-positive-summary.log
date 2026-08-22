@@ -1,0 +1,11 @@
+A-FLOORS corrected focused frozen contract
+subject=e3b8a76cff7a002b3211bb8f8a75f2d14b86a37e
+baseline=1a133301533e9d959dbafbbcc7ffe05e7eb78df3
+variant=exact-positive-control
+harness_sha256=827a4119f60ac97e20951d3a1b0b43a411b3bd2db48872cde754a700d584fc39
+REQUIRED 71/71
+CONTROL 65/65
+A_FLOORS_FOCUSED_COMPLETE
+exit=0
+raw_sha256=34980d90b09909c698abf7e8f2c88d02e81755325d03ba61325756fef2de0d11
+matrix_sha256=3db1d06abbcec760aa4ce80f68aacaed7ed17df3fc998adf3c74707b86695bdb

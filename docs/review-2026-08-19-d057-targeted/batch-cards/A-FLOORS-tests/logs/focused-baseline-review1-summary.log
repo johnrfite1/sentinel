@@ -1,0 +1,18 @@
+A-FLOORS focused frozen contract
+subject=1a133301533e9d959dbafbbcc7ffe05e7eb78df3
+baseline=1a133301533e9d959dbafbbcc7ffe05e7eb78df3
+harness_sha256=4782ff0211ce64c5a6fb1c82b7faf6ea3b4118eea4fe218c38648386e235200f
+P-history CONTROL PASS dated numbers inside both enumerated D-010 logical paragraphs remain controls
+P-session-stable REQUIRED FAIL wrapped live §3 floor paragraph refuses with named reader diagnostic
+P-wrap-witness CONTROL PASS wrapped and unwrapped mutations normalize to one logical paragraph
+P-session-stable-flat REQUIRED FAIL equivalent unwrapped live §3 paragraph receives the same diagnostic class
+P-session-d010 REQUIRED FAIL wrapped current D-010 paragraph refuses with named reader diagnostic
+P-coverage-d010 REQUIRED FAIL wrapped current gate coverage paragraph refuses with named reader diagnostic
+W-common REQUIRED FAIL one real-gate targeted-guard invocation; observed 0
+W-positive CONTROL PASS frozen candidate text survives fixtures and one direct invocation increments the oracle
+REQUIRED 10/53
+CONTROL 28/28
+PRE-REPAIR DEFECTS OBSERVED
+exit=1
+raw_sha256=8a34c604d0a9ce814a55715a1f1775fcb9f01eff76a90b7ad4d33174c7d57478
+matrix_sha256=a704290d198f14ab85db1a66149b5dd03ff3d7096ad04646f05f5c6980247ca5

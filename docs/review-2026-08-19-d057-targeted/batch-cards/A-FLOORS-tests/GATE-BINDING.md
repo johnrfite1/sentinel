@@ -1,5 +1,17 @@
 # A-FLOORS — fast and deep top-level gate binding
 
+## Correction status and reliance limit
+
+Review-1 F1/F2 change only focused source-value/assignment stimuli. The 328-line gate harness is
+byte-unchanged at sha256 `fb389fdd33e981a356436cf37e453158787288c6d64530c28c695fcec83cd8d0`,
+and `gate-matrix.tsv` is byte-unchanged at
+`0b4d9c127e7230c7266960fe073f92f9551da9a68005cb936850993d803d1c58`.
+
+The seven expensive gate cases were therefore not rerun for this bounded correction. Everything
+below is retained historical author evidence from the original subject: it remains relevant to
+the unchanged gate design, but this correction neither refreshes its timings/raw logs nor claims
+independent reinspection of the external logs. Fresh focused evidence is in `RESULTS.md`.
+
 **Baseline:** `1a133301533e9d959dbafbbcc7ffe05e7eb78df3`.
 
 **Frozen gate:** `scripts/test.sh`, sha256

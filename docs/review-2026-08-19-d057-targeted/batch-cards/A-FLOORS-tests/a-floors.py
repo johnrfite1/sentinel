@@ -95,6 +95,11 @@ def canonical_value(path: Path, name: str) -> int | None:
     return int(found[0]) if len(found) == 1 else None
 
 
+def legacy_first_value(path: Path, name: str) -> str | None:
+    found = re.findall(rf"(?m)^{re.escape(name)}=([^\n]*)$", path.read_text())
+    return found[0] if found else None
+
+
 def replace_once(path: Path, old: str, new: str) -> None:
     text = path.read_text()
     if text.count(old) != 1:
@@ -143,6 +148,140 @@ On 2026-08-18 the old floor constants were 75/513/209/7/78/30. This paragraph is
 dated and outside the enumerated current paragraphs.
 """
 
+ZERO_ACCEPTING_SIBLING = r'''#!/usr/bin/env bash
+set -uo pipefail
+ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)" || exit 2
+python3 - "$ROOT/scripts/test.sh" "$ROOT/docs/session-state.md" <<'PY'
+import re, sys
+
+gate_path, session_path = sys.argv[1:]
+gate = open(gate_path).read()
+session = open(session_path).read()
+names = (
+    "FOUNDRY_MIN_TESTS", "TS_MIN_TESTS", "VERIFIER_MIN_TESTS",
+    "VERIFIER_MIN_SAMPLES", "VERIFIER_MIN_TAMPER", "VERIFIER_MIN_TAMPER_MODES",
+)
+
+def shell_code(line):
+    out = []
+    quote = None
+    escaped = False
+    for index, char in enumerate(line):
+        if escaped:
+            escaped = False
+            if quote is None:
+                out.append(char)
+            continue
+        if char == "\\":
+            escaped = True
+            continue
+        if quote is not None:
+            if char == quote:
+                quote = None
+            continue
+        if char in "'\"":
+            quote = char
+            continue
+        if char == "#" and (index == 0 or line[index - 1].isspace()):
+            break
+        out.append(char)
+    return "".join(out)
+
+tokens = {name: [] for name in names}
+heredoc = None
+for number, raw in enumerate(gate.splitlines(), 1):
+    if heredoc is not None:
+        if raw.strip() == heredoc:
+            heredoc = None
+        continue
+    marker = None if raw.lstrip().startswith("#") else re.search(
+        r"<<-?\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\1", raw
+    )
+    if marker:
+        heredoc = marker.group(2)
+    code = shell_code(raw)
+    for name in names:
+        if not re.search(rf"(?<![A-Za-z0-9_]){re.escape(name)}\s*=", code):
+            continue
+        direct = re.fullmatch(rf"{re.escape(name)}=(.*)", code)
+        tokens[name].append((number, direct.group(1) if direct else None))
+
+failed = False
+values = {}
+for name in names:
+    found = tokens[name]
+    if not found:
+        print(f"{name}: missing definition")
+        failed = True
+        continue
+    if len(found) > 1:
+        print(f"{name}: duplicate executable assignment")
+        failed = True
+        continue
+    value = found[0][1]
+    if value is None:
+        print(f"{name}: malformed assignment")
+        failed = True
+    elif value == "":
+        print(f"{name}: empty assignment")
+        failed = True
+    elif not re.fullmatch(r"[0-9]+", value):
+        print(f"{name}: numeric positive decimal required")
+        failed = True
+    else:
+        values[name] = value
+
+normal_session = re.sub(r"\s+", " ", session)
+normal_gate = re.sub(r"\s+", " ", gate)
+if "What is stable and worth stating: current floors are Foundry" in normal_session:
+    print("session-state current publication is a numeric copy and must derive")
+    failed = True
+if "D-010 verifier:** 7 samples" in normal_session:
+    print("session-state maintained publication is a numeric copy and must derive")
+    failed = True
+if "D-010 The current verifier has" in normal_gate:
+    print("coverage current publication is a numeric copy and must derive")
+    failed = True
+
+if failed:
+    sys.exit(1)
+for name in names:
+    print(f"  {name:<26} {values[name]}")
+print("suite floors: read from scripts/test.sh, which is the only executable source.")
+PY
+'''
+
+
+def install_zero_accepting_sibling(root: Path) -> None:
+    gate = root / "scripts/test.sh"
+    text = gate.read_text()
+    for name, value in FLOORS.items():
+        pattern = rf"(?m)^{re.escape(name)}=[^\n]*$"
+        if len(re.findall(pattern, text)) != 1:
+            raise RuntimeError(f"zero sibling floor anchor {name}")
+        text = re.sub(pattern, f"{name}={value}", text)
+    anchor = 'step() { printf \'\\n\\033[1m== %s ==\\033[0m\\n\' "$1"; }\n'
+    if text.count(anchor) != 1:
+        raise RuntimeError("zero sibling gate wiring anchor")
+    gate.write_text(text.replace(
+        anchor,
+        anchor + "\n./scripts/check-suite-floors.sh || fail=1\n",
+    ))
+    reader = root / "scripts/check-suite-floors.sh"
+    reader.write_text(ZERO_ACCEPTING_SIBLING)
+    reader.chmod(0o755)
+
+
+def install_exact_positive_control(root: Path) -> None:
+    install_zero_accepting_sibling(root)
+    reader = root / "scripts/check-suite-floors.sh"
+    text = reader.read_text()
+    old = 're.fullmatch(r"[0-9]+", value)'
+    new = 're.fullmatch(r"[1-9][0-9]*", value)'
+    if text.count(old) != 1:
+        raise RuntimeError("exact-positive sibling predicate anchor")
+    reader.write_text(text.replace(old, new))
+
 
 def make_fixture(root: Path) -> None:
     (root / "scripts/test.sh").write_text(VALID_TEST_SH)
@@ -157,6 +296,18 @@ def shell_value(script: Path, name: str) -> tuple[int, str]:
         stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False,
     )
     return result.returncode, result.stdout
+
+
+def shell_assignment_trace(script: Path, name: str) -> tuple[int, list[str]]:
+    result = subprocess.run(
+        [
+            "bash", "--noprofile", "--norc", "-x", "-c",
+            'source "$1" >/dev/null; printf "done"', "_", str(script),
+        ],
+        text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False,
+    )
+    values = re.findall(rf"(?m)^\++ {re.escape(name)}=([^\s]*)$", result.stdout)
+    return result.returncode, values
 
 
 def source_refusal(result: subprocess.CompletedProcess[str], name: str, reason: str) -> bool:
@@ -213,6 +364,10 @@ def main() -> int:
         return 2
 
     matrix_path = os.environ.get("A_FLOORS_MATRIX")
+    variant = os.environ.get("A_FLOORS_VARIANT", "baseline")
+    if variant not in ("baseline", "digits-zero-sibling", "exact-positive-control"):
+        print("preflight: unknown A_FLOORS_VARIANT", file=sys.stderr)
+        return 2
     with tempfile.TemporaryDirectory(prefix="a-floors.") as temp:
         root = Path(temp) / "subject"
         cloned = run(["git", "clone", "--no-hardlinks", "--local", str(source), str(root)], source)
@@ -226,10 +381,15 @@ def main() -> int:
         if must(["git", "rev-parse", "HEAD"], root, "identity").strip() != subject:
             print("preflight: clone identity mismatch", file=sys.stderr)
             return 2
+        if variant == "digits-zero-sibling":
+            install_zero_accepting_sibling(root)
+        elif variant == "exact-positive-control":
+            install_exact_positive_control(root)
 
         print("A-FLOORS focused frozen contract")
         print(f"subject={subject}")
         print(f"baseline={BASELINE}")
+        print(f"variant={variant}")
         print(f"harness_sha256={digest(Path(__file__))}")
 
         print("\n== frozen B/C preservation controls ==")
@@ -247,7 +407,12 @@ def main() -> int:
         print("\n== live canonical values ==")
         actual_gate = root / "scripts/test.sh"
         actual_gate_text = actual_gate.read_text()
+        actual_session = root / "docs/session-state.md"
+        actual_session_text = actual_session.read_text()
+        actual_reader_hash = digest(root / "scripts/check-suite-floors.sh")
         live_reader = checker(root)
+        if live_reader.returncode != 0:
+            print("  live-reader diagnostic: " + live_reader.stdout.strip().replace("\n", " | "))
         record("CONTROL", "V-reader-alive", live_reader.returncode == 0,
                "unchanged baseline reader executes successfully")
         for name, expected in FLOORS.items():
@@ -296,16 +461,31 @@ def main() -> int:
                    "assigned non-numeric value refuses by constant and reason")
 
             make_fixture(root)
+            replace_once(root / "scripts/test.sh", line, f"{name}=0")
+            result = checker(root)
+            record("REQUIRED", f"Z-{name}", source_refusal(result, name, "positive"),
+                   "zero refuses by constant and positive-decimal reason")
+
+            make_fixture(root)
+            replace_once(root / "scripts/test.sh", line, f"{name}=1")
+            result = checker(root)
+            record(
+                "CONTROL", f"ONE-{name}",
+                result.returncode == 0 and printed_value(result.stdout, name) == "1",
+                "ordinary positive decimal one remains accepted and reported",
+            )
+
+            make_fixture(root)
             replace_once(root / "scripts/test.sh", line, line + f"\n{name}=999")
             result = checker(root)
             bash_rc, bash_got = shell_value(root / "scripts/test.sh", name)
             witness = (
                 bash_rc == 0 and bash_got == "999"
-                and printed_value(result.stdout, name) == str(value)
+                and legacy_first_value(root / "scripts/test.sh", name) == str(value)
                 and len(source_assignments(root / "scripts/test.sh", name)) == 2
             )
             record("CONTROL", f"DAW-{name}", witness,
-                   "after witness: current reader first-wins; Bash last-wins 999")
+                   "after witness: legacy first-line projection differs from Bash last-wins 999")
             record("REQUIRED", f"DA-{name}", source_refusal(result, name, "duplicate"),
                    "duplicate after the canonical definition refuses by name")
 
@@ -315,11 +495,11 @@ def main() -> int:
             bash_rc, bash_got = shell_value(root / "scripts/test.sh", name)
             witness = (
                 bash_rc == 0 and bash_got == str(value)
-                and printed_value(result.stdout, name) == "999"
+                and legacy_first_value(root / "scripts/test.sh", name) == "999"
                 and len(source_assignments(root / "scripts/test.sh", name)) == 2
             )
             record("CONTROL", f"DBW-{name}", witness,
-                   f"before witness: current reader first-wins 999; Bash last-wins {value}")
+                   f"before witness: legacy first-line projection 999 differs from Bash {value}")
             record("REQUIRED", f"DB-{name}", source_refusal(result, name, "duplicate"),
                    "duplicate before the canonical definition refuses by name")
 
@@ -334,7 +514,74 @@ def main() -> int:
             record("CONTROL", f"DCW-{name}", witness,
                    "conditional duplicate executes and shadows the canonical value")
             record("REQUIRED", f"DC-{name}", source_refusal(result, name, "duplicate"),
-                   "conditional/indented assignment token refuses as duplicate")
+                   "inline conditional assignment token refuses as duplicate")
+
+            make_fixture(root)
+            replace_once(root / "scripts/test.sh", line, line + f"\n    {name}=999")
+            result = checker(root)
+            bash_rc, bash_got = shell_value(root / "scripts/test.sh", name)
+            trace_rc, trace = shell_assignment_trace(root / "scripts/test.sh", name)
+            witness = (
+                bash_rc == 0 and bash_got == "999" and trace_rc == 0
+                and trace == [str(value), "999"]
+            )
+            record("CONTROL", f"IAW-{name}", witness,
+                   "indented-after executes after canonical and Bash last-wins 999")
+            record("REQUIRED", f"IA-{name}", source_refusal(result, name, "duplicate"),
+                   "standalone indented duplicate after canonical refuses by name")
+
+            make_fixture(root)
+            replace_once(root / "scripts/test.sh", line, f"    {name}=999\n" + line)
+            result = checker(root)
+            bash_rc, bash_got = shell_value(root / "scripts/test.sh", name)
+            trace_rc, trace = shell_assignment_trace(root / "scripts/test.sh", name)
+            witness = (
+                bash_rc == 0 and bash_got == str(value) and trace_rc == 0
+                and trace == ["999", str(value)]
+            )
+            record("CONTROL", f"IBW-{name}", witness,
+                   f"indented-before executes first; canonical later restores {value}")
+            record("REQUIRED", f"IB-{name}", source_refusal(result, name, "duplicate"),
+                   "standalone indented duplicate before canonical refuses by name")
+
+            make_fixture(root)
+            replace_once(root / "scripts/test.sh", line, line + f"\n    # {name}=999")
+            result = checker(root)
+            bash_rc, bash_got = shell_value(root / "scripts/test.sh", name)
+            record(
+                "CONTROL", f"IC-{name}",
+                result.returncode == 0 and bash_rc == 0 and bash_got == str(value)
+                and printed_value(result.stdout, name) == str(value),
+                "indented commented assignment-shaped text is inert and accepted",
+            )
+
+            make_fixture(root)
+            replace_once(
+                root / "scripts/test.sh", line,
+                line + f"\nprintf '%s\\n' '{name}=999' >/dev/null",
+            )
+            result = checker(root)
+            bash_rc, bash_got = shell_value(root / "scripts/test.sh", name)
+            record(
+                "CONTROL", f"IQ-{name}",
+                result.returncode == 0 and bash_rc == 0 and bash_got == str(value)
+                and printed_value(result.stdout, name) == str(value),
+                "quoted assignment-shaped string is inert and accepted",
+            )
+
+            make_fixture(root)
+            replace_once(
+                root / "scripts/test.sh", line,
+                line + f"\n: <<'A_FLOOR_INERT'\n{name}=999\nA_FLOOR_INERT",
+            )
+            result = checker(root)
+            bash_rc, bash_got = shell_value(root / "scripts/test.sh", name)
+            record(
+                "CONTROL", f"IH-{name}",
+                result.returncode == 0 and bash_rc == 0 and bash_got == str(value)
+                and printed_value(result.stdout, name) == str(value),
+                "quoted-heredoc assignment-shaped body is inert and accepted",
+            )
 
         print("\n== enumerated logical-paragraph matrix ==")
         make_fixture(root)
@@ -428,6 +675,16 @@ def main() -> int:
             actual_gate.read_text() != actual_gate_text
             and wiring_count(wired_witness) == invocation_count + 1,
             "frozen candidate text survives fixtures and one direct invocation increments the oracle",
+        )
+        actual_gate.write_text(actual_gate_text)
+        actual_session.write_text(actual_session_text)
+        restored_reader = checker(root)
+        record(
+            "CONTROL", "P-reader-restore",
+            digest(root / "scripts/check-suite-floors.sh") == actual_reader_hash
+            and restored_reader.returncode == live_reader.returncode
+            and restored_reader.stdout == live_reader.stdout,
+            "fixture transforms leave candidate reader bytes and restored behavior identical",
         )
 
     if matrix_path:

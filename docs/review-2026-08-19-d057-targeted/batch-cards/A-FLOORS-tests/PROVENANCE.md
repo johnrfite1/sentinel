@@ -14,10 +14,14 @@
 | frozen B-EVENTS test | blob `b601b0ad949a6c64b5ab53232fc00a9784e123a0`; sha256 `2a9219cc5138858b012b0bc56069490db3dd7d1963b73ccc19c28a48ce2b029e` |
 | frozen C-SNAPSHOT test | blob `6a00cb9d674a5fe89c0e999149add7e25f7100de`; sha256 `29a673560e89b639b6635661706a368454c9969a04c5d37c4f6c15229df3dd8a` |
 | signed Gate S2 pack | blob `baab3e7809a46f22131ef2b609f30af1ed8eeada`; sha256 `833671b8071b0c8786e6fcbd0aaa672478d437e6f6d4ba01c744fb1f816bf589` |
+| original evidence subject | `e8b4d29641c47f0099482c9a9ac5da86c9255197`; tree `3debee282acb37a23e0a5ba8eb38368ad5736d08` |
+| independent Review-1 FAIL | `e3b8a76cff7a002b3211bb8f8a75f2d14b86a37e`; tree `bd3357e60d5f9b6cc5942a0f75eff38102349286` |
+| preserved `INSTRUMENT-REVIEW-1.md` | sha256 `d07c6358127caba142b0c95adcba6fc33cb5b8eafdbba5c8680382a32d39c82d` |
 
-The shared worktree was clean at baseline. Focused and gate probes cloned an exact commit into
-private temporary roots. Mutations touched only those disposable clones. The shared repository
-received only new files under this evidence directory.
+The shared worktree was clean at the Review-1 parent. Corrected focused probes cloned the exact
+review commit into private temporary roots; every source mutation remained there. The shared
+repository correction changes only files under this evidence directory and preserves the review
+record byte-for-byte.
 
 ## Governing and source material read
 
@@ -49,14 +53,18 @@ decision entries, signed packs and dated narration were classified as controls, 
 
 | Item | sha256 |
 |---|---|
-| focused harness, 455 lines | `4782ff0211ce64c5a6fb1c82b7faf6ea3b4118eea4fe218c38648386e235200f` |
-| focused matrix | `a704290d198f14ab85db1a66149b5dd03ff3d7096ad04646f05f5c6980247ca5` |
-| focused raw output, external | `8a34c604d0a9ce814a55715a1f1775fcb9f01eff76a90b7ad4d33174c7d57478` |
+| Review-1 focused harness/matrix, historical | `4782ff0211ce64c5a6fb1c82b7faf6ea3b4118eea4fe218c38648386e235200f` / `a704290d198f14ab85db1a66149b5dd03ff3d7096ad04646f05f5c6980247ca5` |
+| corrected focused harness, 712 lines | `827a4119f60ac97e20951d3a1b0b43a411b3bd2db48872cde754a700d584fc39` |
+| corrected baseline matrix/raw | `f0ab8dcd63efe98bbacfc353dd0e849b6b9f91bbdccd6288fa90c80a524b63a0` / `d90500cd684d245bdc79324f3562a92cabbc935b79595e65976878322ba20931` |
+| digits-zero sibling matrix/raw | `2094fba903c6ad9ef7f8be4cdba1bc5dfc0bc841b7f34fc70070b6787c6bf46c` / `2085505bdcd6db3004b5e82cb424da45cc658bcc47caf78ce3b7a522d6275e2c` |
+| exact-positive control matrix/raw | `3db1d06abbcec760aa4ce80f68aacaed7ed17df3fc998adf3c74707b86695bdb` / `34980d90b09909c698abf7e8f2c88d02e81755325d03ba61325756fef2de0d11` |
 | serial gate harness, 328 lines | `fb389fdd33e981a356436cf37e453158787288c6d64530c28c695fcec83cd8d0` |
 | gate matrix | `0b4d9c127e7230c7266960fe073f92f9551da9a68005cb936850993d803d1c58` |
 | gate wrapper raw output, external | `c4a41ddc58b73c7c23932556a37c7c955968298553fcbbd94314c550c01a6cb2` |
 
-The seven full gate-log hashes are in `RESULTS.md`. Full logs remain external because the
+The seven full gate-log hashes remain in unchanged tracked `logs/gate-summary.log`; gate design
+and reliance limits remain in `GATE-BINDING.md`. They were not rerun for the focused-only
+correction. Full logs remain external because the
 pre-existing rename stage prints a machine-specific absolute repository path. Tracked summaries
 and matrices contain no such path.
 
@@ -73,6 +81,7 @@ and matrices contain no such path.
 
 - No production, existing test, script, gate, floor, maintained claim, prior evidence or decision
   file changed.
+- `INSTRUMENT-REVIEW-1.md` remains byte-identical at the hash above.
 - Both frozen B/C test files remain byte-identical at the hashes above.
 - Signed Gate S2 material remains byte-identical.
 - No test patch was applied, no floor lowered, and no historical record rewritten.
