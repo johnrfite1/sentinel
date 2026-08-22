@@ -251,6 +251,9 @@ step "corpus class coverage (A-036)"
 step "vendor honesty (§7.5 Gate 5, D-008)"
 ./scripts/check-vendor-honesty.sh || fail=1
 
+step "suite floors (R4-F4, D-058)"
+./scripts/check-suite-floors.sh || fail=1
+
 # COUNT FLOORS FOR THE OTHER TWO SUITES (round six L8-14; authorised by John at D-055(d)).
 #
 # WHY THESE EXIST AT ALL. Until now only the verifier had a floor. The Foundry and TypeScript
@@ -274,8 +277,10 @@ step "vendor honesty (§7.5 Gate 5, D-008)"
 # ratchet against ACCIDENT, not against intent. It catches a suite that shrinks. It says
 # nothing about whether the tests that remain assert anything — `test/reasoncodes.test.ts`
 # exists because 22 of 31 signer checks once had no test at all while the count looked healthy.
-FOUNDRY_MIN_TESTS=92
-TS_MIN_TESTS=527
+# A-FLOORS (D-058): raised in the same edit as reconciling the live B-EVENTS (+11) and
+# C-SNAPSHOT (+23) suites the gate already executes. NEVER LOWER A FLOOR TO MAKE A RUN PASS.
+FOUNDRY_MIN_TESTS=103
+TS_MIN_TESTS=550
 
 step "solidity build + tests (profile: $PROFILE)"
 if command -v forge >/dev/null 2>&1; then
@@ -1020,9 +1025,9 @@ WHAT IS COVERED, by layer, each with the limit that layer cannot exceed:
 
   D-010    The independent Python receipt verifier, in `verifier/`. Zero third-party
            dependencies; its own RFC 8785, Keccak-f[1600] and secp256k1 recovery, built by
-           an agent that never read this repository's TypeScript. 7/7 samples verify, 78/78
-           applicable tamper cases across 30 distinct modes behave as specified, and 180/180
-           of its own tests pass.
+           an agent that never read this repository's TypeScript. Current measured counts
+           and all six floor values are printed above from canonical assignments; this
+           maintained paragraph does not copy them.
            THIS PARAGRAPH'S THREE FIGURES READ 62/24/149 FROM 2026-08-16 UNTIL 2026-08-17,
            while the floors this same run asserts read 160/7/77/29 and printed 142 lines
            above — five of round five's eight reviewers found it independently (A-058, B-1

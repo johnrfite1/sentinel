@@ -340,9 +340,10 @@ only copy, and `scripts/check-suite-floors.sh` prints them from the script itsel
 cannot drift from them again. That is the mechanical binding John required rather than a fifth
 hand-correction of a line whose own text already said it "has been wrong four times".
 
-**What is stable and worth stating: 50 corpus fixtures · 7 samples · 78 tamper cases over 30
-modes · workspace guards 0 NEW findings with 13 pre-existing baselined — it PASSES ON RATCHETED
-DEBT, which is not the same as clean.**
+**What is stable and worth stating: 50 corpus fixtures · workspace guards 0 NEW findings with
+13 pre-existing baselined — it PASSES ON RATCHETED DEBT, which is not the same as clean.**
+Values for the six floor dimensions are deliberately not repeated here; the checker derives
+them from scripts/test.sh.
 **AND SINCE A-075 THE FOUNDRY AND TYPESCRIPT FIGURES ARE FLOORS THIS GATE ASSERTS, which they
 had never been before** — ratcheted in the same edit as the suites, and falsified (a shrunk suite
 breaches; a `vm.skip`/`skip`/`todo` test is caught by a separate branch because the floor alone
@@ -445,8 +446,9 @@ means only that no NEW class went vacuous. Read their output, not their exit sta
   criterion** (L3-only = compares the call or its effects to the mandate's PURPOSE fields) and
   the figure fell from 17 to 8. The 8 are exactly the wrong-purpose class. The report emits the
   split as a CHECK — its second row must be empty.
-- **D-010 verifier: 7 samples, 77 tamper cases over 29 modes, 160 tests — and all four are FLOORS
-  the gate asserts.** *(CORRECTED 2026-08-17, round five `B-4`/`B-1`: this line read `7/7, 62/62,
+- **D-010 verifier:** Current measured counts and floor values are printed by the gate and by
+  scripts/check-suite-floors.sh; this maintained paragraph carries no numeric copy.
+  *(CORRECTED 2026-08-17, round five `B-4`/`B-1`: this line read `7/7, 62/62,
   24 modes, 149/149` — a fourth staleness in this file, seventy-nine lines below a §3 headline
   that already said 160 and 77/29. **The identical stale trio is STILL PRINTED BY THE GATE
   ITSELF** in `scripts/test.sh`'s COVERAGE BOUNDARY, where it is labelled "ALL THREE FIGURES ARE

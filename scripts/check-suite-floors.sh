@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Print the gate's suite floors FROM THE GATE (R4-F4, D-055(e)).
+# Print the gate's suite floors FROM THE GATE (R4-F4, D-055(e), D-058).
 #
 # WHY. `docs/session-state.md` §3 kept a hand-maintained copy of the suite counts and drifted
 # from the gate's constants five times — most recently publishing 507/198 while the floors were
@@ -9,6 +9,9 @@
 # THIS PRINTS THE FLOORS, NOT THE COUNTS. A floor is what the gate asserts; the count is what a
 # run measures. They are equal today and that is not guaranteed tomorrow — run the gate for the
 # counts. Stating this because reporting a floor as a measurement is the defect one layer up.
+#
+# Refusals name the constant as the subject of one record (`{NAME}: <class phrase>`). Live
+# floor copies in the three enumerated current paragraphs are refused; dated history is not.
 set -uo pipefail
 # --- Sentinel repository identity (D-060(2)) ---------------------------------
 # Derived from THIS FILE's own location, never the caller's working directory, so a
@@ -29,14 +32,163 @@ cd "$SENTINEL_ROOT" || { echo "  FAIL  cannot enter the Sentinel repository root
 # install-hooks write into a victim repository. GIT_PREFIX is included although inert on
 # git 2.50.1 — an inert variable today is not a guarantee tomorrow.
 unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_PREFIX
-GATE=scripts/test.sh
-get() { grep -E "^$1=" "$GATE" | head -1 | cut -d= -f2; }
-missing=0
-for v in FOUNDRY_MIN_TESTS TS_MIN_TESTS VERIFIER_MIN_TESTS VERIFIER_MIN_SAMPLES \
-         VERIFIER_MIN_TAMPER VERIFIER_MIN_TAMPER_MODES; do
-    val="$(get "$v")"
-    if [ -z "$val" ]; then echo "  MISSING: $v is not defined in $GATE"; missing=1
-    else printf "  %-26s %s\n" "$v" "$val"; fi
-done
-[ "$missing" -eq 0 ] || { echo "suite floors: a floor the gate asserts could not be read."; exit 1; }
-echo "suite floors: read from $GATE, which is the only copy."
+
+if ! command -v python3 >/dev/null 2>&1; then
+    echo "python3 not found; suite-floor reader refuses." >&2
+    exit 2
+fi
+
+python3 - "$SENTINEL_ROOT/scripts/test.sh" "$SENTINEL_ROOT/docs/session-state.md" <<'PY'
+import re
+import sys
+
+gate_path, session_path = sys.argv[1:]
+gate = open(gate_path).read()
+session = open(session_path).read()
+names = (
+    "FOUNDRY_MIN_TESTS", "TS_MIN_TESTS", "VERIFIER_MIN_TESTS",
+    "VERIFIER_MIN_SAMPLES", "VERIFIER_MIN_TAMPER", "VERIFIER_MIN_TAMPER_MODES",
+)
+VALUE_PATTERN = r"[1-9][0-9]*"
+
+
+def shell_code(line):
+    out = []
+    quote = None
+    escaped = False
+    for index, char in enumerate(line):
+        if escaped:
+            escaped = False
+            if quote is None:
+                out.append(char)
+            continue
+        if char == "\\":
+            escaped = True
+            continue
+        if quote is not None:
+            if char == quote:
+                quote = None
+            continue
+        if char in "'\"":
+            quote = char
+            continue
+        if char == "#" and (index == 0 or line[index - 1].isspace()):
+            break
+        out.append(char)
+    return "".join(out)
+
+
+def heredoc_opener(raw):
+    # Finite lexer: unquoted/quoted delimiter forms only. Operators inside ordinary
+    # quotes and here-strings are ignored. This is not a general Bash parser.
+    index = 0
+    quote = None
+    while index < len(raw):
+        char = raw[index]
+        if quote is not None:
+            if quote == '"' and char == "\\" and index + 1 < len(raw):
+                index += 2
+                continue
+            if char == quote:
+                quote = None
+            index += 1
+            continue
+        if char == "\\" and index + 1 < len(raw):
+            index += 2
+            continue
+        if char in "'\"":
+            quote = char
+            index += 1
+            continue
+        if char == "#" and (index == 0 or raw[index - 1].isspace()):
+            return None
+        if raw.startswith("<<<", index):
+            index += 3
+            continue
+        if not raw.startswith("<<", index):
+            index += 1
+            continue
+        cursor = index + 2
+        if cursor < len(raw) and raw[cursor] == "-":
+            cursor += 1
+        while cursor < len(raw) and raw[cursor].isspace():
+            cursor += 1
+        delimiter_quote = None
+        if cursor < len(raw) and raw[cursor] in "'\"":
+            delimiter_quote = raw[cursor]
+            cursor += 1
+        match = re.match(r"[A-Za-z_][A-Za-z0-9_]*", raw[cursor:])
+        if not match:
+            index += 2
+            continue
+        delimiter = match.group(0)
+        cursor += len(delimiter)
+        if delimiter_quote is not None:
+            if cursor >= len(raw) or raw[cursor] != delimiter_quote:
+                index += 2
+                continue
+        return delimiter
+    return None
+
+
+tokens = {name: [] for name in names}
+heredoc = None
+for number, raw in enumerate(gate.splitlines(), 1):
+    if heredoc is not None:
+        if raw.strip() == heredoc:
+            heredoc = None
+        continue
+    marker = heredoc_opener(raw)
+    if marker is not None:
+        heredoc = marker
+    code = shell_code(raw)
+    for name in names:
+        if not re.search(rf"(?<![A-Za-z0-9_]){re.escape(name)}\s*=", code):
+            continue
+        direct = re.fullmatch(rf"{re.escape(name)}=(.*)", code)
+        tokens[name].append((number, direct.group(1) if direct else None))
+
+failed = False
+values = {}
+for name in names:
+    found = tokens[name]
+    if not found:
+        print(f"{name}: missing definition")
+        failed = True
+        continue
+    if len(found) > 1:
+        print(f"{name}: duplicate executable assignment")
+        failed = True
+        continue
+    value = found[0][1]
+    if value is None:
+        print(f"{name}: malformed assignment")
+        failed = True
+    elif value == "":
+        print(f"{name}: empty assignment")
+        failed = True
+    elif not re.fullmatch(VALUE_PATTERN, value):
+        print(f"{name}: numeric positive decimal required")
+        failed = True
+    else:
+        values[name] = value
+
+normal_session = re.sub(r"\s+", " ", session)
+normal_gate = re.sub(r"\s+", " ", gate)
+if "What is stable and worth stating: current floors are Foundry" in normal_session:
+    print("session-state current publication is a numeric copy and must derive")
+    failed = True
+if "D-010 verifier:** 7 samples" in normal_session:
+    print("session-state maintained publication is a numeric copy and must derive")
+    failed = True
+if "D-010 The current verifier has" in normal_gate:
+    print("coverage current publication is a numeric copy and must derive")
+    failed = True
+
+if failed:
+    sys.exit(1)
+for name in names:
+    print(f"  {name:<26} {values[name]}")
+print("suite floors: read from scripts/test.sh, which is the only copy.")
+PY
+exit $?
