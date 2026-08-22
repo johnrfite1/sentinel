@@ -1,0 +1,343 @@
+// SPDX-License-Identifier: UNLICENSED
+pragma solidity 0.8.28;
+
+import {Test} from "forge-std/Test.sol";
+import {Vm} from "forge-std/Vm.sol";
+import {SentinelVault} from "../src/SentinelVault.sol";
+import {SentinelTypes as T} from "../src/types/SentinelTypes.sol";
+import {DemoPay} from "../src/demo/DemoPay.sol";
+
+/// @notice Live-receipt probe helper. It exposes swallowed and ancestor-revert boundaries.
+contract BEventsRelay {
+    event Attempted(address indexed vault, bool ok);
+
+    error ForcedOuterRevert();
+
+    function relay(address vault, bytes calldata payload) external {
+        (bool ok,) = vault.call(payload);
+        emit Attempted(vault, ok);
+    }
+
+    function relayThenRevert(address vault, bytes calldata payload) external {
+        (bool ok,) = vault.call(payload);
+        if (!ok) revert ForcedOuterRevert();
+        revert ForcedOuterRevert();
+    }
+}
+
+/// @notice Frozen Batch B event contract. Every expected vault event binds its emitter.
+contract SentinelVaultEventsTest is Test {
+    event MandateActivated(bytes32 indexed mandateHash);
+    event MandateRevoked(bytes32 indexed mandateHash);
+    event PolicyActivated(bytes32 indexed policyHash);
+    event SignerRotated(address indexed previousSigner, address indexed newSigner);
+    event PausedSet(bool paused);
+    event Recovered(address indexed to, uint256 amount);
+    event ActionExecuted(
+        bytes32 indexed actionHash, uint256 indexed actionNonce, bytes32 decisionId, bool viaOverride
+    );
+    event OverrideAuthorized(
+        bytes32 indexed actionHash,
+        bytes32 indexed overrideHash,
+        bytes32 reviewReceiptHash,
+        bytes32 reasonHash,
+        uint64 expiresAt
+    );
+
+    uint256 internal constant OWNER_PK = 0xA11CE;
+    uint256 internal constant SIGNER_PK = 0x519E4;
+
+    bytes32 internal constant MANDATE_HASH = keccak256("events-mandate");
+    bytes32 internal constant POLICY_HASH = keccak256("events-policy");
+    bytes32 internal constant RESOURCE_ID = keccak256("events-resource");
+
+    address internal owner;
+    address internal signerAddr;
+    address internal beneficiary;
+    DemoPay internal demoPay;
+    SentinelVault internal vault;
+
+    function setUp() public {
+        owner = vm.addr(OWNER_PK);
+        signerAddr = vm.addr(SIGNER_PK);
+        beneficiary = address(0xBEEF);
+        demoPay = new DemoPay();
+
+        address[] memory targets = new address[](1);
+        targets[0] = address(demoPay);
+        bytes4[] memory selectors = new bytes4[](1);
+        selectors[0] = DemoPay.purchase.selector;
+        vault = new SentinelVault(owner, signerAddr, 1 ether, targets, selectors);
+
+        vm.deal(address(vault), 10 ether);
+        vm.warp(1_000_000);
+    }
+
+    function test_MandateActivated_exactFieldAndVaultEmitter() public {
+        vm.expectEmit(true, false, false, false, address(vault));
+        emit MandateActivated(MANDATE_HASH);
+        vm.recordLogs();
+        vm.prank(owner);
+        vault.activateMandate(MANDATE_HASH);
+        _assertSingleVaultTopic(vm.getRecordedLogs(), keccak256("MandateActivated(bytes32)"));
+        assertEq(vault.activeMandateHash(), MANDATE_HASH);
+    }
+
+    function test_MandateRevoked_exactPreviousFieldAndVaultEmitter() public {
+        vm.startPrank(owner);
+        vault.activateMandate(MANDATE_HASH);
+        vm.expectEmit(true, false, false, false, address(vault));
+        emit MandateRevoked(MANDATE_HASH);
+        vm.recordLogs();
+        vault.revokeMandate();
+        vm.stopPrank();
+        _assertSingleVaultTopic(vm.getRecordedLogs(), keccak256("MandateRevoked(bytes32)"));
+        assertEq(vault.activeMandateHash(), bytes32(0));
+    }
+
+    function test_PolicyActivated_exactFieldAndVaultEmitter() public {
+        vm.expectEmit(true, false, false, false, address(vault));
+        emit PolicyActivated(POLICY_HASH);
+        vm.recordLogs();
+        vm.prank(owner);
+        vault.activatePolicy(POLICY_HASH);
+        _assertSingleVaultTopic(vm.getRecordedLogs(), keccak256("PolicyActivated(bytes32)"));
+        assertEq(vault.activePolicyHash(), POLICY_HASH);
+    }
+
+    function test_SignerRotated_exactPreviousAndNewFieldsAndVaultEmitter() public {
+        address newSigner = address(0xCAFE);
+        vm.expectEmit(true, true, false, false, address(vault));
+        emit SignerRotated(signerAddr, newSigner);
+        vm.recordLogs();
+        vm.prank(owner);
+        vault.rotateSigner(newSigner);
+        _assertSingleVaultTopic(vm.getRecordedLogs(), keccak256("SignerRotated(address,address)"));
+        assertEq(vault.signer(), newSigner);
+    }
+
+    function test_PausedSet_exactTrueAndFalseFieldsAndVaultEmitter() public {
+        vm.startPrank(owner);
+        vm.expectEmit(false, false, false, true, address(vault));
+        emit PausedSet(true);
+        vm.recordLogs();
+        vault.setPaused(true);
+        _assertSingleVaultTopic(vm.getRecordedLogs(), keccak256("PausedSet(bool)"));
+        assertTrue(vault.paused());
+
+        vm.expectEmit(false, false, false, true, address(vault));
+        emit PausedSet(false);
+        vm.recordLogs();
+        vault.setPaused(false);
+        vm.stopPrank();
+        _assertSingleVaultTopic(vm.getRecordedLogs(), keccak256("PausedSet(bool)"));
+        assertFalse(vault.paused());
+    }
+
+    function test_Recovered_exactRecipientAndAmountFieldsAndVaultEmitter() public {
+        address payable recipient = payable(address(0xCAFE));
+        uint256 amount = 0.375 ether;
+        vm.expectEmit(true, false, false, true, address(vault));
+        emit Recovered(recipient, amount);
+        vm.recordLogs();
+        vm.prank(owner);
+        vault.recover(recipient, amount);
+        _assertSingleVaultTopic(vm.getRecordedLogs(), keccak256("Recovered(address,uint256)"));
+        assertEq(recipient.balance, amount);
+    }
+
+    function test_ActionExecuted_automaticExactFieldsFalseRouteAndVaultEmitter() public {
+        bytes memory data = _successData(false);
+        (T.ActionPayload memory action, T.DecisionReceiptPayload memory receipt, bytes memory receiptSig) =
+            _receiptBundle(T.Verdict.ALLOW, data);
+
+        vm.expectEmit(true, true, false, true, address(vault));
+        emit ActionExecuted(T.hashAction(action), action.actionNonce, receipt.decisionId, false);
+        vm.recordLogs();
+        vault.executeWithReceipt(action, data, receipt, receiptSig);
+        Vm.Log[] memory recorded = vm.getRecordedLogs();
+        bytes32[] memory expectedVaultTopics = new bytes32[](1);
+        expectedVaultTopics[0] = keccak256("ActionExecuted(bytes32,uint256,bytes32,bool)");
+        _assertExactVaultTopics(recorded, expectedVaultTopics);
+
+        assertEq(vault.actionNonce(), 1);
+        assertEq(demoPay.entitlementExpiry(beneficiary, RESOURCE_ID), uint64(block.timestamp + 1 hours));
+    }
+
+    function test_OverrideAndActionExecuted_exactFieldsTrueRouteOrderAndVaultEmitter() public {
+        bytes memory data = _successData(true);
+        (T.ActionPayload memory action, T.DecisionReceiptPayload memory receipt, bytes memory receiptSig) =
+            _receiptBundle(T.Verdict.REVIEW, data);
+        (T.OverrideAuthorizationPayload memory auth, bytes memory ownerSig) = _overrideBundle(action, receipt);
+        bytes32 overrideHash = T.hashOverride(auth);
+
+        vm.expectEmit(true, true, false, true, address(vault));
+        emit OverrideAuthorized(
+            auth.actionHash, overrideHash, auth.reviewReceiptHash, auth.reasonHash, auth.expiresAt
+        );
+        vm.expectEmit(true, true, false, true, address(vault));
+        emit ActionExecuted(T.hashAction(action), action.actionNonce, receipt.decisionId, true);
+        vm.recordLogs();
+        vault.executeWithOverride(action, data, receipt, receiptSig, auth, ownerSig);
+        Vm.Log[] memory recorded = vm.getRecordedLogs();
+        bytes32[] memory expectedVaultTopics = new bytes32[](2);
+        expectedVaultTopics[0] = keccak256("OverrideAuthorized(bytes32,bytes32,bytes32,bytes32,uint64)");
+        expectedVaultTopics[1] = keccak256("ActionExecuted(bytes32,uint256,bytes32,bool)");
+        _assertExactVaultTopics(recorded, expectedVaultTopics);
+
+        assertEq(vault.actionNonce(), 1);
+        assertEq(demoPay.entitlementExpiry(beneficiary, RESOURCE_ID), uint64(block.timestamp + 1 hours));
+        assertTrue(demoPay.recurringEnabled(beneficiary, RESOURCE_ID));
+    }
+
+    function test_revertedAutomaticCallRollsBackVaultNonceAndTargetState() public {
+        bytes memory data = _failingData();
+        (T.ActionPayload memory action, T.DecisionReceiptPayload memory receipt, bytes memory receiptSig) =
+            _receiptBundle(T.Verdict.ALLOW, data);
+
+        vm.expectPartialRevert(SentinelVault.CallFailed.selector);
+        vault.executeWithReceipt(action, data, receipt, receiptSig);
+
+        assertEq(vault.actionNonce(), 0);
+        assertEq(demoPay.entitlementExpiry(beneficiary, RESOURCE_ID), 0);
+    }
+
+    function test_revertedOverrideCallRollsBackAuthorizationNonceAndTargetState() public {
+        bytes memory data = _failingData();
+        (T.ActionPayload memory action, T.DecisionReceiptPayload memory receipt, bytes memory receiptSig) =
+            _receiptBundle(T.Verdict.REVIEW, data);
+        (T.OverrideAuthorizationPayload memory auth, bytes memory ownerSig) = _overrideBundle(action, receipt);
+
+        vm.expectPartialRevert(SentinelVault.CallFailed.selector);
+        vault.executeWithOverride(action, data, receipt, receiptSig, auth, ownerSig);
+
+        assertEq(vault.actionNonce(), 0);
+        assertEq(demoPay.entitlementExpiry(beneficiary, RESOURCE_ID), 0);
+    }
+
+    /// @dev Foundry deliberately exposes reverted-frame logs here. These entries are recorder
+    ///      artifacts, not durable receipt evidence; the live Anvil probe checks durability.
+    function test_LIMIT_recordLogsRetainsARevertedOverrideArtifact() public {
+        bytes memory data = _failingData();
+        (T.ActionPayload memory action, T.DecisionReceiptPayload memory receipt, bytes memory receiptSig) =
+            _receiptBundle(T.Verdict.REVIEW, data);
+        (T.OverrideAuthorizationPayload memory auth, bytes memory ownerSig) = _overrideBundle(action, receipt);
+
+        vm.recordLogs();
+        (bool ok,) = address(vault)
+            .call(
+                abi.encodeCall(
+                    SentinelVault.executeWithOverride, (action, data, receipt, receiptSig, auth, ownerSig)
+                )
+            );
+        Vm.Log[] memory recorded = vm.getRecordedLogs();
+        bytes32 overrideTopic = keccak256("OverrideAuthorized(bytes32,bytes32,bytes32,bytes32,uint64)");
+        uint256 retainedArtifacts;
+        for (uint256 i = 0; i < recorded.length; i++) {
+            if (recorded[i].emitter == address(vault) && recorded[i].topics[0] == overrideTopic) {
+                retainedArtifacts++;
+            }
+        }
+
+        assertFalse(ok);
+        assertEq(retainedArtifacts, 1, "recordLogs behavior changed; never treat this as durable evidence");
+        assertEq(vault.actionNonce(), 0, "the reverted frame must retain no vault state");
+    }
+
+    function _activate() internal {
+        vm.startPrank(owner);
+        vault.activateMandate(MANDATE_HASH);
+        vault.activatePolicy(POLICY_HASH);
+        vm.stopPrank();
+    }
+
+    function _assertExactVaultTopics(Vm.Log[] memory recorded, bytes32[] memory expected) internal view {
+        uint256 vaultLogIndex;
+        for (uint256 i = 0; i < recorded.length; i++) {
+            if (recorded[i].emitter != address(vault)) continue;
+            assertLt(vaultLogIndex, expected.length, "unexpected extra vault event");
+            assertEq(recorded[i].topics[0], expected[vaultLogIndex], "wrong vault event or order");
+            vaultLogIndex++;
+        }
+        assertEq(vaultLogIndex, expected.length, "missing vault event");
+    }
+
+    function _assertSingleVaultTopic(Vm.Log[] memory recorded, bytes32 expected) internal view {
+        bytes32[] memory expectedVaultTopics = new bytes32[](1);
+        expectedVaultTopics[0] = expected;
+        _assertExactVaultTopics(recorded, expectedVaultTopics);
+    }
+
+    function _successData(bool recurring) internal view returns (bytes memory) {
+        return abi.encodeCall(DemoPay.purchase, (RESOURCE_ID, beneficiary, uint64(1 hours), recurring));
+    }
+
+    function _failingData() internal view returns (bytes memory) {
+        return abi.encodeCall(DemoPay.purchase, (RESOURCE_ID, beneficiary, uint64(0), false));
+    }
+
+    function _receiptBundle(T.Verdict verdict, bytes memory data)
+        internal
+        returns (
+            T.ActionPayload memory action,
+            T.DecisionReceiptPayload memory receipt,
+            bytes memory receiptSig
+        )
+    {
+        _activate();
+        action = T.ActionPayload({
+            schemaVersion: 1,
+            chainId: block.chainid,
+            vault: address(vault),
+            actionNonce: vault.actionNonce(),
+            target: address(demoPay),
+            valueWei: 0.01 ether,
+            dataHash: keccak256(data),
+            operation: uint8(T.Operation.CALL),
+            mandateHash: MANDATE_HASH,
+            policyHash: POLICY_HASH,
+            deadline: uint64(block.timestamp + 1 hours)
+        });
+        receipt = T.DecisionReceiptPayload({
+            schemaVersion: 1,
+            decisionId: keccak256(abi.encode("events-decision", uint8(verdict))),
+            actionHash: T.hashAction(action),
+            mandateHash: MANDATE_HASH,
+            policyHash: POLICY_HASH,
+            verdict: uint8(verdict),
+            reasonCodesHash: keccak256("events-reasons"),
+            evidenceHash: keccak256("events-evidence"),
+            simulationBlockNumber: block.number,
+            simulationBlockHash: bytes32(0),
+            issuedAt: uint64(block.timestamp),
+            expiresAt: uint64(block.timestamp + 10 minutes),
+            signer: signerAddr
+        });
+        receiptSig = _sign(SIGNER_PK, T.hashReceipt(receipt));
+    }
+
+    function _overrideBundle(T.ActionPayload memory action, T.DecisionReceiptPayload memory receipt)
+        internal
+        view
+        returns (T.OverrideAuthorizationPayload memory auth, bytes memory ownerSig)
+    {
+        auth = T.OverrideAuthorizationPayload({
+            schemaVersion: 1,
+            reviewReceiptHash: T.hashReceipt(receipt),
+            actionHash: T.hashAction(action),
+            mandateHash: action.mandateHash,
+            policyHash: action.policyHash,
+            actionNonce: action.actionNonce,
+            reasonHash: keccak256("events-owner-reason"),
+            issuedAt: uint64(block.timestamp),
+            expiresAt: uint64(block.timestamp + 5 minutes)
+        });
+        ownerSig = _sign(OWNER_PK, T.hashOverride(auth));
+    }
+
+    function _sign(uint256 privateKey, bytes32 structHash) internal view returns (bytes memory) {
+        bytes32 digest = T.digest(vault.domainSeparator(), structHash);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(privateKey, digest);
+        return abi.encodePacked(r, s, v);
+    }
+}

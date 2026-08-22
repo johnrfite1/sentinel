@@ -271,9 +271,12 @@ contract SentinelVault {
         bytes32 digest = T.digest(_domainSeparator(), overrideHash);
         if (digest.recover(ownerSig) != owner) revert NotOwnerOverride();
 
-        // §3.3(2)'s "logged", emitted AFTER authentication and BEFORE the call — so the log
-        // records only authorizations that actually passed, and records them even if the
-        // external call then reverts the transaction away. (D-043)
+        // §3.3(2)'s "logged": emitted after every override-authentication check passes and
+        // before the external call. A durable OverrideAuthorized log exists only if the
+        // downstream call succeeds and every enclosing call frame commits. Any revert of
+        // this frame or an ancestor discards the log and nonce update. The event therefore
+        // records an override authorization consumed by a successful, retained vault
+        // execution; it does not record a failed or merely attempted override. (D-043, F7-R1)
         emit OverrideAuthorized(
             auth.actionHash, overrideHash, auth.reviewReceiptHash, auth.reasonHash, auth.expiresAt
         );
