@@ -54,6 +54,27 @@ edited. This correction closes its two findings:
 
 Reviews 1 and 2 stay byte-identical.
 
+## THIRD INSTRUMENT REVIEW — TWO DEFECTS CLOSED
+
+`INSTRUMENT-REVIEW-3.md` returned **FAIL** on `4c201d7`. That review is historical and is not
+edited. This correction closes its two findings:
+
+- **F3-1, claimed whitespace missed TypeScript whitespace.** `_skip_ws_comments` only
+  skipped space, tab, CR and LF. VT, FF, NBSP, LS, PS and BOM before `:` are ECMAScript
+  WhiteSpace / LineTerminator and Node `eval` own-properties. The skipper now takes
+  those code points plus other Unicode Zs. Committed variants: `break-reason-vt`,
+  `break-reason-ff`, `break-reason-nbsp`, `break-reason-ls`, `break-reason-ps`,
+  `break-reason-bom`.
+- **F3-2, extra tildes `~~~` were not fail-closed.** Toggling on every two-character
+  `~~` made `~~~…~~` / `~~…~~~` look fully struck. Only an *isolated* `~~` pair
+  (not part of `~~~`) now toggles strike, so extra tildes leave the phrase live or the
+  span unclosed. A path `~` elsewhere in the file is not extra-tilde fail-closed.
+  Committed `break-extra-tilde-open` and `break-extra-tilde-close` must fail
+  exactly `R-D1-blocks`. An unclosed span does not resurrect a prior closed span
+  in the same region. Four-tilde wrap, `<del>`, and unclosed `~~` stay fail-closed.
+
+Reviews 1–3 stay byte-identical.
+
 **Authority:** D-058(1), (6), (8)D and (9); D-059(5)–(6); D-060(1); D-066(2)–(3). D-F3 is
 Batch A (closed at A-094). D-F5 is a dependency on that reader, not a second checker.
 
@@ -62,11 +83,14 @@ no new `scripts/check-*.sh`. `d-claims.py` is an independent instrument and must
 into `scripts/test.sh`. Markdown oracles are wrap-normalized (`\s+` → one space) over a named
 file or named region; a line-oriented grep is not the scored check (D-058(6)). A watched
 false claim is absent only when `phrase_is_live` is false on that wrap-normalized region:
-every occurrence of the phrase has all of its characters inside a closed `~~…~~` span.
-An interior or split span, or an unclosed `~~`, leaves the claim live. TypeScript oracles
+every occurrence of the phrase has all of its characters inside a closed isolated `~~…~~`
+span. An interior or split span, extra tildes (`~~~…~~` / `~~…~~~`), or an unclosed `~~`
+that still covers the phrase, leaves the claim live. A later unclosed span does not
+resurrect a prior closed span. TypeScript oracles
 strip leading `^\s*\*` on each line, then wrap-normalize, so a comment-continuation star
-is not a word in the phrase. `REASON_SEVERITY` keys are read with the finite grammar in
-`reason_object_keys`, not with a line-anchored `IDENT:` regex.
+is not a word in the phrase. `REASON_SEVERITY` keys are read with the finite grammar in `reason_object_keys`, not
+with a line-anchored `IDENT:` regex. Whitespace between a key and `:` is ECMAScript
+WhiteSpace plus LineTerminator (including VT, FF, NBSP, BOM, LS, PS, and other Zs).
 
 Failed global contracts under `docs/review-2026-08-19-d057-targeted/contract/` are not this
 spec. Historical reviews, A-077, and dated round-five prose are not rewritten (D-058(8)D).
@@ -155,7 +179,7 @@ where noted, *and* the frozen truth is present, each scoped to its surface/regio
 **CONTROL** rows (must PASS at baseline and after a conforming repair): `(a)`/`(b)` remain;
 `RefusalRecord` body has no `detail` field; `SIGNER_CHAIN_UNSTABLE` stays FATAL; the
 `REASON_SEVERITY` key set stays the frozen 35 codes under the finite key grammar (quoted,
-unquoted, bracket-quoted, with whitespace or comments before `:`); `D-057(4)` remains; `EVAL_TARGET_BOUND`
+unquoted, bracket-quoted, with ECMAScript whitespace or comments before `:`); `D-057(4)` remains; `EVAL_TARGET_BOUND`
 remains; `D-014 deliberately kept conformance out of the signer` remains; register E4 signer
 half remains deliberately unbuilt; packet §3b `FALSE SINCE A-074; CORRECTED 2026-08-19`
 remains; signed S1 bytes and S2 prefix hash remain; `WHAT IS ACCEPTED TODAY IS SIX` and `G-3`
@@ -186,6 +210,9 @@ Pre-repair `baseline` must FAIL every REQUIRED and PASS every CONTROL. Completio
 | `break-reason-comment` | `C-D6-codes` FAIL (`/*split*/` before `:`). |
 | `break-reason-newline` | `C-D6-codes` FAIL (newline before `:`). |
 | `break-live-strike` | after `fix-all`, Review 2 interior/split `~~` on D1 / FIVE / packet-ten: exactly `R-D1-blocks`, `R-D2-five`, `R-D1-ten` FAIL (11/14 REQUIRED), CONTROL PASS. |
+| `break-reason-vt` / `ff` / `nbsp` / `ls` / `ps` / `bom` | `C-D6-codes` FAIL (ECMAScript whitespace before `:`). |
+| `break-extra-tilde-open` | after `fix-all`, `~~~…~~` around the D-F1 sentence: exactly `R-D1-blocks` FAIL (13/14 REQUIRED). |
+| `break-extra-tilde-close` | after `fix-all`, `~~…~~~` around the D-F1 sentence: exactly `R-D1-blocks` FAIL (13/14 REQUIRED). |
 
 No gate harness: this card adds no targeted guard, so D-059(7) does not apply. D-059(5)
 forbids a second floor/claim checker.

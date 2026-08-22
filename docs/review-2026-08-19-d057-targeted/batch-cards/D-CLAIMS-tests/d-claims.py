@@ -2,8 +2,8 @@
 """Frozen focused test contract for Sentinel D-CLAIMS.
 
 Clones the named exact commit and mutates only that private clone.
-First correction closes INSTRUMENT-REVIEW-1.md; second closes INSTRUMENT-REVIEW-2.md.
-Neither review is edited.
+Corrections close INSTRUMENT-REVIEW-1.md, INSTRUMENT-REVIEW-2.md, and
+INSTRUMENT-REVIEW-3.md in turn. Historical reviews are not edited.
 """
 
 from __future__ import annotations
@@ -14,6 +14,7 @@ import re
 import subprocess
 import sys
 import tempfile
+import unicodedata
 from pathlib import Path
 
 BASELINE = "1e7761be051422ad8091b203df375ddcfb7d1208"
@@ -102,7 +103,15 @@ VARIANTS = {
     "break-reason-space",
     "break-reason-comment",
     "break-reason-newline",
+    "break-reason-vt",
+    "break-reason-ff",
+    "break-reason-nbsp",
+    "break-reason-ls",
+    "break-reason-ps",
+    "break-reason-bom",
     "break-live-strike",
+    "break-extra-tilde-open",
+    "break-extra-tilde-close",
 }
 
 required_total = required_held = control_total = control_held = 0
@@ -162,15 +171,25 @@ def comment_norm(text: str) -> str:
 def phrase_is_live(norm: str, phrase: str) -> bool:
     """True when `phrase` is human-readable in wrap-normalized Markdown.
 
-    A closed `~~…~~` span may keep the words for drift. The phrase is live if any
-    occurrence has at least one unstruck character (interior `exi~~t~~`, split
-    `~~this alone ~~blocks exit`), or if a `~~` span is left unclosed.
+    Only an isolated `~~` pair (not part of `~~~` or a single `~`) toggles strike.
+    Extra tildes `~~~…~~` / `~~…~~~` therefore leave the phrase unstruck or inside
+    an unclosed span — fail-closed. Interior `exi~~t~~` and split `~~this ~~that`
+    stay live. A fully closed isolated `~~…~~` may keep the words for drift.
+    An unclosed span does not resurrect a prior closed span in the same region.
     """
     chars: list[tuple[str, bool]] = []
     i = 0
     struck = False
-    while i < len(norm):
-        if norm.startswith("~~", i):
+    n = len(norm)
+    while i < n:
+        isolated = (
+            i + 1 < n
+            and norm[i] == "~"
+            and norm[i + 1] == "~"
+            and (i == 0 or norm[i - 1] != "~")
+            and (i + 2 >= n or norm[i + 2] != "~")
+        )
+        if isolated:
             struck = not struck
             i += 2
             continue
@@ -185,21 +204,34 @@ def phrase_is_live(norm: str, phrase: str) -> bool:
         if found < 0:
             return False
         span = chars[found:found + plen]
-        if unclosed or not all(flag for _, flag in span):
+        if not all(flag for _, flag in span):
+            return True
+        if unclosed and not any(not flag for _, flag in chars[found + plen:]):
             return True
         start = found + 1
+
+
+_JS_LINE = frozenset({0x0A, 0x0D, 0x2028, 0x2029})
+_JS_SPACE = frozenset({0x09, 0x0B, 0x0C, 0x20, 0xA0, 0xFEFF}) | _JS_LINE
+
+
+def _is_js_ws(ch: str) -> bool:
+    """ECMAScript WhiteSpace plus LineTerminator, including other Unicode Zs."""
+    return ord(ch) in _JS_SPACE or unicodedata.category(ch) == "Zs"
 
 
 def _skip_ws_comments(body: str, i: int) -> int:
     n = len(body)
     while i < n:
-        ch = body[i]
-        if ch in " \t\n\r":
+        if _is_js_ws(body[i]):
             i += 1
             continue
         if body.startswith("//", i):
-            nl = body.find("\n", i)
-            i = n if nl < 0 else nl + 1
+            i += 2
+            while i < n and ord(body[i]) not in _JS_LINE:
+                i += 1
+            if i < n:
+                i += 2 if body.startswith("\r\n", i) else 1
             continue
         if body.startswith("/*", i):
             end = body.find("*/", i + 2)
@@ -223,8 +255,9 @@ def reason_object_keys(body: str) -> frozenset[str]:
     """Finite REASON_SEVERITY key grammar, not a TypeScript parser.
 
     Keys: unquoted IDENT, "IDENT" / 'IDENT', or ["IDENT"] / ['IDENT'].
-    Whitespace and // or /* */ comments may sit between the key and `:`.
-    IDENT scored here is [A-Z][A-Z0-9_]*.
+    Whitespace is ECMAScript WhiteSpace plus LineTerminator (SP/TAB/CR/LF, VT, FF,
+    NBSP, BOM, LS, PS, and other Unicode Zs). // or /* */ comments may also sit
+    between the key and `:`. IDENT scored here is [A-Z][A-Z0-9_]*.
     """
     keys: list[str] = []
     i = 0
@@ -327,6 +360,24 @@ def apply_live_strike(root: Path) -> None:
         root / "docs/exit-criterion-packet.md",
         PACKET_SIX_NEW,
         PACKET_SIX_NEW + "\n- The t~~e~~n §11.0 accepted limits — subject to **T1**.",
+    )
+
+
+def apply_extra_tilde_open(root: Path) -> None:
+    apply_all(root)
+    replace_once(
+        root / "docs/exit-criterion-packet.md",
+        "~~Under C1 condition 4 this alone blocks exit.~~",
+        "~~~Under C1 condition 4 this alone blocks exit.~~",
+    )
+
+
+def apply_extra_tilde_close(root: Path) -> None:
+    apply_all(root)
+    replace_once(
+        root / "docs/exit-criterion-packet.md",
+        "~~Under C1 condition 4 this alone blocks exit.~~",
+        "~~Under C1 condition 4 this alone blocks exit.~~~",
     )
 
 
@@ -550,8 +601,36 @@ def main() -> int:
             insert_reason_after_unstable(
                 root, '    SIGNER_CHAIN_PENDING_HEAD\n    : "FATAL",\n',
             )
+        elif variant == "break-reason-vt":
+            insert_reason_after_unstable(
+                root, '    SIGNER_CHAIN_PENDING_HEAD\v: "FATAL",\n',
+            )
+        elif variant == "break-reason-ff":
+            insert_reason_after_unstable(
+                root, '    SIGNER_CHAIN_PENDING_HEAD\f: "FATAL",\n',
+            )
+        elif variant == "break-reason-nbsp":
+            insert_reason_after_unstable(
+                root, '    SIGNER_CHAIN_PENDING_HEAD\u00a0: "FATAL",\n',
+            )
+        elif variant == "break-reason-ls":
+            insert_reason_after_unstable(
+                root, '    SIGNER_CHAIN_PENDING_HEAD\u2028: "FATAL",\n',
+            )
+        elif variant == "break-reason-ps":
+            insert_reason_after_unstable(
+                root, '    SIGNER_CHAIN_PENDING_HEAD\u2029: "FATAL",\n',
+            )
+        elif variant == "break-reason-bom":
+            insert_reason_after_unstable(
+                root, '    SIGNER_CHAIN_PENDING_HEAD\ufeff: "FATAL",\n',
+            )
         elif variant == "break-live-strike":
             apply_live_strike(root)
+        elif variant == "break-extra-tilde-open":
+            apply_extra_tilde_open(root)
+        elif variant == "break-extra-tilde-close":
+            apply_extra_tilde_close(root)
         score(root)
     print(
         f"REQUIRED {required_held}/{required_total}  "
