@@ -7,7 +7,7 @@
 > and is NOT general prose-consistency evidence."* — D-059(7)
 
 **Harness:** `a-extract-gate.sh`, sha256
-`b8290f9931b540eb8a4dd381dfd9aaa43f143792a0cbdaef3d0c73bb24b8ff50`.
+`2d00ab31fb61956f2daf4128647203a971f220b7104cdff595987cb484153e61`.
 **Subject:** a private `git clone` of this repository checked out at
 `bb664c626d592d86391f644bf014e76f2bbf7db4`, with `ts/node_modules` and both submodule working
 trees copied in. **The live gate is never run, never edited, and never written to.** No signed or
@@ -46,6 +46,41 @@ the three stages are *invoked* there too. **A measured deep invocation plus the 
 mutation evidence is sufficient.** If the candidate SHA changes the control flow around lines
 210-253 — introduces a conditional, moves an invocation, makes one profile-dependent — that
 sufficiency lapses and the deep mutation runs become required.
+
+---
+
+## RE-MEASURED AFTER THE SEVENTH REVIEW — FAIL-CLOSED EVIDENCE DESTINATION
+
+The seventh review supplied an invalid advertised `A_EXTRACT_GATE_LOGDIR`. The old harness ran
+all three gate cases before trying the destination, ignored the failed directory creation and log
+copies, failed the matrix redirection, then still printed 7/7 REQUIRED, 10/10 CONTROL, its
+completion token and exit 0. Evidence output was therefore best-effort while the interface and
+result presented it as part of the run.
+
+The current harness creates, resolves and write-probes the destination and validates all four
+named outputs before `P3-provenance`, its first REQUIRED or CONTROL row. The final three copies
+and matrix write are checked as well. `/dev/null/aextract-review8-output` now refuses at exit 2,
+with zero REQUIRED and zero CONTROL rows and a named preflight diagnosis.
+
+Current harness sha256:
+`2d00ab31fb61956f2daf4128647203a971f220b7104cdff595987cb484153e61`. The paired valid-output
+run wrote `g1.log`, `g2.log`, `g3.log` and `matrix.tsv` and returned:
+
+```
+  REQUIRED : 7 of 7 held
+  CONTROL  : 10 of 10 held
+  exit 0
+```
+
+Supervisor outcomes are `0/5/5`; every preserved log contains one TS, EC and VH banner. G1 has
+one pass token and no failure/refusal token; G2/G3 each have one failure and one
+completion-refusal token and no pass token. The matrix contains 7 REQUIRED PASS, 10 CONTROL PASS
+and 3 OBSERVED rows. The same review's separate stale figure is corrected in §5: the current fast
+harness measures **31**, not 28, REQUIRED failures (21 of 52 held).
+
+This run still does not invoke `--gate`; the STATUS above remains authoritative and the eventual
+post-repair verification must capture the three banners from a deep run at the exact candidate
+SHA.
 
 ---
 
@@ -408,7 +443,7 @@ assumption this whole cycle exists to remove.
   reading rather than a deep-profile run, and this document declines to convert one into the
   other.
 - **Nothing about whether the guards are RIGHT.** This shows the gate carries their verdict.
-  Whether the verdict is sound is what `a-extract.sh` measures — and at `bb664c6` it measures 28
+  Whether the verdict is sound is what `a-extract.sh` measures — and at `bb664c6` it measures 31
   REQUIRED failures.
 - **These guards cover only their enumerated canonical facts** — six `§5.8` type strings,
   forty-one `§5.7.1` identifiers, one `§7.2` sentence, one `§2` table hash. **They are NOT general

@@ -8,7 +8,7 @@ docs/review-2026-08-19-d057-targeted/batch-cards/A-EXTRACT-tests/a-extract.sh . 
 ```
 
 **Harness sha256:** `9e489ee6f4adab00535d036619738cf1faa97ec8ab070d22cbf29dd3e769bc1a` (`a-extract.sh`; printed by the harness itself).
-**Gate harness sha256:** `b8290f9931b540eb8a4dd381dfd9aaa43f143792a0cbdaef3d0c73bb24b8ff50` (`a-extract-gate.sh`; see `GATE-BINDING.md`).
+**Gate harness sha256:** `2d00ab31fb61956f2daf4128647203a971f220b7104cdff595987cb484153e61` (`a-extract-gate.sh`; see `GATE-BINDING.md`).
 **Environment:** git 2.50.1 (Apple Git-155); bash 3.2.57; Python 3.9.6; node v26.3.0;
 `/usr/bin/grep` with a matched canary.
 
@@ -29,6 +29,35 @@ docs/review-2026-08-19-d057-targeted/batch-cards/A-EXTRACT-tests/a-extract.sh . 
   CONTROL  : 70 of 70 held      (0 control failures)
   exit 1   — REQUIRED FAILURES with every control holding: the defects are observed.
 ```
+
+## 0-D066.2. Seventh-review correction — fail-closed gate evidence output
+
+`INSTRUMENT-REVIEW-7.md` returned FAIL because an invalid advertised
+`A_EXTRACT_GATE_LOGDIR` was attempted only after all scoring and every failure was ignored. The
+same review found a live derived count of 28 REQUIRED failures where two complete current fast
+runs measured 31 (21 of 52 held).
+
+**Gate harness, current sha256 `2d00ab31…3e61`:** the normal invalid destination
+`/dev/null/aextract-review8-output` now refuses during preflight at exit 2 with zero REQUIRED and
+zero CONTROL rows and names the destination failure. The paired valid-destination run wrote all
+four advertised outputs and returned:
+
+```
+  REQUIRED : 7 of 7 held
+  CONTROL  : 10 of 10 held
+  exit 0
+```
+
+The supervisor outcomes are `0/5/5`. Each preserved G1/G2/G3 log contains exactly one TS, EC and
+VH banner. G1 contains one `GATE PASSED` and no failure/refusal token; G2 and G3 each contain one
+`GATE FAILED`, one `GATE DID NOT REACH COMPLETION` and no pass token. No retained log contains a
+fatal Git diagnostic or `ERR_MODULE_NOT_FOUND`. The preserved matrix has 7 REQUIRED PASS, 10
+CONTROL PASS and 3 OBSERVED rows.
+
+The fast harness did not change: sha256 `9e489ee6…bc1a`, independently run twice during the
+seventh review with byte-identical stdout and matrix, **21 of 52 REQUIRED / 70 of 70 CONTROL /
+exit 1**. `GATE-BINDING.md` now reports the current 31 failures. Its historical measurements are
+not rewritten.
 
 ## 0-D066.1. Sixth-review correction — measured on the current files
 

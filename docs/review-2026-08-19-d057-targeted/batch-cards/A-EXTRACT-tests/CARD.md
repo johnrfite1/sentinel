@@ -25,6 +25,30 @@ already identifies frozen attempt-two evidence.
 or by the commit that carries it. `TESTS.patch` is supplied as a patch file and is **NOT
 applied**.
 
+## SEVENTH INSTRUMENT REVIEW — TWO DEFECTS CLOSED
+
+`INSTRUMENT-REVIEW-7.md` returned **FAIL** on the exact sixth-review repair commit. That review is
+historical evidence and is not edited. Its two findings are closed in the current instrument:
+
+- **`F7-1`, gate evidence output failed open:** `A_EXTRACT_GATE_LOGDIR` was advertised, but the
+  harness attempted `mkdir`, three log copies and the matrix write only after every scored row;
+  it ignored every failure. `/dev/null/aextract-review7-output` therefore produced filesystem
+  errors followed by 7/7 REQUIRED, 10/10 CONTROL, the completion token and exit 0. The gate
+  harness now creates, resolves and write-probes the destination and validates all four named
+  outputs before its first REQUIRED or CONTROL row. Every final copy/write is also checked and a
+  late I/O failure exits 2 rather than coexisting with a completion token.
+- **`F7-2`, stale derived failure count:** `GATE-BINDING.md` said the current fast harness
+  measured 28 REQUIRED failures. Two complete current runs measured 31 failures — 21 of 52 held.
+  The live statement now says 31; the explicitly historical 28-of-49 measurements remain intact.
+
+Paired measurement: the invalid log destination now refuses in preflight at exit 2 with zero
+REQUIRED and zero CONTROL rows. A valid new destination receives `g1.log`, `g2.log`, `g3.log` and
+`matrix.tsv`; the full gate harness is **7 of 7 REQUIRED / 10 of 10 CONTROL / exit 0**, with
+supervisor outcomes `0/5/5`, all three consumer banners in each log, and the expected pass/fail
+and completion-refusal tokens. The fast harness is unchanged at sha256 `9e489ee6…bc1a` and its
+independent seventh-review runs remain **21 of 52 / 70 of 70 / exit 1**. These are instrument
+results, not a HOLD; fresh independent review of the exact committed correction remains required.
+
 ## SIXTH INSTRUMENT REVIEW — THREE DEFECTS CLOSED
 
 `INSTRUMENT-REVIEW-6.md` returned **FAIL** on the exact fifth-review repair commit. That review is

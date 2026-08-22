@@ -4,6 +4,13 @@
 evidence only for what it actually exercised. Everything below is a limit of this harness,
 stated so that nobody has to rediscover it from a passing line.
 
+**Seventh-review correction:** optional `A_EXTRACT_GATE_LOGDIR` setup is now part of gate
+preflight. The harness creates/resolves and write-probes the directory and validates its four
+named outputs before any REQUIRED or CONTROL row; the final three log copies and matrix write are
+checked as well. A normal invalid destination refuses at exit 2 with zero scored rows rather than
+printing a green completion beside missing evidence. See `CARD.md` “SEVENTH INSTRUMENT REVIEW”
+for the paired drive and the separate current-count correction.
+
 **Sixth-review correction:** the gate harness has three copied dependency prerequisites:
 non-empty `contracts/lib/forge-std`, `contracts/lib/openzeppelin-contracts` and
 `ts/node_modules`. All three are refused before REQUIRED or CONTROL scoring. Both `Z-clean`

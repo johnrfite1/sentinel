@@ -90,7 +90,8 @@ option-shaped input are all refused at exit 2 with ZERO scored verdicts.
   a-extract-gate.sh . bb664c626d592d86391f644bf014e76f2bbf7db4
 
 Optional environment:
-  A_EXTRACT_GATE_LOGDIR    directory to copy the three gate logs and the matrix into
+  A_EXTRACT_GATE_LOGDIR    directory to create/use for the three gate logs and matrix;
+                           the destination is validated before any scored verdict
 USAGE
 }
 
@@ -291,6 +292,30 @@ for m in forge-std openzeppelin-contracts; do
 done
 [ -n "$(ls -A "$ROOT/ts/node_modules" 2>/dev/null)" ] || \
     die "ts/node_modules is absent or empty; install the Node dependency tree before running the gate harness"
+# The evidence destination is part of a trustworthy run, not a best-effort convenience. A
+# seventh independent review supplied `/dev/null/child`: mkdir failed, all three expensive gate
+# cases still ran, every copy error was suppressed, the matrix write failed, and the harness
+# nevertheless printed 7/7 REQUIRED, 10/10 CONTROL, its completion token and exit 0. Validate the
+# operator-controlled destination before P3-provenance, the first scored row. The temporary file
+# proves that a new output can be created and removed; existing named outputs are checked without
+# truncating them. A late I/O failure is still fatal below rather than being silently discarded.
+GATE_LOGDIR=""
+if [ -n "${A_EXTRACT_GATE_LOGDIR:-}" ]; then
+    mkdir -p -- "$A_EXTRACT_GATE_LOGDIR" 2>/dev/null || \
+        die "cannot create A_EXTRACT_GATE_LOGDIR '$(sanitize_path "$A_EXTRACT_GATE_LOGDIR")'"
+    GATE_LOGDIR="$(cd -- "$A_EXTRACT_GATE_LOGDIR" 2>/dev/null && pwd -P)" || \
+        die "cannot resolve A_EXTRACT_GATE_LOGDIR '$(sanitize_path "$A_EXTRACT_GATE_LOGDIR")'"
+    _gate_output_probe="$(mktemp "$GATE_LOGDIR/.a-extract-write.XXXXXX" 2>/dev/null)" || \
+        die "cannot write A_EXTRACT_GATE_LOGDIR '$(sanitize_path "$GATE_LOGDIR")'"
+    rm -f -- "$_gate_output_probe" || \
+        die "cannot remove the A_EXTRACT_GATE_LOGDIR write probe"
+    for _gate_output_name in g1.log g2.log g3.log matrix.tsv; do
+        _gate_output_path="$GATE_LOGDIR/$_gate_output_name"
+        if [ -e "$_gate_output_path" ] && { [ ! -f "$_gate_output_path" ] || [ ! -w "$_gate_output_path" ]; }; then
+            die "A_EXTRACT_GATE_LOGDIR output '$_gate_output_name' is not a writable regular file"
+        fi
+    done
+fi
 # THERE IS NO SUBJECT RESOLUTION STEP. Same ruling, same reason as `a-extract.sh`: a name must
 # be resolved and resolution is what an ambiguous ref or an injected configuration setting gets
 # to influence; an exact object id is looked up, not resolved. Measured: a branch literally named
@@ -469,10 +494,13 @@ s2_base="$(cd "$ROOT" && git --no-replace-objects show "$PRE_REPAIR_SHA:docs/gat
 check CONTROL Z-signed "$([ "$s2_now" = "$s2_base" ] && echo 0 || echo 1)" \
       "docs/gate-s2-evidence.md IN THE LIVE TREE is byte-identical to PRE_REPAIR_SHA — no signed document was read for change"
 
-if [ -n "${A_EXTRACT_GATE_LOGDIR:-}" ]; then
-    mkdir -p "$A_EXTRACT_GATE_LOGDIR"
-    for n in g1 g2 g3; do cp "$WORK/$n.log" "$A_EXTRACT_GATE_LOGDIR/$n.log" 2>/dev/null; done
-    printf '%s' "$MATRIX_TSV" > "$A_EXTRACT_GATE_LOGDIR/matrix.tsv"
+if [ -n "$GATE_LOGDIR" ]; then
+    for n in g1 g2 g3; do
+        cp "$WORK/$n.log" "$GATE_LOGDIR/$n.log" 2>/dev/null || \
+            die "cannot preserve $n.log in A_EXTRACT_GATE_LOGDIR"
+    done
+    printf '%s' "$MATRIX_TSV" > "$GATE_LOGDIR/matrix.tsv" || \
+        die "cannot preserve matrix.tsv in A_EXTRACT_GATE_LOGDIR"
 fi
 
 hdr "SUMMARY"
