@@ -8,7 +8,7 @@ docs/review-2026-08-19-d057-targeted/batch-cards/A-EXTRACT-tests/a-extract.sh . 
 ```
 
 **Harness sha256:** `9e489ee6f4adab00535d036619738cf1faa97ec8ab070d22cbf29dd3e769bc1a` (`a-extract.sh`; printed by the harness itself).
-**Gate harness sha256:** `9da8d3295fecacf68312524080f77db3c35dcf34e308804d657c46bc1a37827e` (`a-extract-gate.sh`; see `GATE-BINDING.md`).
+**Gate harness sha256:** `da8c15794f4a597bb0ab766f73e50dac87fd4edea62b22d533e4eef313acc4b1` (`a-extract-gate.sh`; see `GATE-BINDING.md`).
 **Environment:** git 2.50.1 (Apple Git-155); bash 3.2.57; Python 3.9.6; node v26.3.0;
 `/usr/bin/grep` with a matched canary.
 
@@ -37,7 +37,9 @@ later verifier test. Ignoring the named type-string guard's nonzero status there
 the top-level gate red, and every old G2 predicate passed; none could attribute that refusal to
 the named consumer.
 
-**Gate harness, current sha256 `9da8d329…827e`:** G2 now inserts an exported-but-unused,
+**Gate harness, current sha256 `da8c1579…c4b1`:** its executable lines are byte-identical to
+the fully measured `9da8d329…827e`; only the cost comment changed to record the timing evidence
+below. G2 inserts an exported-but-unused,
 transposed `ActionPayload` string immediately before the canonical runtime definition. The
 primary run reports `ActionPayload` drift at the named type-string stage, keeps the eval-code and
 vendor-honesty stages green, and refuses at the top level. The new G2-causal run preserves that

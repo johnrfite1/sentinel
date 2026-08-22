@@ -49,9 +49,10 @@
 # recorded in GATE-BINDING.md rather than quietly re-run. A baseline that can fail for an
 # unrelated reason is worthless as a control, so give this harness the machine.
 #
-# COST. Four full fast-gate runs. Budget roughly fifteen to twenty minutes and a 240 MB scratch
-# copy per subject. This is deliberately NOT part of `a-extract.sh`, which runs in about a
-# minute and needs no toolchain beyond git, bash, awk, python3 and node.
+# COST. Four full fast-gate runs. Three current four-arm captures on this workstation measured
+# 8m50s, 8m51s and 9m57s; budget ten to fifteen minutes and a 240 MB scratch copy per subject.
+# This is deliberately NOT part of `a-extract.sh`, whose current run measured 103 seconds (budget
+# about two minutes) and needs no toolchain beyond git, bash, awk, python3 and node.
 #
 # EXIT STATUS — the same three-way convention as `a-extract.sh`:
 #   0  every REQUIRED and every CONTROL held

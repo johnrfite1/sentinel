@@ -7,7 +7,7 @@
 > and is NOT general prose-consistency evidence."* — D-059(7)
 
 **Harness:** `a-extract-gate.sh`, sha256
-`9da8d3295fecacf68312524080f77db3c35dcf34e308804d657c46bc1a37827e`.
+`da8c15794f4a597bb0ab766f73e50dac87fd4edea62b22d533e4eef313acc4b1`.
 **Subject:** a private `git clone` of this repository checked out at
 `bb664c626d592d86391f644bf014e76f2bbf7db4`, with `ts/node_modules` and both submodule working
 trees copied in. **The live gate is never run, never edited, and never written to.** No signed or
@@ -66,8 +66,9 @@ failure must still print and the otherwise-identical top-level gate must pass. `
 combines those predicates and therefore fails if another stage independently keeps the gate red.
 
 Current harness sha256:
-`9da8d3295fecacf68312524080f77db3c35dcf34e308804d657c46bc1a37827e`. The full valid-output run
-returned:
+`da8c15794f4a597bb0ab766f73e50dac87fd4edea62b22d533e4eef313acc4b1`. Its executable lines are
+byte-identical to the fully measured `9da8d329…827e`; only the COST comment changed to record the
+preserved timing basis. That full valid-output run returned:
 
 ```
   REQUIRED : 7 of 7 held
@@ -538,9 +539,10 @@ the shape of assumption this cycle exists to remove.
 - Control **`Z-clean`** asserts zero changed paths in the production boundary of the live
   repository when the run ends. Control **`Z-signed`** asserts `docs/gate-s2-evidence.md` is
   byte-identical to `bb664c6`.
-- **Four full fast-gate runs.** Budget fifteen to twenty-five minutes and roughly 240 MB of scratch per
-  subject. This is why gate binding is a separate harness: `a-extract.sh` runs in about two
-  minutes and this does not.
+- **Four full fast-gate runs.** Three current captures measured 8m50s, 8m51s and 9m57s on this
+  workstation; budget 10–15 minutes and roughly 240 MB of scratch per subject. The current
+  `a-extract.sh` run measured 103 seconds, so its operator budget remains about two minutes. This
+  timing difference is why gate binding is a separate harness.
 - If `forge` or `node` is absent, or `ts/node_modules` or either submodule tree is absent or empty,
   the harness **exits 2
   as a preflight failure** rather than skipping. A check that cannot execute must never read as a

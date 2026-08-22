@@ -540,8 +540,8 @@ repair chooses its words; it may not choose silence, success, or a message about
 | File | What it is |
 |---|---|
 | `CARD.md` | this card — the invariant, the boundary, the matrix, the controls, the exclusions, the stopping rule |
-| `a-extract.sh` | the fast harness: 52 binding assertions, 70 controls, ~2 minutes, no toolchain beyond git/bash/awk/python3/node |
-| `a-extract-gate.sh` | the D-059(7) gate-binding harness: four full fast-gate runs in an isolated clone, ~15-25 minutes, needs forge and `ts/node_modules` |
+| `a-extract.sh` | the fast harness: 52 binding assertions, 70 controls, measured 103 seconds / budget ~2 minutes, no toolchain beyond git/bash/awk/python3/node |
+| `a-extract-gate.sh` | the D-059(7) gate-binding harness: four full fast-gate runs in an isolated clone, measured 8m50s–9m57s / budget 10–15 minutes, needs forge and `ts/node_modules` |
 | `GATE-BINDING.md` | the measured gate-binding evidence |
 | `COVERAGE.md` | what is exercised, what is not, the interpretations, and **§7 — what was removed from the binding contract and why** |
 | `RESULTS.md` | the measured pre-repair run at `bb664c6`, both measurements, and the per-case verdicts |

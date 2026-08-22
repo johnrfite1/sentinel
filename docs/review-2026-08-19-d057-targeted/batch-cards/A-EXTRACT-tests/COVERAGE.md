@@ -320,8 +320,9 @@ claim about CI, about Linux, or about a container image.**
 - **Explicitly, as D-059(7) requires:** these guards cover only their enumerated canonical facts
   — six §5.8 type strings, forty-one §5.7.1 identifiers, one §7.2 sentence, one §2 table hash.
   **They are NOT general prose-consistency evidence.**
-- **Cost and dependencies:** four full fast-gate runs, roughly fifteen to twenty minutes, ~240 MB
-  of scratch per subject, and it requires `forge`, `node`, an installed `ts/node_modules` and
+- **Cost and dependencies:** four full fast-gate runs, measured at 8m50s, 8m51s and 9m57s on this
+  workstation; budget 10–15 minutes and ~240 MB of scratch per subject. It requires `forge`,
+  `node`, an installed `ts/node_modules` and
   both submodule working trees. If any is absent the harness **DIES (exit 2)** rather than
   skipping — a check that cannot execute must never read as one that passed.
 
