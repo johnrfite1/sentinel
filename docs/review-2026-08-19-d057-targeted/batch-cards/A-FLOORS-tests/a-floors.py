@@ -25,6 +25,14 @@ FLOORS = {
 }
 B_EVENTS_SHA256 = "2a9219cc5138858b012b0bc56069490db3dd7d1963b73ccc19c28a48ce2b029e"
 C_SNAPSHOT_SHA256 = "29a673560e89b639b6635661706a368454c9969a04c5d37c4f6c15229df3dd8a"
+REASON_PHRASES = {
+    "missing": "missing definition",
+    "empty": "empty assignment",
+    "malformed": "malformed assignment",
+    "numeric": "numeric positive decimal required",
+    "positive": "numeric positive decimal required",
+    "duplicate": "duplicate executable assignment",
+}
 
 required_total = required_held = control_total = control_held = 0
 rows: list[tuple[str, str, str, str]] = []
@@ -289,6 +297,14 @@ def emit_duplicate(target):
         print(inventory + "; UNRELATED_CONSTANT: duplicate executable assignment")
     elif DIAGNOSTIC_MODE == "uncorrelated-json":
         print('{"names": "' + " ".join(names) + '", "class": "duplicate executable assignment"}')
+    elif DIAGNOSTIC_MODE == "uncorrelated-pretty-json":
+        print("{")
+        for index, item in enumerate(names):
+            suffix = "," if index < len(names) - 1 else ""
+            print(f"  {item}: duplicate executable assignment{suffix}")
+        print("}")
+    elif DIAGNOSTIC_MODE == "uncorrelated-inventory":
+        print(f"{target}: duplicate executable assignment " + " ".join(names))
     else:
         print(f"{target}: duplicate executable assignment")
 
@@ -408,6 +424,14 @@ def install_uncorrelated_json_sibling(root: Path) -> None:
     install_sibling(root, r"[1-9][0-9]*", "finite", diagnostic_mode="uncorrelated-json")
 
 
+def install_uncorrelated_pretty_json_sibling(root: Path) -> None:
+    install_sibling(root, r"[1-9][0-9]*", "finite", diagnostic_mode="uncorrelated-pretty-json")
+
+
+def install_uncorrelated_inventory_sibling(root: Path) -> None:
+    install_sibling(root, r"[1-9][0-9]*", "finite", diagnostic_mode="uncorrelated-inventory")
+
+
 def make_fixture(root: Path) -> None:
     (root / "scripts/test.sh").write_text(VALID_TEST_SH)
     (root / "scripts/test.sh").chmod(0o755)
@@ -464,22 +488,51 @@ def refusal_records(output: str) -> list[str]:
     return records
 
 
+def named_subject_hits(output: str) -> list[tuple[str, str]]:
+    hits: list[tuple[str, str]] = []
+    for record in refusal_records(output):
+        for candidate in FLOORS:
+            subject = re.compile(rf"^{re.escape(candidate)}\s*:", re.IGNORECASE)
+            match = subject.match(record)
+            if match is None:
+                continue
+            head = record[: match.end() - 1].strip()
+            if head.lower() != candidate.lower():
+                continue
+            hits.append((candidate, record[match.end():]))
+            break
+    return hits
+
+
+def class_remainder(text: str) -> str:
+    return text.strip().rstrip(",").strip().lower()
+
+
 def source_refusal(result: subprocess.CompletedProcess[str], name: str, reason: str) -> bool:
     if result.returncode == 0:
         return False
-    name_l = name.lower()
-    reason_l = reason.lower()
-    subject = re.compile(rf"^{re.escape(name)}\s*:", re.IGNORECASE)
-    for record in refusal_records(result.stdout):
-        match = subject.match(record)
-        if match is None:
+    phrase = REASON_PHRASES[reason]
+    records = refusal_records(result.stdout)
+    json_wrapped = "{" in records or "}" in records
+    hits = named_subject_hits(result.stdout)
+    matching = [
+        remainder for subject, remainder in hits
+        if subject == name and class_remainder(remainder) == phrase
+    ]
+    if not matching:
+        return False
+    if json_wrapped and any(
+        subject != name and class_remainder(remainder) == phrase
+        for subject, remainder in hits
+    ):
+        return False
+    remainder = matching[0]
+    for other in FLOORS:
+        if other == name:
             continue
-        head = record[: match.end() - 1].strip()
-        if head.lower() != name_l:
-            continue
-        if reason_l in record[match.end():].lower():
-            return True
-    return False
+        if re.search(rf"(?<![A-Za-z0-9_]){re.escape(other)}(?![A-Za-z0-9_])", remainder):
+            return False
+    return True
 
 
 def reader_accepts_all_values(result: subprocess.CompletedProcess[str]) -> bool:
@@ -551,6 +604,7 @@ def main() -> int:
         "review3-failclosed-sibling", "all-token-failclosed-sibling",
         "exact-positive-control", "uncorrelated-diagnostic-sibling",
         "uncorrelated-oneline-sibling", "uncorrelated-json-sibling",
+        "uncorrelated-pretty-json-sibling", "uncorrelated-inventory-sibling",
     ):
         print("preflight: unknown A_FLOORS_VARIANT", file=sys.stderr)
         return 2
@@ -583,6 +637,10 @@ def main() -> int:
             install_uncorrelated_oneline_sibling(root)
         elif variant == "uncorrelated-json-sibling":
             install_uncorrelated_json_sibling(root)
+        elif variant == "uncorrelated-pretty-json-sibling":
+            install_uncorrelated_pretty_json_sibling(root)
+        elif variant == "uncorrelated-inventory-sibling":
+            install_uncorrelated_inventory_sibling(root)
 
         print("A-FLOORS focused frozen contract")
         print(f"subject={subject}")
@@ -643,6 +701,13 @@ def main() -> int:
         prefix_long = synthetic_result(
             "VERIFIER_MIN_TAMPER_MODES: duplicate executable assignment\n"
         )
+        pretty_lines = ["{"]
+        floor_names = list(FLOORS)
+        for index, item in enumerate(floor_names):
+            suffix = "," if index < len(floor_names) - 1 else ""
+            pretty_lines.append(f"  {item}: duplicate executable assignment{suffix}")
+        pretty_lines.append("}")
+        hostile_pretty = "\n".join(pretty_lines) + "\n"
         for name in FLOORS:
             legit = synthetic_result(f"{name}: duplicate executable assignment\n")
             record(
@@ -664,6 +729,22 @@ def main() -> int:
                 "CONTROL", f"DR-json-{name}",
                 not source_refusal(synthetic_result(hostile_json), name, "duplicate"),
                 "JSON inventory plus unrelated class does not name this constant",
+            )
+            record(
+                "CONTROL", f"DR-prettyjson-{name}",
+                not source_refusal(synthetic_result(hostile_pretty), name, "duplicate"),
+                "pretty-printed name-as-key JSON does not uniquely name this constant",
+            )
+            record(
+                "CONTROL", f"DR-inventory-{name}",
+                not source_refusal(
+                    synthetic_result(
+                        f"{name}: duplicate executable assignment " + " ".join(FLOORS) + "\n"
+                    ),
+                    name,
+                    "duplicate",
+                ),
+                "named subject plus same-record six-name inventory does not satisfy",
             )
         record(
             "CONTROL", "DR-prefix-TAMPER",

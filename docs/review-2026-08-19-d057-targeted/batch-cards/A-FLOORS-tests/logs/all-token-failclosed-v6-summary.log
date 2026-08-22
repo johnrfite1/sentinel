@@ -1,0 +1,17 @@
+A-FLOORS expanded all-token fail-closed/raw-state sibling under sixth correction
+subject=b4553841e4d234b947c008f340dce4f6a1a28b02
+variant=all-token-failclosed-sibling
+harness_sha256=1c298341fb807b54fa15e1e95f4084db5b9ce4881bb52099f5499e0811b8c93c
+prior_v3_rows=305
+prior_missing=0
+prior_unexpected_nonpass=0
+added_diagnostic_controls=38/38
+REQUIRED 131/131
+CONTROL 158/212
+new_fake_only_pass=0/54
+new_fake_only_fail=54/54
+failure_families=FA-comment:6,FA-printf:12,FA-echo:12,FA-assign:12,FA-herestring:12
+INSTRUMENT INVALID: control failure
+exit=2
+raw_sha256=304917e7340589d3c0c25693c3582848c4fdf3d2694c5d0fea60e882662da195
+matrix_sha256=b09209d81d4b3fe032ab1de6bb3261d608c6964e00ec501d77baa01a9c46b7c4

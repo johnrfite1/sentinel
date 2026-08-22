@@ -1,0 +1,14 @@
+A-FLOORS Review-6 pretty-printed name-as-key JSON sibling under sixth correction
+subject=b4553841e4d234b947c008f340dce4f6a1a28b02
+variant=uncorrelated-pretty-json-sibling
+harness_sha256=1c298341fb807b54fa15e1e95f4084db5b9ce4881bb52099f5499e0811b8c93c
+finite_lexer=exact-positive
+duplicate_policy=pretty-printed unquoted name-as-key JSON object
+REQUIRED 41/131
+CONTROL 212/212
+required_failures=90
+failure_families=DA:6,DB:6,DC:6,IA:6,IB:6,TF:48,FC-comment:6,HR-post:6
+PRE-REPAIR DEFECTS OBSERVED
+exit=1
+raw_sha256=da9cce34ea8ad7a5fa1b7bd70df126b37ca7dea68e63d7bdea32f090d7f401d1
+matrix_sha256=37329860d7787ea0ee5edda3f30bd4b7d0064353d24b175b5a6e4730ebe8e1c8

@@ -31,13 +31,15 @@
 | preserved `INSTRUMENT-REVIEW-5.md` | sha256 `4d742aded60fce42d30ec49dbb4d7a443fe0f0dbfc04ab9cafcc06987c4bd6fa` |
 | concurrent independent Review-5 FAIL | `bd0c43321e7bb2e8200513fb4e97666fccdab697`; tree `846c19667cff38edb2a8f8976cc82c50ccedecdd` |
 | preserved `INSTRUMENT-REVIEW-5-concurrent.md` | sha256 `10bc8231f5d9e3f309a3bf87190d1340f60176c8fdc1644bb1bf8bd2e585dbb7` |
+| fifth correction | `3fc2e5673bc2d10f552c5d5177c56cabac008541`; tree `d3b174085e0de1bc2b76fce551dddfef749d6d60` |
+| independent Review-6 FAIL | `b4553841e4d234b947c008f340dce4f6a1a28b02`; tree `2b76ab1a4f45cd6b84ecec8bce352b4f86c006d8` |
+| preserved `INSTRUMENT-REVIEW-6.md` | sha256 `a807603684afc76f93929d662be111e1438d7578a7be3dbcdb4d9d7ef40ac3f4` |
 
-The shared worktree was clean at the Review-5 parent. Fifth-corrected focused probes used the
+The shared worktree was clean at the Review-6 parent. Sixth-corrected focused probes used the
 external dirty harness against a disposable clean clone at that exact commit; every source
 mutation remained there. The shared repository correction changes only files under this evidence
-directory and preserves all five review records, the concurrent Review-5 blob, and every earlier
-matrix/summary byte-for-byte. Two reviewers committed `INSTRUMENT-REVIEW-5.md` in succession
-(D-037); both FAILs name the same hole, and both blobs are retained.
+directory and preserves all six review records, the concurrent Review-5 blob, and every earlier
+matrix/summary byte-for-byte.
 
 ## Governing and source material read
 
@@ -104,6 +106,19 @@ decision entries, signed packs and dated narration were classified as controls, 
 | v5 oneline uncorrelated matrix/raw | `b464ae62dcff31da51f5bd6391b7bc8c35c17e39fb540aa03a6c39162b522e2d` / `99edf1dc6d2789cd30c57ad16460fa391f70c86b5d2c58fc6560c86ef2f2de5a` |
 | v5 JSON uncorrelated matrix/raw | `b464ae62dcff31da51f5bd6391b7bc8c35c17e39fb540aa03a6c39162b522e2d` / `1598e55137f9a5a49e2b5ffde0339d74d5aa84f0295384cc8006fe8ebb5942e6` |
 | v5 exact-positive matrix/raw | `ea972bff0f769c8acb177134d1ce5ddbcc03fcc18d89d704af2579f10d5e212a` / `c362678e42aa26d67ad1206cff5b5077cae6969c375f751417c02dc374278adc` |
+| sixth-corrected focused harness, 1116 lines | `1c298341fb807b54fa15e1e95f4084db5b9ce4881bb52099f5499e0811b8c93c` |
+| v6 baseline matrix/raw | `74500e901beeb34a9916ee44d7a890b2ca75370f960d41933f27fffc660dd724` / `690067abeb4c0a984319cb439e9b6c82d488c03f4787377832090296b68dbd5a` |
+| v6 digits-zero matrix/raw | `e3b72a952470a051d0650abf5e6b71ee441f36e191954e7f37c0e38747fc856f` / `0cf9f8a49c2704fcb0812f18f323b46ace6829a1eba103efa8901eb5273e3fa6` |
+| v6 Review-2 raw-reader matrix/raw | `2ac06deb1121d39b3eb2cbdf19443a1313f2f7b21738bf217e7b3c91ce2b80cd` / `dc5b987e22ead342ecb0b6c3be82f52e41efd0a2e0c15c125c047bd3b5f73bf9` |
+| v6 exact Review-3 non-comment matrix/raw | `4451ccdadb92467c78811408188b4f7e7eafae3eaab593db7bb3de272b73f6dc` / `77799ddd97b0a9d919c57bc8be4ec3d1966b8559b7479b86e754ccb6f86c960d` |
+| v6 expanded all-token matrix/raw | `b09209d81d4b3fe032ab1de6bb3261d608c6964e00ec501d77baa01a9c46b7c4` / `304917e7340589d3c0c25693c3582848c4fdf3d2694c5d0fea60e882662da195` |
+| v6 uncorrelated siblings shared matrix | `37329860d7787ea0ee5edda3f30bd4b7d0064353d24b175b5a6e4730ebe8e1c8` |
+| v6 two-line uncorrelated raw | `8e21ab9742fc728e107fa45d5015c504233604b9a0278ab99ee115c028b19887` |
+| v6 oneline uncorrelated raw | `b394de40bbb2c2df2a0b13d1347726e466768c4fe2010dc011ffa3836a7db411` |
+| v6 compact JSON uncorrelated raw | `e7e5510f0e03b39a39cf201a0bb8a053925e2abbb8e3298bd8c24238d7ae1203` |
+| v6 pretty JSON uncorrelated raw | `da9cce34ea8ad7a5fa1b7bd70df126b37ca7dea68e63d7bdea32f090d7f401d1` |
+| v6 same-record inventory uncorrelated raw | `68255068263525ceeb1a56af9e9ad43255ca1c3f0f51e9ab5c301d2f20bec5d4` |
+| v6 exact-positive matrix/raw | `7f3ddf691b9619669ed221c94b1f0ab58e581a1db2086727772043afeadabfa1` / `2ff602c7c33c58681d9b8fa7789d14622ed971634084469c9679efd364517175` |
 | serial gate harness, 328 lines | `fb389fdd33e981a356436cf37e453158787288c6d64530c28c695fcec83cd8d0` |
 | gate matrix | `0b4d9c127e7230c7266960fe073f92f9551da9a68005cb936850993d803d1c58` |
 | gate wrapper raw output, external | `c4a41ddc58b73c7c23932556a37c7c955968298553fcbbd94314c550c01a6cb2` |
@@ -127,9 +142,8 @@ and matrices contain no such path.
 
 - No production, existing test, script, gate, floor, maintained claim, prior evidence or decision
   file changed.
-- `INSTRUMENT-REVIEW-1.md`, `INSTRUMENT-REVIEW-2.md`, `INSTRUMENT-REVIEW-3.md`,
-  `INSTRUMENT-REVIEW-4.md` and `INSTRUMENT-REVIEW-5.md` remain byte-identical at the hashes above.
-  `INSTRUMENT-REVIEW-5-concurrent.md` is the exact `bd0c433` review blob.
+- `INSTRUMENT-REVIEW-1.md` through `INSTRUMENT-REVIEW-6.md` remain byte-identical at the hashes
+  above. `INSTRUMENT-REVIEW-5-concurrent.md` is the exact `bd0c433` review blob.
 - Both frozen B/C test files remain byte-identical at the hashes above.
 - Signed Gate S2 material remains byte-identical.
 - No test patch was applied, no floor lowered, and no historical record rewritten.

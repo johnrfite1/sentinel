@@ -13,9 +13,9 @@ git submodule status
 test -d ts/node_modules
 ```
 
-Behavioral baseline is `1a133301533e9d959dbafbbcc7ffe05e7eb78df3`; fifth-corrected pre-repair
-evidence was driven against clean Review-5 commit
-`30d6257f806276a24cb6a40319b5bbb858fa9a5d` by the external harness.
+Behavioral baseline is `1a133301533e9d959dbafbbcc7ffe05e7eb78df3`; sixth-corrected pre-repair
+evidence was driven against clean Review-6 commit
+`b4553841e4d234b947c008f340dce4f6a1a28b02` by the external harness.
 
 ## 2. Focused contract
 
@@ -30,7 +30,7 @@ shasum -a 256 "$matrix_out"
 printf 'focused_rc=%s\n' "$focused_rc"
 ```
 
-At the frozen pre-repair subject, expected verdict is exit 1, REQUIRED 4/131, CONTROL 200/200,
+At the frozen pre-repair subject, expected verdict is exit 1, REQUIRED 4/131, CONTROL 212/212,
 with `T-route-complete` reporting a 54/54 inverse-to-paired mapping. The four held REQUIRED rows
 are the already-correct verifier floors; class-first `MISSING: $v` wording is not credited.
 Exit 2 is an invalid instrument/setup state and must not be reported as a product verdict.
@@ -71,18 +71,25 @@ oneline_rc=$?
 A_FLOORS_VARIANT=uncorrelated-json-sibling A_FLOORS_MATRIX="$json_matrix" \
   "$evidence/a-floors.py" "$(pwd -P)" "$subject"
 json_rc=$?
+
+A_FLOORS_VARIANT=uncorrelated-pretty-json-sibling A_FLOORS_MATRIX="$pretty_matrix" \
+  "$evidence/a-floors.py" "$(pwd -P)" "$subject"
+pretty_rc=$?
+
+A_FLOORS_VARIANT=uncorrelated-inventory-sibling A_FLOORS_MATRIX="$inventory_matrix" \
+  "$evidence/a-floors.py" "$(pwd -P)" "$subject"
+inventory_rc=$?
 ```
 
-The corrected zero sibling returns 125/131 and 200/200, failing exactly six `Z-*` rows. The
-Review-2 raw sibling returns 83/131 and 160/200: prior 48 `TF-*` misses plus 40 `FA-*` control
-misses; the twenty-six diagnostic controls pass. Exact Review 3 returns 131/131 and 152/200,
+The corrected zero sibling returns 125/131 and 212/212, failing exactly six `Z-*` rows. The
+Review-2 raw sibling returns 83/131 and 172/212: prior 48 `TF-*` misses plus 40 `FA-*` control
+misses; the thirty-eight diagnostic controls pass. Exact Review 3 returns 131/131 and 164/212,
 failing exactly 48 non-comment `FA-*` rows; the separately named expanded sibling returns 131/131
-and 146/200, failing all 54 `FA-*` rows. Both deliberate control-breaking candidates exit 2.
+and 158/212, failing all 54 `FA-*` rows. Both deliberate control-breaking candidates exit 2.
 Compare their prior row names to `exact-positive-matrix-v3.tsv`; every prior Review-3 row must
-remain PASS for the Review-3 and expanded siblings. The Review-4 two-line, Review-5 oneline and
-JSON uncorrelated-diagnostic siblings each return 41/131 and 200/200, failing exactly 90
-named-duplicate REQUIRED rows. The corrected exact-positive control returns 131/131, 200/200 and
-completion.
+remain PASS for the Review-3 and expanded siblings. The five uncorrelated-diagnostic siblings
+each return 41/131 and 212/212, failing exactly 90 named-duplicate REQUIRED rows. The corrected
+exact-positive control returns 131/131, 212/212 and completion.
 
 ## 4. Serial top-level gate contract
 
@@ -138,7 +145,7 @@ machine-state findings and must report zero new.
 
 ## 7. Post-repair fixed target
 
-A conforming implementation subject must return focused REQUIRED 131/131 and CONTROL 200/200, then
+A conforming implementation subject must return focused REQUIRED 131/131 and CONTROL 212/212, then
 gate REQUIRED 4/4 and CONTROL 3/3 with the same frozen harness hashes. Re-run repository/workspace
 guards and obtain a different independent verifier at that exact subject. Do not edit the
 instruments to fit the implementation.
