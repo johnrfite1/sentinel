@@ -6,6 +6,7 @@ those paths.
 
 The corrected raw files were retained outside the repository and are bound by sha256 in
 `RESULTS.md`, `GATE-BINDING.md`, and `mutation-matrix.tsv`. The tracked summaries preserve the
-exact scored counts, stage outcomes, all 22 focused test names, and corrected patch/source
-identities while omitting only absolute paths, stack frames, ANSI color and timings. The original
-review record remains byte-untouched. None of these files answers a held D-008 question.
+exact scored counts, stage outcomes, all 23 focused top-level test names, all four 486/486
+exhaustive traversal counters, and corrected patch/source identities while omitting only absolute
+paths, stack frames, ANSI color and timings. Both independent review records remain byte-untouched.
+None of these files answers a held D-008 question.

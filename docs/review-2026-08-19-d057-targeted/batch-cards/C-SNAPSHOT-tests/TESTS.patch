@@ -1,9 +1,9 @@
 diff --git a/ts/test/vault.snapshot.classification.test.ts b/ts/test/vault.snapshot.classification.test.ts
 new file mode 100644
-index 0000000..3cfb2ec
+index 0000000..6a00cb9
 --- /dev/null
 +++ b/ts/test/vault.snapshot.classification.test.ts
-@@ -0,0 +1,485 @@
+@@ -0,0 +1,603 @@
 +import {describe, it} from "node:test";
 +import assert from "node:assert/strict";
 +import {createServer, type Server} from "node:http";
@@ -35,7 +35,8 @@ index 0000000..3cfb2ec
 + * counts, then requires one finite full message for its exact nonempty cause set. Bidirectional
 + * pairs, all six triple first-occurrence orders, repetitions and explicit negative-oracle controls
 + * make lexical negation, false universals, extra causes and order-dependent accumulation fail at
-+ * their named case rather than merely throw.
++ * their named case rather than merely throw. One aggregate test also exhausts all 3^5 category
++ * sequences under both alternating B2a/B2b starting polarities: 486 real reader routes total.
 + */
 +
 +const VAULT: Hex = "0x1111111111111111111111111111111111111111";
@@ -109,6 +110,12 @@ index 0000000..3cfb2ec
 +    url: string;
 +    calls: Recorded[];
 +    stop(): Promise<void>;
++}
++
++interface ExhaustionObservation {
++    returned: boolean;
++    caught: unknown;
++    calls: Recorded[];
 +}
 +
 +function hash(label: string): Hex {
@@ -243,48 +250,94 @@ index 0000000..3cfb2ec
 +    return error;
 +}
 +
++async function observeExhaustion(attempts: AttemptEnd[]): Promise<ExhaustionObservation> {
++    const node = await mockNode(headsFor(attempts));
++    try {
++        let caught: unknown;
++        let returned = false;
++        try {
++            await createChainReader(node.url).readVaultState(VAULT, TARGET, SELECTOR);
++            returned = true;
++        } catch (error) {
++            caught = error;
++        }
++        return {returned, caught, calls: [...node.calls]};
++    } finally {
++        await node.stop();
++    }
++}
++
++function assertRoute(
++    observation: ExhaustionObservation,
++    attempts: AttemptEnd[],
++    expectedLatest: number,
++    expectedReads: number,
++): void {
++    assert.equal(attempts.length, SNAPSHOT_ATTEMPTS, "fixture must consume the exact retry budget");
++    const readsExpected = attempts.filter((a) => a !== "pending-head").length * PINNED_READS;
++    const latestExpected = attempts.reduce(
++        (count, a) => count + (a === "pending-head" ? 1 : 2),
++        0,
++    );
++    assert.equal(readsExpected, expectedReads, "declared pinned-read count drifted");
++    assert.equal(latestExpected, expectedLatest, "declared latest-lookup count drifted");
++    const pinned = observation.calls.filter(
++        (c) => c.method === "eth_call" || c.method === "eth_getCode",
++    );
++    const latest = observation.calls.filter(
++        (c) => c.method === "eth_getBlockByNumber" && c.blockTag === "latest",
++    );
++    assert.equal(pinned.length, readsExpected, "fixture did not drive its declared read routes");
++    assert.equal(latest.length, latestExpected, "fixture did not drive its declared head routes");
++}
++
++function assertClassification(
++    observation: ExhaustionObservation,
++    attempts: AttemptEnd[],
++): ChainUnstableError {
++    assert.equal(observation.returned, false, "expected exhaustion instead of a returned snapshot");
++    assert.ok(observation.caught instanceof ChainUnstableError,
++        `expected ChainUnstableError, got ${String(observation.caught)}`);
++    const causes = occurred(attempts);
++    assert.equal(observation.caught.pendingOnly, causes.size === 1 && causes.has("B1"),
++        "pendingOnly means all attempts ended at the pre-read pending-head branch");
++    assertExactMessage(observation.caught, causes);
++    return observation.caught;
++}
++
 +async function assertExhaustion(
 +    attempts: AttemptEnd[],
 +    expectedLatest: number,
 +    expectedReads: number,
 +): Promise<ChainUnstableError> {
-+    assert.equal(attempts.length, SNAPSHOT_ATTEMPTS, "fixture must consume the exact retry budget");
-+    const node = await mockNode(headsFor(attempts));
-+    try {
-+        let caught: unknown;
-+        try {
-+            await createChainReader(node.url).readVaultState(VAULT, TARGET, SELECTOR);
-+            assert.fail("expected ChainUnstableError");
-+        } catch (error) {
-+            caught = error;
-+        }
-+        assert.ok(caught instanceof ChainUnstableError,
-+            `expected ChainUnstableError, got ${String(caught)}`);
++    const observation = await observeExhaustion(attempts);
++    assertRoute(observation, attempts, expectedLatest, expectedReads);
++    return assertClassification(observation, attempts);
++}
 +
-+        const readsExpected = attempts.filter((a) => a !== "pending-head").length * PINNED_READS;
-+        const latestExpected = attempts.reduce(
-+            (count, a) => count + (a === "pending-head" ? 1 : 2),
-+            0,
-+        );
-+        assert.equal(readsExpected, expectedReads, "declared pinned-read count drifted");
-+        assert.equal(latestExpected, expectedLatest, "declared latest-lookup count drifted");
-+        const pinned = node.calls.filter(
-+            (c) => c.method === "eth_call" || c.method === "eth_getCode",
-+        );
-+        const latest = node.calls.filter(
-+            (c) => c.method === "eth_getBlockByNumber" && c.blockTag === "latest",
-+        );
-+        assert.equal(pinned.length, readsExpected, "fixture did not drive its declared read routes");
-+        assert.equal(latest.length, latestExpected, "fixture did not drive its declared head routes");
++const CATEGORY_SEQUENCE_COUNT = CAUSE_ORDER.length ** SNAPSHOT_ATTEMPTS;
++const EXHAUSTIVE_ROUTE_COUNT = CATEGORY_SEQUENCE_COUNT * 2;
 +
-+        const causes = occurred(attempts);
-+        assert.equal(caught.pendingOnly, causes.size === 1 && causes.has("B1"),
-+            "pendingOnly means all attempts ended at the pre-read pending-head branch");
-+        assertExactMessage(caught, causes);
-+        return caught;
-+    } finally {
-+        await node.stop();
-+    }
++function categorySequence(index: number): Cause[] {
++    return Array.from({length: SNAPSHOT_ATTEMPTS}, (_, position): Cause => {
++        const divisor = CAUSE_ORDER.length ** (SNAPSHOT_ATTEMPTS - position - 1);
++        return CAUSE_ORDER[Math.floor(index / divisor) % CAUSE_ORDER.length]!;
++    });
++}
++
++function mechanismSequence(categories: Cause[], b2StartsAsReorg: boolean): AttemptEnd[] {
++    let b2Index = 0;
++    return categories.map((cause): AttemptEnd => {
++        if (cause === "B1") return "pending-head";
++        if (cause === "B3") return "confirmation-pending";
++        const reorg = (b2Index + Number(b2StartsAsReorg)) % 2 === 1;
++        b2Index += 1;
++        return reorg ? "same-height-reorg" : "moved-height";
++    });
++}
++
++function firstLine(error: unknown): string {
++    return (error instanceof Error ? error.message : String(error)).split("\n", 1)[0]!;
 +}
 +
 +describe("C-SNAPSHOT exhaustive branch classification", () => {
@@ -486,6 +539,71 @@ index 0000000..3cfb2ec
 +                new Set<Cause>(["B1", "B2"]),
 +            ),
 +            /exact B1\+B2 cause-set message mismatch/,
++        );
++    });
++
++    it("EXHAUSTIVE CONTROL traverses and classifies all 486/486 real reader routes", async () => {
++        assert.equal(CATEGORY_SEQUENCE_COUNT, 243, "category matrix must remain exactly 3^5");
++        assert.equal(EXHAUSTIVE_ROUTE_COUNT, 486, "two B2 polarities must run per category sequence");
++
++        const failures: string[] = [];
++        let attempted = 0;
++        let observed = 0;
++        let routeVerified = 0;
++        let classificationChecked = 0;
++
++        for (let sequenceIndex = 0; sequenceIndex < CATEGORY_SEQUENCE_COUNT; sequenceIndex += 1) {
++            const categories = categorySequence(sequenceIndex);
++            const pendingCount = categories.filter((cause) => cause === "B1").length;
++            const expectedLatest = pendingCount + (SNAPSHOT_ATTEMPTS - pendingCount) * 2;
++            const expectedReads = (SNAPSHOT_ATTEMPTS - pendingCount) * PINNED_READS;
++
++            for (const b2StartsAsReorg of [false, true]) {
++                const polarity = b2StartsAsReorg ? "B2b-first" : "B2a-first";
++                const label = `${categories.join("")}/${polarity}`;
++                const attempts = mechanismSequence(categories, b2StartsAsReorg);
++                attempted += 1;
++
++                let observation: ExhaustionObservation;
++                try {
++                    observation = await observeExhaustion(attempts);
++                    observed += 1;
++                } catch (error) {
++                    failures.push(`${label} execution: ${firstLine(error)}`);
++                    continue;
++                }
++
++                try {
++                    assertRoute(observation, attempts, expectedLatest, expectedReads);
++                    routeVerified += 1;
++                } catch (error) {
++                    failures.push(`${label} route: ${firstLine(error)}`);
++                }
++
++                classificationChecked += 1;
++                try {
++                    assertClassification(observation, attempts);
++                } catch (error) {
++                    failures.push(`${label} classification: ${firstLine(error)}`);
++                }
++            }
++        }
++
++        const traversal =
++            `attempted=${attempted}/${EXHAUSTIVE_ROUTE_COUNT} ` +
++            `observed=${observed}/${EXHAUSTIVE_ROUTE_COUNT} ` +
++            `route-verified=${routeVerified}/${EXHAUSTIVE_ROUTE_COUNT} ` +
++            `classification-checked=${classificationChecked}/${EXHAUSTIVE_ROUTE_COUNT}`;
++        if (attempted !== EXHAUSTIVE_ROUTE_COUNT || observed !== EXHAUSTIVE_ROUTE_COUNT ||
++            routeVerified !== EXHAUSTIVE_ROUTE_COUNT ||
++            classificationChecked !== EXHAUSTIVE_ROUTE_COUNT) {
++            failures.unshift(`incomplete traversal: ${traversal}`);
++        }
++        assert.equal(
++            failures.length,
++            0,
++            `exhaustive matrix ${traversal}; aggregated failures=${failures.length}\n` +
++            failures.join("\n"),
 +        );
 +    });
 +});

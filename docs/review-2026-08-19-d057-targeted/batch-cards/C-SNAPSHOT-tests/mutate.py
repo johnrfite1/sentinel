@@ -187,6 +187,32 @@ def reset_on_repeat_accumulator(source: str, mutation_id: str) -> str:
     )
 
 
+def exact_accumulator_control(source: str, mutation_id: str) -> str:
+    return accumulator_mutation(
+        source,
+        mutation_id,
+        '''            const recordCause = (cause: MutantCause): void => {
+                causes.add(cause);
+            };''',
+    )
+
+
+def freeze_after_first_repeat(source: str, mutation_id: str) -> str:
+    return accumulator_mutation(
+        source,
+        mutation_id,
+        '''            let frozen = false;
+            const recordCause = (cause: MutantCause): void => {
+                if (frozen) return;
+                if (causes.has(cause)) {
+                    frozen = true;
+                    return;
+                }
+                causes.add(cause);
+            };''',
+    )
+
+
 MUTATIONS: dict[str, Callable[[str, str], str]] = {
     "path_b1_as_movement": one_replacement(
         B1_END,
@@ -230,8 +256,10 @@ MUTATIONS: dict[str, Callable[[str, str], str]] = {
                       "under each pinned read",
         );''',
     ),
+    "accumulator_exact_control": exact_accumulator_control,
     "accumulator_rank_order": rank_order_accumulator,
     "accumulator_reset_on_repeat": reset_on_repeat_accumulator,
+    "accumulator_freeze_after_first_repeat": freeze_after_first_repeat,
 }
 
 

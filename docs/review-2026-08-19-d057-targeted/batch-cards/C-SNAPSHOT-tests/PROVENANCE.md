@@ -9,11 +9,14 @@
 | behavioral baseline parent | `060af4ee1ff1718edbf7772dc15050ccb88b3d29` |
 | baseline timestamp/title | `2026-08-21T23:25:48-07:00`; `A-091: record B-EVENTS implementation HOLD` |
 | original instrument | `30d1466cde0e47899740818e574a75e575d75b9d` (tree `09c29b98b17468ba937c8c6a87094a1ea1215b71`) |
-| independent FAIL review | `8834d9b868657fbccfe1009bf139e23dc8e06db1` |
-| preserved review file | sha256 `ffad26f2c8307aa7fcf9e2c7e18dd971eace47b955132f65222bbb1c335febf0` |
-| corrected `TESTS.patch` | sha256 `c2a53a4707d62c3e6632405037d684216c8319dd79fdaad15da2c15de6c69de1` |
-| corrected extracted test | 485 lines; sha256 `eea8876c38545db864df36f8d75e7a10e53b47ee730d805dc4ed984f88d6c1f7` |
-| corrected mutation driver | 270 lines; sha256 `223e784d3804aad8fb7e9a12424c94d19a60418ad4905c3959bcfc707123b4f8` |
+| first independent FAIL review | `8834d9b868657fbccfe1009bf139e23dc8e06db1` |
+| preserved Review 1 file | sha256 `ffad26f2c8307aa7fcf9e2c7e18dd971eace47b955132f65222bbb1c335febf0` |
+| first correction | `cf67c7f8ae79dd15d241bd3ca7a69707a1c94981` |
+| second independent FAIL review | `71cfa70b8267d5e2950af99307abf372992c008b` |
+| preserved Review 2 file | sha256 `25e336b97194ee58f6e20c367163726a3a4e9c8b2566e86bc76ab1fbdc3b201e` |
+| twice-corrected `TESTS.patch` | sha256 `b6fc3c713e97c2fdfc328516eeb42fdb4f3cc25d0648602ea654e6cf1513c9f1` |
+| twice-corrected extracted test | 603 lines; sha256 `29a673560e89b639b6635661706a368454c9969a04c5d37c4f6c15229df3dd8a` |
+| mutation/control driver | 298 lines; sha256 `f404a5ffe7d00a8d4978cd235c3c2a57c62a6e332a8d7106699db5eddd45ef2f` |
 | frozen `vault.ts` sha256 | `dbff956fc2fdf6698e6c94ce4261626dc40cf219b6095ff8afcda8afcadc1185` |
 | frozen `protocol.ts` sha256 | `87fc5204c561d986c04cc61eb4ae9e880db113187707f7e92e2df7a334b29b33` |
 | pre-existing TypeScript-test tree | `e29397245dadfe8c9250905d99c26c036013aacf` |
@@ -22,7 +25,7 @@
 
 All patch application, source mutation, focused tests and top-level gates ran in a private
 detached checkout. The shared repository received only bounded corrections to existing files
-under this evidence directory. The first independent review record is byte-untouched. The author
+under this evidence directory. Both independent review records are byte-untouched. The author
 made no production repair and authored none of the future Batch C implementation.
 
 ## Governing and source material read
@@ -78,7 +81,8 @@ recorded in tracked evidence.
 ## Preserved boundaries
 
 - `TESTS.patch` is not applied in this evidence commit.
-- `INSTRUMENT-REVIEW-1.md` remains byte-identical at the preserved sha256 above.
+- `INSTRUMENT-REVIEW-1.md` and `INSTRUMENT-REVIEW-2.md` remain byte-identical at the preserved
+  sha256 values above.
 - `ts/src`, existing tests, `ts/package.json`, scripts, floors, claims and prior evidence remain
   byte-untouched.
 - `protocol.ts` remains outside Batch C ownership and unchanged at its frozen sha256 above.
@@ -89,7 +93,7 @@ recorded in tracked evidence.
 ## Measurement hygiene
 
 The original contract's one mutation typecheck invoked from the repository root remains excluded
-historical measurement; it exited before any test and is not reused. Every corrected final
-mutation used the exact corrected test source and `npm --prefix ts run typecheck`, exited 0, and
-then ran behaviorally. Raw path-bearing outputs were hashed outside the repository before tracked
-summaries were written.
+historical measurement; it exited before any test and is not reused. Every final baseline,
+control and mutant case used the exact twice-corrected test source and
+`npm --prefix ts run typecheck`, exited 0, and then ran behaviorally. Raw path-bearing outputs
+were hashed outside the repository before tracked summaries were written.

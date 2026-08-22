@@ -1,10 +1,12 @@
-case	kind	typecheck	tests	pass	fail	intended_named_observation	raw_test_log_sha256
-live_baseline_collapse	BASELINE	PASS	22	9	13	pure B3 and all twelve pair/order/triple aggregation cases fail their own property or exact cause-set message assertion	fdbb1361b1875b36e3bacf778ca063f4f8d328ff6fb39ee0a171e50cd75dd4e9
-path_b1_as_movement	MUTANT	PASS	22	8	14	CONTROL pure B1 incrementally fails pendingOnly exact-semantics assertion	862323a127aae7d822281efaadf4f64ee9834069840f4b77e5fe07cbfe53b958
-path_b2_as_pending	MUTANT	PASS	22	7	15	CONTROL pure B2 movement and pure B2 reorg incrementally fail pendingOnly exact-semantics assertion	a5b77fb801d0032d2bc8474f8f1cc6c263c6d9f0972190ece540a743bf5ee980
-path_b3_as_movement	MUTANT	PASS	22	9	13	R2-F6 pure B3 moves past pendingOnly and fails the exact B3 cause-set message assertion	c5c4a29f984a5747f513c457f76607bee9b52d971511e871dde9b666b494f9b6
-message_swap_pure_causes	MUTANT	PASS	22	6	16	pure B1 and both pure B2 controls incrementally fail their exact full-message assertions	17fb02006103dfa8ce0f88ccaa37b311a82afdadd8f241c14a692a9ede07c0ee
-message_collapse_generic	MUTANT	PASS	22	6	16	all sixteen exhaustion tests fail their exact full-message assertion	973f2fd9cb482ed1383554802d8f6969443a7b24a2328f2e0c2a05db55727461
-message_negates_pending	MUTANT	PASS	22	8	14	CONTROL pure B1 incrementally fails exact B1 full-message assertion despite cause words and attempt context	dfe4f81a798d47e530933a9233166b20dd9643e5490e736fcf60e17ad14798d2
-accumulator_rank_order	MUTANT	PASS	22	14	8	three reversed pairs and five non-ascending triple permutations fail exact set messages; pure and ascending cases pass	9e7d63fa5d329e3c3eee3d33dd1aaf8691b825e9bf27d257e38cad8a45a510ff
-accumulator_reset_on_repeat	MUTANT	PASS	22	10	12	all twelve repeated mixed routes fail exact set messages; all pure and oracle-negative controls pass	74508dd74ed931867948ae4f9ae07fa59c858edba3a915f29297227f1910af8b
+case	kind	typecheck	tests	pass	fail	exhaustive_attempted	exhaustive_observed	exhaustive_route_verified	exhaustive_classification_checked	exhaustive_classification_failures	intended_named_observation	raw_test_log_sha256
+live_baseline_collapse	BASELINE	PASS	23	9	14	486	486	486	486	482	retained 9/13 result plus aggregate; only pure B1 and pure B2 exhaustive polarity routes classify exactly	7066885e18c81f936137017799e7f451849cc0683afd4995d7f9bb646c2b1aba
+path_b1_as_movement	MUTANT	PASS	23	8	15	486	486	486	486	484	CONTROL pure B1 incrementally fails pendingOnly exact-semantics assertion	03e1288c015c355cbc819708ac0828107aa819bfc90b44c9548d372995f9ae10
+path_b2_as_pending	MUTANT	PASS	23	7	16	486	486	486	486	484	CONTROL pure B2 movement and pure B2 reorg incrementally fail pendingOnly exact-semantics assertion	87029b2aad40f122d3b9e43f4133a16a58e13002948e5608a0d7c1d81ea22f2e
+path_b3_as_movement	MUTANT	PASS	23	9	14	486	486	486	486	482	R2-F6 pure B3 moves past pendingOnly and fails exact B3 cause-set message	ca6611df8f8f27f90ef77cbd872d5f01b3045f23bc5cba6d9f95644365345515
+message_swap_pure_causes	MUTANT	PASS	23	6	17	486	486	486	486	486	pure B1 and both pure B2 controls incrementally fail exact full messages	cab81045528bfc15d613f7a50ddd2c3cdb4141fbdff99bdb1402e13f72e30782
+message_collapse_generic	MUTANT	PASS	23	6	17	486	486	486	486	486	all retained exhaustion cases and all exhaustive routes fail exact full messages	acf545d496ee8c061dae2ffefddb00dbda15b0dcf8e605a873d58c75489657b8
+message_negates_pending	MUTANT	PASS	23	8	15	486	486	486	486	484	CONTROL pure B1 incrementally rejects negation despite cause words and attempt context	35172dfd8854623b0b8fe7b053ac6471d5a99647617548915373b7e2ddb9acad
+accumulator_exact_control	CONTROL	PASS	23	23	0	486	486	486	486	0	otherwise-compatible exact cause-set accumulator passes retained and finite exhaustive contract	c6bdcb3a7941cef848b3851c552ce8e235065893b3a08cc5ec18926b58173478
+accumulator_rank_order	MUTANT	PASS	23	14	9	486	486	486	486	340	prior eight named order failures retained and aggregate catches full rank-gated sequence domain	30c73652bce17cea93400fce26dd331259a09d60663cf057b4298909a2444f19
+accumulator_reset_on_repeat	MUTANT	PASS	23	10	13	486	486	486	486	360	prior twelve named repetition failures retained and aggregate catches full reset sequence domain	c2153e3e4c366170c0e03016f723e41c8b9be4e77137551eb0d8495b63ecea2d
+accumulator_freeze_after_first_repeat	MUTANT	PASS	23	22	1	486	486	486	486	276	all original named 22 green; only exhaustive late-arrival aggregate catches freeze after first repeat	b7e96cfae4ca4e9054601b7dca32d023d5d344095d1ad9f21d2ae0de43b67027

@@ -1,13 +1,18 @@
 subject=1655b120a653b60ccb5b3a22583c0001d59ea7a4
-tests_patch_sha256=c2a53a4707d62c3e6632405037d684216c8319dd79fdaad15da2c15de6c69de1
-test_source_sha256=eea8876c38545db864df36f8d75e7a10e53b47ee730d805dc4ed984f88d6c1f7
+tests_patch_sha256=b6fc3c713e97c2fdfc328516eeb42fdb4f3cc25d0648602ea654e6cf1513c9f1
+test_source_sha256=29a673560e89b639b6635661706a368454c9969a04c5d37c4f6c15229df3dd8a
 typecheck_exit=0
 typecheck_raw_sha256=8fa1cf5506304e8abac55868e7f1a136c9b1dde57a3981a382da4c21ea129a6f
 test_exit=1
-test_raw_sha256=fdbb1361b1875b36e3bacf778ca063f4f8d328ff6fb39ee0a171e50cd75dd4e9
-tests=22
+test_raw_sha256=7066885e18c81f936137017799e7f451849cc0683afd4995d7f9bb646c2b1aba
+tests=23
 pass=9
-fail=13
+fail=14
+exhaustive_attempted=486/486
+exhaustive_observed=486/486
+exhaustive_route_verified=486/486
+exhaustive_classification_checked=486/486
+exhaustive_classification_failures=482
 PASS CONTROL stable success returns the hashed pin after exactly eleven pinned reads
 PASS CONTROL pure B1: pending head is rejected before reads and named accurately
 PASS CONTROL pure B2 movement: advanced height after reads is named accurately
@@ -30,3 +35,4 @@ PASS ORACLE CONTROL rejects a message that negates the expected cause
 PASS ORACLE CONTROL rejects an unrelated 50 instead of the five-attempt budget
 PASS ORACLE CONTROL rejects a message that adds an unobserved cause
 PASS ORACLE CONTROL rejects false universal wording for a mixed run
+FAIL EXHAUSTIVE CONTROL traverses and classifies all 486/486 real reader routes
