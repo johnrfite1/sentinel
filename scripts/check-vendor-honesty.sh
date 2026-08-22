@@ -299,6 +299,7 @@ normalize_paragraphs() {
             }
         }
         /^[[:space:]]*$/ { flush_paragraph(); next }
+        /^#{1,6}[[:space:]]/ { flush_paragraph(); next }
         {
             line = $0
             gsub(/[[:space:]]+/, " ", line)
