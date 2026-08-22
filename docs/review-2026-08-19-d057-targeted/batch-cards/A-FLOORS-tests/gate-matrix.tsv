@@ -1,0 +1,8 @@
+case	kind	status	elapsed_seconds	description
+G0-fast-unchanged	CONTROL	PASS	152.670	unchanged fast gate completes with measured 103/550/221/7/78/30
+G1-fast-reader	REQUIRED	FAIL	150.318	wrong current publication is named; later green stages cannot mask refusal
+G2-deep-unchanged	CONTROL	PASS	286.512	unchanged deep gate alone completes and identifies the deep profile
+G3-deep-reader	REQUIRED	FAIL	289.146	deep path names the same defect, later stages run, completion remains absent
+G4-raised-control	CONTROL	PASS	153.205	planned 103/550 floors preserve the unchanged frozen B/C suites
+G5-delete-events	REQUIRED	PASS	145.689	deleting the frozen eleven-test file breaches only the 103 Foundry floor
+G6-delete-snapshot	REQUIRED	PASS	143.293	deleting the frozen twenty-three-test file breaches only the 550 TypeScript floor

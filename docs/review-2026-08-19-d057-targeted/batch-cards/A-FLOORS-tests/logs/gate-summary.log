@@ -1,0 +1,25 @@
+A-FLOORS serial top-level gate contract
+subject=1a133301533e9d959dbafbbcc7ffe05e7eb78df3
+baseline=1a133301533e9d959dbafbbcc7ffe05e7eb78df3
+harness_sha256=fb389fdd33e981a356436cf37e453158787288c6d64530c28c695fcec83cd8d0
+execution=serial; each case has an independent exact-commit clone
+G0-fast-unchanged CONTROL PASS 152.670s 103/550/221/7/78/30; GATE PASSED
+G1-fast-reader REQUIRED FAIL 150.318s same counts; GATE PASSED (baseline wiring hole)
+G2-deep-unchanged CONTROL PASS 286.512s corpus 50/views verified; deep profile; GATE PASSED
+G3-deep-reader REQUIRED FAIL 289.146s corpus 50/views verified; GATE PASSED (baseline wiring hole)
+G4-raised-control CONTROL PASS 153.205s Foundry 103 floor 103; TypeScript 550 floor 550; GATE PASSED
+G5-delete-events REQUIRED PASS 145.689s Foundry 92 floor 103 breach; later consumers green; GATE DID NOT REACH COMPLETION
+G6-delete-snapshot REQUIRED PASS 143.293s TypeScript 527 floor 550 breach; later consumers green; GATE DID NOT REACH COMPLETION
+REQUIRED 2/4
+CONTROL 3/3
+PRE-REPAIR GATE DEFECTS OBSERVED
+exit=1
+wrapper_raw_sha256=c4a41ddc58b73c7c23932556a37c7c955968298553fcbbd94314c550c01a6cb2
+matrix_sha256=0b4d9c127e7230c7266960fe073f92f9551da9a68005cb936850993d803d1c58
+G0_raw_sha256=27fa0430af50e662f2fee339057cd824703d8cc964e8bdc9b5d1447977a07ee0
+G1_raw_sha256=691748637047827f629fb65f131777774131f4958a54af77bbf87382ac37260f
+G2_raw_sha256=ebb9d73577f6e4888ac8b2579883c7aa46bf9cc06e1803748c37a6b495a81275
+G3_raw_sha256=9c0321dcccdd7477b0ba487f8fbdeb0c541d121f09978b0a588b874639265d20
+G4_raw_sha256=79b14aa7537ec233ae2b60f61fcb1e390ff19ae7a589042cdffd82a2f2cb4edf
+G5_raw_sha256=42e061acabb661a3d34d94abaf8227f455ad7ad6c0d2b574e886473d991f5fdc
+G6_raw_sha256=954940da794f0afe6b4d014f34aaf5861f88325f2563cc35f08565791e3577c6

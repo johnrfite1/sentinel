@@ -1,0 +1,82 @@
+case	kind	status	description
+P-B-EVENTS	CONTROL	PASS	frozen eleven-test B-EVENTS implementation bytes
+P-C-SNAPSHOT	CONTROL	PASS	frozen twenty-three-test C-SNAPSHOT implementation bytes
+V-reader-alive	CONTROL	PASS	unchanged baseline reader executes successfully
+V-FOUNDRY_MIN_TESTS	REQUIRED	FAIL	canonical value 103; observed 92
+V-TS_MIN_TESTS	REQUIRED	FAIL	canonical value 550; observed 527
+V-VERIFIER_MIN_TESTS	REQUIRED	PASS	canonical value 221; observed 221
+V-VERIFIER_MIN_SAMPLES	REQUIRED	PASS	canonical value 7; observed 7
+V-VERIFIER_MIN_TAMPER	REQUIRED	PASS	canonical value 78; observed 78
+V-VERIFIER_MIN_TAMPER_MODES	REQUIRED	PASS	canonical value 30; observed 30
+S-valid	CONTROL	PASS	six exact positive-decimal definitions are accepted and reported
+S-prefix	CONTROL	PASS	TAMPER does not consume the legitimate TAMPER_MODES sibling
+M-FOUNDRY_MIN_TESTS	REQUIRED	PASS	missing definition refuses by constant and reason
+E-FOUNDRY_MIN_TESTS	REQUIRED	FAIL	empty definition refuses distinctly
+X-FOUNDRY_MIN_TESTS	REQUIRED	FAIL	malformed assignment refuses by constant and reason
+N-FOUNDRY_MIN_TESTS	REQUIRED	FAIL	assigned non-numeric value refuses by constant and reason
+DAW-FOUNDRY_MIN_TESTS	CONTROL	PASS	after witness: current reader first-wins; Bash last-wins 999
+DA-FOUNDRY_MIN_TESTS	REQUIRED	FAIL	duplicate after the canonical definition refuses by name
+DBW-FOUNDRY_MIN_TESTS	CONTROL	PASS	before witness: current reader first-wins 999; Bash last-wins 103
+DB-FOUNDRY_MIN_TESTS	REQUIRED	FAIL	duplicate before the canonical definition refuses by name
+DCW-FOUNDRY_MIN_TESTS	CONTROL	PASS	conditional duplicate executes and shadows the canonical value
+DC-FOUNDRY_MIN_TESTS	REQUIRED	FAIL	conditional/indented assignment token refuses as duplicate
+M-TS_MIN_TESTS	REQUIRED	PASS	missing definition refuses by constant and reason
+E-TS_MIN_TESTS	REQUIRED	FAIL	empty definition refuses distinctly
+X-TS_MIN_TESTS	REQUIRED	FAIL	malformed assignment refuses by constant and reason
+N-TS_MIN_TESTS	REQUIRED	FAIL	assigned non-numeric value refuses by constant and reason
+DAW-TS_MIN_TESTS	CONTROL	PASS	after witness: current reader first-wins; Bash last-wins 999
+DA-TS_MIN_TESTS	REQUIRED	FAIL	duplicate after the canonical definition refuses by name
+DBW-TS_MIN_TESTS	CONTROL	PASS	before witness: current reader first-wins 999; Bash last-wins 550
+DB-TS_MIN_TESTS	REQUIRED	FAIL	duplicate before the canonical definition refuses by name
+DCW-TS_MIN_TESTS	CONTROL	PASS	conditional duplicate executes and shadows the canonical value
+DC-TS_MIN_TESTS	REQUIRED	FAIL	conditional/indented assignment token refuses as duplicate
+M-VERIFIER_MIN_TESTS	REQUIRED	PASS	missing definition refuses by constant and reason
+E-VERIFIER_MIN_TESTS	REQUIRED	FAIL	empty definition refuses distinctly
+X-VERIFIER_MIN_TESTS	REQUIRED	FAIL	malformed assignment refuses by constant and reason
+N-VERIFIER_MIN_TESTS	REQUIRED	FAIL	assigned non-numeric value refuses by constant and reason
+DAW-VERIFIER_MIN_TESTS	CONTROL	PASS	after witness: current reader first-wins; Bash last-wins 999
+DA-VERIFIER_MIN_TESTS	REQUIRED	FAIL	duplicate after the canonical definition refuses by name
+DBW-VERIFIER_MIN_TESTS	CONTROL	PASS	before witness: current reader first-wins 999; Bash last-wins 221
+DB-VERIFIER_MIN_TESTS	REQUIRED	FAIL	duplicate before the canonical definition refuses by name
+DCW-VERIFIER_MIN_TESTS	CONTROL	PASS	conditional duplicate executes and shadows the canonical value
+DC-VERIFIER_MIN_TESTS	REQUIRED	FAIL	conditional/indented assignment token refuses as duplicate
+M-VERIFIER_MIN_SAMPLES	REQUIRED	PASS	missing definition refuses by constant and reason
+E-VERIFIER_MIN_SAMPLES	REQUIRED	FAIL	empty definition refuses distinctly
+X-VERIFIER_MIN_SAMPLES	REQUIRED	FAIL	malformed assignment refuses by constant and reason
+N-VERIFIER_MIN_SAMPLES	REQUIRED	FAIL	assigned non-numeric value refuses by constant and reason
+DAW-VERIFIER_MIN_SAMPLES	CONTROL	PASS	after witness: current reader first-wins; Bash last-wins 999
+DA-VERIFIER_MIN_SAMPLES	REQUIRED	FAIL	duplicate after the canonical definition refuses by name
+DBW-VERIFIER_MIN_SAMPLES	CONTROL	PASS	before witness: current reader first-wins 999; Bash last-wins 7
+DB-VERIFIER_MIN_SAMPLES	REQUIRED	FAIL	duplicate before the canonical definition refuses by name
+DCW-VERIFIER_MIN_SAMPLES	CONTROL	PASS	conditional duplicate executes and shadows the canonical value
+DC-VERIFIER_MIN_SAMPLES	REQUIRED	FAIL	conditional/indented assignment token refuses as duplicate
+M-VERIFIER_MIN_TAMPER	REQUIRED	PASS	missing definition refuses by constant and reason
+E-VERIFIER_MIN_TAMPER	REQUIRED	FAIL	empty definition refuses distinctly
+X-VERIFIER_MIN_TAMPER	REQUIRED	FAIL	malformed assignment refuses by constant and reason
+N-VERIFIER_MIN_TAMPER	REQUIRED	FAIL	assigned non-numeric value refuses by constant and reason
+DAW-VERIFIER_MIN_TAMPER	CONTROL	PASS	after witness: current reader first-wins; Bash last-wins 999
+DA-VERIFIER_MIN_TAMPER	REQUIRED	FAIL	duplicate after the canonical definition refuses by name
+DBW-VERIFIER_MIN_TAMPER	CONTROL	PASS	before witness: current reader first-wins 999; Bash last-wins 78
+DB-VERIFIER_MIN_TAMPER	REQUIRED	FAIL	duplicate before the canonical definition refuses by name
+DCW-VERIFIER_MIN_TAMPER	CONTROL	PASS	conditional duplicate executes and shadows the canonical value
+DC-VERIFIER_MIN_TAMPER	REQUIRED	FAIL	conditional/indented assignment token refuses as duplicate
+M-VERIFIER_MIN_TAMPER_MODES	REQUIRED	PASS	missing definition refuses by constant and reason
+E-VERIFIER_MIN_TAMPER_MODES	REQUIRED	FAIL	empty definition refuses distinctly
+X-VERIFIER_MIN_TAMPER_MODES	REQUIRED	FAIL	malformed assignment refuses by constant and reason
+N-VERIFIER_MIN_TAMPER_MODES	REQUIRED	FAIL	assigned non-numeric value refuses by constant and reason
+DAW-VERIFIER_MIN_TAMPER_MODES	CONTROL	PASS	after witness: current reader first-wins; Bash last-wins 999
+DA-VERIFIER_MIN_TAMPER_MODES	REQUIRED	FAIL	duplicate after the canonical definition refuses by name
+DBW-VERIFIER_MIN_TAMPER_MODES	CONTROL	PASS	before witness: current reader first-wins 999; Bash last-wins 30
+DB-VERIFIER_MIN_TAMPER_MODES	REQUIRED	FAIL	duplicate before the canonical definition refuses by name
+DCW-VERIFIER_MIN_TAMPER_MODES	CONTROL	PASS	conditional duplicate executes and shadows the canonical value
+DC-VERIFIER_MIN_TAMPER_MODES	REQUIRED	FAIL	conditional/indented assignment token refuses as duplicate
+P-history	CONTROL	PASS	dated numbers inside both enumerated D-010 logical paragraphs remain controls
+P-session-stable	REQUIRED	FAIL	wrapped live §3 floor paragraph refuses with named reader diagnostic
+P-wrap-witness	CONTROL	PASS	wrapped and unwrapped mutations normalize to one logical paragraph
+P-session-stable-flat	REQUIRED	FAIL	equivalent unwrapped live §3 paragraph receives the same diagnostic class
+P-session-d010	REQUIRED	FAIL	wrapped current D-010 paragraph refuses with named reader diagnostic
+P-coverage-d010	REQUIRED	FAIL	wrapped current gate coverage paragraph refuses with named reader diagnostic
+P-name-mentions	CONTROL	PASS	constant-name mentions without values are legitimate
+P-unrelated	CONTROL	PASS	unrelated numbers outside enumerated floor paragraphs remain controls
+W-common	REQUIRED	FAIL	one real-gate targeted-guard invocation; observed 0
+W-positive	CONTROL	PASS	frozen candidate text survives fixtures and one direct invocation increments the oracle
