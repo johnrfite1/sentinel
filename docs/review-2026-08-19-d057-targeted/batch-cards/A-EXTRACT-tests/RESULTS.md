@@ -8,7 +8,7 @@ docs/review-2026-08-19-d057-targeted/batch-cards/A-EXTRACT-tests/a-extract.sh . 
 ```
 
 **Harness sha256:** `9e489ee6f4adab00535d036619738cf1faa97ec8ab070d22cbf29dd3e769bc1a` (`a-extract.sh`; printed by the harness itself).
-**Gate harness sha256:** `2d00ab31fb61956f2daf4128647203a971f220b7104cdff595987cb484153e61` (`a-extract-gate.sh`; see `GATE-BINDING.md`).
+**Gate harness sha256:** `9da8d3295fecacf68312524080f77db3c35dcf34e308804d657c46bc1a37827e` (`a-extract-gate.sh`; see `GATE-BINDING.md`).
 **Environment:** git 2.50.1 (Apple Git-155); bash 3.2.57; Python 3.9.6; node v26.3.0;
 `/usr/bin/grep` with a matched canary.
 
@@ -30,6 +30,34 @@ docs/review-2026-08-19-d057-targeted/batch-cards/A-EXTRACT-tests/a-extract.sh . 
   exit 1   — REQUIRED FAILURES with every control holding: the defects are observed.
 ```
 
+## 0-D066.3. Eighth-review correction — causal G2 gate binding
+
+`INSTRUMENT-REVIEW-8.md` returned FAIL because the old G2 `ActionPayload` mutation also failed a
+later verifier test. Ignoring the named type-string guard's nonzero status therefore still left
+the top-level gate red, and every old G2 predicate passed; none could attribute that refusal to
+the named consumer.
+
+**Gate harness, current sha256 `9da8d329…827e`:** G2 now inserts an exported-but-unused,
+transposed `ActionPayload` string immediately before the canonical runtime definition. The
+primary run reports `ActionPayload` drift at the named type-string stage, keeps the eval-code and
+vendor-honesty stages green, and refuses at the top level. The new G2-causal run preserves that
+exact source-uniqueness mutation but changes only the named invocation's accumulator edge from
+`|| fail=1` to `|| true`; its type-string failure still prints, while the top-level gate passes.
+Full result:
+
+```
+  REQUIRED : 7 of 7 held
+  CONTROL  : 11 of 11 held
+  exit 0
+```
+
+Supervisor outcomes are `0/5/0/5` for G1/G2/G2-causal/G3. The evidence destination contains
+`g1.log`, `g2.log`, `g2-causal.log`, `g3.log` and `matrix.tsv`. Every log contains exactly one TS,
+EC and VH banner; G1 and G2-causal each contain one pass token and no failure/refusal token, while
+G2/G3 each contain one failure and one completion-refusal token and no pass token. No log contains
+a fatal Git diagnostic or `ERR_MODULE_NOT_FOUND`. The matrix has 7 REQUIRED PASS, 11 CONTROL PASS
+and 3 OBSERVED rows.
+
 ## 0-D066.2. Seventh-review correction — fail-closed gate evidence output
 
 `INSTRUMENT-REVIEW-7.md` returned FAIL because an invalid advertised
@@ -37,7 +65,7 @@ docs/review-2026-08-19-d057-targeted/batch-cards/A-EXTRACT-tests/a-extract.sh . 
 same review found a live derived count of 28 REQUIRED failures where two complete current fast
 runs measured 31 (21 of 52 held).
 
-**Gate harness, current sha256 `2d00ab31…3e61`:** the normal invalid destination
+**Gate harness, then-current sha256 `2d00ab31…3e61`:** the normal invalid destination
 `/dev/null/aextract-review8-output` now refuses during preflight at exit 2 with zero REQUIRED and
 zero CONTROL rows and names the destination failure. The paired valid-destination run wrote all
 four advertised outputs and returned:
@@ -72,7 +100,7 @@ are byte-identical: **21 of 52 REQUIRED, 70 of 70 CONTROL, exit 1**. `Z-clean` r
 and zero boundary lines. The consumer transcript intentionally embeds randomized scratch paths
 and is therefore not claimed byte-identical.
 
-**Gate harness, current sha256 `b8290f99…ff50`:** **7 of 7 REQUIRED, 10 of 10 CONTROL, exit 0**,
+**Gate harness, then-current sha256 `b8290f99…ff50`:** **7 of 7 REQUIRED, 10 of 10 CONTROL, exit 0**,
 with top-level supervisor outcomes `0/5/5`. G1 contains one `GATE PASSED` and no failure token;
 G2 and G3 each contain one `GATE FAILED`, no pass token and one completion-refusal token. Every
 retained log contains exactly one TS, EC and VH banner. `Z-clean` records Git rc 0 and zero
@@ -828,7 +856,7 @@ that cannot execute must never read as a check that passed.*
 ## 7. Gate binding — D-059(7), PARTLY discharged
 
 Measured separately by `a-extract-gate.sh`: **fast-profile gate binding is MEASURED** — 7 of 7
-REQUIRED and 10 of 10 CONTROL held on the corrected revision. **The deep profile (`--gate`) was NOT run**; its coverage rests
+REQUIRED and 11 of 11 CONTROL held on the corrected revision. **The deep profile (`--gate`) was NOT run**; its coverage rests
 on static control-flow evidence only, and **D-059(7) is therefore NOT yet fully discharged.**
 What the eventual independent post-repair verification must do to close it — run the deep profile
 at the exact candidate SHA and capture the three stage banners, with three deep mutation runs

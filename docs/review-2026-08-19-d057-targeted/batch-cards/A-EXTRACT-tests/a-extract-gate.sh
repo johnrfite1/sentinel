@@ -16,10 +16,9 @@
 #
 #   G1  the UNCHANGED top-level fast gate PASSES in the isolated copy.
 #   G2  a targeted A-EXTRACT guard failure makes the TOP-LEVEL gate FAIL at its NAMED STAGE.
-#   G3  that failure CANNOT BE MASKED by another consumer succeeding — demonstrated from BOTH
-#       ends of the stage order, because "a later stage cannot clear an earlier failure" and
-#       "an earlier success cannot excuse a later failure" are two different properties and
-#       only one of them is obvious from reading `fail=1`.
+#       A causal control explicitly ignores that consumer's nonzero status and requires the
+#       otherwise-identical top-level gate to PASS, excluding a second failure as the cause.
+#   G3  a last-consumer failure CANNOT BE EXCUSED by the two earlier consumers succeeding.
 #
 # THE THREE CONSUMER STAGES, by the exact banner `scripts/test.sh` prints:
 #
@@ -27,9 +26,10 @@
 #   == §5.7.1 check coverage (D-031) ==                 scripts/check-eval-codes.sh
 #   == vendor honesty (§7.5 Gate 5, D-008) ==           scripts/check-vendor-honesty.sh
 #
-# G2 breaks the FIRST of the three, so two consumer stages report success AFTER the failure.
-# G3 breaks the LAST of the three, so two consumer stages report success BEFORE it. In both
-# runs the gate must still refuse.
+# G2 breaks the FIRST consumer and leaves both later consumers green. In its causal twin the named
+# failure still prints but its status is explicitly ignored, and
+# the whole gate must pass — proving the primary G2 refusal depends on this consumer's wiring and
+# not on a later independent failure. G3 breaks the LAST consumer, with two earlier successes.
 #
 # WHAT THIS DOES **NOT** SHOW, said here rather than left to be assumed:
 #
@@ -49,7 +49,7 @@
 # recorded in GATE-BINDING.md rather than quietly re-run. A baseline that can fail for an
 # unrelated reason is worthless as a control, so give this harness the machine.
 #
-# COST. Three full fast-gate runs. Budget roughly ten to fifteen minutes and a 180 MB scratch
+# COST. Four full fast-gate runs. Budget roughly fifteen to twenty minutes and a 240 MB scratch
 # copy per subject. This is deliberately NOT part of `a-extract.sh`, which runs in about a
 # minute and needs no toolchain beyond git, bash, awk, python3 and node.
 #
@@ -90,7 +90,7 @@ option-shaped input are all refused at exit 2 with ZERO scored verdicts.
   a-extract-gate.sh . bb664c626d592d86391f644bf014e76f2bbf7db4
 
 Optional environment:
-  A_EXTRACT_GATE_LOGDIR    directory to create/use for the three gate logs and matrix;
+  A_EXTRACT_GATE_LOGDIR    directory to create/use for the four gate logs and matrix;
                            the destination is validated before any scored verdict
 USAGE
 }
@@ -309,7 +309,7 @@ if [ -n "${A_EXTRACT_GATE_LOGDIR:-}" ]; then
         die "cannot write A_EXTRACT_GATE_LOGDIR '$(sanitize_path "$GATE_LOGDIR")'"
     rm -f -- "$_gate_output_probe" || \
         die "cannot remove the A_EXTRACT_GATE_LOGDIR write probe"
-    for _gate_output_name in g1.log g2.log g3.log matrix.tsv; do
+    for _gate_output_name in g1.log g2.log g2-causal.log g3.log matrix.tsv; do
         _gate_output_path="$GATE_LOGDIR/$_gate_output_name"
         if [ -e "$_gate_output_path" ] && { [ ! -f "$_gate_output_path" ] || [ ! -w "$_gate_output_path" ]; }; then
             die "A_EXTRACT_GATE_LOGDIR output '$_gate_output_name' is not a writable regular file"
@@ -392,36 +392,37 @@ check CONTROL  G1-stages "$(has "$g1" "$STAGE_TS" && has "$g1" "$STAGE_EC" && ha
       "all three A-EXTRACT consumer stages are INVOKED BY THE GATE, by name (D-059(7))"
 check CONTROL  G1-order "$([ "$($GREP -n -F -- "$STAGE_TS" "$G1LOG" | cut -d: -f1)" -lt "$($GREP -n -F -- "$STAGE_EC" "$G1LOG" | cut -d: -f1)" ] && \
       [ "$($GREP -n -F -- "$STAGE_EC" "$G1LOG" | cut -d: -f1)" -lt "$($GREP -n -F -- "$STAGE_VH" "$G1LOG" | cut -d: -f1)" ] && echo 0 || echo 1)" \
-      "stage order is type-strings, then eval-codes, then vendor-honesty — which is what makes G2 and G3 opposite ends"
+      "stage order is type-strings, then eval-codes, then vendor-honesty — the before/after relation exercised by G2 and G3"
 check CONTROL  G1-green "$(has "$(stage_body "$G1LOG" "$STAGE_TS")" "$OK_TS" && \
       has "$(stage_body "$G1LOG" "$STAGE_EC")" "$OK_EC" && \
       has "$(stage_body "$G1LOG" "$STAGE_VH")" "$OK_VH" && echo 0 || echo 1)" \
       "on the unchanged copy each of the three stages reports its own success line"
 
 # ============================================================================ G2 =============
-hdr "G2 — a §5.8 guard failure fails the gate at its NAMED STAGE, and two LATER consumers cannot mask it"
-say "The FIRST of the three consumer stages is broken. Everything the gate does afterwards —"
-say "including two A-EXTRACT consumer stages that report success — must not clear the failure."
+hdr "G2 — a §5.8/source-uniqueness failure causally fails the gate at its NAMED STAGE"
+say "The FIRST consumer is broken by a duplicate source string that runtime code never uses. Both"
+say "later consumers stay green. A causal twin ignores only this status and must make the gate pass."
 
 G2COPY="$WORK/gate-g2"
 cp -R "$BASECOPY" "$G2COPY" || die "cannot build the G2 subject"
-python3 - "$G2COPY/$PROP_REL" <<'PY'
+python3 - "$G2COPY/ts/src/signer/eip712.ts" <<'PY'
 import sys
 path = sys.argv[1]
-lines = open(path, encoding="utf-8").read().split("\n")
-hits = 0
-for i, line in enumerate(lines):
-    if line.startswith("    ActionPayload(") and "bytes32 mandateHash,bytes32 policyHash" in line:
-        lines[i] = line.replace("bytes32 mandateHash,bytes32 policyHash",
-                                "bytes32 policyHash,bytes32 mandateHash")
-        hits += 1
-assert hits == 1, "expected exactly one ActionPayload publication, found %d" % hits
-open(path, "w", encoding="utf-8").write("\n".join(lines))
+text = open(path, encoding="utf-8").read()
+marker = "export const ACTION_TYPE ="
+decoy = """export const A_EXTRACT_G2_DECOY_ACTION_TYPE =
+    \"ActionPayload(uint16 schemaVersion,uint256 chainId,address vault,uint256 actionNonce,address target,uint256 valueWei,bytes32 dataHash,uint8 operation,bytes32 policyHash,bytes32 mandateHash,uint64 deadline)\";
+
+"""
+assert text.count(marker) == 1, "expected exactly one ACTION_TYPE definition, found %d" % text.count(marker)
+open(path, "w", encoding="utf-8").write(text.replace(marker, decoy + marker))
 PY
 g2_mut=$?
 check CONTROL  G2-mut "$([ "$g2_mut" = 0 ] && \
-      [ "$($GREP -c '^    ActionPayload(uint16 schemaVersion,uint256 chainId,address vault,uint256 actionNonce,address target,uint256 valueWei,bytes32 dataHash,uint8 operation,bytes32 policyHash,bytes32 mandateHash' "$G2COPY/$PROP_REL")" = 1 ] && echo 0 || echo 1)" \
-      "mutation applied: §5.8 publishes a transposed ActionPayload; nothing else in the subject changed"
+      [ "$($GREP -c 'A_EXTRACT_G2_DECOY_ACTION_TYPE' "$G2COPY/ts/src/signer/eip712.ts")" = 1 ] && \
+      [ "$($GREP -c 'bytes32 policyHash,bytes32 mandateHash,uint64 deadline' "$G2COPY/ts/src/signer/eip712.ts")" = 1 ] && \
+      cmp -s "$BASECOPY/$PROP_REL" "$G2COPY/$PROP_REL" && echo 0 || echo 1)" \
+      "mutation applied: a second, transposed ActionPayload string precedes the runtime source definition; the proposal is unchanged"
 
 G2LOG="$WORK/g2.log"
 ( cd "$G2COPY" && ./scripts/test.sh ) > "$G2LOG" 2>&1
@@ -432,14 +433,49 @@ g2_ts="$(stage_body "$G2LOG" "$STAGE_TS")"
 g2_ec="$(stage_body "$G2LOG" "$STAGE_EC")"
 g2_vh="$(stage_body "$G2LOG" "$STAGE_VH")"
 
-check REQUIRED G2-named "$(has_re "$g2_ts" 'DRIFT in ActionPayload' && ! has "$g2_ts" "$OK_TS" && echo 0 || echo 1)" \
-      "the failure appears UNDER the named stage banner and names the type string, not merely somewhere in the log"
+check REQUIRED G2-named "$(has "$g2_ts" 'ActionPayload' && ! has "$g2_ts" "$OK_TS" && \
+      has_re "$g2_ts" '(DRIFT|duplicate|twice|more than one|source[^0-9]*[2-9]|[2-9][^0-9]*source)' && echo 0 || echo 1)" \
+      "the failure appears UNDER the named stage banner, names ActionPayload, and reports drift or source duplication"
 check REQUIRED G2-gate "$(has "$g2" "GATE FAILED" && ! has "$g2" "GATE PASSED" && echo 0 || echo 1)" \
       "the TOP-LEVEL gate prints GATE FAILED and never GATE PASSED (supervisor rc=$g2_rc)"
 check REQUIRED G2-unmasked "$(has "$g2_ec" "$OK_EC" && has "$g2_vh" "$OK_VH" && has "$g2" "GATE FAILED" && echo 0 || echo 1)" \
-      "NOT MASKED: the two LATER consumer stages both report success in this same run and the gate still fails"
+      "NOT MASKED: the two LATER consumer stages report success in this same run and the gate still fails"
 check CONTROL  G2-scope "$(has "$g2_ec" "$OK_EC" && has "$g2_vh" "$OK_VH" && echo 0 || echo 1)" \
-      "the mutation is targeted — it moved the §5.8 stage and left the other two consumers green"
+      "the unused duplicate moved the §5.8/source stage and left the other two consumers green"
+
+# CAUSAL DISCRIMINATION, added after an eighth review showed the old ActionPayload mutation also
+# failed a later verifier test. Every G2 predicate still held when the named guard's exit was
+# deliberately ignored, so `GATE FAILED` did not establish which stage caused the refusal. This
+# twin keeps the exact source-uniqueness mutation and changes only the gate's accumulator edge for that named
+# consumer. PASS is the required outcome: it proves no later stage independently supplies the
+# failure and makes the primary G2 failure evidence about the named wiring rather than correlation.
+G2CAUSAL="$WORK/gate-g2-causal"
+cp -R "$G2COPY" "$G2CAUSAL" || die "cannot build the G2 causal control"
+python3 - "$G2CAUSAL/scripts/test.sh" <<'PY'
+import sys
+path = sys.argv[1]
+text = open(path, encoding="utf-8").read()
+old = "./scripts/check-type-strings.sh || fail=1"
+new = "./scripts/check-type-strings.sh || true  # A-EXTRACT G2 causal bypass"
+assert text.count(old) == 1, "expected exactly one type-string gate edge, found %d" % text.count(old)
+open(path, "w", encoding="utf-8").write(text.replace(old, new))
+PY
+g2_causal_mut=$?
+G2CAUSALLOG="$WORK/g2-causal.log"
+( cd "$G2CAUSAL" && ./scripts/test.sh ) > "$G2CAUSALLOG" 2>&1
+g2_causal_rc=$?
+sed -i '' 's/\x1b\[[0-9;]*m//g' "$G2CAUSALLOG" 2>/dev/null || sed -i 's/\x1b\[[0-9;]*m//g' "$G2CAUSALLOG" 2>/dev/null
+g2_causal="$(cat "$G2CAUSALLOG")"
+g2_causal_ts="$(stage_body "$G2CAUSALLOG" "$STAGE_TS")"
+g2_causal_ec="$(stage_body "$G2CAUSALLOG" "$STAGE_EC")"
+g2_causal_vh="$(stage_body "$G2CAUSALLOG" "$STAGE_VH")"
+check CONTROL G2-causal "$([ "$g2_causal_mut" = 0 ] && [ "$g2_causal_rc" = 0 ] && \
+      has "$g2_causal_ts" 'ActionPayload' && ! has "$g2_causal_ts" "$OK_TS" && \
+      has_re "$g2_causal_ts" '(DRIFT|duplicate|twice|more than one|source[^0-9]*[2-9]|[2-9][^0-9]*source)' && \
+      has "$g2_causal_ec" "$OK_EC" && has "$g2_causal_vh" "$OK_VH" && \
+      has "$g2_causal" 'GATE PASSED' && ! has "$g2_causal" 'GATE FAILED' && \
+      ! has "$g2_causal" 'GATE DID NOT REACH COMPLETION' && echo 0 || echo 1)" \
+      "CAUSAL: with only the named type-string status edge ignored, its failure still prints but the otherwise-identical top-level gate PASSES (supervisor rc=$g2_causal_rc)"
 
 # ============================================================================ G3 =============
 hdr "G3 — a §7.2 guard failure fails the gate at ITS named stage, with two EARLIER consumers green"
@@ -495,7 +531,7 @@ check CONTROL Z-signed "$([ "$s2_now" = "$s2_base" ] && echo 0 || echo 1)" \
       "docs/gate-s2-evidence.md IN THE LIVE TREE is byte-identical to PRE_REPAIR_SHA — no signed document was read for change"
 
 if [ -n "$GATE_LOGDIR" ]; then
-    for n in g1 g2 g3; do
+    for n in g1 g2 g2-causal g3; do
         cp "$WORK/$n.log" "$GATE_LOGDIR/$n.log" 2>/dev/null || \
             die "cannot preserve $n.log in A_EXTRACT_GATE_LOGDIR"
     done

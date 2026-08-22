@@ -4,9 +4,17 @@
 evidence only for what it actually exercised. Everything below is a limit of this harness,
 stated so that nobody has to rediscover it from a passing line.
 
+**Eighth-review correction:** G2 now inserts an unused, transposed duplicate `ActionPayload`
+string before the runtime source definition. The named type-string guard sees drift on the
+pre-repair subject and source duplication after the repair, while the runtime typehash and later
+tests remain unchanged. A fourth full gate run retains that exact mutation while bypassing only
+the type-string guard's `fail=1` edge; the named failure remains visible and the top-level gate
+must pass. This causal control excludes another stage as the source of G2's refusal. A valid
+evidence destination now receives four logs plus the matrix.
+
 **Seventh-review correction:** optional `A_EXTRACT_GATE_LOGDIR` setup is now part of gate
-preflight. The harness creates/resolves and write-probes the directory and validates its four
-named outputs before any REQUIRED or CONTROL row; the final three log copies and matrix write are
+preflight. The harness creates/resolves and write-probes the directory and validates its five
+named outputs before any REQUIRED or CONTROL row; the final four log copies and matrix write are
 checked as well. A normal invalid destination refuses at exit 2 with zero scored rows rather than
 printing a green completion beside missing evidence. See `CARD.md` “SEVENTH INSTRUMENT REVIEW”
 for the paired drive and the separate current-count correction.
@@ -300,9 +308,10 @@ claim about CI, about Linux, or about a container image.**
 ## 2b. Gate binding — what `a-extract-gate.sh` does and does not show
 
 - **Shown:** the unchanged top-level FAST gate passes in an isolated clone; all three consumer
-  stages are invoked by their exact banners, in a known order; breaking the FIRST consumer fails
-  the gate at its named stage with two later consumers green; breaking the LAST does the same
-  with two earlier consumers green.
+  stages are invoked by their exact banners, in a known order; breaking the FIRST consumer with
+  an unused duplicate source string fails the gate at its named stage with both later consumers
+  green; bypassing only that named status edge makes the otherwise-identical gate pass; breaking
+  the LAST consumer fails with two earlier consumers green.
 - **NOT shown:** the DEEP profile (`--gate`) is not run — it costs several minutes more per
   invocation and executes the corpus. **That the three stages are unconditional in both profiles
   is a READING of `scripts/test.sh`, not a measurement, and it is recorded here as a reading.**
@@ -311,7 +320,7 @@ claim about CI, about Linux, or about a container image.**
 - **Explicitly, as D-059(7) requires:** these guards cover only their enumerated canonical facts
   — six §5.8 type strings, forty-one §5.7.1 identifiers, one §7.2 sentence, one §2 table hash.
   **They are NOT general prose-consistency evidence.**
-- **Cost and dependencies:** three full fast-gate runs, roughly ten to fifteen minutes, ~180 MB
+- **Cost and dependencies:** four full fast-gate runs, roughly fifteen to twenty minutes, ~240 MB
   of scratch per subject, and it requires `forge`, `node`, an installed `ts/node_modules` and
   both submodule working trees. If any is absent the harness **DIES (exit 2)** rather than
   skipping — a check that cannot execute must never read as one that passed.

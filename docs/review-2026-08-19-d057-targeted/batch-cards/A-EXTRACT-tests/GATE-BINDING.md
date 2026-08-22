@@ -7,7 +7,7 @@
 > and is NOT general prose-consistency evidence."* — D-059(7)
 
 **Harness:** `a-extract-gate.sh`, sha256
-`2d00ab31fb61956f2daf4128647203a971f220b7104cdff595987cb484153e61`.
+`9da8d3295fecacf68312524080f77db3c35dcf34e308804d657c46bc1a37827e`.
 **Subject:** a private `git clone` of this repository checked out at
 `bb664c626d592d86391f644bf014e76f2bbf7db4`, with `ts/node_modules` and both submodule working
 trees copied in. **The live gate is never run, never edited, and never written to.** No signed or
@@ -49,6 +49,44 @@ sufficiency lapses and the deep mutation runs become required.
 
 ---
 
+## RE-MEASURED AFTER THE EIGHTH REVIEW — G2 IS NOW CAUSALLY DISCRIMINATING
+
+The eighth review showed that the old G2 `ActionPayload` mutation failed both the named
+type-string guard and a later verifier test. A gate that explicitly ignored the named guard's
+status still failed later and satisfied every G2 predicate. That G2 could not establish that the
+gate carried the named consumer's verdict.
+
+The current G2 inserts a second, transposed `ActionPayload` string literal immediately before the
+canonical runtime source definition. It is exported but unused, so the named type-string guard
+sees a second source candidate while the runtime typehash and later tests stay unchanged. The
+primary arm requires a named drift-or-duplication diagnostic, green eval-code and vendor-honesty
+stages, and a top-level refusal. A fourth full run is its causal twin: the same duplicate source
+string remains, but the gate changes only `check-type-strings.sh || fail=1` to `|| true`. The named
+failure must still print and the otherwise-identical top-level gate must pass. `G2-causal`
+combines those predicates and therefore fails if another stage independently keeps the gate red.
+
+Current harness sha256:
+`9da8d3295fecacf68312524080f77db3c35dcf34e308804d657c46bc1a37827e`. The full valid-output run
+returned:
+
+```
+  REQUIRED : 7 of 7 held
+  CONTROL  : 11 of 11 held
+  exit 0
+```
+
+Supervisor outcomes are `0/5/0/5` for G1/G2/G2-causal/G3. All four retained logs contain one TS,
+EC and VH banner. G1 and G2-causal contain one pass token and no failure/refusal token; G2/G3 each
+contain one failure and one completion-refusal token and no pass token. The matrix contains 7
+REQUIRED PASS, 11 CONTROL PASS and 3 OBSERVED rows, and no log contains a fatal Git diagnostic or
+`ERR_MODULE_NOT_FOUND`.
+
+This run still does not invoke `--gate`; the STATUS above remains authoritative and the eventual
+post-repair verification must capture the three banners from a deep run at the exact candidate
+SHA.
+
+---
+
 ## RE-MEASURED AFTER THE SEVENTH REVIEW — FAIL-CLOSED EVIDENCE DESTINATION
 
 The seventh review supplied an invalid advertised `A_EXTRACT_GATE_LOGDIR`. The old harness ran
@@ -62,7 +100,7 @@ named outputs before `P3-provenance`, its first REQUIRED or CONTROL row. The fin
 and matrix write are checked as well. `/dev/null/aextract-review8-output` now refuses at exit 2,
 with zero REQUIRED and zero CONTROL rows and a named preflight diagnosis.
 
-Current harness sha256:
+Then-current harness sha256:
 `2d00ab31fb61956f2daf4128647203a971f220b7104cdff595987cb484153e61`. The paired valid-output
 run wrote `g1.log`, `g2.log`, `g3.log` and `matrix.tsv` and returned:
 
@@ -97,7 +135,7 @@ discarded Git's status and counted its empty stdout. The current control require
 and zero output lines**. Its isolated paired drive is clean `0/0 -> PASS`, dirty `0/1 -> FAIL`,
 and broken status `128/1 -> FAIL`.
 
-Current harness sha256:
+Then-current harness sha256:
 `b8290f9931b540eb8a4dd381dfd9aaa43f143792a0cbdaef3d0c73bb24b8ff50`. A full isolated run at
 `bb664c626d592d86391f644bf014e76f2bbf7db4` returned:
 
@@ -364,24 +402,27 @@ own success line.
 
 ---
 
-## 3. G2 — the FIRST consumer breaks; two LATER consumers cannot mask it
+## 3. G2 — the FIRST consumer breaks, and its status edge is the cause
 
-**Mutation:** transpose `bytes32 mandateHash,bytes32 policyHash` in the one `ActionPayload`
-publication inside `§5.8`. One line, proven applied by control `G2-mut`.
+**Mutation:** insert an exported-but-unused, transposed `ActionPayload` string immediately before
+the canonical `ACTION_TYPE` definition in `ts/src/signer/eip712.ts`. The pre-repair guard reads
+the first candidate and reports drift; the repaired source-uniqueness guard must refuse the two
+candidates. Runtime hashing still uses the untouched canonical definition. Control `G2-mut`
+proves the insertion applied once and the proposal stayed byte-identical.
+
+Primary arm:
 
 ```
 == published EIP-712 type strings (D-023) ==
 type strings: DRIFT in ActionPayload
-  spec  : ActionPayload(…,uint8 operation,bytes32 policyHash,bytes32 mandateHash,uint64 deadline)
-  source: ActionPayload(…,uint8 operation,bytes32 mandateHash,bytes32 policyHash,uint64 deadline)
-  A published type string that disagrees with the code is a confident wrong answer:
-  a wrong type string and an invalid signature are indistinguishable at the output.
+  spec  : ActionPayload(…,bytes32 mandateHash,bytes32 policyHash,uint64 deadline)
+  source: ActionPayload(…,bytes32 policyHash,bytes32 mandateHash,uint64 deadline)
 
 == §5.7.1 check coverage (D-031) ==
-eval codes: 41/41 engine checks documented in §5.7.1 (D-031)          ← LATER consumer, GREEN
+eval codes: 41/41 engine checks documented in §5.7.1 (D-031)             ← LATER, GREEN
 
 == vendor honesty (§7.5 Gate 5, D-008) ==
-  ok    the ablation report carries §7.2's caveat verbatim, as §7.2 words it   ← LATER, GREEN
+  ok    the ablation report carries §7.2's caveat verbatim, as §7.2 words it  ← AFTER, GREEN
 …
 GATE FAILED
 
@@ -389,12 +430,19 @@ GATE DID NOT REACH COMPLETION
   The body exited 1 without emitting its completion token.
 ```
 
-- **`G2-named`** — the failure is *under the named banner* and names `ActionPayload`. It is not
-  merely somewhere in a 2000-line log.
+- **`G2-named`** — the failure is under the named banner, names `ActionPayload`, and reports
+  either pre-repair drift or repaired source duplication.
 - **`G2-gate`** — the top-level gate prints `GATE FAILED` and never `GATE PASSED`.
-- **`G2-unmasked`** — **two later A-EXTRACT consumer stages report success in this same run and
-  the gate still refuses.**
-- **`G2-scope`** — the mutation is targeted: it moved the §5.8 stage and left the other two green.
+- **`G2-unmasked`** — both later consumers are green in the same run and the gate still refuses.
+- **`G2-scope`** — the unused duplicate moved only the type-string/source consumer.
+
+**Causal twin:** copy that exact G2 subject and change only the named gate edge from
+`./scripts/check-type-strings.sh || fail=1` to `|| true`. The same diagnostic must still print,
+the eval-code and vendor-honesty consumers must remain green, and now the complete top-level gate
+must print `GATE PASSED` with no failure or completion-refusal token. That is control
+**`G2-causal`**. It rules out the defect found by Review 8: if any later stage independently
+failed on this fixture, the causal twin would remain red and the control would invalidate every
+verdict at exit 2.
 
 ---
 
@@ -424,10 +472,10 @@ GATE FAILED
 - **`G3-unmasked`** — **two earlier consumer stages are green and do not excuse the later failure.**
 - **`G3-scope`** — targeted; the other two consumers stayed green.
 
-**Why both directions are run.** "A later stage cannot clear an earlier failure" and "earlier
-successes cannot excuse a later failure" are two properties. G2 shows the first, G3 the second. A
-single direction would demonstrate only one and leave the other assumed — which is the shape of
-assumption this whole cycle exists to remove.
+**Why both shapes are run.** G2 puts two successful consumers after its failure and adds the
+causal bypass that attributes the refusal to its one status edge. G3 separately puts the failure
+last, after two earlier successes. One shape would leave a different ordering assumed — which is
+the shape of assumption this cycle exists to remove.
 
 ---
 

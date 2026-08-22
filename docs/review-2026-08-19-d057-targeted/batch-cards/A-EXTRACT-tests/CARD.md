@@ -25,6 +25,32 @@ already identifies frozen attempt-two evidence.
 or by the commit that carries it. `TESTS.patch` is supplied as a patch file and is **NOT
 applied**.
 
+## EIGHTH INSTRUMENT REVIEW — CAUSAL GATE BINDING RESTORED
+
+`INSTRUMENT-REVIEW-8.md` returned **FAIL** on the exact seventh-review repair commit. Its finding
+is closed without editing that historical review:
+
+- **`F8-1`, G2 was non-discriminating:** transposing the proposal's `ActionPayload` publication
+  failed the named type-string guard **and** a later verifier test. When the reviewer changed the
+  gate to ignore the named guard's nonzero status, that later test still made the top-level gate
+  fail, satisfying every G2 predicate. G2 therefore showed correlation, not that the gate carried
+  the named consumer's verdict.
+
+G2 now inserts a second, transposed `ActionPayload` string literal immediately before the runtime
+definition in `ts/src/signer/eip712.ts`. It is exported but unused, so it changes the named
+type-string guard's source-uniqueness fact without changing the runtime typehash or the later test
+suites. Its primary arm requires that named failure, two green later consumers, and a top-level
+refusal. A fourth full gate run is the causal twin: it retains the same duplicate source string
+but changes only `check-type-strings.sh || fail=1` to `|| true`. The named failure must still print and the
+top-level gate must **PASS**. Control `G2-causal` binds those observations together, so another
+stage cannot silently supply G2's refusal.
+
+Current measurement: **7 of 7 REQUIRED / 11 of 11 CONTROL / exit 0**, with supervisor outcomes
+`0/5/0/5` for G1/G2/G2-causal/G3. All four logs and the matrix were preserved; every log has the
+three consumer banners, G1 and G2-causal carry only the pass token, and G2/G3 carry only the
+failure and completion-refusal tokens. This is still an instrument result, not a HOLD; a ninth
+fresh independent review of the exact committed correction is required before implementation.
+
 ## SEVENTH INSTRUMENT REVIEW — TWO DEFECTS CLOSED
 
 `INSTRUMENT-REVIEW-7.md` returned **FAIL** on the exact sixth-review repair commit. That review is
@@ -41,7 +67,8 @@ historical evidence and is not edited. Its two findings are closed in the curren
   measured 28 REQUIRED failures. Two complete current runs measured 31 failures — 21 of 52 held.
   The live statement now says 31; the explicitly historical 28-of-49 measurements remain intact.
 
-Paired measurement: the invalid log destination now refuses in preflight at exit 2 with zero
+Paired measurement at the seventh-review correction checkpoint: the invalid log destination
+refused in preflight at exit 2 with zero
 REQUIRED and zero CONTROL rows. A valid new destination receives `g1.log`, `g2.log`, `g3.log` and
 `matrix.tsv`; the full gate harness is **7 of 7 REQUIRED / 10 of 10 CONTROL / exit 0**, with
 supervisor outcomes `0/5/5`, all three consumer banners in each log, and the expected pass/fail
@@ -74,7 +101,7 @@ harness defines that option as an **existing writable directory** and validates 
 matrix output path, before any REQUIRED or CONTROL row. An invalid destination refuses at exit 2
 with zero scored verdicts.
 
-Current remeasurement: two complete fast runs are byte-identical in stdout and matrix at **21 of
+Sixth-review checkpoint remeasurement: two complete fast runs are byte-identical in stdout and matrix at **21 of
 52 REQUIRED / 70 of 70 CONTROL / exit 1**; the full gate harness is **7 of 7 REQUIRED / 10 of 10
 CONTROL / exit 0**, with supervisor outcomes `0/5/5`. These are instrument results, not a HOLD;
 fresh independent review of the exact committed correction is still required before implementation.
@@ -436,13 +463,13 @@ things. `GATE-BINDING.md` carries the measured evidence.
 | | Demonstration |
 |---|---|
 | **G1** | the **unchanged** top-level fast gate **PASSES**, and all three consumer stages are invoked by name |
-| **G2** | breaking the **FIRST** consumer makes the gate fail **at its named stage** — and the two LATER consumer stages report success in the same run without clearing it |
+| **G2** | breaking the **FIRST** consumer with an unused duplicate source string makes the gate fail **at its named stage**, with both later consumers green; its causal twin ignores only that status edge and makes the otherwise-identical gate pass |
 | **G3** | breaking the **LAST** consumer does the same with the two EARLIER consumer stages green |
 
 The three stage banners are `== published EIP-712 type strings (D-023) ==`,
 `== §5.7.1 check coverage (D-031) ==` and `== vendor honesty (§7.5 Gate 5, D-008) ==`.
-**Both directions are run because "a later stage cannot clear an earlier failure" and "earlier
-successes cannot excuse a later failure" are two properties, and one direction shows only one.**
+G2 observes two later successes and proves causality by bypassing only its status edge; G3
+separately shows that two earlier successes cannot excuse the last consumer.
 
 **Stated explicitly, as D-059(7) requires: these guards cover only their enumerated canonical
 facts — six §5.8 type strings, forty-one §5.7.1 identifiers, one §7.2 sentence, one §2 table
@@ -514,7 +541,7 @@ repair chooses its words; it may not choose silence, success, or a message about
 |---|---|
 | `CARD.md` | this card — the invariant, the boundary, the matrix, the controls, the exclusions, the stopping rule |
 | `a-extract.sh` | the fast harness: 52 binding assertions, 70 controls, ~2 minutes, no toolchain beyond git/bash/awk/python3/node |
-| `a-extract-gate.sh` | the D-059(7) gate-binding harness: three full fast-gate runs in an isolated clone, ~10-20 minutes, needs forge and `ts/node_modules` |
+| `a-extract-gate.sh` | the D-059(7) gate-binding harness: four full fast-gate runs in an isolated clone, ~15-25 minutes, needs forge and `ts/node_modules` |
 | `GATE-BINDING.md` | the measured gate-binding evidence |
 | `COVERAGE.md` | what is exercised, what is not, the interpretations, and **§7 — what was removed from the binding contract and why** |
 | `RESULTS.md` | the measured pre-repair run at `bb664c6`, both measurements, and the per-case verdicts |
