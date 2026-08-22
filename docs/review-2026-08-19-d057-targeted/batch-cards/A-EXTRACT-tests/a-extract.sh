@@ -129,8 +129,8 @@ To reproduce the recorded pre-repair baseline:
   a-extract.sh . bb664c626d592d86391f644bf014e76f2bbf7db4
 
 Optional environment:
-  A_EXTRACT_EVIDENCE_DIR   directory to write per-case consumer output into
-  A_EXTRACT_MATRIX_OUT     file to write the case matrix TSV into
+  A_EXTRACT_EVIDENCE_DIR   existing writable directory for per-case consumer output
+  A_EXTRACT_MATRIX_OUT     writable file path for the case matrix TSV
 USAGE
 }
 
@@ -562,6 +562,22 @@ check OBSERVED P2 0 "$GIT_V ; bash ${BASH_V#version } ; $(python3 --version 2>&1
 
 [ -n "$ROOT" ] || die "the repository path '$ROOT_ARG' does not exist or is not a directory"
 [ -d "$ROOT/.git" ] || die "$(sanitize_path "$ROOT") is not a git repository"
+
+# Optional evidence destinations are operator preconditions, not verdicts. Validate their write
+# paths before any REQUIRED or CONTROL row so a capture setup error cannot accompany a scored
+# result. The evidence directory is intentionally required to exist; the harness does not create
+# an arbitrary caller-supplied directory tree.
+if [ -n "${A_EXTRACT_EVIDENCE_DIR:-}" ]; then
+    [ -d "$A_EXTRACT_EVIDENCE_DIR" ] || \
+        die "A_EXTRACT_EVIDENCE_DIR is not an existing directory: $(sanitize_path "$A_EXTRACT_EVIDENCE_DIR")"
+    : > "$A_EXTRACT_EVIDENCE_DIR/consumer-output.txt" 2>/dev/null || \
+        die "cannot write A_EXTRACT_EVIDENCE_DIR/consumer-output.txt"
+fi
+if [ -n "${A_EXTRACT_MATRIX_OUT:-}" ]; then
+    [ -d "$(dirname "$A_EXTRACT_MATRIX_OUT")" ] || \
+        die "the parent of A_EXTRACT_MATRIX_OUT is not an existing directory"
+    : > "$A_EXTRACT_MATRIX_OUT" 2>/dev/null || die "cannot write A_EXTRACT_MATRIX_OUT"
+fi
 
 # THERE IS NO SUBJECT RESOLUTION STEP ANY MORE. THAT IS THE POINT.
 #
@@ -1583,9 +1599,11 @@ done
 # deliberately NOT folded into the Z-consumer comparison above. "the snapshot matches the commit
 # I asked for" and "this run changed nothing in the repository it read" are different claims, and
 # a single merged control would let either one carry the other.
-dirty="$(cd "$ROOT" && git status --porcelain -- "$PROP_REL" "$SRC_REL" "$RPT_REL" scripts verifier | wc -l | tr -d ' ')"
-check CONTROL Z-clean "$([ "$dirty" = "0" ] && echo 0 || echo 1)" \
-      "the repository under test was not modified by this run ($dirty changed path(s) in the boundary)"
+_dirty_out="$(cd "$ROOT" && git status --porcelain -- "$PROP_REL" "$SRC_REL" "$RPT_REL" scripts verifier 2>&1)"
+_dirty_rc=$?
+dirty="$(printf '%s\n' "$_dirty_out" | awk 'NF { n++ } END { print n+0 }')"
+check CONTROL Z-clean "$([ "$_dirty_rc" = "0" ] && [ "$dirty" = "0" ] && echo 0 || echo 1)" \
+      "git status completed successfully (rc=$_dirty_rc) and the repository under test was not modified by this run ($dirty changed or diagnostic line(s) in the boundary probe)"
 
 # GATE 5 IS AN INTEGRITY CONTROL, NOT A FALSIFICATION. The earlier `14d` compared the live
 # repository's pin and §2 hash against a constant with NO opposite outcome available — proving

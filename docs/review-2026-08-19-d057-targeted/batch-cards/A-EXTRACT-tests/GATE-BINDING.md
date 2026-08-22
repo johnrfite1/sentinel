@@ -7,7 +7,7 @@
 > and is NOT general prose-consistency evidence."* — D-059(7)
 
 **Harness:** `a-extract-gate.sh`, sha256
-`e4141c166353c941a479fa730dfaaaff2089dbb17df697aeffeb666271189fd3`.
+`b8290f9931b540eb8a4dd381dfd9aaa43f143792a0cbdaef3d0c73bb24b8ff50`.
 **Subject:** a private `git clone` of this repository checked out at
 `bb664c626d592d86391f644bf014e76f2bbf7db4`, with `ts/node_modules` and both submodule working
 trees copied in. **The live gate is never run, never edited, and never written to.** No signed or
@@ -49,6 +49,40 @@ sufficiency lapses and the deep mutation runs become required.
 
 ---
 
+## RE-MEASURED AFTER THE SIXTH REVIEW — COMPLETE DEPENDENCY PREFLIGHT AND FAIL-CLOSED CLEANLINESS
+
+The sixth review found that the fifth repair enumerated only two of the gate harness's three
+copied dependencies. With valid Forge trees and an empty `ts/node_modules`, package-resolution
+errors reached all three gate runs and the harness scored G1. The current preflight requires all
+three trees to be non-empty before any REQUIRED or CONTROL verdict. The empty Node branch now
+refuses at exit 2 with zero scored rows, matching the independently driven Forge-tree branches.
+
+The same review showed that `Z-clean` could PASS when `git status` exited 128 because a pipeline
+discarded Git's status and counted its empty stdout. The current control requires **status rc 0
+and zero output lines**. Its isolated paired drive is clean `0/0 -> PASS`, dirty `0/1 -> FAIL`,
+and broken status `128/1 -> FAIL`.
+
+Current harness sha256:
+`b8290f9931b540eb8a4dd381dfd9aaa43f143792a0cbdaef3d0c73bb24b8ff50`. A full isolated run at
+`bb664c626d592d86391f644bf014e76f2bbf7db4` returned:
+
+```
+  REQUIRED : 7 of 7 held
+  CONTROL  : 10 of 10 held
+  exit 0
+```
+
+Supervisor outcomes are `0/5/5`. Each retained G1/G2/G3 log contains exactly one TS, EC and VH
+banner. G1 contains one pass token and no fail/refusal token; G2 and G3 each contain one fail and
+one completion-refusal token with no pass token. `Z-clean` records rc 0 and zero lines, and
+`Z-signed` passes. The fast-profile binding result is unchanged.
+
+This run still does not invoke `--gate`; the STATUS above remains authoritative and the eventual
+post-repair verification must capture the three banners from a deep run at the exact candidate
+SHA.
+
+---
+
 ## RE-MEASURED AFTER THE FIFTH REVIEW — D-066
 
 The fifth review found the empty-submodule preflight silently removed at `4f1e6a3`. The restored
@@ -56,7 +90,7 @@ loop covers both Forge dependency siblings before the first REQUIRED or CONTROL 
 negative probes established each branch independently: empty `forge-std` refuses at exit 2 with
 zero scored verdicts; with that sibling populated, empty `openzeppelin-contracts` does the same.
 
-The current committed-content harness hash during this working state is
+The then-current committed-content harness hash during that working state was
 `e4141c166353c941a479fa730dfaaaff2089dbb17df697aeffeb666271189fd3`. Its full isolated run at
 `bb664c626d592d86391f644bf014e76f2bbf7db4` returned:
 
@@ -424,6 +458,7 @@ assumption this whole cycle exists to remove.
 - **Three full fast-gate runs.** Budget ten to twenty minutes and roughly 180 MB of scratch per
   subject. This is why gate binding is a separate harness: `a-extract.sh` runs in about two
   minutes and this does not.
-- If `forge`, `node`, `ts/node_modules` or either submodule tree is absent, the harness **exits 2
+- If `forge` or `node` is absent, or `ts/node_modules` or either submodule tree is absent or empty,
+  the harness **exits 2
   as a preflight failure** rather than skipping. A check that cannot execute must never read as a
   check that passed.

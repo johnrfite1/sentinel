@@ -7,15 +7,15 @@
 docs/review-2026-08-19-d057-targeted/batch-cards/A-EXTRACT-tests/a-extract.sh . bb664c626d592d86391f644bf014e76f2bbf7db4
 ```
 
-**Harness sha256:** `68dec333a34ecbc3186419ba2264af513c74058771772be24deee275f3c7e4c9` (`a-extract.sh`; printed by the harness itself).
-**Gate harness sha256:** `e4141c166353c941a479fa730dfaaaff2089dbb17df697aeffeb666271189fd3` (`a-extract-gate.sh`; see `GATE-BINDING.md`).
+**Harness sha256:** `9e489ee6f4adab00535d036619738cf1faa97ec8ab070d22cbf29dd3e769bc1a` (`a-extract.sh`; printed by the harness itself).
+**Gate harness sha256:** `b8290f9931b540eb8a4dd381dfd9aaa43f143792a0cbdaef3d0c73bb24b8ff50` (`a-extract-gate.sh`; see `GATE-BINDING.md`).
 **Environment:** git 2.50.1 (Apple Git-155); bash 3.2.57; Python 3.9.6; node v26.3.0;
 `/usr/bin/grep` with a matched canary.
 
 **The five identity facts the run printed, twice — before any case and again in the summary:**
 
 ```
-  harness sha256   : 68dec333a34ecbc3186419ba2264af513c74058771772be24deee275f3c7e4c9
+  harness sha256   : 9e489ee6f4adab00535d036619738cf1faa97ec8ab070d22cbf29dd3e769bc1a
   repository       : ~/Projects/Sentinel
   requested subject: bb664c626d592d86391f644bf014e76f2bbf7db4
   resolved subject : bb664c626d592d86391f644bf014e76f2bbf7db4
@@ -30,18 +30,50 @@ docs/review-2026-08-19-d057-targeted/batch-cards/A-EXTRACT-tests/a-extract.sh . 
   exit 1   — REQUIRED FAILURES with every control holding: the defects are observed.
 ```
 
+## 0-D066.1. Sixth-review correction — measured on the current files
+
+`INSTRUMENT-REVIEW-6.md` returned FAIL because the gate harness scored an empty
+`ts/node_modules` as G1, both `Z-clean` controls ignored a failed `git status`, and `CARD.md`
+retained an unqualified current count of 49 assertions. The first two are faithful-measurement
+defects under D-065(3); the third is a published figure that was not current.
+
+**Fast harness, current sha256 `9e489ee6…bc1a`:** run twice at the exact pre-repair oid with
+existing evidence directories and explicit matrix paths. Complete stdout and the 136-row matrices
+are byte-identical: **21 of 52 REQUIRED, 70 of 70 CONTROL, exit 1**. `Z-clean` reports Git rc 0
+and zero boundary lines. The consumer transcript intentionally embeds randomized scratch paths
+and is therefore not claimed byte-identical.
+
+**Gate harness, current sha256 `b8290f99…ff50`:** **7 of 7 REQUIRED, 10 of 10 CONTROL, exit 0**,
+with top-level supervisor outcomes `0/5/5`. G1 contains one `GATE PASSED` and no failure token;
+G2 and G3 each contain one `GATE FAILED`, no pass token and one completion-refusal token. Every
+retained log contains exactly one TS, EC and VH banner. `Z-clean` records Git rc 0 and zero
+production-boundary lines; `Z-signed` holds.
+
+Targeted negative and movement probes:
+
+| Probe | Result |
+|---|---|
+| non-empty Forge trees, empty `ts/node_modules` | exit 2; 0 REQUIRED; 0 CONTROL; named Node-tree diagnosis |
+| clean status | rc 0, 0 lines, `Z-clean` predicate PASS |
+| ordinary dirty status | rc 0, 1 line, predicate FAIL |
+| failed status | rc 128, 1 diagnostic line, predicate FAIL |
+| nonexistent `A_EXTRACT_EVIDENCE_DIR` | exit 2; 0 REQUIRED; 0 CONTROL; named destination diagnosis |
+
+The TEST MATRIX heading now says 52. The fifth-review measurements immediately below remain the
+historical measurement of the preceding instrument hashes; they are not the current-file hashes.
+
 ## 0-D066. Fifth-review correction — measured on the current files
 
 `INSTRUMENT-REVIEW-5.md` returned FAIL on a silently removed dependency preflight and four lines
 counted as controls although P6 already made their failure unreachable; it also corrected three
 exhaustive pinning claims. John approved the `OBSERVED` reclassification in D-066.
 
-**Fast harness, current sha256 `68dec333…e4c9`:** run twice at the exact pre-repair oid. Both
+**Fast harness, then-current sha256 `68dec333…e4c9`:** run twice at the exact pre-repair oid. Both
 captured logs and both matrices are byte-identical: **21 of 52 REQUIRED, 70 of 70 CONTROL, exit
 1**. The four reclassified facts print as OBSERVED; REQUIRED results, reason classes, execution
 witness counts, `Z-clean`, `Z-gate5` and `Z-signed` are unchanged.
 
-**Gate harness, current sha256 `e4141c16…fd3`:** **7 of 7 REQUIRED, 10 of 10 CONTROL, exit 0**,
+**Gate harness, then-current sha256 `e4141c16…fd3`:** **7 of 7 REQUIRED, 10 of 10 CONTROL, exit 0**,
 with the three top-level gate supervisor outcomes still rc `0/5/5`. Each of G1, G2 and G3 carries
 all three named consumer-stage banners; G1 prints one `GATE PASSED`, while G2 and G3 each print one
 `GATE FAILED` and no pass token. An empty `forge-std` and, independently, an empty

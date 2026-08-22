@@ -25,6 +25,36 @@ already identifies frozen attempt-two evidence.
 or by the commit that carries it. `TESTS.patch` is supplied as a patch file and is **NOT
 applied**.
 
+## SIXTH INSTRUMENT REVIEW — THREE DEFECTS CLOSED
+
+`INSTRUMENT-REVIEW-6.md` returned **FAIL** on the exact fifth-review repair commit. That review is
+historical evidence and is not edited. Its three findings are closed in the current instrument:
+
+- **`F6-1`, the omitted Node dependency sibling:** `a-extract-gate.sh` consumes three copied
+  dependency trees, not two. An existing-but-empty `ts/node_modules` reached all three gate runs,
+  produced package-resolution errors, and was scored as a G1 failure. The gate preflight now
+  requires `forge-std`, `openzeppelin-contracts` **and** `ts/node_modules` to be non-empty before
+  any REQUIRED or CONTROL row. Each empty-tree branch was driven separately and refuses at exit 2
+  with zero scored verdicts.
+- **`F6-2`, `Z-clean` false-pass:** both harnesses previously counted the stdout of
+  `git status | wc -l` but ignored Git's exit status. A broken repository probe could therefore
+  yield zero lines and PASS. Each control now captures Git's status and output separately and
+  requires **rc 0 AND zero lines**. The paired drive moves clean `rc=0/0 -> PASS`, ordinary dirty
+  `rc=0/1 -> FAIL`, and probe failure `rc=128/1 -> FAIL`.
+- **`F6-3`, stale current count:** the TEST MATRIX introduction now says 52 binding assertions,
+  matching the matrix and the other current figures.
+
+The review also recorded a non-finding setup error: a caller supplied a nonexistent
+`A_EXTRACT_EVIDENCE_DIR`, `_log` failed to append, and scored output continued. The current fast
+harness defines that option as an **existing writable directory** and validates it, along with the
+matrix output path, before any REQUIRED or CONTROL row. An invalid destination refuses at exit 2
+with zero scored verdicts.
+
+Current remeasurement: two complete fast runs are byte-identical in stdout and matrix at **21 of
+52 REQUIRED / 70 of 70 CONTROL / exit 1**; the full gate harness is **7 of 7 REQUIRED / 10 of 10
+CONTROL / exit 0**, with supervisor outcomes `0/5/5`. These are instrument results, not a HOLD;
+fresh independent review of the exact committed correction is still required before implementation.
+
 ## FIFTH INSTRUMENT REVIEW — D-066 DISPOSITION
 
 The fifth independent review returned **FAIL** on two classes D-065(3) explicitly keeps in scope,
@@ -36,9 +66,9 @@ claim more evidence than it had.
   reached G1 and appeared as a scored gate failure instead of an operator-precondition refusal.
   **Argument:** the gate harness must refuse an incomplete dependency precondition before emitting
   a REQUIRED or CONTROL verdict; it must never score that state as a gate defect. Both dependency
-  siblings — `forge-std` and `openzeppelin-contracts` — now have the same non-empty preflight.
-  The fast harness has no Forge stage; its only dependency copy is `ts/node_modules`, already
-  refused at P7, so there is no third sibling in this repair's boundary.
+  siblings — `forge-std` and `openzeppelin-contracts` — received the same non-empty preflight.
+  The sixth review then showed that this inventory was incomplete: the gate harness also copies
+  `ts/node_modules`. The sixth-review disposition above is the current dependency statement.
 - **`F5-2`, controls that could not fail:** `1-ctl`, `5-ctl`, `8-ctl` and `13-ctl` repeated facts
   P6 had already required with unconditional `die`s. John approved their reclassification to
   `OBSERVED`; they remain visible as baseline facts and no longer inflate the current CONTROL
@@ -287,7 +317,7 @@ quoted, or proposed for change by this card.**
 
 ## TEST MATRIX — fourteen cases, all required
 
-**Fourteen CASES; forty-nine BINDING assertions.** The case numbers are the brief's; the
+**Fourteen CASES; fifty-two BINDING assertions.** The case numbers are the brief's; the
 sub-case ids below are the harness's. Every binding assertion carries a paired control, a
 proof-of-mutation control, and a named failure reason. **Where a case could not be given a
 discriminating control it was REMOVED from the binding set and recorded as a residual, never

@@ -289,6 +289,8 @@ for m in forge-std openzeppelin-contracts; do
     [ -n "$(ls -A "$ROOT/contracts/lib/$m" 2>/dev/null)" ] || \
         die "contracts/lib/$m is absent or empty; initialise the submodule working tree before running the gate harness"
 done
+[ -n "$(ls -A "$ROOT/ts/node_modules" 2>/dev/null)" ] || \
+    die "ts/node_modules is absent or empty; install the Node dependency tree before running the gate harness"
 # THERE IS NO SUBJECT RESOLUTION STEP. Same ruling, same reason as `a-extract.sh`: a name must
 # be resolved and resolution is what an ambiguous ref or an injected configuration setting gets
 # to influence; an exact object id is looked up, not resolved. Measured: a branch literally named
@@ -457,9 +459,11 @@ check CONTROL  G3-scope "$(has "$g3_ts" "$OK_TS" && has "$g3_ec" "$OK_EC" && ech
 
 # ============================================================================ integrity =====
 hdr "INTEGRITY"
-dirty="$(cd "$ROOT" && git status --porcelain -- "$PROP_REL" scripts ts contracts verifier fixtures .githooks | wc -l | tr -d ' ')"
-check CONTROL Z-clean "$([ "$dirty" = "0" ] && echo 0 || echo 1)" \
-      "the repository under test was not modified by this run ($dirty changed path(s) in the production boundary)"
+_dirty_out="$(cd "$ROOT" && git status --porcelain -- "$PROP_REL" scripts ts contracts verifier fixtures .githooks 2>&1)"
+_dirty_rc=$?
+dirty="$(printf '%s\n' "$_dirty_out" | awk 'NF { n++ } END { print n+0 }')"
+check CONTROL Z-clean "$([ "$_dirty_rc" = "0" ] && [ "$dirty" = "0" ] && echo 0 || echo 1)" \
+      "git status completed successfully (rc=$_dirty_rc) and the repository under test was not modified by this run ($dirty changed or diagnostic line(s) in the production-boundary probe)"
 s2_now="$(shasum -a 256 "$ROOT/docs/gate-s2-evidence.md" | awk '{print $1}')"
 s2_base="$(cd "$ROOT" && git --no-replace-objects show "$PRE_REPAIR_SHA:docs/gate-s2-evidence.md" | shasum -a 256 | awk '{print $1}')"
 check CONTROL Z-signed "$([ "$s2_now" = "$s2_base" ] && echo 0 || echo 1)" \

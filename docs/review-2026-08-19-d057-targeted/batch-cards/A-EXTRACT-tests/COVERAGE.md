@@ -4,11 +4,19 @@
 evidence only for what it actually exercised. Everything below is a limit of this harness,
 stated so that nobody has to rediscover it from a passing line.
 
+**Sixth-review correction:** the gate harness has three copied dependency prerequisites:
+non-empty `contracts/lib/forge-std`, `contracts/lib/openzeppelin-contracts` and
+`ts/node_modules`. All three are refused before REQUIRED or CONTROL scoring. Both `Z-clean`
+controls require a successful `git status` probe as well as zero output; a failed status command
+is a CONTROL failure, not a clean repository. Optional fast-harness evidence destinations are
+validated before scoring. See `CARD.md` “SIXTH INSTRUMENT REVIEW” for the paired drives.
+
 **D-066 / fifth-review correction:** `1-ctl`, `5-ctl`, `8-ctl` and `13-ctl` are OBSERVED
 preflight-established facts, not controls. The current fast matrix therefore contains 52 REQUIRED,
 70 CONTROL and 14 OBSERVED lines. The gate harness refuses an absent or empty `forge-std` or
 `openzeppelin-contracts` tree before scoring. See `CARD.md` “FIFTH INSTRUMENT REVIEW” for the
-argument, sibling list and residual.
+historical fifth-review argument; the sixth-review paragraph above supplies the corrected complete
+dependency inventory.
 
 ---
 
