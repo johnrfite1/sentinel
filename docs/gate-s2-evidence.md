@@ -514,8 +514,7 @@ shows ten entries. A-075 reopened `D-09(c)`; A-076 then FIXED five of them outri
 `D-09`(a),(b), `E5`, `F-VAULT-4`, `F-VAULT-5`.~~
 
 **THAT LIST WAS WRONG AND DROPPED `G-3` ENTIRELY (R4-F1, CONFIRMED). WHAT IS ACCEPTED TODAY IS
-SIX: `D-07`, `D-09`(a),(b), `E5`, `F-VAULT-4`, `F-VAULT-5` AND `G-3`.** Ten minus the five
-fixed leaves six, not five. `G-3` appears **zero** times in the whole A-076 entry, D-056(a)'s
+SIX: `D-07`, `D-09`(a),(b), `E5`, `F-VAULT-4`, `F-VAULT-5` AND `G-3`.** Four entries were wholly removed (`D-10`, `G-5`, `H-5`, `H-8`); `D-09` is in both the fixed and accepted sets. Ten minus four wholly-removed entries is six, not five. `G-3` appears **zero** times in the whole A-076 entry, D-056(a)'s
 authorised scope did not include it, and register §13.4 has carried it as ACCEPTED throughout —
 so the register was right and both prose ledgers were wrong.
 
@@ -549,9 +548,9 @@ re-report** — the same rule the review briefs carry.
 
 ---
 
-**FIVE OF THESE TEN ARE NO LONGER ACCEPTED LIMITS — THEY ARE FIXED (A-076, 2026-08-18, under
+~~**FIVE OF THESE TEN ARE NO LONGER ACCEPTED LIMITS — THEY ARE FIXED (A-076, 2026-08-18, under
 D-056(a)). `D-09(c)`, `D-10`, `G-5`, `H-5` and `H-8` were repaired at John's direction in the
-bounded pre-review stabilization checkpoint.** Each carries its mutation evidence in A-076 and
+bounded pre-review stabilization checkpoint.**~~ Each carries its mutation evidence in A-076 and
 its status in `docs/v1-1-register.md` §13.4. ~~**What remains accepted here is five: `D-07`,
 `D-09`(a),(b), `E5`, `F-VAULT-4` and `F-VAULT-5`.**~~
 

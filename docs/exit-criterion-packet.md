@@ -209,16 +209,14 @@ wrong often enough that three verdicts came back REFUTED, ALREADY-CLOSED, UNPROV
 **BLOCKERS — exit cannot be reached while these stand:**
 
 1. **The signed Gate S1 pack contains a known false claim.** `gate-s1-evidence.md:124`/`:152`
-   state the D-010 verifier "does the conformance comparison"; it does not. **This is not an
-   agent's to close — it changes what the product guarantees, and it sits in signed text.**
-   Under C1 condition 4 this alone blocks exit.
+   state the D-010 verifier "does the conformance comparison"; ~~it does not.~~ **FALSE SINCE A-074; THE COMPARISON IS BUILT (`grep -c decodedSelectorAndParameters verifier/verify.py` = 2). The signed S1 pack's original sentence is historical signed text and is not an agent's to rewrite. This item is not a current exit blocker.** ~~Under C1 condition 4 this alone blocks exit.~~
 2. **`E3` is an open fork, not a boundary.** It needs a ruling to become either.
 3. **Register §13's status column** must be corrected before a review that depends on it.
 
 **NON-BLOCKERS — must not be read as blocking:**
 
 - Every item in §3 (accepted boundaries, all ruled).
-- The ten §11.0 accepted limits — subject to **T1**.
+- The six §11.0 accepted limits — subject to **T1**.
 - The gate's carried/ratcheted items — subject to **T4**.
 - Round 6's own non-cleanliness. D-052(a) already ruled it cannot be the qualifying round; it
   does not have to be re-run.

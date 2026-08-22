@@ -188,17 +188,13 @@ export function decodeCall(args: {
  *
  * "DETECTABLE BY THE D-010 VERIFIER" IS NOT YET TRUE OF THE WHOLE BUNDLE (A-068, from round
  * five's E4, adjudicated and confirmed). What the signer binds is the PARAMETERS. The §5.6
- * bundle also carries `normalizedAction` and `expectedEffects`, and those are checked by
- * NEITHER the signer nor the verifier — the receipt's `evidenceHash` commits to them, so they
- * are tamper-evident, but nothing compares them to the action and the mandate they purport to
- * describe. A bundle can therefore state expected effects that its own action does not imply
- * and still verify.
+ * bundle also carries `normalizedAction` and `expectedEffects`. The D-010 verifier compares
+ * those fields to the presented action and mandate (`_evidence_describes_the_bundle`). The
+ * signer still does not.
  *
  * Whether the SIGNER should compare them is a D-014 question and not an agent's to answer:
- * D-014 deliberately kept conformance out of the signer. Whether the VERIFIER should is
- * cheaper and needs no ruling — it already loads all three documents. Both are open (v1.1
- * register); this comment states the gap rather than leaving the sentence above to imply it
- * is closed.
+ * D-014 deliberately kept conformance out of the signer. Register E4 is VERIFIER HALF BUILT
+ * · SIGNER HALF DELIBERATELY NOT BUILT, not an open defect.
  *
  * BOUNDARY, STATED PRECISELY BECAUSE D-014 STATES IT PRECISELY: this checks that the
  * parameters match the bytes *given the selector*. It does NOT check that the selector

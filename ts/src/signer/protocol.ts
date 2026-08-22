@@ -112,7 +112,7 @@ export const REASON_SEVERITY = {
      *       which no amount of retrying will change if the node keeps serving one.
      * Exhausting the attempts on (b) is not "the chain is moving too fast"; it is "the node
      * never offered a finalised head". **A record naming one cause for two conditions is the
-     * shape this project keeps paying for**, so the refusal detail now distinguishes them.
+     * shape this project keeps paying for.** The signed RefusalRecord has no detail field; SIGNER_CHAIN_UNSTABLE remains one public code for both (a) and (b). Distinguishing text exists only on ChainUnstableError, which attest.ts does not put on the wire.
      * No reason-code split: the tiering and the remedy are identical, and splitting a public
      * code to carry a diagnostic belongs in the detail, not in the enum (D-057(4)).
      *

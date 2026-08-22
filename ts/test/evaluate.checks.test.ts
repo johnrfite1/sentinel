@@ -499,7 +499,7 @@ describe("binding comparisons are case- and field-pinned (D-10)", () => {
 
     it("matches a mixed-case TARGET against the mandate (mutation: drop normalisation)", () => {
         // The action names the target upper-cased, the mandate lower-cased. Same address, so
-        // `EVAL_ACTION_TARGET_MATCHES_MANDATE` must PASS.
+        // `EVAL_TARGET_BOUND` must PASS.
         assert.notEqual(upper(LETTERY), LETTERY, "the probe must actually change the spelling");
         assert.equal(
             outcomeOf(
