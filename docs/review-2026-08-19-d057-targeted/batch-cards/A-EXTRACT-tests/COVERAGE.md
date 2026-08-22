@@ -440,7 +440,7 @@ STOPS and has the disagreement independently confirmed — it does not edit the 
   fails the case. That is deliberate — the class is the contract — but it means a repair must read
   the vocabulary in `CARD.md` and `TESTS.patch` rather than guess it.
 - **The VH cases are slow** (~4 s each, dominated by the repository-wide vendor scan the block
-  under test does not need). A whole run is roughly 55 s.
+  under test does not need). The current whole run measured 103 seconds; budget about two minutes.
 - **`P3` is now a CONTROL, and the subject is an argument.** Its predecessor was an OBSERVED
   warning beside a snapshot built from a hardcoded commit — see §0. A run that cannot resolve the
   ref it was given refuses at preflight rather than measuring something nobody named.
