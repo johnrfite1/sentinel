@@ -421,7 +421,7 @@ STOPS and has the disagreement independently confirmed — it does not edit the 
   and is then discarded; the repository's `verifier/` tree is untouched.
 - **`a-extract.sh` does not run the gate.** D-059(7)'s gate-binding obligation is discharged by a
   SEPARATE harness, `a-extract-gate.sh`, whose evidence is in `GATE-BINDING.md`. It runs the
-  top-level FAST gate three times against a private clone. **The DEEP profile (`--gate`) is still
+  top-level FAST gate four times against a private clone. **The DEEP profile (`--gate`) is still
   not run** — see §2b.
 
 ---

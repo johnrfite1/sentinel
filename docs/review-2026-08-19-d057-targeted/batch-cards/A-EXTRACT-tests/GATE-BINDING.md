@@ -26,7 +26,7 @@ of the two was run.
 
 | | Status |
 |---|---|
-| **Fast-profile gate binding** | **MEASURED.** Three full `./scripts/test.sh` runs against a private clone: unchanged passes, a targeted failure fails the gate at its named stage, and that failure survives other consumers succeeding both before and after it. |
+| **Fast-profile gate binding** | **MEASURED.** Four full `./scripts/test.sh` runs against a private clone: unchanged passes; a targeted first-consumer failure fails at its named stage with both later consumers green; the causal twin ignores only that status edge and passes; and a targeted last-consumer failure fails with both earlier consumers green. |
 | **Deep-profile invocation (`--gate`)** | **NOT MEASURED.** Supported only by **STATIC CONTROL-FLOW EVIDENCE**: the three consumer invocations sit at `scripts/test.sh:235`, `:238` and `:252`; between line 210 (where `PROFILE` is assigned) and line 253 there is no `if`, `fi`, `else`, `case`, `esac`, `while`, `for` or `do` at column 0, so nothing encloses them; the first `PROFILE`-dependent statement is at line 308. Strong, and still a reading of the source rather than an observation of a run. |
 | **D-059(7) overall** | **NOT YET DISCHARGED.** The deep portion is outstanding. |
 
@@ -538,7 +538,7 @@ the shape of assumption this cycle exists to remove.
 - Control **`Z-clean`** asserts zero changed paths in the production boundary of the live
   repository when the run ends. Control **`Z-signed`** asserts `docs/gate-s2-evidence.md` is
   byte-identical to `bb664c6`.
-- **Three full fast-gate runs.** Budget ten to twenty minutes and roughly 180 MB of scratch per
+- **Four full fast-gate runs.** Budget fifteen to twenty-five minutes and roughly 240 MB of scratch per
   subject. This is why gate binding is a separate harness: `a-extract.sh` runs in about two
   minutes and this does not.
 - If `forge` or `node` is absent, or `ts/node_modules` or either submodule tree is absent or empty,
