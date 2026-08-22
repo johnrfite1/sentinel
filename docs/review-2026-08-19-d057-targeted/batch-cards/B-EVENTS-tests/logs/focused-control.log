@@ -1,0 +1,17 @@
+No files changed, compilation skipped
+
+Ran 11 tests for test/SentinelVault.events.t.sol:SentinelVaultEventsTest
+[PASS] test_ActionExecuted_automaticExactFieldsFalseRouteAndVaultEmitter() (gas: 175890)
+[PASS] test_LIMIT_recordLogsRetainsARevertedOverrideArtifact() (gas: 180232)
+[PASS] test_MandateActivated_exactFieldAndVaultEmitter() (gas: 43275)
+[PASS] test_MandateRevoked_exactPreviousFieldAndVaultEmitter() (gas: 32867)
+[PASS] test_OverrideAndActionExecuted_exactFieldsTrueRouteOrderAndVaultEmitter() (gas: 221235)
+[PASS] test_PausedSet_exactTrueAndFalseFieldsAndVaultEmitter() (gas: 37428)
+[PASS] test_PolicyActivated_exactFieldAndVaultEmitter() (gas: 43209)
+[PASS] test_Recovered_exactRecipientAndAmountFieldsAndVaultEmitter() (gas: 55284)
+[PASS] test_SignerRotated_exactPreviousAndNewFieldsAndVaultEmitter() (gas: 29058)
+[PASS] test_revertedAutomaticCallRollsBackVaultNonceAndTargetState() (gas: 164432)
+[PASS] test_revertedOverrideCallRollsBackAuthorizationNonceAndTargetState() (gas: 182637)
+Suite result: ok. 11 passed; 0 failed; 0 skipped; finished in 1.24ms (2.90ms CPU time)
+
+Ran 1 test suite in 5.02ms (1.24ms CPU time): 11 tests passed, 0 failed, 0 skipped (11 total tests)

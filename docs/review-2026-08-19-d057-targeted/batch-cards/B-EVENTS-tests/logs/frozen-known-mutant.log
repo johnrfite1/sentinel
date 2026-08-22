@@ -1,0 +1,25 @@
+No files changed, compilation skipped
+
+Ran 11 tests for test/SentinelVault.events.t.sol:SentinelVaultEventsTest
+[PASS] test_ActionExecuted_automaticExactFieldsFalseRouteAndVaultEmitter() (gas: 175926)
+[PASS] test_LIMIT_recordLogsRetainsARevertedOverrideArtifact() (gas: 180261)
+[PASS] test_MandateActivated_exactFieldAndVaultEmitter() (gas: 43275)
+[PASS] test_MandateRevoked_exactPreviousFieldAndVaultEmitter() (gas: 32867)
+[FAIL: Purchased != expected ActionExecuted] test_OverrideAndActionExecuted_exactFieldsTrueRouteOrderAndVaultEmitter() (gas: 229487)
+[PASS] test_PausedSet_exactTrueAndFalseFieldsAndVaultEmitter() (gas: 37428)
+[PASS] test_PolicyActivated_exactFieldAndVaultEmitter() (gas: 43209)
+[PASS] test_Recovered_exactRecipientAndAmountFieldsAndVaultEmitter() (gas: 55284)
+[PASS] test_SignerRotated_exactPreviousAndNewFieldsAndVaultEmitter() (gas: 29058)
+[PASS] test_revertedAutomaticCallRollsBackVaultNonceAndTargetState() (gas: 164462)
+[PASS] test_revertedOverrideCallRollsBackAuthorizationNonceAndTargetState() (gas: 182666)
+Suite result: FAILED. 10 passed; 1 failed; 0 skipped; finished in 2.12ms (4.97ms CPU time)
+
+Ran 1 test suite in 6.36ms (2.12ms CPU time): 10 tests passed, 1 failed, 0 skipped (11 total tests)
+
+Failing tests:
+Encountered 1 failing test in test/SentinelVault.events.t.sol:SentinelVaultEventsTest
+[FAIL: Purchased != expected ActionExecuted] test_OverrideAndActionExecuted_exactFieldsTrueRouteOrderAndVaultEmitter() (gas: 229487)
+
+Encountered a total of 1 failing tests, 10 tests succeeded
+
+Tip: Run `forge test --rerun` to retry only the 1 failed test

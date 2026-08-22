@@ -1,0 +1,476 @@
+No files changed, compilation skipped
+
+Ran 3 tests for test/SentinelVault.invariants.t.sol:SentinelVaultReentrancyTest
+[PASS] test_anAllowExecutionCannotBeReenteredThroughTheOverridePath() (gas: 1061679)
+[PASS] test_reentrantOverrideCannotExecuteInTheSameTransaction() (gas: 1085376)
+[PASS] test_reentrantSecondReceiptCannotExecuteInTheSameTransaction() (gas: 757580)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 3.05ms (1.49ms CPU time)
+
+Ran 17 tests for test/SentinelVault.binding.t.sol:SentinelVaultBindingTest
+[PASS] test_MandateActivated_statesTheActivatedHash() (gas: 22281)
+[PASS] test_MandateRevoked_statesTheRevokedHash() (gas: 17211)
+[PASS] test_PausedSet_statesTheNewStateTruthfully() (gas: 31481)
+[PASS] test_PolicyActivated_statesTheActivatedHash() (gas: 22281)
+[PASS] test_Recovered_statesRecipientAndAmount() (gas: 51570)
+[PASS] test_SignerRotated_statesBothEpochsTruthfully() (gas: 24370)
+[PASS] test_actionDeadline_atTheBoundaryIsStillValid() (gas: 114518)
+[PASS] test_actionDeadline_oneSecondPastIsRejected() (gas: 53443)
+[PASS] test_correctlyBoundReceiptStillExecutes() (gas: 114141)
+[PASS] test_overrideExpiry_atTheBoundaryIsStillValid() (gas: 133371)
+[PASS] test_overrideExpiry_oneSecondPastIsRejected() (gas: 81793)
+[PASS] test_receiptBoundToMandate_mismatchIsRejected() (gas: 67413)
+[PASS] test_receiptBoundToPolicy_mismatchIsRejected() (gas: 67335)
+[PASS] test_receiptExpiry_atTheBoundaryIsStillValid() (gas: 114650)
+[PASS] test_receiptExpiry_oneSecondPastIsRejected() (gas: 64884)
+[PASS] test_valueCeiling_atTheCapIsAllowed() (gas: 113672)
+[PASS] test_valueCeiling_oneWeiOverIsRejected() (gas: 57600)
+Suite result: ok. 17 passed; 0 failed; 0 skipped; finished in 4.51ms (4.52ms CPU time)
+
+Ran 12 tests for test/SentinelTypes.t.sol:SentinelTypesTest
+[PASS] testFuzz_actionHash_changesOnAnyBoundFieldMutation(uint8) (runs: 1024, μ: 3788, ~: 3799)
+[PASS] testFuzz_domainSeparator_isInjectiveOverChainAndVault(uint256,uint256,address,address) (runs: 1024, μ: 5397, ~: 5397)
+[PASS] testFuzz_mandateHash_changesOnAnyBoundFieldMutation(uint8) (runs: 1024, μ: 5161, ~: 5166)
+[PASS] test_allHashesAreDeterministic() (gas: 19967)
+[PASS] test_digest_isEip712Framed() (gas: 2261)
+[PASS] test_distinctPayloadTypesDoNotCollide() (gas: 15248)
+[PASS] test_domainSeparator_bindsChainAndVault() (gas: 4625)
+[PASS] test_mandateHash_bindsPurposeFieldsAPolicyEngineWouldMiss() (gas: 9609)
+[PASS] test_noPayloadTypeStringContainsASignatureField() (gas: 572884)
+[PASS] test_typehashes_matchGoldenDigests() (gas: 3963)
+[PASS] test_typehashes_matchIndependentTranscription() (gas: 2653)
+[PASS] test_zeroValuedEnumsAreFailClosed() (gas: 1802)
+Suite result: ok. 12 passed; 0 failed; 0 skipped; finished in 5.68s (5.72s CPU time)
+
+Ran 21 tests for test/SentinelVault.t.sol:SentinelVaultTest
+[PASS] testFuzz_nonOwnerCannotTouchOwnerControls(address) (runs: 1024, μ: 32755, ~: 32755)
+[PASS] test_anyCallerMayRelayAValidReceipt() (gas: 117285)
+[PASS] test_blockReceiptNeverExecutes() (gas: 131217)
+[PASS] test_case1_allowReceiptExecutes() (gas: 116973)
+[PASS] test_expiredActionIsRejected() (gas: 53244)
+[PASS] test_expiredReceiptIsRejected() (gas: 65484)
+[PASS] test_overrideForADifferentActionIsRejected() (gas: 81384)
+[PASS] test_overrideSignedByNonOwnerIsRejected() (gas: 90123)
+[PASS] test_pausedExecutionAlwaysFails() (gas: 112714)
+[PASS] test_receiptFromNonActiveSignerIsRejected() (gas: 72829)
+[PASS] test_receiptNamingAStaleSignerIsRejected() (gas: 68453)
+[PASS] test_replay_sameReceiptCannotExecuteTwice() (gas: 139557)
+[PASS] test_replay_staleNonceIsRejected() (gas: 146477)
+[PASS] test_reviewPlusOwnerOverrideExecutes() (gas: 133198)
+[PASS] test_reviewReceiptDoesNotExecuteOnTheAutomaticPath() (gas: 72736)
+[PASS] test_revokedMandateBlocksExecution() (gas: 59055)
+[PASS] test_rotationInvalidatesOutstandingReceipts() (gas: 77054)
+[PASS] test_signerCannotReachOwnerControls() (gas: 20358)
+[PASS] test_tamper_anyBoundFieldMutationIsRejected() (gas: 430638)
+[PASS] test_uninitialisedVaultRejectsZeroHashes() (gas: 1428155)
+[PASS] test_valueOverHardCapIsRejectedEvenWithAValidReceipt() (gas: 57539)
+Suite result: ok. 21 passed; 0 failed; 0 skipped; finished in 8.35s (8.35s CPU time)
+
+Ran 22 tests for test/SentinelVault.backstops.t.sol:SentinelVaultBackstopsTest
+[PASS] test_LIMIT_nativeCeilingIsPerActionAndBoundsNoAggregate() (gas: 7978146)
+[PASS] test_LIMIT_receiptFromAFutureSignerGoesLiveOnRotation() (gas: 166070)
+[PASS] test_LIMIT_reinstatingARotatedOutSignerRevivesItsOldReceipts() (gas: 165041)
+[PASS] test_LIMIT_vaultCapsNativeValueOnlyAndNotTokenAuthority() (gas: 1590654)
+[PASS] test_aFailedExternalCallRevertsRatherThanConsumingTheNonce() (gas: 108143)
+[PASS] test_actionNamingADifferentVaultIsRejected() (gas: 53593)
+[PASS] test_calldataShorterThanASelectorIsRejected() (gas: 58618)
+[PASS] test_constructorRejectsAZeroOwnerOrSigner() (gas: 78873)
+[PASS] test_dataHashIsRecomputedFromTheBytesActuallyPassedOn() (gas: 59376)
+[PASS] test_executionEventReportsTheBoundNonceAndTheActualAmount() (gas: 116838)
+[PASS] test_expiredOverrideIsRejected() (gas: 83022)
+[PASS] test_nonceIsConsumedBeforeTheExternalCall() (gas: 1624077)
+[PASS] test_overrideAuthorizationIsLogged() (gas: 137271)
+[PASS] test_overrideCannotBeReusedForADifferentReviewReceipt() (gas: 82943)
+[PASS] test_overrideNamingADifferentMandateIsRejected() (gas: 141065)
+[PASS] test_overrideNamingADifferentNonceIsRejected() (gas: 82240)
+[PASS] test_receiptClaimingADifferentMandateIsRejected() (gas: 65111)
+[PASS] test_recoverEventReportsTheAmountItActuallyMoved() (gas: 51733)
+[PASS] test_recoverRejectsTheZeroAddress() (gas: 14326)
+[PASS] test_rotateSignerRejectsTheZeroAddress() (gas: 18857)
+[PASS] test_selectorOffTheVaultAllowlistIsRejected() (gas: 61166)
+[PASS] test_zeroPolicyHashDoesNotMatchAnUnsetPolicy() (gas: 1453026)
+Suite result: ok. 22 passed; 0 failed; 0 skipped; finished in 8.35s (33.85ms CPU time)
+
+Ran 17 tests for test/SentinelVault.invariants.t.sol:SentinelVaultInvariantTest
+[PASS] invariant_failedCallNeverCountsAsExecution() (runs: 256, calls: 16384, reverts: 8)
+
+╭--------------+-----------------------------------+-------+---------+----------╮
+| Contract     | Selector                          | Calls | Reverts | Discards |
++===============================================================================+
+| VaultHandler | executeFailingCall                | 1158  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeForgedSignature            | 1203  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeFutureNonce                | 1168  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeNonAllow                   | 1192  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeOverrideForAnotherAction   | 1162  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeOverrideOnNonReview        | 1175  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeOverrideWithForgedOwnerSig | 1168  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeReplay                     | 1194  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeTamperedCalldata           | 1173  | 8       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeValid                      | 1145  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeValidOverride              | 1189  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | rotateSigner                      | 1169  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | togglePause                       | 1175  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | warp                              | 1113  | 0       | 0        |
+╰--------------+-----------------------------------+-------+---------+----------╯
+
+[PASS] invariant_futureNonceNeverExecutes() (runs: 256, calls: 16384, reverts: 8)
+
+╭--------------+-----------------------------------+-------+---------+----------╮
+| Contract     | Selector                          | Calls | Reverts | Discards |
++===============================================================================+
+| VaultHandler | executeFailingCall                | 1158  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeForgedSignature            | 1203  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeFutureNonce                | 1168  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeNonAllow                   | 1192  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeOverrideForAnotherAction   | 1162  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeOverrideOnNonReview        | 1175  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeOverrideWithForgedOwnerSig | 1168  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeReplay                     | 1194  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeTamperedCalldata           | 1173  | 8       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeValid                      | 1145  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeValidOverride              | 1189  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | rotateSigner                      | 1169  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | togglePause                       | 1175  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | warp                              | 1113  | 0       | 0        |
+╰--------------+-----------------------------------+-------+---------+----------╯
+
+[PASS] invariant_noActionHashExecutesTwice() (runs: 256, calls: 16384, reverts: 8)
+
+╭--------------+-----------------------------------+-------+---------+----------╮
+| Contract     | Selector                          | Calls | Reverts | Discards |
++===============================================================================+
+| VaultHandler | executeFailingCall                | 1158  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeForgedSignature            | 1203  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeFutureNonce                | 1168  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeNonAllow                   | 1192  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeOverrideForAnotherAction   | 1162  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeOverrideOnNonReview        | 1175  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeOverrideWithForgedOwnerSig | 1168  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeReplay                     | 1194  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeTamperedCalldata           | 1173  | 8       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeValid                      | 1145  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeValidOverride              | 1189  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | rotateSigner                      | 1169  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | togglePause                       | 1175  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | warp                              | 1113  | 0       | 0        |
+╰--------------+-----------------------------------+-------+---------+----------╯
+
+[PASS] invariant_nonceEqualsSuccessfulExecutions() (runs: 256, calls: 16384, reverts: 8)
+
+╭--------------+-----------------------------------+-------+---------+----------╮
+| Contract     | Selector                          | Calls | Reverts | Discards |
++===============================================================================+
+| VaultHandler | executeFailingCall                | 1158  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeForgedSignature            | 1203  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeFutureNonce                | 1168  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeNonAllow                   | 1192  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeOverrideForAnotherAction   | 1162  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeOverrideOnNonReview        | 1175  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeOverrideWithForgedOwnerSig | 1168  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeReplay                     | 1194  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeTamperedCalldata           | 1173  | 8       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeValid                      | 1145  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeValidOverride              | 1189  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | rotateSigner                      | 1169  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | togglePause                       | 1175  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | warp                              | 1113  | 0       | 0        |
+╰--------------+-----------------------------------+-------+---------+----------╯
+
+[PASS] invariant_onlyAllowVerdictsExecuteOnTheAutomaticPath() (runs: 256, calls: 16384, reverts: 8)
+
+╭--------------+-----------------------------------+-------+---------+----------╮
+| Contract     | Selector                          | Calls | Reverts | Discards |
++===============================================================================+
+| VaultHandler | executeFailingCall                | 1158  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeForgedSignature            | 1203  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeFutureNonce                | 1168  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeNonAllow                   | 1192  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeOverrideForAnotherAction   | 1162  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeOverrideOnNonReview        | 1175  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeOverrideWithForgedOwnerSig | 1168  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeReplay                     | 1194  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeTamperedCalldata           | 1173  | 8       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeValid                      | 1145  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeValidOverride              | 1189  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | rotateSigner                      | 1169  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | togglePause                       | 1175  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | warp                              | 1113  | 0       | 0        |
+╰--------------+-----------------------------------+-------+---------+----------╯
+
+[PASS] invariant_onlyReviewVerdictsExecuteOnTheOverridePath() (runs: 256, calls: 16384, reverts: 8)
+
+╭--------------+-----------------------------------+-------+---------+----------╮
+| Contract     | Selector                          | Calls | Reverts | Discards |
++===============================================================================+
+| VaultHandler | executeFailingCall                | 1158  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeForgedSignature            | 1203  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeFutureNonce                | 1168  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeNonAllow                   | 1192  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeOverrideForAnotherAction   | 1162  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeOverrideOnNonReview        | 1175  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeOverrideWithForgedOwnerSig | 1168  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeReplay                     | 1194  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeTamperedCalldata           | 1173  | 8       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeValid                      | 1145  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeValidOverride              | 1189  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | rotateSigner                      | 1169  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | togglePause                       | 1175  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | warp                              | 1113  | 0       | 0        |
+╰--------------+-----------------------------------+-------+---------+----------╯
+
+[PASS] invariant_overrideMustNameTheExactAction() (runs: 256, calls: 16384, reverts: 8)
+
+╭--------------+-----------------------------------+-------+---------+----------╮
+| Contract     | Selector                          | Calls | Reverts | Discards |
++===============================================================================+
+| VaultHandler | executeFailingCall                | 1158  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeForgedSignature            | 1203  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeFutureNonce                | 1168  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeNonAllow                   | 1192  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeOverrideForAnotherAction   | 1162  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeOverrideOnNonReview        | 1175  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeOverrideWithForgedOwnerSig | 1168  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeReplay                     | 1194  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeTamperedCalldata           | 1173  | 8       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeValid                      | 1145  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeValidOverride              | 1189  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | rotateSigner                      | 1169  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | togglePause                       | 1175  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | warp                              | 1113  | 0       | 0        |
+╰--------------+-----------------------------------+-------+---------+----------╯
+
+[PASS] invariant_overrideRequiresTheOwnersOwnSignature() (runs: 256, calls: 16384, reverts: 8)
+
+╭--------------+-----------------------------------+-------+---------+----------╮
+| Contract     | Selector                          | Calls | Reverts | Discards |
++===============================================================================+
+| VaultHandler | executeFailingCall                | 1158  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeForgedSignature            | 1203  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeFutureNonce                | 1168  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeNonAllow                   | 1192  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeOverrideForAnotherAction   | 1162  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeOverrideOnNonReview        | 1175  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeOverrideWithForgedOwnerSig | 1168  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeReplay                     | 1194  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeTamperedCalldata           | 1173  | 8       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeValid                      | 1145  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeValidOverride              | 1189  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | rotateSigner                      | 1169  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | togglePause                       | 1175  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | warp                              | 1113  | 0       | 0        |
+╰--------------+-----------------------------------+-------+---------+----------╯
+
+[PASS] invariant_ownerAndCapsAreImmutableFromExecution() (runs: 256, calls: 16384, reverts: 8)
+
+╭--------------+-----------------------------------+-------+---------+----------╮
+| Contract     | Selector                          | Calls | Reverts | Discards |
++===============================================================================+
+| VaultHandler | executeFailingCall                | 1158  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeForgedSignature            | 1203  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeFutureNonce                | 1168  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeNonAllow                   | 1192  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeOverrideForAnotherAction   | 1162  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeOverrideOnNonReview        | 1175  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeOverrideWithForgedOwnerSig | 1168  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeReplay                     | 1194  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeTamperedCalldata           | 1173  | 8       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeValid                      | 1145  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeValidOverride              | 1189  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | rotateSigner                      | 1169  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | togglePause                       | 1175  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | warp                              | 1113  | 0       | 0        |
+╰--------------+-----------------------------------+-------+---------+----------╯
+
+[PASS] invariant_pausedNeverExecutes() (runs: 256, calls: 16384, reverts: 8)
+
+╭--------------+-----------------------------------+-------+---------+----------╮
+| Contract     | Selector                          | Calls | Reverts | Discards |
++===============================================================================+
+| VaultHandler | executeFailingCall                | 1158  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeForgedSignature            | 1203  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeFutureNonce                | 1168  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeNonAllow                   | 1192  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeOverrideForAnotherAction   | 1162  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeOverrideOnNonReview        | 1175  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeOverrideWithForgedOwnerSig | 1168  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeReplay                     | 1194  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeTamperedCalldata           | 1173  | 8       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeValid                      | 1145  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeValidOverride              | 1189  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | rotateSigner                      | 1169  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | togglePause                       | 1175  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | warp                              | 1113  | 0       | 0        |
+╰--------------+-----------------------------------+-------+---------+----------╯
+
+[PASS] invariant_tamperedAttemptsNeverExecute() (runs: 256, calls: 16384, reverts: 8)
+
+╭--------------+-----------------------------------+-------+---------+----------╮
+| Contract     | Selector                          | Calls | Reverts | Discards |
++===============================================================================+
+| VaultHandler | executeFailingCall                | 1158  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeForgedSignature            | 1203  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeFutureNonce                | 1168  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeNonAllow                   | 1192  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeOverrideForAnotherAction   | 1162  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeOverrideOnNonReview        | 1175  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeOverrideWithForgedOwnerSig | 1168  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeReplay                     | 1194  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeTamperedCalldata           | 1173  | 8       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeValid                      | 1145  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | executeValidOverride              | 1189  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | rotateSigner                      | 1169  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | togglePause                       | 1175  | 0       | 0        |
+|--------------+-----------------------------------+-------+---------+----------|
+| VaultHandler | warp                              | 1113  | 0       | 0        |
+╰--------------+-----------------------------------+-------+---------+----------╯
+
+[PASS] test_everyHandlerActionIsRegisteredWithTheFuzzer() (gas: 63115)
+[PASS] test_nonVacuity_adversarialPathsAreReachedAndRejected() (gas: 439971)
+[PASS] test_nonVacuity_futureNonceAndFailingCallArmsAreReachable() (gas: 409063)
+[PASS] test_nonVacuity_overridePathExecutesAndItsAdversarialArmsDoNot() (gas: 497745)
+[PASS] test_nonVacuity_ownerControlsAreReachable() (gas: 307046)
+[PASS] test_nonVacuity_validPathActuallyExecutes() (gas: 452770)
+Suite result: ok. 17 passed; 0 failed; 0 skipped; finished in 8.35s (50.92s CPU time)
+
+Ran 6 test suites in 8.35s (30.74s CPU time): 92 tests passed, 0 failed, 0 skipped (92 total tests)
