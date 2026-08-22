@@ -1,0 +1,15 @@
+A-FLOORS second corrected focused baseline
+subject=9889289cb730a7ef23b2b9d11c0e84110dce84f6
+behavioral_baseline=1a133301533e9d959dbafbbcc7ffe05e7eb78df3
+variant=baseline
+harness_sha256=fb9577d3182cc881e4c2c4f5bca9c02d1ddf8ed04bd64d9f85e0db4d0985896d
+paired_fake_opener_routes=54/54
+real_heredoc_post_routes=6/6
+matrix_rows=251
+unique_case_names=251
+REQUIRED 10/131
+CONTROL 120/120
+PRE-REPAIR DEFECTS OBSERVED
+exit=1
+raw_sha256=a18333f67c4405af8b86aa7d6f4cfb9f94df380d31ae4744174cd40701f069e4
+matrix_sha256=26039eccc906f3db9a5d8f97c7710e17fe6e007187c5503fcfd54fb16b9eaf35

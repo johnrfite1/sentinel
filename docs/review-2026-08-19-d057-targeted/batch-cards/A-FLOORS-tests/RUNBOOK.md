@@ -13,9 +13,9 @@ git submodule status
 test -d ts/node_modules
 ```
 
-Behavioral baseline is `1a133301533e9d959dbafbbcc7ffe05e7eb78df3`; the corrected pre-repair
-focused evidence was driven against clean Review-1 commit
-`e3b8a76cff7a002b3211bb8f8a75f2d14b86a37e` by the corrected external harness.
+Behavioral baseline is `1a133301533e9d959dbafbbcc7ffe05e7eb78df3`; second-corrected pre-repair
+evidence was driven against clean Review-2 commit
+`9889289cb730a7ef23b2b9d11c0e84110dce84f6` by the external harness.
 
 ## 2. Focused contract
 
@@ -30,9 +30,9 @@ shasum -a 256 "$matrix_out"
 printf 'focused_rc=%s\n' "$focused_rc"
 ```
 
-At the frozen pre-repair subject, expected verdict is exit 1, REQUIRED 10/71, CONTROL 65/65.
-Exit 2 is an
-invalid instrument/setup state and must not be reported as a product verdict.
+At the frozen pre-repair subject, expected verdict is exit 1, REQUIRED 10/131, CONTROL 120/120,
+with `T-route-complete` reporting 54/54. Exit 2 is an invalid instrument/setup state and must not
+be reported as a product verdict.
 
 ## 3. Causal sibling and satisfying control
 
@@ -43,14 +43,20 @@ A_FLOORS_VARIANT=digits-zero-sibling A_FLOORS_MATRIX="$zero_matrix" \
   "$evidence/a-floors.py" "$(pwd -P)" "$subject"
 zero_rc=$?
 
+A_FLOORS_VARIANT=flawed-heredoc-sibling A_FLOORS_MATRIX="$flawed_matrix" \
+  "$evidence/a-floors.py" "$(pwd -P)" "$subject"
+flawed_rc=$?
+
 A_FLOORS_VARIANT=exact-positive-control A_FLOORS_MATRIX="$positive_matrix" \
   "$evidence/a-floors.py" "$(pwd -P)" "$subject"
 positive_rc=$?
 ```
 
-The zero sibling must return REQUIRED 65/71 and CONTROL 65/65, with exactly six `Z-*` failures.
-Compare its matrix by case name to `focused-matrix-review1.tsv`: all 81 old rows must be present
-and PASS. The exact-positive control must return 71/71, 65/65 and completion.
+The corrected zero sibling must return 125/131 and 120/120, failing exactly six `Z-*` rows. The
+exact Review-2 raw sibling must return 83/131 and 120/120, passing all 136 prior rows and failing
+exactly 48 `TF-*` rows: 12 each for `printf`, `echo`, quoted assignment and here-string. Compare
+both by case name to `exact-positive-matrix.tsv`; every prior row must be present and PASS. The
+corrected exact-positive control must return 131/131, 120/120 and completion.
 
 ## 4. Serial top-level gate contract
 
@@ -72,8 +78,9 @@ unchanged fast, wrong-reader fast, unchanged deep, wrong-reader deep, raised-flo
 B-EVENTS deletion, C-SNAPSHOT deletion.
 
 The harness timeout, clone failure, missing dependency, dirty tracked source or non-empty log
-directory is exit 2 before final scoring. Do not convert it to HOLD/FAIL. Review-1 F1/F2 did not
-change this harness; do not present a rerun-free correction as refreshed gate/timing evidence.
+directory is exit 2 before final scoring. Do not convert it to HOLD/FAIL. Neither focused
+correction changed this harness; do not present a rerun-free correction as refreshed gate/timing
+evidence.
 
 ## 5. Inspect material output
 
@@ -104,7 +111,7 @@ machine-state findings and must report zero new.
 
 ## 7. Post-repair fixed target
 
-A conforming implementation subject must return focused REQUIRED 71/71 and CONTROL 65/65, then
+A conforming implementation subject must return focused REQUIRED 131/131 and CONTROL 120/120, then
 gate REQUIRED 4/4 and CONTROL 3/3 with the same frozen harness hashes. Re-run repository/workspace
 guards and obtain a different independent verifier at that exact subject. Do not edit the
 instruments to fit the implementation.

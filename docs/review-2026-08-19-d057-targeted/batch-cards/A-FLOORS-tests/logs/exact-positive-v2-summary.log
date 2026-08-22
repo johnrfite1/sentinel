@@ -1,0 +1,16 @@
+A-FLOORS second corrected exact-positive satisfying control
+subject=9889289cb730a7ef23b2b9d11c0e84110dce84f6
+variant=exact-positive-control
+harness_sha256=fb9577d3182cc881e4c2c4f5bca9c02d1ddf8ed04bd64d9f85e0db4d0985896d
+prior_review2_rows=136
+prior_missing=0
+prior_nonpass=0
+paired_fake_opener_routes=54/54
+matrix_rows=251
+unique_case_names=251
+REQUIRED 131/131
+CONTROL 120/120
+A_FLOORS_FOCUSED_COMPLETE
+exit=0
+raw_sha256=9044d8e72217b9bc03c023ff109b22663852c12f07d45f38bed70359efa84fd9
+matrix_sha256=5d390a4fe8a1600d3430abb340e28e0f0f22e3389ad2f87e61636fa49a9244c1

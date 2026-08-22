@@ -1,0 +1,19 @@
+A-FLOORS exact Review-2 raw-heredoc sibling
+subject=9889289cb730a7ef23b2b9d11c0e84110dce84f6
+variant=flawed-heredoc-sibling
+harness_sha256=fb9577d3182cc881e4c2c4f5bca9c02d1ddf8ed04bd64d9f85e0db4d0985896d
+prior_review2_rows=136
+prior_missing=0
+prior_nonpass=0
+paired_fake_opener_routes=54/54
+matrix_rows=251
+unique_case_names=251
+REQUIRED 83/131
+CONTROL 120/120
+failure_count=48
+failure_families=TF-printf:12,TF-echo:12,TF-assign:12,TF-herestring:12
+full_line_comment_pairs=6/6 PASS
+real_heredoc_post_pairs=6/6 PASS
+exit=1
+raw_sha256=33a0b2d3b12cdb8f89b2b45b30774baee93f488797573b11033d056c5178fbc4
+matrix_sha256=a49891dcfcfc5da17e0003a7ed1148901d7437d123e8e2b6347d4c6575babfc7

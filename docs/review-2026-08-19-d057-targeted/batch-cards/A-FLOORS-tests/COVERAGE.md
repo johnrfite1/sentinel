@@ -1,34 +1,36 @@
-# A-FLOORS — corrected coverage and blind spots
+# A-FLOORS — second-corrected coverage and blind spots
 
 ## Covered
 
-- All six named floor constants, planned/baseline/measured values.
-- Exact-one positive-decimal source shape, including explicit zero refusal and ordinary positive
-  one acceptance for every constant.
-- Missing, empty, whitespace-malformed and assigned non-numeric definitions for every constant.
-- Direct duplicates before/after with independent legacy-first versus Bash-last witnesses.
-- Inline conditional duplicates, separately named and witnessed for all six.
-- Standalone indented executable duplicates before and after every canonical line, with exact
-  Bash xtrace order and final value.
-- Inert commented, quoted-string and quoted-heredoc assignment shapes for every constant.
-- A digits-only zero-accepting sibling passing all 81 old rows and failing exactly six new zero
-  rows; an exact-positive satisfying control passing all 136 rows.
-- Candidate reader byte/output restoration after fixture transforms.
-- Prefix discrimination, three finite maintained logical paragraphs, wrap normalization, dated
-  history controls, exact common-path wiring, frozen B/C bytes and historical seven-case fast/deep
-  gate binding.
+- All six floor constants and the prior missing/empty/malformed/non-numeric/zero/positive-one
+  matrix.
+- Direct duplicates in both orders, inline conditionals, standalone indented duplicates before
+  and after, exact Bash order/final-value witnesses, prefix discrimination and reader restoration.
+- Nine exact inert fake-opener spellings across every constant: full-line comment; `printf`,
+  `echo` and assignment single/double quote forms; and here-string single/double quote forms.
+- Every fake-opener spelling immediately followed by a real indented duplicate: 54/54 unique
+  routes, with one Bash witness and one named requirement per route.
+- Genuine quoted-heredoc body inertness and six post-terminator parser-resumption routes.
+- Exact Review-2 raw-reader sibling: all 136 prior rows pass, then exactly 48 vulnerable transition
+  rows fail while comment and genuine-heredoc boundary rows pass.
+- Corrected digits-only sibling failing exactly six zero rows; corrected exact-positive control
+  passing all 251 rows.
+- Three finite maintained logical paragraphs, wrap normalization, dated-history controls, exact
+  common-path wiring, frozen B/C bytes and unchanged historical seven-case gate binding.
 
 ## Not covered
 
-- Shell spellings outside the enumerated direct, spaced, inline-conditional, standalone-indented,
-  comment, quoted-string and quoted-heredoc forms. This is not a complete Bash parser claim.
-- Arbitrary Markdown/numeric prose. Only the three named maintained roles are scored.
+- Command substitution, backticks, concatenated or escaped quote variants, process substitution,
+  arbitrary redirection/delimiter expansion, or other shell spellings outside the exact matrix.
+  This is not a complete Bash parser claim.
+- Arbitrary Markdown/numeric prose; only three named maintained roles are scored.
 - Historical factual correctness, non-floor counts, Batch D claims, B/C semantic strength,
   concurrent gates, implementation, post-repair pass, public claim or D-055 closure.
 
 ## Interpreting green
 
-Focused green means 71 REQUIRED and 65 CONTROL assertions held for the exact subject/variant.
-Gate green means the seven unchanged serial cases produced their named outcomes. Neither is
+Focused green means 131 REQUIRED and 120 CONTROL assertions held for the exact subject/variant,
+including 54/54 paired routes. Gate green means the seven unchanged serial cases produced their
+named outcomes when actually replayed; this correction did not replay them. Neither result is
 repository-wide completeness. Workspace guards remain ratcheted; Sentinel's non-Godot route has
 no visual/aspect/contrast evidence.

@@ -148,7 +148,7 @@ On 2026-08-18 the old floor constants were 75/513/209/7/78/30. This paragraph is
 dated and outside the enumerated current paragraphs.
 """
 
-ZERO_ACCEPTING_SIBLING = r'''#!/usr/bin/env bash
+SIBLING_TEMPLATE = r'''#!/usr/bin/env bash
 set -uo pipefail
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)" || exit 2
 python3 - "$ROOT/scripts/test.sh" "$ROOT/docs/session-state.md" <<'PY'
@@ -161,6 +161,8 @@ names = (
     "FOUNDRY_MIN_TESTS", "TS_MIN_TESTS", "VERIFIER_MIN_TESTS",
     "VERIFIER_MIN_SAMPLES", "VERIFIER_MIN_TAMPER", "VERIFIER_MIN_TAMPER_MODES",
 )
+VALUE_PATTERN = r"__VALUE_PATTERN__"
+MARKER_MODE = "__MARKER_MODE__"
 
 def shell_code(line):
     out = []
@@ -187,6 +189,65 @@ def shell_code(line):
         out.append(char)
     return "".join(out)
 
+def heredoc_opener(raw):
+    if MARKER_MODE == "raw":
+        if raw.lstrip().startswith("#"):
+            return None
+        marker = re.search(
+            r"<<-?\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\1", raw
+        )
+        return marker.group(2) if marker else None
+    # This finite lexer recognizes only the card's exact unquoted/quoted delimiter forms.
+    # It ignores operators inside ordinary single/double quotes and ignores here-strings.
+    index = 0
+    quote = None
+    while index < len(raw):
+        char = raw[index]
+        if quote is not None:
+            if quote == '"' and char == "\\" and index + 1 < len(raw):
+                index += 2
+                continue
+            if char == quote:
+                quote = None
+            index += 1
+            continue
+        if char == "\\" and index + 1 < len(raw):
+            index += 2
+            continue
+        if char in "'\"":
+            quote = char
+            index += 1
+            continue
+        if char == "#" and (index == 0 or raw[index - 1].isspace()):
+            return None
+        if raw.startswith("<<<", index):
+            index += 3
+            continue
+        if not raw.startswith("<<", index):
+            index += 1
+            continue
+        cursor = index + 2
+        if cursor < len(raw) and raw[cursor] == "-":
+            cursor += 1
+        while cursor < len(raw) and raw[cursor].isspace():
+            cursor += 1
+        delimiter_quote = None
+        if cursor < len(raw) and raw[cursor] in "'\"":
+            delimiter_quote = raw[cursor]
+            cursor += 1
+        match = re.match(r"[A-Za-z_][A-Za-z0-9_]*", raw[cursor:])
+        if not match:
+            index += 2
+            continue
+        delimiter = match.group(0)
+        cursor += len(delimiter)
+        if delimiter_quote is not None:
+            if cursor >= len(raw) or raw[cursor] != delimiter_quote:
+                index += 2
+                continue
+        return delimiter
+    return None
+
 tokens = {name: [] for name in names}
 heredoc = None
 for number, raw in enumerate(gate.splitlines(), 1):
@@ -194,11 +255,9 @@ for number, raw in enumerate(gate.splitlines(), 1):
         if raw.strip() == heredoc:
             heredoc = None
         continue
-    marker = None if raw.lstrip().startswith("#") else re.search(
-        r"<<-?\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\1", raw
-    )
-    if marker:
-        heredoc = marker.group(2)
+    marker = heredoc_opener(raw)
+    if marker is not None:
+        heredoc = marker
     code = shell_code(raw)
     for name in names:
         if not re.search(rf"(?<![A-Za-z0-9_]){re.escape(name)}\s*=", code):
@@ -225,7 +284,7 @@ for name in names:
     elif value == "":
         print(f"{name}: empty assignment")
         failed = True
-    elif not re.fullmatch(r"[0-9]+", value):
+    elif not re.fullmatch(VALUE_PATTERN, value):
         print(f"{name}: numeric positive decimal required")
         failed = True
     else:
@@ -252,41 +311,62 @@ PY
 '''
 
 
-def install_zero_accepting_sibling(root: Path) -> None:
+def install_sibling(root: Path, value_pattern: str, marker_mode: str) -> None:
     gate = root / "scripts/test.sh"
     text = gate.read_text()
     for name, value in FLOORS.items():
         pattern = rf"(?m)^{re.escape(name)}=[^\n]*$"
         if len(re.findall(pattern, text)) != 1:
-            raise RuntimeError(f"zero sibling floor anchor {name}")
+            raise RuntimeError(f"sibling floor anchor {name}")
         text = re.sub(pattern, f"{name}={value}", text)
     anchor = 'step() { printf \'\\n\\033[1m== %s ==\\033[0m\\n\' "$1"; }\n'
     if text.count(anchor) != 1:
-        raise RuntimeError("zero sibling gate wiring anchor")
+        raise RuntimeError("sibling gate wiring anchor")
     gate.write_text(text.replace(
         anchor,
         anchor + "\n./scripts/check-suite-floors.sh || fail=1\n",
     ))
     reader = root / "scripts/check-suite-floors.sh"
-    reader.write_text(ZERO_ACCEPTING_SIBLING)
+    sibling = SIBLING_TEMPLATE
+    if sibling.count("__VALUE_PATTERN__") != 1 or sibling.count("__MARKER_MODE__") != 1:
+        raise RuntimeError("sibling template anchors")
+    reader.write_text(
+        sibling.replace("__VALUE_PATTERN__", value_pattern).replace("__MARKER_MODE__", marker_mode)
+    )
     reader.chmod(0o755)
 
 
+def install_zero_accepting_sibling(root: Path) -> None:
+    install_sibling(root, r"[0-9]+", "finite")
+
+
+def install_flawed_heredoc_sibling(root: Path) -> None:
+    install_sibling(root, r"[1-9][0-9]*", "raw")
+
+
 def install_exact_positive_control(root: Path) -> None:
-    install_zero_accepting_sibling(root)
-    reader = root / "scripts/check-suite-floors.sh"
-    text = reader.read_text()
-    old = 're.fullmatch(r"[0-9]+", value)'
-    new = 're.fullmatch(r"[1-9][0-9]*", value)'
-    if text.count(old) != 1:
-        raise RuntimeError("exact-positive sibling predicate anchor")
-    reader.write_text(text.replace(old, new))
+    install_sibling(root, r"[1-9][0-9]*", "finite")
 
 
 def make_fixture(root: Path) -> None:
     (root / "scripts/test.sh").write_text(VALID_TEST_SH)
     (root / "scripts/test.sh").chmod(0o755)
     (root / "docs/session-state.md").write_text(VALID_SESSION)
+
+
+def inert_opener_routes(name: str) -> list[tuple[str, str, bool]]:
+    """Exact finite fake-opener spellings; bool marks Review-2-vulnerable routes."""
+    return [
+        ("comment", f"    # <<'A_FLOOR_MASK' {name}=888", False),
+        ("printf-sq", f"printf '%s\\n' '<<\"A_FLOOR_MASK\" {name}=888' >/dev/null", True),
+        ("printf-dq", f"printf '%s\\n' \"<<'A_FLOOR_MASK' {name}=888\" >/dev/null", True),
+        ("echo-sq", f"echo '<<\"A_FLOOR_MASK\" {name}=888' >/dev/null", True),
+        ("echo-dq", f"echo \"<<'A_FLOOR_MASK' {name}=888\" >/dev/null", True),
+        ("assign-sq", f"a_floor_note='<<\"A_FLOOR_MASK\" {name}=888'", True),
+        ("assign-dq", f"a_floor_note=\"<<'A_FLOOR_MASK' {name}=888\"", True),
+        ("herestring-sq", ": <<< 'A_FLOOR_MASK'", True),
+        ("herestring-dq", ': <<< "A_FLOOR_MASK"', True),
+    ]
 
 
 def shell_value(script: Path, name: str) -> tuple[int, str]:
@@ -365,7 +445,10 @@ def main() -> int:
 
     matrix_path = os.environ.get("A_FLOORS_MATRIX")
     variant = os.environ.get("A_FLOORS_VARIANT", "baseline")
-    if variant not in ("baseline", "digits-zero-sibling", "exact-positive-control"):
+    if variant not in (
+        "baseline", "digits-zero-sibling", "flawed-heredoc-sibling",
+        "exact-positive-control",
+    ):
         print("preflight: unknown A_FLOORS_VARIANT", file=sys.stderr)
         return 2
     with tempfile.TemporaryDirectory(prefix="a-floors.") as temp:
@@ -383,6 +466,8 @@ def main() -> int:
             return 2
         if variant == "digits-zero-sibling":
             install_zero_accepting_sibling(root)
+        elif variant == "flawed-heredoc-sibling":
+            install_flawed_heredoc_sibling(root)
         elif variant == "exact-positive-control":
             install_exact_positive_control(root)
 
@@ -433,6 +518,7 @@ def main() -> int:
             "TAMPER does not consume the legitimate TAMPER_MODES sibling",
         )
 
+        paired_routes: list[tuple[str, str]] = []
         for name, value in FLOORS.items():
             line = f"{name}={value}"
 
@@ -582,6 +668,67 @@ def main() -> int:
                 and printed_value(result.stdout, name) == str(value),
                 "quoted-heredoc assignment-shaped body is inert and accepted",
             )
+
+            for opener_id, opener, vulnerable in inert_opener_routes(name):
+                make_fixture(root)
+                replace_once(
+                    root / "scripts/test.sh", line,
+                    line + f"\n{opener}\n    {name}=999",
+                )
+                result = checker(root)
+                bash_rc, bash_got = shell_value(root / "scripts/test.sh", name)
+                trace_rc, trace = shell_assignment_trace(root / "scripts/test.sh", name)
+                witness = (
+                    bash_rc == 0 and bash_got == "999" and trace_rc == 0
+                    and trace == [str(value), "999"]
+                )
+                prefix = "TF" if vulnerable else "FC"
+                record(
+                    "CONTROL", f"{prefix}W-{opener_id}-{name}", witness,
+                    f"{opener_id} token is inert; Bash executes canonical then indented 999",
+                )
+                record(
+                    "REQUIRED", f"{prefix}-{opener_id}-{name}",
+                    witness and source_refusal(result, name, "duplicate"),
+                    f"{opener_id} fake opener cannot mask following executable duplicate",
+                )
+                paired_routes.append((opener_id, name))
+
+            make_fixture(root)
+            replace_once(
+                root / "scripts/test.sh", line,
+                line + f"\n: <<'A_FLOOR_REAL'\n{name}=888\nA_FLOOR_REAL\n    {name}=999",
+            )
+            result = checker(root)
+            bash_rc, bash_got = shell_value(root / "scripts/test.sh", name)
+            trace_rc, trace = shell_assignment_trace(root / "scripts/test.sh", name)
+            real_post_witness = (
+                bash_rc == 0 and bash_got == "999" and trace_rc == 0
+                and trace == [str(value), "999"]
+            )
+            record(
+                "REQUIRED", f"HR-post-{name}",
+                real_post_witness and source_refusal(result, name, "duplicate"),
+                "real heredoc body is inert and parsing resumes for post-terminator duplicate",
+            )
+
+        expected_routes = {
+            (opener_id, name)
+            for name in FLOORS
+            for opener_id, _opener, _vulnerable in inert_opener_routes(name)
+        }
+        route_counts = {
+            opener_id: sum(route_id == opener_id for route_id, _name in paired_routes)
+            for opener_id, _opener, _vulnerable in inert_opener_routes(next(iter(FLOORS)))
+        }
+        record(
+            "CONTROL", "T-route-complete",
+            len(paired_routes) == 54
+            and len(set(paired_routes)) == 54
+            and set(paired_routes) == expected_routes
+            and all(count == 6 for count in route_counts.values()),
+            "nine exact inert opener forms each executed once for all six constants (54/54)",
+        )
 
         print("\n== enumerated logical-paragraph matrix ==")
         make_fixture(root)
