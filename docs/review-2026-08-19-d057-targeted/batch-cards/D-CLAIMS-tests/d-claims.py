@@ -2,6 +2,7 @@
 """Frozen focused test contract for Sentinel D-CLAIMS.
 
 Clones the named exact commit and mutates only that private clone.
+First correction closes INSTRUMENT-REVIEW-1.md without editing that review.
 """
 
 from __future__ import annotations
@@ -37,9 +38,55 @@ D4B_TRUTH_B = (
     "not an open defect."
 )
 D1_FALSE = "; it does not."
+D1_BLOCKS = "this alone blocks exit"
 D1_TRUTH = "FALSE SINCE A-074; THE COMPARISON IS BUILT"
 D2_FALSE = "Ten minus the five fixed leaves six"
-D2_TRUTH = "Ten minus four wholly-removed entries is six"
+D2_FIVE = "FIVE OF THESE TEN ARE NO LONGER ACCEPTED LIMITS"
+D2_TRUTH = (
+    "Four entries were wholly removed (`D-10`, `G-5`, `H-5`, `H-8`); `D-09` is in "
+    "both the fixed and accepted sets. Ten minus four wholly-removed entries is six, not five."
+)
+D2_D09 = "`D-09` is in both the fixed and accepted sets"
+PACKET_TEN = "The ten §11.0 accepted limits"
+PACKET_SIX = "The six §11.0 accepted limits"
+FROZEN_REASON_CODES = frozenset({
+    "SIGNER_DATAHASH_MISMATCH",
+    "SIGNER_WRONG_VAULT",
+    "SIGNER_WRONG_CHAIN",
+    "SIGNER_VAULT_UNREACHABLE",
+    "SIGNER_CHAIN_UNSTABLE",
+    "SIGNER_DOMAIN_SEPARATOR_MISMATCH",
+    "SIGNER_CALLDATA_TOO_SHORT",
+    "SIGNER_EVIDENCE_DECODING_MISMATCH",
+    "SIGNER_EVIDENCE_DECODING_ABSENT",
+    "SIGNER_NOT_ACTIVE_SIGNER",
+    "SIGNER_NONCE_MISMATCH",
+    "SIGNER_VAULT_PAUSED",
+    "SIGNER_ACTION_EXPIRED",
+    "SIGNER_NONCE_ALREADY_ATTESTED",
+    "SIGNER_MANDATE_NOT_ACTIVE",
+    "SIGNER_POLICY_NOT_ACTIVE",
+    "SIGNER_ACTION_BINDING_STALE",
+    "SIGNER_MANDATE_TARGET_MISMATCH",
+    "SIGNER_MANDATE_SELECTOR_MISMATCH",
+    "SIGNER_MANDATE_VALUE_EXCEEDED",
+    "SIGNER_MANDATE_WINDOW",
+    "SIGNER_MANDATE_PRINCIPAL_MISMATCH",
+    "SIGNER_MANDATE_POLICY_LINK_MISMATCH",
+    "SIGNER_MANDATE_SCOPE_MISMATCH",
+    "SIGNER_TARGET_CODEHASH_MISMATCH",
+    "SIGNER_SIMULATION_BLOCK_MISMATCH",
+    "SIGNER_ANCHOR_NOT_OBSERVED",
+    "SIGNER_POLICY_SCOPE_MISMATCH",
+    "SIGNER_POLICY_OPERATION_MISMATCH",
+    "SIGNER_POLICY_VALUE_EXCEEDED",
+    "SIGNER_POLICY_WINDOW",
+    "SIGNER_UNSUPPORTED_OPERATION",
+    "SIGNER_VAULT_VALUE_CAP_EXCEEDED",
+    "SIGNER_VAULT_TARGET_NOT_ALLOWED",
+    "SIGNER_VAULT_SELECTOR_NOT_ALLOWED",
+})
+REQUIRED_N = 14
 VARIANTS = {
     "baseline",
     "fix-d6",
@@ -49,6 +96,7 @@ VARIANTS = {
     "break-floors",
     "break-bevents",
     "break-d014",
+    "break-reason-split",
 }
 
 required_total = required_held = control_total = control_held = 0
@@ -105,6 +153,11 @@ def comment_norm(text: str) -> str:
     return wrap_norm(re.sub(r"(?m)^\s*\*", " ", text))
 
 
+def live_text(norm: str) -> str:
+    """Wrap-normalized text with ~~struck~~ spans removed. Unstruck oracles use this."""
+    return wrap_norm(re.sub(r"~~.*?~~", " ", norm))
+
+
 def replace_once(path: Path, old: str, new: str) -> None:
     text = path.read_text()
     if text.count(old) != 1:
@@ -125,6 +178,12 @@ def s2_prefix_digest(text: str) -> str:
 def refusal_record_has_detail(src: str) -> bool:
     body = region(src, "export interface RefusalRecord {", "export interface Refusal {")
     return re.search(r"\bdetail\s*[?:]", body) is not None
+
+
+def reason_codes(src: str) -> frozenset[str]:
+    start = src.index("export const REASON_SEVERITY = {")
+    end = src.index("} as const satisfies Record<string, Severity>;", start)
+    return frozenset(re.findall(r"(?m)^\s+([A-Z][A-Z0-9_]+):", src[start:end]))
 
 
 D6_OLD = (
@@ -160,19 +219,29 @@ D4B_NEW = (
     " * D-014 deliberately kept conformance out of the signer. Register E4 is VERIFIER HALF BUILT\n"
     " * · SIGNER HALF DELIBERATELY NOT BUILT, not an open defect.\n"
 )
-D1_OLD = 'does the conformance comparison"; it does not.'
+D1_OLD = (
+    'does the conformance comparison"; it does not. **This is not an\n'
+    "   agent's to close — it changes what the product guarantees, and it sits in signed text.**\n"
+    "   Under C1 condition 4 this alone blocks exit."
+)
 D1_NEW = (
     'does the conformance comparison"; ~~it does not.~~ **'
     + D1_TRUTH
     + " (`grep -c decodedSelectorAndParameters verifier/verify.py` = 2). "
     "The signed S1 pack's original sentence is historical signed text and is not "
-    "an agent's to rewrite. This item is not a current exit blocker.**"
+    "an agent's to rewrite. This item is not a current exit blocker.** "
+    "~~Under C1 condition 4 this alone blocks exit.~~"
 )
 D2_OLD = "Ten minus the five\nfixed leaves six, not five."
-D2_NEW = (
-    "Four entries were wholly removed (`D-10`, `G-5`, `H-5`, `H-8`); `D-09` is in "
-    "both the fixed and accepted sets. Ten minus four wholly-removed entries is six, not five."
+D2_NEW = D2_TRUTH
+D2_FIVE_OLD = (
+    "**FIVE OF THESE TEN ARE NO LONGER ACCEPTED LIMITS — THEY ARE FIXED (A-076, 2026-08-18, under\n"
+    "D-056(a)). `D-09(c)`, `D-10`, `G-5`, `H-5` and `H-8` were repaired at John's direction in the\n"
+    "bounded pre-review stabilization checkpoint.**"
 )
+D2_FIVE_NEW = "~~" + D2_FIVE_OLD + "~~"
+PACKET_TEN_OLD = "- The ten §11.0 accepted limits — subject to **T1**."
+PACKET_SIX_NEW = "- The six §11.0 accepted limits — subject to **T1**."
 
 
 def apply_d6(root: Path) -> None:
@@ -184,7 +253,9 @@ def apply_all(root: Path) -> None:
     replace_once(root / "ts/test/evaluate.checks.test.ts", D4A_OLD, D4A_NEW)
     replace_once(root / "ts/src/decode/index.ts", D4B_OLD, D4B_NEW)
     replace_once(root / "docs/exit-criterion-packet.md", D1_OLD, D1_NEW)
+    replace_once(root / "docs/exit-criterion-packet.md", PACKET_TEN_OLD, PACKET_SIX_NEW)
     replace_once(root / "docs/gate-s2-evidence.md", D2_OLD, D2_NEW)
+    replace_once(root / "docs/gate-s2-evidence.md", D2_FIVE_OLD, D2_FIVE_NEW)
 
 
 def score(root: Path) -> None:
@@ -195,9 +266,12 @@ def score(root: Path) -> None:
     checks = (root / "ts/test/evaluate.checks.test.ts").read_text()
     packet = (root / "docs/exit-criterion-packet.md").read_text()
     packet_n = wrap_norm(packet)
+    packet_live = live_text(packet_n)
     blocker = wrap_norm(region(packet, BLOCKER1_START, BLOCKER1_END))
+    blocker_live = live_text(blocker)
     s2 = (root / "docs/gate-s2-evidence.md").read_text()
     s2_n = wrap_norm(s2)
+    s2_live = live_text(s2_n)
     s1 = root / "docs/gate-s1-evidence.md"
     register = wrap_norm((root / "docs/v1-1-register.md").read_text())
     session = wrap_norm((root / "docs/session-state.md").read_text())
@@ -214,15 +288,20 @@ def score(root: Path) -> None:
     record("REQUIRED", "R-D4b-neither", D4B_NEITHER not in decode_n, "decode/index.ts lacks NEITHER signer nor verifier")
     record("REQUIRED", "R-D4b-open", D4B_OPEN not in decode_n, "decode/index.ts lacks Both are open")
     record("REQUIRED", "R-D4b-truth", D4B_TRUTH_A in decode_n and D4B_TRUTH_B in decode_n, "decode/index.ts carries both D4B_TRUTH fragments")
-    record("REQUIRED", "R-D1-absent", D1_FALSE not in blocker, "packet BLOCKER 1 lacks unstruck ; it does not.")
+    record("REQUIRED", "R-D1-absent", D1_FALSE not in blocker_live, "unstruck BLOCKER 1 lacks ; it does not.")
+    record("REQUIRED", "R-D1-blocks", D1_BLOCKS not in blocker_live, "unstruck BLOCKER 1 lacks this alone blocks exit")
     record("REQUIRED", "R-D1-truth", D1_TRUTH in blocker, "packet BLOCKER 1 carries D1_TRUTH")
-    record("REQUIRED", "R-D2-absent", D2_FALSE not in s2_n, "gate-s2 §11.0 lacks Ten minus the five")
-    record("REQUIRED", "R-D2-truth", D2_TRUTH in s2_n, "gate-s2 §11.0 carries Ten minus four wholly-removed")
+    record("REQUIRED", "R-D1-ten", PACKET_TEN not in packet_live, "unstruck packet lacks The ten §11.0 accepted limits")
+    record("REQUIRED", "R-D1-six", PACKET_SIX in packet_n, "packet carries The six §11.0 accepted limits")
+    record("REQUIRED", "R-D2-absent", D2_FALSE not in s2_live, "unstruck gate-s2 lacks Ten minus the five")
+    record("REQUIRED", "R-D2-five", D2_FIVE not in s2_live, "unstruck gate-s2 lacks FIVE OF THESE TEN heading")
+    record("REQUIRED", "R-D2-truth", D2_TRUTH in s2_n and D2_D09 in s2_n, "gate-s2 carries full D2_TRUTH including D-09 in both sets")
 
     record("CONTROL", "C-D6-a", "(a) the head MOVED" in protocol_n, "(a) chain-moved condition remains")
     record("CONTROL", "C-D6-b", "(b) the head had NO HASH" in protocol_n, "(b) pending-head condition remains")
     record("CONTROL", "C-D6-no-detail", not refusal_record_has_detail(protocol), "RefusalRecord has no detail field")
     record("CONTROL", "C-D6-fatal", 'SIGNER_CHAIN_UNSTABLE: "FATAL"' in protocol, "SIGNER_CHAIN_UNSTABLE stays FATAL")
+    record("CONTROL", "C-D6-codes", reason_codes(protocol) == FROZEN_REASON_CODES, "public ReasonCode set is unchanged")
     record("CONTROL", "C-D6-d057", "D-057(4)" in protocol, "D-057(4) remains in the NatSpec")
     record("CONTROL", "C-D4a-real", "EVAL_TARGET_BOUND" in checks, "evaluate.checks.test.ts still asserts EVAL_TARGET_BOUND")
     record("CONTROL", "C-D4b-d014", "D-014 deliberately kept conformance out of the signer" in decode_n, "D-014 signer exclusion remains")
@@ -231,8 +310,7 @@ def score(root: Path) -> None:
     record("CONTROL", "C-D1-s1", digest(s1) == S1_SHA256, "signed gate-s1-evidence.md bytes unchanged")
     record("CONTROL", "C-D2-prefix", s2_prefix_digest(s2) == S2_PREFIX_SHA256, "gate-s2 bytes before §11 unchanged")
     record("CONTROL", "C-D2-six", "WHAT IS ACCEPTED TODAY IS SIX" in s2_n and "`G-3`" in s2_n, "accepted set still names six including G-3")
-    record("CONTROL", "C-D2-struck", "FIVE OF THESE TEN ARE NO LONGER ACCEPTED LIMITS" in s2_n, "struck five-of-ten sentence remains")
-    record("CONTROL", "C-D2-packet-ten", "The ten §11.0 accepted limits" in packet_n, "packet NON-BLOCKER historical ten remains")
+    record("CONTROL", "C-D2-superseded", "THAT SENTENCE IS FALSE AND IS SUPERSEDED" in s2_n, "§11.0 R4-F1 superseded record remains")
     record("CONTROL", "C-session-ten", "ten accepted as documented limits" in session, "dated round-five ten remains in session-state")
     record("CONTROL", "C-A077", "**A-077 (2026-08-19)" in decisions, "A-077 heading is not rewritten away")
     record("CONTROL", "C-A080", '~~"COMPLETE THROUGH REVERIFICATION"~~' in handoff, "HANDOFF A-080 strike remains")
@@ -299,8 +377,7 @@ def main() -> int:
         elif variant == "break-s2-prefix":
             path = root / "docs/gate-s2-evidence.md"
             text = path.read_text()
-            mark = S2_PREFIX_MARK
-            path.write_text(text.replace(mark, " \n" + mark, 1))
+            path.write_text(text.replace(S2_PREFIX_MARK, " \n" + S2_PREFIX_MARK, 1))
         elif variant == "break-floors":
             replace_once(root / "scripts/test.sh", "FOUNDRY_MIN_TESTS=103", "FOUNDRY_MIN_TESTS=92")
         elif variant == "break-bevents":
@@ -311,6 +388,13 @@ def main() -> int:
                 root / "ts/src/decode/index.ts",
                 "D-014 deliberately kept conformance out of the signer.",
                 "conformance remains out of the signer.",
+            )
+        elif variant == "break-reason-split":
+            replace_once(
+                root / "ts/src/signer/protocol.ts",
+                '    SIGNER_CHAIN_UNSTABLE: "FATAL",\n',
+                '    SIGNER_CHAIN_UNSTABLE: "FATAL",\n'
+                '    SIGNER_CHAIN_PENDING_HEAD: "FATAL",\n',
             )
         score(root)
     print(
@@ -327,7 +411,7 @@ def main() -> int:
         dest.write_text(body)
         print(f"matrix sha256 {hashlib.sha256(dest.read_bytes()).hexdigest()}")
     complete = (
-        required_total == 10
+        required_total == REQUIRED_N
         and required_held == required_total
         and control_total > 0
         and control_held == control_total
