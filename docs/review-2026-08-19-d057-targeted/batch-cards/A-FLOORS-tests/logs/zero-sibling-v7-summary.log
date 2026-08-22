@@ -1,0 +1,14 @@
+A-FLOORS seventh-corrected zero-accepting sibling
+subject=0e90836057174052c13327fa5410f58a92550ad0
+variant=digits-zero-sibling
+harness_sha256=47cb61ccef462f75131259c7af2b22c12911c86347c898653d50062bf8b717b4
+fake_only_reader_routes=54/54
+matrix_rows=349
+unique_case_names=349
+REQUIRED 125/131
+CONTROL 218/218
+failure_count=6
+failure_set=Z-FOUNDRY_MIN_TESTS,Z-TS_MIN_TESTS,Z-VERIFIER_MIN_TESTS,Z-VERIFIER_MIN_SAMPLES,Z-VERIFIER_MIN_TAMPER,Z-VERIFIER_MIN_TAMPER_MODES
+exit=1
+raw_sha256=11b251c00193907c38b3f62fb89d66b553165761b1937fc95f9961fc9bd5e6c4
+matrix_sha256=fec03d43fe4cc392fe8765119d651d971e06db853ebbc676b89d4290f518ae47

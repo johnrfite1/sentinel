@@ -1,0 +1,14 @@
+A-FLOORS commented pretty JSON uncorrelated sibling under seventh correction
+subject=0e90836057174052c13327fa5410f58a92550ad0
+variant=uncorrelated-pretty-json-comment-sibling
+harness_sha256=47cb61ccef462f75131259c7af2b22c12911c86347c898653d50062bf8b717b4
+finite_lexer=exact-positive
+duplicate_policy=pretty-printed JSON with commented brace wrappers
+REQUIRED 41/131
+CONTROL 218/218
+required_failures=90
+failure_families=DA:6,DB:6,DC:6,IA:6,IB:6,TF:48,FC-comment:6,HR-post:6
+PRE-REPAIR DEFECTS OBSERVED
+exit=1
+raw_sha256=23079c36c5d1f56d442b19fdc2f3569fc12e2377f7861ff313e8d050ff8878c6
+matrix_sha256=b83e49acb5a483d9507b4ae4e31edfc0f53ffd767cf3d40b0dabfca81fd30308

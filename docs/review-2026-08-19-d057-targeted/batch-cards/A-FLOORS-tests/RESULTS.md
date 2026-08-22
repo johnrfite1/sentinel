@@ -1,158 +1,65 @@
-# A-FLOORS — sixth-corrected measured pre-repair results
+# A-FLOORS — seventh-corrected measured pre-repair results
 
 ## Verdict
 
-**HOLD for sixth-corrected test-contract readiness, pending fresh independent Review 7.** No
+**HOLD for seventh-corrected test-contract readiness, pending fresh independent Review 8.** No
 production repair, post-repair pass, approval or gate replay exists.
 
-## 1. Frozen history and correction identity
+## 1. Identity
 
-The original subject and first five corrections remain historical evidence. Review 6 reproduced
-the fifth correction and returned FAIL in exact review-only commit
-`b4553841e4d234b947c008f340dce4f6a1a28b02`. Reviews 1–6 and the concurrent Review-5 blob, and
-every earlier matrix/log summary, are byte-preserved.
+Review 7 FAIL `0e90836057174052c13327fa5410f58a92550ad0`. Reviews 1–7 and earlier matrices/logs
+are byte-preserved. Harness 1140 lines, sha256
+`47cb61ccef462f75131259c7af2b22c12911c86347c898653d50062bf8b717b4`. Runs used that external
+harness against a clean clone of `0e90836`.
 
-The sixth-corrected harness is 1116 lines, sha256
-`1c298341fb807b54fa15e1e95f4084db5b9ce4881bb52099f5499e0811b8c93c`. Every final run below
-used that external harness against a disposable clean clone at exact Review-6 commit `b455384`.
+## 2. Baseline
 
-## 2. Sixth-corrected baseline
+REQUIRED 4/131, CONTROL 218/218, exit 1. Raw/matrix:
+`ec0d66e240d7ad2382d8ddb1375e32e4d173364c0464dc0b694244e8aeb1d23e` /
+`82e0e80e849190807576ddb079795dfeb86595eb517c035ed28a848023c23684`.
 
-```text
-REQUIRED 4/131
-CONTROL 212/212
-PRE-REPAIR DEFECTS OBSERVED
-exit=1
-```
+## 3. Uncorrelated siblings
 
-The current reader passes all 54 fake-only acceptance controls and all thirty-eight
-diagnostic-oracle controls. `T-route-complete` proves 54/54 unique fake-only routes map one-to-one
-to 54/54 paired requirements. All 343 case names are unique. The four held REQUIRED rows are the
-four live verifier-floor canonical values.
+Six live siblings (two-line, oneline, compact JSON, pretty JSON, commented pretty JSON,
+same-record inventory) each return REQUIRED 41/131, CONTROL 218/218, exit 1, failing exactly the
+90 named-duplicate rows. Shared matrix
+`b83e49acb5a483d9507b4ae4e31edfc0f53ffd767cf3d40b0dabfca81fd30308`.
 
-Raw/matrix sha256:
-`690067abeb4c0a984319cb439e9b6c82d488c03f4787377832090296b68dbd5a` /
-`74500e901beeb34a9916ee44d7a890b2ca75370f960d41933f27fffc660dd724`.
+| Sibling | Raw SHA-256 |
+|---|---|
+| two-line | `c066b05fb53d6e2520d6daaea170319bbfa37300321b7232d315ad9f137f903a` |
+| oneline | `71e7218bb77b0a67970f6a253482de30fa09d6b6d9f25ffa3c56345db1a1aa7c` |
+| compact JSON | `f5e77cc46111b38b20ae0e753a1c8c8c701e88656e3d91e7fb596760e1229348` |
+| pretty JSON | `25ede00dcb2d10640cb0117e6a9cdba9f00c2411b5113e94ebae1d2b71420e96` |
+| commented pretty JSON | `23079c36c5d1f56d442b19fdc2f3569fc12e2377f7861ff313e8d050ff8878c6` |
+| same-record inventory | `3f530e8d6166436f5b779f1a7abac83fdc4e7cc977d8d1390c16fcede7a92387` |
 
-## 3. Diagnostic-correlation oracle
+Forty-four `DR-*` controls pass, including `DR-prettycomment-*`.
 
-Review 6's pretty-printed name-as-key JSON listed every constant as `{NAME}: duplicate
-executable assignment` inside `{` / `}` wrapper records. Against the fifth-corrected matcher
-that payload scored 343/343 with a matrix byte-identical to the satisfying control.
+## 4. Other variants
 
-The sixth-corrected oracle requires the exact class phrase, rejects other floor names after the
-colon, and requires a unique named subject when `{` or `}` is its own record. Direct controls are
-the thirty-eight `DR-*` rows in `CARD.md` §4.
+| Variant | REQUIRED | CONTROL | Exit | Raw | Matrix |
+|---|---|---|---:|---|---|
+| digits-zero | 125/131 | 218/218 | 1 | `11b251c00193907c38b3f62fb89d66b553165761b1937fc95f9961fc9bd5e6c4` | `fec03d43fe4cc392fe8765119d651d971e06db853ebbc676b89d4290f518ae47` |
+| Review-2 raw | 83/131 | 178/218 | 2 | `4033c3c34958760041368fd0921e38fc2c36365e92a5b2501d83d12771eaee5b` | `0696db2d63fc9779e7038d0e4615ad92e748ff9845e6cd2e84a539999364c7c9` |
+| Review-3 | 131/131 | 170/218 | 2 | `bdc01cf527aa788ed588f3bb4174169942fb3e1903b70a7c88c6ec47ee8750bc` | `57584faa5b4a2aeb8d03db41e354ba236e11082d31d5d062daceefd3be7aa2b2` |
+| all-token | 131/131 | 164/218 | 2 | `eef8d7c7b90e62a1f3872216f91339319ac4394492c5f78dc502f88427fce65d` | `eb398f4b816e395c277346d4ad104f295fd62ff982da81786bc011372111407b` |
+| exact-positive | 131/131 | 218/218 | 0 | `622544caaff1acdb75d07a81cd05a6527ba56efec532955514a847657e4899a0` | `69825cc0e41a11cc359c66968f5920160f215d2a0c2f2b62e6c06a4dd99aeed0` |
 
-Five embedded uncorrelated siblings (two-line, oneline, compact JSON, pretty JSON, same-record
-inventory) each return:
+349 unique names. Gate harness/matrix unchanged; not rerun.
 
-```text
-REQUIRED 41/131
-CONTROL 212/212
-PRE-REPAIR DEFECTS OBSERVED
-exit=1
-```
+## 5. Limits
 
-The 90 REQUIRED failures are exactly the named-duplicate rows: `DA/DB/DC/IA/IB` (30), `TF-*`
-(48), `FC-comment-*` (6) and `HR-post-*` (6). The five siblings produced one shared matrix,
-distinct from the satisfying control.
+This establishes only the exact finite grammar in `CARD.md`, including Review 7's commented
+JSON-wrapper hole. It is not implementation, certification, signing, publication or D-055
+closure.
 
-| Sibling | Raw SHA-256 | Matrix SHA-256 |
-|---|---|---|
-| two-line | `8e21ab9742fc728e107fa45d5015c504233604b9a0278ab99ee115c028b19887` | `37329860d7787ea0ee5edda3f30bd4b7d0064353d24b175b5a6e4730ebe8e1c8` |
-| oneline | `b394de40bbb2c2df2a0b13d1347726e466768c4fe2010dc011ffa3836a7db411` | `37329860d7787ea0ee5edda3f30bd4b7d0064353d24b175b5a6e4730ebe8e1c8` |
-| compact JSON | `e7e5510f0e03b39a39cf201a0bb8a053925e2abbb8e3298bd8c24238d7ae1203` | `37329860d7787ea0ee5edda3f30bd4b7d0064353d24b175b5a6e4730ebe8e1c8` |
-| pretty JSON | `da9cce34ea8ad7a5fa1b7bd70df126b37ca7dea68e63d7bdea32f090d7f401d1` | `37329860d7787ea0ee5edda3f30bd4b7d0064353d24b175b5a6e4730ebe8e1c8` |
-| same-record inventory | `68255068263525ceeb1a56af9e9ad43255ca1c3f0f51e9ab5c301d2f20bec5d4` | `37329860d7787ea0ee5edda3f30bd4b7d0064353d24b175b5a6e4730ebe8e1c8` |
-
-## 4. Exact Review-3 sibling
-
-```text
-REQUIRED 131/131
-CONTROL 164/212
-INSTRUMENT INVALID: control failure
-exit=2
-```
-
-It fails exactly 48 non-comment `FA-*` controls. 126/174 plus 38 passing diagnostic controls is
-164/212. Raw/matrix sha256:
-`77799ddd97b0a9d919c57bc8be4ec3d1966b8559b7479b86e754ccb6f86c960d` /
-`4451ccdadb92467c78811408188b4f7e7eafae3eaab593db7bb3de272b73f6dc`.
-
-## 5. Expanded all-token sibling
-
-```text
-REQUIRED 131/131
-CONTROL 158/212
-INSTRUMENT INVALID: control failure
-exit=2
-```
-
-It fails all 54 fake-only controls. 120/174 plus 38 passing diagnostic controls is 158/212.
-Raw/matrix sha256:
-`304917e7340589d3c0c25693c3582848c4fdf3d2694c5d0fea60e882662da195` /
-`b09209d81d4b3fe032ab1de6bb3261d608c6964e00ec501d77baa01a9c46b7c4`.
-
-## 6. Earlier causal siblings under the inverse matrix
-
-Digits-only:
-
-```text
-REQUIRED 125/131
-CONTROL 212/212
-exit=1
-```
-
-Raw/matrix sha256:
-`0cf9f8a49c2704fcb0812f18f323b46ace6829a1eba103efa8901eb5273e3fa6` /
-`e3b72a952470a051d0650abf5e6b71ee441f36e191954e7f37c0e38747fc856f`.
-
-Review-2 raw:
-
-```text
-REQUIRED 83/131
-CONTROL 172/212
-INSTRUMENT INVALID: control failure
-exit=2
-```
-
-Raw/matrix sha256:
-`dc5b987e22ead342ecb0b6c3be82f52e41efd0a2e0c15c125c047bd3b5f73bf9` /
-`2ac06deb1121d39b3eb2cbdf19443a1313f2f7b21738bf217e7b3c91ce2b80cd`.
-
-## 7. Satisfying control
-
-```text
-REQUIRED 131/131
-CONTROL 212/212
-A_FLOORS_FOCUSED_COMPLETE
-exit=0
-```
-
-Raw/matrix sha256:
-`2ff602c7c33c58681d9b8fa7789d14622ed971634084469c9679efd364517175` /
-`7f3ddf691b9619669ed221c94b1f0ab58e581a1db2086727772043afeadabfa1`.
-
-## 8. Historical serial gate reliance
-
-The gate harness/matrix remain byte-identical at
-`fb389fdd33e981a356436cf37e453158787288c6d64530c28c695fcec83cd8d0` /
-`0b4d9c127e7230c7266960fe073f92f9551da9a68005cb936850993d803d1c58`. No expensive gate was
-rerun.
-
-## 9. Limits
-
-This establishes only the exact finite grammar and named-subject diagnostic correlation in
-`CARD.md`, including Review 6's pretty-printed JSON and same-record inventory holes. It is not
-implementation, certification, signing, publication or D-055 closure.
-
-## 10. Guards
+## 6. Guards
 
 Before staging, repository guards all exited 0: worktree secret scan, review scope
-(`R1=468`, `R2=47`, `R3=152`; 667/667 then-tracked files assigned), findings ledger (23 IDs;
+(`R1=491`, `R2=47`, `R3=152`; 690/690 then-tracked files assigned), findings ledger (23 IDs;
 totals match D-057), live suite-floor reader (`92/527/221/7/78/30`) and vendor-honesty mechanical
-conditions. With the new v6 matrix/summary files staged, the staged secret scan was clean and
-review scope again exited 0 (`R1=490`, `R2=47`, `R3=152`; 689/689 tracked files assigned). The
+conditions. With the new v7 matrix/summary files staged, the staged secret scan was clean and
+review scope again exited 0 (`R1=515`, `R2=47`, `R3=152`; 714/714 tracked files assigned). The
 workspace guard exited 0 with 13 machine-state findings, all 13 baselined and zero new.
 Workspace success remains ratcheted: pre-existing findings are not absent.

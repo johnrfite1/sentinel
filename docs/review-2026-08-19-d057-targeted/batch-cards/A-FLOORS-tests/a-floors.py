@@ -303,6 +303,12 @@ def emit_duplicate(target):
             suffix = "," if index < len(names) - 1 else ""
             print(f"  {item}: duplicate executable assignment{suffix}")
         print("}")
+    elif DIAGNOSTIC_MODE == "uncorrelated-pretty-json-comment":
+        print("{ // object")
+        for index, item in enumerate(names):
+            suffix = "," if index < len(names) - 1 else ""
+            print(f"  {item}: duplicate executable assignment{suffix}")
+        print("} // end")
     elif DIAGNOSTIC_MODE == "uncorrelated-inventory":
         print(f"{target}: duplicate executable assignment " + " ".join(names))
     else:
@@ -428,6 +434,10 @@ def install_uncorrelated_pretty_json_sibling(root: Path) -> None:
     install_sibling(root, r"[1-9][0-9]*", "finite", diagnostic_mode="uncorrelated-pretty-json")
 
 
+def install_uncorrelated_pretty_json_comment_sibling(root: Path) -> None:
+    install_sibling(root, r"[1-9][0-9]*", "finite", diagnostic_mode="uncorrelated-pretty-json-comment")
+
+
 def install_uncorrelated_inventory_sibling(root: Path) -> None:
     install_sibling(root, r"[1-9][0-9]*", "finite", diagnostic_mode="uncorrelated-inventory")
 
@@ -513,7 +523,7 @@ def source_refusal(result: subprocess.CompletedProcess[str], name: str, reason: 
         return False
     phrase = REASON_PHRASES[reason]
     records = refusal_records(result.stdout)
-    json_wrapped = "{" in records or "}" in records
+    json_wrapped = any(record.startswith("{") or record.startswith("}") for record in records)
     hits = named_subject_hits(result.stdout)
     matching = [
         remainder for subject, remainder in hits
@@ -604,7 +614,8 @@ def main() -> int:
         "review3-failclosed-sibling", "all-token-failclosed-sibling",
         "exact-positive-control", "uncorrelated-diagnostic-sibling",
         "uncorrelated-oneline-sibling", "uncorrelated-json-sibling",
-        "uncorrelated-pretty-json-sibling", "uncorrelated-inventory-sibling",
+        "uncorrelated-pretty-json-sibling", "uncorrelated-pretty-json-comment-sibling",
+        "uncorrelated-inventory-sibling",
     ):
         print("preflight: unknown A_FLOORS_VARIANT", file=sys.stderr)
         return 2
@@ -639,6 +650,8 @@ def main() -> int:
             install_uncorrelated_json_sibling(root)
         elif variant == "uncorrelated-pretty-json-sibling":
             install_uncorrelated_pretty_json_sibling(root)
+        elif variant == "uncorrelated-pretty-json-comment-sibling":
+            install_uncorrelated_pretty_json_comment_sibling(root)
         elif variant == "uncorrelated-inventory-sibling":
             install_uncorrelated_inventory_sibling(root)
 
@@ -708,6 +721,12 @@ def main() -> int:
             pretty_lines.append(f"  {item}: duplicate executable assignment{suffix}")
         pretty_lines.append("}")
         hostile_pretty = "\n".join(pretty_lines) + "\n"
+        comment_lines = ["{ // object"]
+        for index, item in enumerate(floor_names):
+            suffix = "," if index < len(floor_names) - 1 else ""
+            comment_lines.append(f"  {item}: duplicate executable assignment{suffix}")
+        comment_lines.append("} // end")
+        hostile_pretty_comment = "\n".join(comment_lines) + "\n"
         for name in FLOORS:
             legit = synthetic_result(f"{name}: duplicate executable assignment\n")
             record(
@@ -734,6 +753,11 @@ def main() -> int:
                 "CONTROL", f"DR-prettyjson-{name}",
                 not source_refusal(synthetic_result(hostile_pretty), name, "duplicate"),
                 "pretty-printed name-as-key JSON does not uniquely name this constant",
+            )
+            record(
+                "CONTROL", f"DR-prettycomment-{name}",
+                not source_refusal(synthetic_result(hostile_pretty_comment), name, "duplicate"),
+                "pretty-printed JSON with commented braces does not uniquely name this constant",
             )
             record(
                 "CONTROL", f"DR-inventory-{name}",

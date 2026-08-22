@@ -1,0 +1,17 @@
+A-FLOORS expanded all-token sibling under seventh correction
+subject=0e90836057174052c13327fa5410f58a92550ad0
+variant=all-token-failclosed-sibling
+harness_sha256=47cb61ccef462f75131259c7af2b22c12911c86347c898653d50062bf8b717b4
+prior_v3_rows=305
+prior_missing=0
+prior_unexpected_nonpass=0
+added_diagnostic_controls=44/44
+REQUIRED 131/131
+CONTROL 164/218
+new_fake_only_pass=0/54
+new_fake_only_fail=54/54
+failure_families=FA-comment:6,FA-printf:12,FA-echo:12,FA-assign:12,FA-herestring:12
+INSTRUMENT INVALID: control failure
+exit=2
+raw_sha256=eef8d7c7b90e62a1f3872216f91339319ac4394492c5f78dc502f88427fce65d
+matrix_sha256=eb398f4b816e395c277346d4ad104f295fd62ff982da81786bc011372111407b

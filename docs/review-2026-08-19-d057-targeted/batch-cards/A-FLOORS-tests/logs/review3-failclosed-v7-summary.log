@@ -1,0 +1,16 @@
+A-FLOORS exact Review-3 sibling under seventh correction
+subject=0e90836057174052c13327fa5410f58a92550ad0
+variant=review3-failclosed-sibling
+harness_sha256=47cb61ccef462f75131259c7af2b22c12911c86347c898653d50062bf8b717b4
+prior_v3_rows=305
+prior_missing=0
+prior_unexpected_nonpass=0
+added_diagnostic_controls=44/44
+REQUIRED 131/131
+CONTROL 170/218
+new_fake_only_pass=6/54 (full-line comments)
+new_fake_only_fail=48/54 (printf,echo,assignment,here-string)
+INSTRUMENT INVALID: control failure
+exit=2
+raw_sha256=bdc01cf527aa788ed588f3bb4174169942fb3e1903b70a7c88c6ec47ee8750bc
+matrix_sha256=57584faa5b4a2aeb8d03db41e354ba236e11082d31d5d062daceefd3be7aa2b2

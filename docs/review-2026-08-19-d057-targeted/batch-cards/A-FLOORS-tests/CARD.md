@@ -1,7 +1,7 @@
-# A-FLOORS — sixth-corrected frozen independent test contract
+# A-FLOORS — seventh-corrected frozen independent test contract
 
-**Verdict: HOLD for sixth-corrected test-contract readiness only, pending fresh independent
-Review 7.** This is not implementation approval, a gate signature, certification, ratification,
+**Verdict: HOLD for seventh-corrected test-contract readiness only, pending fresh independent
+Review 8.** This is not implementation approval, a gate signature, certification, ratification,
 publication, rename, D-055 assessment or push authorization.
 
 **Behavioral baseline:** `1a133301533e9d959dbafbbcc7ffe05e7eb78df3` (tree
@@ -16,10 +16,12 @@ publication, rename, D-055 assessment or push authorization.
 `178347dbf33ab70923a6fd0278ea61c5dec5e6b6`; Review-5 FAIL of record
 `30d6257f806276a24cb6a40319b5bbb858fa9a5d`; fifth correction
 `3fc2e5673bc2d10f552c5d5177c56cabac008541`; Review-6 FAIL
-`b4553841e4d234b947c008f340dce4f6a1a28b02`. This correction changes only this evidence
-directory. Reviews 1–6 and the concurrent Review-5 blob remain byte-identical.
-Sixth-corrected focused probes used the external dirty harness against a disposable clean clone
-of Review-6 commit `b455384`.
+`b4553841e4d234b947c008f340dce4f6a1a28b02`; sixth correction
+`f0e0a9f1a12a5593e1d32aed9e207c3ab2b51fe3`; Review-7 FAIL
+`0e90836057174052c13327fa5410f58a92550ad0`. This correction changes only this evidence
+directory. Reviews 1–7 and the concurrent Review-5 blob remain byte-identical.
+Seventh-corrected focused probes used the external dirty harness against a disposable clean clone
+of Review-7 commit `0e90836`.
 
 **Authority:** D-058(1), (2), (6), (8)C and (9); D-059(5), (7) and (8); D-060(1); D-066(2)–(4).
 `N-TESTSH-FLOORS` remains a duplicate of `R4-F4`, not a seventh item. C3 supplies the confirmed
@@ -65,10 +67,11 @@ same named-subject record — does not satisfy that assertion. Class-first live 
 `VERIFIER_MIN_TAMPER`/`VERIFIER_MIN_TAMPER_MODES` prefix relationship remain controls: a
 `TAMPER_MODES` subject is not a `TAMPER` refusal.
 
-A JSON-wrapped dump (`{` or `}` as its own record) that names every constant as the same class
-is not a unique-subject refusal. A brace-less six-line `{NAME}: duplicate executable assignment`
-dump without those wrapper records is the Review-3 herestring fail-closed shape and is not the
-Review-6 JSON grammar.
+A JSON-wrapped dump whose stripped records begin with `{` or `}` and that names every constant
+as the same class is not a unique-subject refusal, including when those wrapper lines carry
+comments. A brace-less six-line `{NAME}: duplicate executable assignment` dump without those
+wrapper records is the Review-3 herestring fail-closed shape and is not the Review-6/7 JSON
+grammar.
 
 Direct duplicates remain in both orders with independent legacy-first and Bash-last witnesses.
 Inline conditionals remain separate `DC/DCW` rows. Standalone indented before/after rows require
@@ -100,38 +103,28 @@ fifth-corrected matcher:
 inventory after a legitimate `{NAME}:` subject, and a kitchen-sink of every class word after the
 colon, also fully greened.
 
-The sixth correction requires the exact class phrase after `{NAME}:`, rejects other floor names
-in that remainder, and, when `{` or `}` appears as its own record, requires the mutated constant
-to be the unique named subject of that class. Direct controls:
-
-- six `DR-legit-*` rows accept `{NAME}: duplicate executable assignment`;
-- six `DR-uncorrelated-*` rows reject Review 4's two-line payload;
-- six `DR-oneline-*` rows reject Review 5's semicolon-joined payload;
-- six `DR-json-*` rows reject compact `{"names":..., "class":...}` JSON;
-- six `DR-prettyjson-*` rows reject Review 6's pretty-printed name-as-key object;
-- six `DR-inventory-*` rows reject `{NAME}: duplicate executable assignment` plus the six names;
-- `DR-prefix-TAMPER` / `DR-prefix-TAMPER-MODES` keep the prefix pair.
-
-Five embedded siblings bind those rejected grammars to live candidates. Each is the
-exact-positive finite lexer with only duplicate diagnostics rewritten. Each must fail exactly
-the 90 named-duplicate REQUIRED rows and hold every CONTROL, including the thirty-eight
+The seventh correction treats a record as a JSON wrapper when its stripped text begins with `{`
+or `}`, not only when it is exactly `{` / `}`. Direct controls add six `DR-prettycomment-*`
+rows rejecting Review 7's `{ // object` / `} // end` payload. Six live uncorrelated siblings
+bind the rejected grammars, including `uncorrelated-pretty-json-comment-sibling`. Each must fail
+exactly the 90 named-duplicate REQUIRED rows and hold every CONTROL, including the forty-four
 diagnostic-oracle rows.
 
 ## 5. Causal sibling calibration
 
-All current variants execute the same 343 uniquely named rows: 131 REQUIRED and 212 CONTROL.
+All current variants execute the same 349 uniquely named rows: 131 REQUIRED and 218 CONTROL.
 
-- `digits-zero-sibling`: 125/131, 212/212 (exactly six `Z-*`).
-- `flawed-heredoc-sibling`: 83/131, 172/212 (48 `TF-*` plus 40 `FA-*`; 38 diagnostic controls pass).
-- `review3-failclosed-sibling`: 131/131, 164/212 (exactly 48 non-comment `FA-*`).
-- `all-token-failclosed-sibling`: 131/131, 158/212 (all 54 `FA-*`).
-- five uncorrelated siblings (two-line, oneline, compact JSON, pretty JSON, same-record
-  inventory): each 41/131, 212/212, exit 1, failing exactly the 90 named-duplicate rows. Their
-  matrices are byte-identical to each other and distinct from the satisfying control.
-- `exact-positive-control`: 131/131, 212/212.
+- `digits-zero-sibling`: 125/131, 218/218 (exactly six `Z-*`).
+- `flawed-heredoc-sibling`: 83/131, 178/218 (48 `TF-*` plus 40 `FA-*`; 44 diagnostic controls pass).
+- `review3-failclosed-sibling`: 131/131, 170/218 (exactly 48 non-comment `FA-*`).
+- `all-token-failclosed-sibling`: 131/131, 164/218 (all 54 `FA-*`).
+- six uncorrelated siblings (two-line, oneline, compact JSON, pretty JSON, commented pretty JSON,
+  same-record inventory): each 41/131, 218/218, exit 1, failing exactly the 90 named-duplicate
+  rows. Their matrices are byte-identical to each other and distinct from the satisfying control.
+- `exact-positive-control`: 131/131, 218/218.
 
-The baseline/current reader passes all 54 fake-only controls and all thirty-eight diagnostic
-controls. Held REQUIRED rows remain the four already-correct verifier floors: 4/131, 212/212.
+The baseline/current reader passes all 54 fake-only controls and all forty-four diagnostic
+controls. Held REQUIRED rows remain the four already-correct verifier floors: 4/131, 218/218.
 Control failures in deliberate siblings return exit 2. These embedded candidates calibrate
 observable behavior; they do not prescribe production structure.
 
@@ -144,18 +137,18 @@ remain controls.
 
 The seven-case serial gate harness remains byte-identical at
 `fb389fdd33e981a356436cf37e453158787288c6d64530c28c695fcec83cd8d0`; `gate-matrix.tsv` remains
-`0b4d9c127e7230c7266960fe073f92f9551da9a68005cb936850993d803d1c58`. The sixth correction
+`0b4d9c127e7230c7266960fe073f92f9551da9a68005cb936850993d803d1c58`. The seventh correction
 changes only focused diagnostic-correlation stimuli, so no expensive gate was rerun.
 
 | File | Role |
 |---|---|
-| `a-floors.py` | sixth-corrected 131 REQUIRED / 212 CONTROL instrument and ten calibration/control variants |
-| `*-matrix-v6.tsv` | current eleven-variant baseline/calibration matrices |
-| matrices/logs without `v6` | preserved earlier historical evidence |
+| `a-floors.py` | seventh-corrected 131 REQUIRED / 218 CONTROL instrument and eleven calibration/control variants |
+| `*-matrix-v7.tsv` | current twelve-variant baseline/calibration matrices |
+| matrices/logs without `v7` | preserved earlier historical evidence |
 | `a-floors-gate.py`, `gate-matrix.tsv` | byte-unchanged seven serial fast/deep cases |
 | `RUNBOOK.md` | reproduction and setup/verdict rules |
 
-A future implementation is contract-ready only if focused is 131/131 and 212/212, unchanged gate
+A future implementation is contract-ready only if focused is 131/131 and 218/218, unchanged gate
 binding is 4/4 and 3/3 when replayed for implementation verification, frozen B/C/protected bytes
 hold, and repository/workspace guards report no new finding. A product failure permits only
 D-058(9)'s bounded product correction, not a test rewrite or lower floor.

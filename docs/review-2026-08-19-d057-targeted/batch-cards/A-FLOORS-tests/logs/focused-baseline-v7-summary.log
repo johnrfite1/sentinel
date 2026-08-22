@@ -1,0 +1,16 @@
+A-FLOORS seventh-corrected focused baseline
+subject=0e90836057174052c13327fa5410f58a92550ad0
+variant=baseline
+harness_sha256=47cb61ccef462f75131259c7af2b22c12911c86347c898653d50062bf8b717b4
+fake_only_reader_routes=54/54
+paired_required_routes=54/54
+route_bijection=54/54
+matrix_rows=349
+unique_case_names=349
+REQUIRED 4/131
+CONTROL 218/218
+held_required=V-VERIFIER_MIN_TESTS,V-VERIFIER_MIN_SAMPLES,V-VERIFIER_MIN_TAMPER,V-VERIFIER_MIN_TAMPER_MODES
+PRE-REPAIR DEFECTS OBSERVED
+exit=1
+raw_sha256=ec0d66e240d7ad2382d8ddb1375e32e4d173364c0464dc0b694244e8aeb1d23e
+matrix_sha256=82e0e80e849190807576ddb079795dfeb86595eb517c035ed28a848023c23684

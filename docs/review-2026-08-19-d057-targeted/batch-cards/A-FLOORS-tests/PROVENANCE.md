@@ -34,11 +34,14 @@
 | fifth correction | `3fc2e5673bc2d10f552c5d5177c56cabac008541`; tree `d3b174085e0de1bc2b76fce551dddfef749d6d60` |
 | independent Review-6 FAIL | `b4553841e4d234b947c008f340dce4f6a1a28b02`; tree `2b76ab1a4f45cd6b84ecec8bce352b4f86c006d8` |
 | preserved `INSTRUMENT-REVIEW-6.md` | sha256 `a807603684afc76f93929d662be111e1438d7578a7be3dbcdb4d9d7ef40ac3f4` |
+| sixth correction | `f0e0a9f1a12a5593e1d32aed9e207c3ab2b51fe3`; tree `95b3e78f549537c90173d8de3c46237fe6b1672d` |
+| independent Review-7 FAIL | `0e90836057174052c13327fa5410f58a92550ad0`; tree `109c9aecdaec47dbf936ba8bc08ad7ea9fdb3527` |
+| preserved `INSTRUMENT-REVIEW-7.md` | sha256 `7d4fea4c150e7c136ecb364b32dca97e76a69b94b8267b44e470bd28956dfa77` |
 
-The shared worktree was clean at the Review-6 parent. Sixth-corrected focused probes used the
+The shared worktree was clean at the Review-7 parent. Seventh-corrected focused probes used the
 external dirty harness against a disposable clean clone at that exact commit; every source
 mutation remained there. The shared repository correction changes only files under this evidence
-directory and preserves all six review records, the concurrent Review-5 blob, and every earlier
+directory and preserves all seven review records, the concurrent Review-5 blob, and every earlier
 matrix/summary byte-for-byte.
 
 ## Governing and source material read
@@ -119,6 +122,20 @@ decision entries, signed packs and dated narration were classified as controls, 
 | v6 pretty JSON uncorrelated raw | `da9cce34ea8ad7a5fa1b7bd70df126b37ca7dea68e63d7bdea32f090d7f401d1` |
 | v6 same-record inventory uncorrelated raw | `68255068263525ceeb1a56af9e9ad43255ca1c3f0f51e9ab5c301d2f20bec5d4` |
 | v6 exact-positive matrix/raw | `7f3ddf691b9619669ed221c94b1f0ab58e581a1db2086727772043afeadabfa1` / `2ff602c7c33c58681d9b8fa7789d14622ed971634084469c9679efd364517175` |
+| seventh-corrected focused harness, 1140 lines | `47cb61ccef462f75131259c7af2b22c12911c86347c898653d50062bf8b717b4` |
+| v7 baseline matrix/raw | `82e0e80e849190807576ddb079795dfeb86595eb517c035ed28a848023c23684` / `ec0d66e240d7ad2382d8ddb1375e32e4d173364c0464dc0b694244e8aeb1d23e` |
+| v7 digits-zero matrix/raw | `fec03d43fe4cc392fe8765119d651d971e06db853ebbc676b89d4290f518ae47` / `11b251c00193907c38b3f62fb89d66b553165761b1937fc95f9961fc9bd5e6c4` |
+| v7 Review-2 raw-reader matrix/raw | `0696db2d63fc9779e7038d0e4615ad92e748ff9845e6cd2e84a539999364c7c9` / `4033c3c34958760041368fd0921e38fc2c36365e92a5b2501d83d12771eaee5b` |
+| v7 exact Review-3 non-comment matrix/raw | `57584faa5b4a2aeb8d03db41e354ba236e11082d31d5d062daceefd3be7aa2b2` / `bdc01cf527aa788ed588f3bb4174169942fb3e1903b70a7c88c6ec47ee8750bc` |
+| v7 expanded all-token matrix/raw | `eb398f4b816e395c277346d4ad104f295fd62ff982da81786bc011372111407b` / `eef8d7c7b90e62a1f3872216f91339319ac4394492c5f78dc502f88427fce65d` |
+| v7 uncorrelated siblings shared matrix | `b83e49acb5a483d9507b4ae4e31edfc0f53ffd767cf3d40b0dabfca81fd30308` |
+| v7 two-line uncorrelated raw | `c066b05fb53d6e2520d6daaea170319bbfa37300321b7232d315ad9f137f903a` |
+| v7 oneline uncorrelated raw | `71e7218bb77b0a67970f6a253482de30fa09d6b6d9f25ffa3c56345db1a1aa7c` |
+| v7 compact JSON uncorrelated raw | `f5e77cc46111b38b20ae0e753a1c8c8c701e88656e3d91e7fb596760e1229348` |
+| v7 pretty JSON uncorrelated raw | `25ede00dcb2d10640cb0117e6a9cdba9f00c2411b5113e94ebae1d2b71420e96` |
+| v7 commented pretty JSON uncorrelated raw | `23079c36c5d1f56d442b19fdc2f3569fc12e2377f7861ff313e8d050ff8878c6` |
+| v7 same-record inventory uncorrelated raw | `3f530e8d6166436f5b779f1a7abac83fdc4e7cc977d8d1390c16fcede7a92387` |
+| v7 exact-positive matrix/raw | `69825cc0e41a11cc359c66968f5920160f215d2a0c2f2b62e6c06a4dd99aeed0` / `622544caaff1acdb75d07a81cd05a6527ba56efec532955514a847657e4899a0` |
 | serial gate harness, 328 lines | `fb389fdd33e981a356436cf37e453158787288c6d64530c28c695fcec83cd8d0` |
 | gate matrix | `0b4d9c127e7230c7266960fe073f92f9551da9a68005cb936850993d803d1c58` |
 | gate wrapper raw output, external | `c4a41ddc58b73c7c23932556a37c7c955968298553fcbbd94314c550c01a6cb2` |
@@ -142,7 +159,7 @@ and matrices contain no such path.
 
 - No production, existing test, script, gate, floor, maintained claim, prior evidence or decision
   file changed.
-- `INSTRUMENT-REVIEW-1.md` through `INSTRUMENT-REVIEW-6.md` remain byte-identical at the hashes
+- `INSTRUMENT-REVIEW-1.md` through `INSTRUMENT-REVIEW-7.md` remain byte-identical at the hashes
   above. `INSTRUMENT-REVIEW-5-concurrent.md` is the exact `bd0c433` review blob.
 - Both frozen B/C test files remain byte-identical at the hashes above.
 - Signed Gate S2 material remains byte-identical.
