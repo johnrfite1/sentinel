@@ -164,6 +164,7 @@ names = (
 VALUE_PATTERN = r"__VALUE_PATTERN__"
 MARKER_MODE = "__MARKER_MODE__"
 FAILCLOSE_MODE = "__FAILCLOSE_MODE__"
+DIAGNOSTIC_MODE = "__DIAGNOSTIC_MODE__"
 
 def shell_code(line):
     out = []
@@ -277,9 +278,18 @@ for number, raw in enumerate(gate.splitlines(), 1):
 
 failed = False
 values = {}
+if DIAGNOSTIC_MODE == "uncorrelated":
+    print("inspected constants: " + " ".join(names))
+
+def emit_duplicate(target):
+    if DIAGNOSTIC_MODE == "uncorrelated":
+        print("UNRELATED_CONSTANT: duplicate executable assignment")
+    else:
+        print(f"{target}: duplicate executable assignment")
+
 for name in names:
     if name in forced_duplicates:
-        print(f"{name}: duplicate executable assignment")
+        emit_duplicate(name)
         failed = True
 for name in names:
     found = tokens[name]
@@ -288,7 +298,7 @@ for name in names:
         failed = True
         continue
     if len(found) > 1:
-        print(f"{name}: duplicate executable assignment")
+        emit_duplicate(name)
         failed = True
         continue
     value = found[0][1]
@@ -327,6 +337,7 @@ PY
 
 def install_sibling(
     root: Path, value_pattern: str, marker_mode: str, failclose_mode: str = "none",
+    diagnostic_mode: str = "named",
 ) -> None:
     gate = root / "scripts/test.sh"
     text = gate.read_text()
@@ -348,12 +359,14 @@ def install_sibling(
         sibling.count("__VALUE_PATTERN__") != 1
         or sibling.count("__MARKER_MODE__") != 1
         or sibling.count("__FAILCLOSE_MODE__") != 1
+        or sibling.count("__DIAGNOSTIC_MODE__") != 1
     ):
         raise RuntimeError("sibling template anchors")
     reader.write_text(
         sibling.replace("__VALUE_PATTERN__", value_pattern)
         .replace("__MARKER_MODE__", marker_mode)
         .replace("__FAILCLOSE_MODE__", failclose_mode)
+        .replace("__DIAGNOSTIC_MODE__", diagnostic_mode)
     )
     reader.chmod(0o755)
 
@@ -376,6 +389,10 @@ def install_all_token_failclosed_sibling(root: Path) -> None:
 
 def install_exact_positive_control(root: Path) -> None:
     install_sibling(root, r"[1-9][0-9]*", "finite")
+
+
+def install_uncorrelated_diagnostic_sibling(root: Path) -> None:
+    install_sibling(root, r"[1-9][0-9]*", "finite", diagnostic_mode="uncorrelated")
 
 
 def make_fixture(root: Path) -> None:
@@ -420,9 +437,20 @@ def shell_assignment_trace(script: Path, name: str) -> tuple[int, list[str]]:
     return result.returncode, values
 
 
+def synthetic_result(output: str, rc: int = 1) -> subprocess.CompletedProcess[str]:
+    return subprocess.CompletedProcess(args=[], returncode=rc, stdout=output, stderr="")
+
+
 def source_refusal(result: subprocess.CompletedProcess[str], name: str, reason: str) -> bool:
-    output = result.stdout.lower()
-    return result.returncode != 0 and name.lower() in output and reason in output
+    if result.returncode == 0:
+        return False
+    name_l = name.lower()
+    reason_l = reason.lower()
+    for line in result.stdout.splitlines():
+        low = line.lower()
+        if name_l in low and reason_l in low:
+            return True
+    return False
 
 
 def reader_accepts_all_values(result: subprocess.CompletedProcess[str]) -> bool:
@@ -492,7 +520,7 @@ def main() -> int:
     if variant not in (
         "baseline", "digits-zero-sibling", "flawed-heredoc-sibling",
         "review3-failclosed-sibling", "all-token-failclosed-sibling",
-        "exact-positive-control",
+        "exact-positive-control", "uncorrelated-diagnostic-sibling",
     ):
         print("preflight: unknown A_FLOORS_VARIANT", file=sys.stderr)
         return 2
@@ -519,6 +547,8 @@ def main() -> int:
             install_all_token_failclosed_sibling(root)
         elif variant == "exact-positive-control":
             install_exact_positive_control(root)
+        elif variant == "uncorrelated-diagnostic-sibling":
+            install_uncorrelated_diagnostic_sibling(root)
 
         print("A-FLOORS focused frozen contract")
         print(f"subject={subject}")
@@ -566,6 +596,25 @@ def main() -> int:
             len(source_assignments(root / "scripts/test.sh", "VERIFIER_MIN_TAMPER")) == 1,
             "TAMPER does not consume the legitimate TAMPER_MODES sibling",
         )
+
+        print("\n== diagnostic-correlation oracle ==")
+        hostile_output = (
+            "inspected constants: " + " ".join(FLOORS) + "\n"
+            "UNRELATED_CONSTANT: duplicate executable assignment\n"
+        )
+        for name in FLOORS:
+            legit = synthetic_result(f"{name}: duplicate executable assignment\n")
+            record(
+                "CONTROL", f"DR-legit-{name}",
+                source_refusal(legit, name, "duplicate"),
+                "same-record named duplicate diagnostic satisfies the oracle",
+            )
+            hostile = synthetic_result(hostile_output)
+            record(
+                "CONTROL", f"DR-uncorrelated-{name}",
+                not source_refusal(hostile, name, "duplicate"),
+                "inventory plus unrelated duplicate record does not name this constant",
+            )
 
         fake_only_routes: list[tuple[str, str]] = []
         paired_routes: list[tuple[str, str]] = []

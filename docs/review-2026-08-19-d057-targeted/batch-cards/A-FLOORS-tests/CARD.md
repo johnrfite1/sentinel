@@ -1,7 +1,7 @@
-# A-FLOORS — third-corrected frozen independent test contract
+# A-FLOORS — fourth-corrected frozen independent test contract
 
-**Verdict: HOLD for third-corrected test-contract readiness only, pending fresh independent
-Review 4.** This is not implementation approval, a gate signature, certification, ratification,
+**Verdict: HOLD for fourth-corrected test-contract readiness only, pending fresh independent
+Review 5.** This is not implementation approval, a gate signature, certification, ratification,
 publication, rename, D-055 assessment or push authorization.
 
 **Behavioral baseline:** `1a133301533e9d959dbafbbcc7ffe05e7eb78df3` (tree
@@ -10,8 +10,11 @@ publication, rename, D-055 assessment or push authorization.
 `69e4fda92401e29c0cd4c717538fc278a5e59e26`; Review-2 FAIL
 `9889289cb730a7ef23b2b9d11c0e84110dce84f6`; second correction
 `12a35d2c3f30c77250b3ebde0bf82c25591dce10`; Review-3 FAIL parent
-`cd12ac26fb718a9bd02971db1f09f4fe1189bba7`. This correction changes only this evidence
-directory. All three review records remain byte-identical.
+`cd12ac26fb718a9bd02971db1f09f4fe1189bba7`; third correction
+`fa92ff7729287b10d6e140a6955b9740248600a6`; Review-4 FAIL
+`0bf739b5be645abe6c8171c005a7181aaaadc5c8`. This correction changes only this evidence
+directory. All four review records remain byte-identical. Fourth-corrected focused probes used
+the external dirty harness against a disposable clean clone of Review-4 commit `0bf739b`.
 
 **Authority:** D-058(1), (2), (6), (8)C and (9); D-059(5), (7) and (8); D-060(1); D-066(2)–(4).
 `N-TESTSH-FLOORS` remains a duplicate of `R4-F4`, not a seventh item. C3 supplies the confirmed
@@ -44,10 +47,12 @@ implementation, current claim or existing script is edited by this correction.
 | `VERIFIER_MIN_TAMPER_MODES` | 30 | 30 | 30 |
 
 For every name, exactly one executable column-zero assignment with a positive decimal value is
-accepted and reported. Refusals name the constant and exact class: absent → `missing`; empty →
-`empty`; spaced/non-assignment spelling → `malformed`; assigned non-number → `numeric`; zero →
-`positive`; and a second executable assignment in the enumerated direct, inline-conditional or
-standalone-indented forms → `duplicate`. Ordinary `NAME=1` and the
+accepted and reported. Refusals name the constant and exact class on **one refusal record or
+line**: absent → `missing`; empty → `empty`; spaced/non-assignment spelling → `malformed`;
+assigned non-number → `numeric`; zero → `positive`; and a second executable assignment in the
+enumerated direct, inline-conditional or standalone-indented forms → `duplicate`. An inventory
+line that lists every constant, paired with an unrelated record that carries only the class,
+does not satisfy that assertion. Ordinary `NAME=1` and the
 `VERIFIER_MIN_TAMPER`/`VERIFIER_MIN_TAMPER_MODES` prefix relationship remain controls.
 
 Direct duplicates remain in both orders with independent legacy-first and Bash-last witnesses.
@@ -89,31 +94,57 @@ concatenated quote fragments, escaped-quote variants, process substitution, arbi
 syntax and delimiter expansion are outside it. Those forms were not promised by the prior card;
 this correction does not widen into them.
 
-## 4. Causal sibling calibration
+## 4. Diagnostic-correlation oracle
 
-All current variants execute the same 305 uniquely named rows: 131 REQUIRED and 174 CONTROL.
+Review 4 showed that a global search for the mutated name anywhere in complete output and the
+reason word anywhere else accepted this exact hostile payload at 305/305:
+
+```text
+inspected constants: FOUNDRY_MIN_TESTS TS_MIN_TESTS VERIFIER_MIN_TESTS VERIFIER_MIN_SAMPLES VERIFIER_MIN_TAMPER VERIFIER_MIN_TAMPER_MODES
+UNRELATED_CONSTANT: duplicate executable assignment
+```
+
+The fourth correction requires one refusal record or line to carry both the mutated constant and
+the expected class. Twelve new CONTROLS pin that oracle directly:
+
+- six `DR-legit-*` rows accept `{NAME}: duplicate executable assignment`;
+- six `DR-uncorrelated-*` rows reject the Review-4 inventory-plus-unrelated payload for that name.
+
+The embedded `uncorrelated-diagnostic-sibling` is the Review-4 candidate: the exact-positive
+finite lexer, with only duplicate diagnostics rewritten to that hostile policy. It must fail
+exactly the 90 named-duplicate REQUIRED rows and hold every CONTROL, including the twelve new
+oracle rows.
+
+## 5. Causal sibling calibration
+
+All current variants execute the same 317 uniquely named rows: 131 REQUIRED and 186 CONTROL.
 
 - `digits-zero-sibling` uses the corrected finite opener lexer but accepts `[0-9]+`. It passes all
-  transition and prior rows and fails exactly six `Z-*` rows: 125/131, 174/174.
+  transition, prior and diagnostic-oracle rows and fails exactly six `Z-*` rows: 125/131, 186/186.
 - `flawed-heredoc-sibling` reconstructs Review 2's raw-text marker search before quote/context
-  classification. Its earlier 83/131 and 120/120 outcome remains intact; inverse controls expose
-  40 additional false reader states, so current calibration is 83/131 and 134/174.
+  classification. Its earlier 83/131 REQUIRED outcome remains intact; inverse controls expose 40
+  additional false reader states; the twelve diagnostic controls pass, so current calibration is
+  83/131 and 146/186.
 - `review3-failclosed-sibling` exactly preserves Review 3's non-comment policy. It passes all 251
-  prior rows and every REQUIRED assertion, passes six comment-only controls, and fails exactly 48
-  new fake-only controls: 131/131, 126/174.
+  prior rows, every REQUIRED assertion, the twelve diagnostic controls and six comment-only
+  controls, then fails exactly 48 non-comment `FA-*` rows: 131/131, 138/186.
 - `all-token-failclosed-sibling` is separately named expanded calibration, not the exact Review-3
-  candidate. It passes all prior rows/REQUIRED assertions but rejects comments too, failing all
-  54 fake-only controls: 131/131, 120/174.
-- `exact-positive-control` uses `[1-9][0-9]*` and the finite lexer. It passes 131/131 and 174/174.
+  candidate. It passes all prior rows/REQUIRED assertions and the twelve diagnostic controls but
+  rejects comments too, failing all 54 `FA-*` rows: 131/131, 132/186.
+- `uncorrelated-diagnostic-sibling` is the Review-4 hostile diagnostic policy on the satisfying
+  lexer. It passes every CONTROL and fails exactly 90 named-duplicate REQUIRED rows: 41/131,
+  186/186, exit 1.
+- `exact-positive-control` uses `[1-9][0-9]*` and the finite lexer with named same-record
+  diagnostics. It passes 131/131 and 186/186.
 
-The baseline/current reader also passes all 54 new controls. Control failures in deliberate
-siblings return exit 2 by harness design: they establish that the candidate is inadmissible, not a
-product verdict. The satisfying control proves the matrix is achievable. These embedded
-candidates calibrate observable behavior; they do not prescribe production structure.
-`P-reader-restore` continues to require unchanged candidate-reader bytes plus identical restored
-exit/output after fixtures.
+The baseline/current reader also passes all 54 fake-only controls and all twelve diagnostic
+controls. Control failures in deliberate siblings return exit 2 by harness design: they establish
+that the candidate is inadmissible, not a product verdict. The satisfying control proves the
+matrix is achievable. These embedded candidates calibrate observable behavior; they do not
+prescribe production structure. `P-reader-restore` continues to require unchanged candidate-reader
+bytes plus identical restored exit/output after fixtures.
 
-## 5. Finite reader-publication contract
+## 6. Finite reader-publication contract
 
 The Markdown oracle remains limited to three whitespace-normalized logical paragraphs: the
 `docs/session-state.md` §3 stable paragraph, its current D-010 bullet, and the quoted gate COVERAGE
@@ -121,28 +152,28 @@ D-010 paragraph. Refusal names the surface, current-time class and publication/d
 Wrapped/unwrapped forms agree. Dated history in the same paragraph, constant names without values
 and unrelated numbers outside these roles remain controls. This is not a generic prose scan.
 
-## 6. Gate binding and frozen instruments
+## 7. Gate binding and frozen instruments
 
 The seven-case serial gate harness remains byte-identical at
 `fb389fdd33e981a356436cf37e453158787288c6d64530c28c695fcec83cd8d0`; `gate-matrix.tsv` remains
-`0b4d9c127e7230c7266960fe073f92f9551da9a68005cb936850993d803d1c58`. The third correction
-changes only focused reader-acceptance stimuli, so no expensive gate was rerun. Earlier serial results
-remain historical design reliance, not refreshed execution/timing evidence.
+`0b4d9c127e7230c7266960fe073f92f9551da9a68005cb936850993d803d1c58`. The fourth correction
+changes only focused diagnostic-correlation stimuli, so no expensive gate was rerun. Earlier serial
+results remain historical design reliance, not refreshed execution/timing evidence.
 
 | File | Role |
 |---|---|
-| `a-floors.py` | third-corrected 131 REQUIRED / 174 CONTROL instrument and five calibration/control variants |
-| `*-matrix-v3.tsv` | current six-variant baseline/calibration matrices |
-| matrices/logs without `v3` | preserved earlier historical evidence |
+| `a-floors.py` | fourth-corrected 131 REQUIRED / 186 CONTROL instrument and six calibration/control variants |
+| `*-matrix-v4.tsv` | current seven-variant baseline/calibration matrices |
+| matrices/logs without `v4` | preserved earlier historical evidence |
 | `a-floors-gate.py`, `gate-matrix.tsv` | byte-unchanged seven serial fast/deep cases |
 | `RUNBOOK.md` | reproduction and setup/verdict rules |
 
-A future implementation is contract-ready only if focused is 131/131 and 174/174, unchanged gate
+A future implementation is contract-ready only if focused is 131/131 and 186/186, unchanged gate
 binding is 4/4 and 3/3 when replayed for implementation verification, frozen B/C/protected bytes
 hold, and repository/workspace guards report no new finding. A product failure permits only
 D-058(9)'s bounded product correction, not a test rewrite or lower floor.
 
-## 7. Exclusions
+## 8. Exclusions
 
 Historical reviews, decisions, signed packs, prior gate logs and A-090–A-093 remain controls.
 Corpus/ablation/mutation counts and Batch D claims are excluded. B/C semantics remain owned by

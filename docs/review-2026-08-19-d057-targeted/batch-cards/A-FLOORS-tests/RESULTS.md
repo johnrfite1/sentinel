@@ -1,50 +1,71 @@
-# A-FLOORS — third-corrected measured pre-repair results
+# A-FLOORS — fourth-corrected measured pre-repair results
 
 ## Verdict
 
-**HOLD for third-corrected test-contract readiness, pending fresh independent Review 4.** No
+**HOLD for fourth-corrected test-contract readiness, pending fresh independent Review 5.** No
 production repair, post-repair pass, approval or gate replay exists.
 
 ## 1. Frozen history and correction identity
 
-The original subject and first two corrections remain historical evidence. Review 3 reproduced
-the second correction and returned FAIL in exact review-only commit
-`cd12ac26fb718a9bd02971db1f09f4fe1189bba7`. All three `INSTRUMENT-REVIEW-*.md` files and every
+The original subject and first three corrections remain historical evidence. Review 4 reproduced
+the third correction and returned FAIL in exact review-only commit
+`0bf739b5be645abe6c8171c005a7181aaaadc5c8`. All four `INSTRUMENT-REVIEW-*.md` files and every
 earlier matrix/log summary are byte-preserved.
 
-The third-corrected harness is 926 lines, sha256
-`4bc09b9c4f835f28fcfc114a6f9b78c6bb3e102d3513eae545bdb1ad5996bb80`. Every final run below
-used that external harness against a disposable clean clone at exact Review-3 commit.
+The fourth-corrected harness is 975 lines, sha256
+`b751b0b643c6dc28f484ca80845bd4d453e31bb85fd61a70ded68b898016df33`. Every final run below
+used that external harness against a disposable clean clone at exact Review-4 commit `0bf739b`.
 
-## 2. Third-corrected baseline
+## 2. Fourth-corrected baseline
 
 ```text
 REQUIRED 10/131
-CONTROL 174/174
+CONTROL 186/186
 PRE-REPAIR DEFECTS OBSERVED
 exit=1
 ```
 
-The current reader passes all 54 new fake-only acceptance controls. `T-route-complete` proves
-54/54 unique fake-only routes map one-to-one to 54/54 paired requirements, with six of each exact
-form and no missing constant. All 305 case names are unique.
+The current reader passes all 54 fake-only acceptance controls and all twelve diagnostic-oracle
+controls. `T-route-complete` proves 54/54 unique fake-only routes map one-to-one to 54/54 paired
+requirements, with six of each exact form and no missing constant. All 317 case names are unique.
+The ten held REQUIRED rows remain the four live verifier-floor canonical values and the six
+`M-*` missing-definition refusals already named on one line by the baseline reader.
 
 Raw/matrix sha256:
-`cb2e9e89edc3d032483a5241df06d7d0fcae499de49c85acd3f40d763061d7f4` /
-`98a3f66489827f8632be5b32395d2e02841fc456099f5f179e213eeda71f95ca`.
+`33a241ca6c9dffec52b9f0a8d9fe2a741ac6c02675ba01444f6f1b2ce6524192` /
+`81049470ca4a7d36385bf82a231395f85b039d7b682bc89ae4108602b84396f1`.
 
-## 3. Opposite-side reader oracle
+## 3. Diagnostic-correlation oracle
 
-Each existing paired route now has a same-position `FA-*` control containing its exact fake opener
-without indented 999. It requires all of:
+Review 4's hostile payload listed every constant on an `inspected constants:` line and emitted
+only `UNRELATED_CONSTANT: duplicate executable assignment` for an actual duplicate. Against the
+third-corrected oracle that payload scored 305/305.
 
-- checker exit 0;
-- no duplicate, missing, malformed, empty, numeric, derivation or refusal diagnostic; and
-- exact reporting of all six canonical values.
+The fourth-corrected oracle requires the mutated name and expected class on one refusal record
+or line. Direct controls:
 
-Adding the indented 999 then leaves the opener identical, produces exact Bash trace
-`[planned, 999]`, final value 999, and requires the named duplicate refusal. The reader therefore
-cannot satisfy the pair by rejecting the inert token itself.
+- `DR-legit-*` (6): `{NAME}: duplicate executable assignment` with nonzero status is accepted;
+- `DR-uncorrelated-*` (6): the exact Review-4 split payload is rejected for that name.
+
+The embedded `uncorrelated-diagnostic-sibling` is the Review-4 candidate on the satisfying finite
+lexer. It returns:
+
+```text
+REQUIRED 41/131
+CONTROL 186/186
+PRE-REPAIR DEFECTS OBSERVED
+exit=1
+```
+
+The 90 REQUIRED failures are exactly the named-duplicate rows: `DA/DB/DC/IA/IB` (30), `TF-*`
+(48), `FC-comment-*` (6) and `HR-post-*` (6). Missing/empty/malformed/numeric/zero, paragraph,
+wiring and canonical-value rows remain PASS. Every CONTROL holds, including the twelve oracle
+rows and all 54 fake-only routes. This is a product-style REQUIRED miss of a defective diagnostic
+policy, not an instrument/setup invalidation.
+
+Raw/matrix sha256:
+`6c6bc07ca9b59bb9214dcaa865cc6c9926e4addd54bad906bc0ad9691a1c908b` /
+`15c540c565050b427d4e97486ba34a2d7d020aede82d2aa6e61e2086820f3be9`.
 
 ## 4. Exact Review-3 sibling
 
@@ -53,36 +74,37 @@ fail-closes on non-comment `A_FLOOR_MASK` syntax. It returns:
 
 ```text
 REQUIRED 131/131
-CONTROL 126/174
+CONTROL 138/186
 INSTRUMENT INVALID: control failure
 exit=2
 ```
 
-All 251 prior rows remain PASS. It passes all required rows and the six full-line-comment-only
-controls, but fails exactly 48 new controls: 12 each `FA-printf`, `FA-echo`, `FA-assign` and
-`FA-herestring`. This is the exact Review-3 scope, not rounded to 54.
+All 305 prior v3 rows keep their previous status. The twelve diagnostic controls pass. It still
+fails exactly 48 new controls: 12 each `FA-printf`, `FA-echo`, `FA-assign` and `FA-herestring`.
+This is the exact Review-3 scope, not rounded to 54. 126/174 plus 12 passing diagnostic controls
+is 138/186.
 
 Raw/matrix sha256:
-`b7950c4b1e4ca075ca6a32e525f5e1ea108f6c205cd6f862c378871e3eea101e` /
-`feb1ede79e3cff8ca38d34e1a747116daeac73589c982fa12be1781c2347f2f4`.
+`634c0b999268a453923f1868ba46cd3e1a3a79064dc01af3653bf8f0711f9f68` /
+`a258ba787faad740bf7ac98813701f261ddac73a89fcea0f6a7cf05ff77d1618`.
 
 ## 5. Expanded all-token sibling
 
 A separately named candidate extends the fail-closed policy to comments. It is not described as
-the exact Review-3 sibling. It passes all 251 prior rows and all 131 REQUIRED assertions but fails
-all 54 new fake-only controls, including six comments:
+the exact Review-3 sibling. It passes all 305 prior rows, all 131 REQUIRED assertions and the
+twelve diagnostic controls, then fails all 54 fake-only controls, including six comments:
 
 ```text
 REQUIRED 131/131
-CONTROL 120/174
+CONTROL 132/186
 INSTRUMENT INVALID: control failure
 exit=2
 ```
 
-Failure families are comment 6, and `printf`/`echo`/assignment/here-string 12 each. Raw/matrix
-sha256:
-`6e9daec8628d84707d1f7b1485fd85d1f6ca4eb29e7bb26071329f83e020ef2f` /
-`c9f40f79b8acac473701a1c17d2d928a93905369bbe3c41734c29afbaa4f5101`.
+Failure families are comment 6, and `printf`/`echo`/assignment/here-string 12 each. 120/174 plus
+12 passing diagnostic controls is 132/186. Raw/matrix sha256:
+`b4dd45521ede35165a532725a4c4a1573905898dac516c200f96fdb63ff0be1a` /
+`1ff40412804a481264dd01cb0bf74164e5104e66291403ae5f06ac299128e600`.
 
 Both exit-2 results are deliberate-candidate calibration: the frozen instrument correctly rejects
 control-breaking readers. They are not product/setup verdicts.
@@ -93,28 +115,29 @@ The corrected digits-only reader remains causal:
 
 ```text
 REQUIRED 125/131
-CONTROL 174/174
+CONTROL 186/186
 exit=1
 ```
 
 Its only failures are the six `Z-*` rows. Raw/matrix sha256:
-`d9f08c88bed66e38b6789114fd4a20d7da104d5c2d138097e7ec6d935c67f47e` /
-`bbeaaf8a18d4ee08e9990b339ea3e5f426d19c3198adcfb9ae6ca9c27761c3e1`.
+`351350c6583f2101e34ce822c1a922a477676080dcf3d1d489293af204ef548e` /
+`9e7982aea1c4930ba4df535cf6d136c322c1d03eb1f3792217efb712d87956e3`.
 
-The exact Review-2 raw reader truthfully retains its earlier 83/131 REQUIRED and 120/120 prior
-CONTROL result. Of the 54 new controls it passes 14 (six comments plus eight last-constant cases)
-and fails 40 (eight vulnerable forms × five non-last constants), so its current total is:
+The exact Review-2 raw reader truthfully retains its earlier 83/131 REQUIRED result. Of the 54
+fake-only controls it passes 14 (six comments plus eight last-constant cases) and fails 40
+(eight vulnerable forms × five non-last constants). The twelve diagnostic controls pass, so its
+current total is:
 
 ```text
 REQUIRED 83/131
-CONTROL 134/174
+CONTROL 146/186
 INSTRUMENT INVALID: control failure
 exit=2
 ```
 
 Its failure set is the prior 48 `TF-*` requirements plus 40 `FA-*` controls. Raw/matrix sha256:
-`65e1cf30e3c123a5485741e8544d3da6e45a6225d8ee73827046628bb85a778d` /
-`9456409625b1f49570c34580adbe1c0b7fc45d834965cfdeb3710d80aae97ecf`.
+`2314126ce6cc5ffae241f76825ea377a327c99dfa51f6cf5c4b38ed67378973e` /
+`3842c0d9e28880859b66b27d662912be190be0e9fc9b26882aa6db752399627f`.
 
 ## 7. Satisfying control
 
@@ -122,36 +145,38 @@ The corrected finite exact-positive reader returns:
 
 ```text
 REQUIRED 131/131
-CONTROL 174/174
+CONTROL 186/186
 A_FLOORS_FOCUSED_COMPLETE
 exit=0
 ```
 
-All 251 prior and 54 added rows pass. Raw/matrix sha256:
-`a3a1c390ab03a53d19596d473fcbdfc3b38852d5775a3f7a1edc6ee45685bf16` /
-`15e53549138fb45d19c8b89d8f2dd676abdeb576aa735b195c20218e858bfe2d`.
+All 305 prior v3 rows and all 12 diagnostic-oracle rows pass. Raw/matrix sha256:
+`d8d3a9b9f5c1c63c16bca04131b1c17d755a72da2a99794aafd980d0bbe7c809` /
+`63dbb5577a5a9d40c5f4df06367f77901305d26e858e6d16386c4118451e1ff5`.
 
 ## 8. Historical serial gate reliance
 
 The gate harness/matrix remain byte-identical at
 `fb389fdd33e981a356436cf37e453158787288c6d64530c28c695fcec83cd8d0` /
-`0b4d9c127e7230c7266960fe073f92f9551da9a68005cb936850993d803d1c58`. The third correction adds
-only focused reader controls, so no expensive gate was rerun. Prior serial scores/raw hashes/timing
-remain historical design reliance in unchanged `logs/gate-summary.log`, not refreshed evidence.
+`0b4d9c127e7230c7266960fe073f92f9551da9a68005cb936850993d803d1c58`. The fourth correction adds
+only focused diagnostic-correlation controls, so no expensive gate was rerun. Prior serial
+scores/raw hashes/timing remain historical design reliance in unchanged `logs/gate-summary.log`,
+not refreshed evidence.
 
 ## 9. Limits
 
 Full focused raw logs remain external and hash-bound. This establishes only the exact finite
-grammar in `CARD.md`, not command substitution, escaped/concatenated quoting, arbitrary
-redirection, general Bash parsing, generic Markdown consistency, historical truth,
-implementation, certification, signing, publication or D-055 closure.
+grammar and same-record diagnostic correlation in `CARD.md`, not command substitution,
+escaped/concatenated quoting, arbitrary redirection, general Bash parsing, generic Markdown
+consistency, historical truth, implementation, certification, signing, publication or D-055
+closure.
 
 ## 10. Guards
 
 Before staging, repository guards all exited 0: worktree secret scan, review scope
-(`R1=420`, `R2=47`, `R3=152`; 619/619 then-tracked files assigned), findings ledger (23 IDs;
+(`R1=433`, `R2=47`, `R3=152`; 632/632 then-tracked files assigned), findings ledger (23 IDs;
 totals match D-057), live suite-floor reader (`92/527/221/7/78/30`) and vendor-honesty mechanical
-conditions. With all 12 new v3 matrix/summary files staged, the staged secret scan was clean and
-review scope again exited 0 (`R1=432`, `R2=47`, `R3=152`; 631/631 tracked files assigned). The
+conditions. With the 14 new v4 matrix/summary files staged, the staged secret scan was clean and
+review scope again exited 0 (`R1=447`, `R2=47`, `R3=152`; 646/646 tracked files assigned). The
 workspace guard exited 0 with 13 machine-state findings, all 13 baselined and zero new. Workspace
 success remains ratcheted: pre-existing findings are not absent.

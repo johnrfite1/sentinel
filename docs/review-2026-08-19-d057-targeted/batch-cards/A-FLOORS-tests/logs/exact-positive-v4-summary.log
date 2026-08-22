@@ -1,0 +1,16 @@
+A-FLOORS fourth-corrected exact-positive satisfying control
+subject=0bf739b5be645abe6c8171c005a7181aaaadc5c8
+variant=exact-positive-control
+harness_sha256=b751b0b643c6dc28f484ca80845bd4d453e31bb85fd61a70ded68b898016df33
+prior_v3_rows=305
+prior_missing=0
+prior_nonpass=0
+added_diagnostic_controls=12/12
+fake_only_reader_routes=54/54
+paired_required_routes=54/54
+REQUIRED 131/131
+CONTROL 186/186
+A_FLOORS_FOCUSED_COMPLETE
+exit=0
+raw_sha256=d8d3a9b9f5c1c63c16bca04131b1c17d755a72da2a99794aafd980d0bbe7c809
+matrix_sha256=63dbb5577a5a9d40c5f4df06367f77901305d26e858e6d16386c4118451e1ff5

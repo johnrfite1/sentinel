@@ -23,11 +23,14 @@
 | second correction | `12a35d2c3f30c77250b3ebde0bf82c25591dce10`; tree `b75b7173793b2ea31305698d43a0d81f147e2540` |
 | independent Review-3 FAIL | `cd12ac26fb718a9bd02971db1f09f4fe1189bba7`; tree `6da663764db80488e67e49e8505b4d9bd2106e02` |
 | preserved `INSTRUMENT-REVIEW-3.md` | sha256 `27e8e8da48fe34a07c750023296c11b82d937279f65b058fe4c5d2e78523bf86` |
+| third correction | `fa92ff7729287b10d6e140a6955b9740248600a6`; tree `e01f89342315611f42edd42ee6400b34ea0da56e` |
+| independent Review-4 FAIL | `0bf739b5be645abe6c8171c005a7181aaaadc5c8`; tree `2b7265c78e549ba290f0ec2c138c7bc5718b7fcf` |
+| preserved `INSTRUMENT-REVIEW-4.md` | sha256 `cfdf80b4c49a5716565fae5254652174c360226e005720402aaba8fb37d28437` |
 
-The shared worktree was clean at the Review-3 parent. Third-corrected focused probes used the
+The shared worktree was clean at the Review-4 parent. Fourth-corrected focused probes used the
 external dirty harness against a disposable clean clone at that exact commit; every source
 mutation remained there. The shared repository correction changes only files under this evidence
-directory and preserves all three review records and every earlier matrix/summary byte-for-byte.
+directory and preserves all four review records and every earlier matrix/summary byte-for-byte.
 
 ## Governing and source material read
 
@@ -76,6 +79,14 @@ decision entries, signed packs and dated narration were classified as controls, 
 | v3 exact Review-3 non-comment matrix/raw | `feb1ede79e3cff8ca38d34e1a747116daeac73589c982fa12be1781c2347f2f4` / `b7950c4b1e4ca075ca6a32e525f5e1ea108f6c205cd6f862c378871e3eea101e` |
 | v3 expanded all-token matrix/raw | `c9f40f79b8acac473701a1c17d2d928a93905369bbe3c41734c29afbaa4f5101` / `6e9daec8628d84707d1f7b1485fd85d1f6ca4eb29e7bb26071329f83e020ef2f` |
 | v3 exact-positive matrix/raw | `15e53549138fb45d19c8b89d8f2dd676abdeb576aa735b195c20218e858bfe2d` / `a3a1c390ab03a53d19596d473fcbdfc3b38852d5775a3f7a1edc6ee45685bf16` |
+| fourth-corrected focused harness, 975 lines | `b751b0b643c6dc28f484ca80845bd4d453e31bb85fd61a70ded68b898016df33` |
+| v4 baseline matrix/raw | `81049470ca4a7d36385bf82a231395f85b039d7b682bc89ae4108602b84396f1` / `33a241ca6c9dffec52b9f0a8d9fe2a741ac6c02675ba01444f6f1b2ce6524192` |
+| v4 digits-zero matrix/raw | `9e7982aea1c4930ba4df535cf6d136c322c1d03eb1f3792217efb712d87956e3` / `351350c6583f2101e34ce822c1a922a477676080dcf3d1d489293af204ef548e` |
+| v4 Review-2 raw-reader matrix/raw | `3842c0d9e28880859b66b27d662912be190be0e9fc9b26882aa6db752399627f` / `2314126ce6cc5ffae241f76825ea377a327c99dfa51f6cf5c4b38ed67378973e` |
+| v4 exact Review-3 non-comment matrix/raw | `a258ba787faad740bf7ac98813701f261ddac73a89fcea0f6a7cf05ff77d1618` / `634c0b999268a453923f1868ba46cd3e1a3a79064dc01af3653bf8f0711f9f68` |
+| v4 expanded all-token matrix/raw | `1ff40412804a481264dd01cb0bf74164e5104e66291403ae5f06ac299128e600` / `b4dd45521ede35165a532725a4c4a1573905898dac516c200f96fdb63ff0be1a` |
+| v4 uncorrelated-diagnostic matrix/raw | `15c540c565050b427d4e97486ba34a2d7d020aede82d2aa6e61e2086820f3be9` / `6c6bc07ca9b59bb9214dcaa865cc6c9926e4addd54bad906bc0ad9691a1c908b` |
+| v4 exact-positive matrix/raw | `63dbb5577a5a9d40c5f4df06367f77901305d26e858e6d16386c4118451e1ff5` / `d8d3a9b9f5c1c63c16bca04131b1c17d755a72da2a99794aafd980d0bbe7c809` |
 | serial gate harness, 328 lines | `fb389fdd33e981a356436cf37e453158787288c6d64530c28c695fcec83cd8d0` |
 | gate matrix | `0b4d9c127e7230c7266960fe073f92f9551da9a68005cb936850993d803d1c58` |
 | gate wrapper raw output, external | `c4a41ddc58b73c7c23932556a37c7c955968298553fcbbd94314c550c01a6cb2` |
@@ -99,8 +110,8 @@ and matrices contain no such path.
 
 - No production, existing test, script, gate, floor, maintained claim, prior evidence or decision
   file changed.
-- `INSTRUMENT-REVIEW-1.md`, `INSTRUMENT-REVIEW-2.md` and `INSTRUMENT-REVIEW-3.md` remain
-  byte-identical at the hashes above.
+- `INSTRUMENT-REVIEW-1.md`, `INSTRUMENT-REVIEW-2.md`, `INSTRUMENT-REVIEW-3.md` and
+  `INSTRUMENT-REVIEW-4.md` remain byte-identical at the hashes above.
 - Both frozen B/C test files remain byte-identical at the hashes above.
 - Signed Gate S2 material remains byte-identical.
 - No test patch was applied, no floor lowered, and no historical record rewritten.
