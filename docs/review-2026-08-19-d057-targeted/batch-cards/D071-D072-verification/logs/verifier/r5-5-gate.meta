@@ -1,0 +1,7 @@
+origin_at_start=/tmp/sentinel-v-d071/head-wt
+npm_start=2026-08-23T22:36:43Z
+npm_rc=0
+gate_start=2026-08-23T22:36:46Z
+origin=/tmp/sentinel-v-d071/head-wt
+head=bdacace71e47c55301100d27341e67fc422fbcde
+gate_end=2026-08-23T22:58:18Z

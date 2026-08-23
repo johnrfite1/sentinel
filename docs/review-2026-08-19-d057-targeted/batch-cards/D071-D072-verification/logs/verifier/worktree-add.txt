@@ -1,0 +1,2 @@
+Preparing worktree (detached HEAD bdacace)
+HEAD is now at bdacace D-071/D-072: freeze independent observing tests against pre-repair baselines.

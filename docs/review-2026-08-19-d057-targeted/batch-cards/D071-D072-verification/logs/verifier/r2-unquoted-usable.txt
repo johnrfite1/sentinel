@@ -1,0 +1,3 @@
+ascii_usable=True
+cafe_usable=False
+escaped=True

@@ -1,0 +1,66 @@
+R5-C-unverified-origin	CONTROL	PASS	origin is local path: /tmp/sentinel-v-d071/head-wt
+R5-C-unverified-output	CONTROL	PASS	fast UNVERIFIED (rc=0)
+R5-1-fast-varname	REQUIRED	PASS	UNVERIFIED line names SENTINEL_RENAME_GATE_UNVERIFIED_OK rc=0
+R5-2-deep-refuse	REQUIRED	PASS	deep no-ack rc=1
+R5-3-deep-ack-disclose	REQUIRED	PASS	ack deep rc=0 and disclosure present
+R5-C-gh-private	CONTROL	PASS	gh repo view johnrfite1/sentinel visibility=PRIVATE
+R5-4-readable-clean	REQUIRED	FAIL	fast rc=0 deep rc=1
+R5-C-clone-still-unverified	CONTROL	PASS	pre-gate UNVERIFIED rc=1
+V6-COUNT-secrets-C-potency-ls	CONTROL	PASS	unpinned ls listed v-d072-secret.txt
+V6-COUNT-secrets-C-potency-scan	CONTROL	PASS	consumer blocked visible v-d072-secret.txt
+V6-COUNT-secrets-C-exploit	CONTROL	PASS	unpinned ls omitted v-d072-secret.txt
+V6-COUNT-secrets	REQUIRED	PASS	consumer blocked v-d072-secret.txt under COUNT rc=1
+V6-COUNT-vendor-C-potency-ls	CONTROL	PASS	unpinned ls listed v-d072-vendor.md
+V6-COUNT-vendor-C-potency-scan	CONTROL	PASS	consumer blocked visible v-d072-vendor.md
+V6-COUNT-vendor-C-exploit	CONTROL	PASS	unpinned ls omitted v-d072-vendor.md
+V6-COUNT-vendor	REQUIRED	PASS	consumer blocked v-d072-vendor.md under COUNT rc=1
+V6-GLOBAL-secrets-C-potency-ls	CONTROL	PASS	unpinned ls listed v-d072-secret.txt
+V6-GLOBAL-secrets-C-potency-scan	CONTROL	PASS	consumer blocked visible v-d072-secret.txt
+V6-GLOBAL-secrets-C-exploit	CONTROL	PASS	unpinned ls omitted v-d072-secret.txt
+V6-GLOBAL-secrets-C-potency-ls	CONTROL	PASS	unpinned ls listed v-d072-secret.txt
+V6-GLOBAL-secrets-C-potency-scan	CONTROL	PASS	consumer blocked visible v-d072-secret.txt
+V6-GLOBAL-secrets-C-exploit	CONTROL	PASS	unpinned ls omitted v-d072-secret.txt
+V6-GLOBAL-secrets	REQUIRED	PASS	consumer blocked v-d072-secret.txt under GLOBAL rc=1
+V6-GLOBAL-vendor-C-potency-ls	CONTROL	PASS	unpinned ls listed v-d072-vendor.md
+V6-GLOBAL-vendor-C-potency-scan	CONTROL	PASS	consumer blocked visible v-d072-vendor.md
+V6-GLOBAL-vendor-C-exploit	CONTROL	PASS	unpinned ls omitted v-d072-vendor.md
+V6-GLOBAL-vendor	REQUIRED	PASS	consumer blocked v-d072-vendor.md under GLOBAL rc=1
+V6-SYSTEM-secrets-C-potency-ls	CONTROL	PASS	unpinned ls listed v-d072-secret.txt
+V6-SYSTEM-secrets-C-potency-scan	CONTROL	PASS	consumer blocked visible v-d072-secret.txt
+V6-SYSTEM-secrets-C-exploit	CONTROL	PASS	unpinned ls omitted v-d072-secret.txt
+V6-SYSTEM-secrets	REQUIRED	PASS	consumer blocked v-d072-secret.txt under SYSTEM rc=1
+V6-SYSTEM-vendor-C-potency-ls	CONTROL	PASS	unpinned ls listed v-d072-vendor.md
+V6-SYSTEM-vendor-C-potency-scan	CONTROL	PASS	consumer blocked visible v-d072-vendor.md
+V6-SYSTEM-vendor-C-exploit	CONTROL	PASS	unpinned ls omitted v-d072-vendor.md
+V6-SYSTEM-vendor	REQUIRED	PASS	consumer blocked v-d072-vendor.md under SYSTEM rc=1
+V6-NOSYSTEM-secrets-C-potency-ls	CONTROL	PASS	unpinned ls listed v-d072-secret.txt
+V6-NOSYSTEM-secrets-C-potency-scan	CONTROL	PASS	consumer blocked visible v-d072-secret.txt
+V6-NOSYSTEM-secrets-C-exploit	CONTROL	NOT_MEASURED	NOSYSTEM did not hide plant (inert here)
+V6-NOSYSTEM-secrets	REQUIRED	NOT_MEASURED	exploit control did not hide
+V6-NOSYSTEM-vendor-C-potency-ls	CONTROL	PASS	unpinned ls listed v-d072-vendor.md
+V6-NOSYSTEM-vendor-C-potency-scan	CONTROL	PASS	consumer blocked visible v-d072-vendor.md
+V6-NOSYSTEM-vendor-C-exploit	CONTROL	NOT_MEASURED	NOSYSTEM did not hide plant (inert here)
+V6-NOSYSTEM-vendor	REQUIRED	NOT_MEASURED	exploit control did not hide
+V6-HOME-secrets-C-potency-ls	CONTROL	PASS	unpinned ls listed v-d072-secret.txt
+V6-HOME-secrets-C-potency-scan	CONTROL	PASS	consumer blocked visible v-d072-secret.txt
+V6-HOME-secrets-C-exploit	CONTROL	PASS	unpinned ls omitted v-d072-secret.txt
+V6-HOME-secrets	REQUIRED	PASS	consumer blocked v-d072-secret.txt under HOME rc=1
+V6-HOME-vendor-C-potency-ls	CONTROL	PASS	unpinned ls listed v-d072-vendor.md
+V6-HOME-vendor-C-potency-scan	CONTROL	PASS	consumer blocked visible v-d072-vendor.md
+V6-HOME-vendor-C-exploit	CONTROL	PASS	unpinned ls omitted v-d072-vendor.md
+V6-HOME-vendor	REQUIRED	PASS	consumer blocked v-d072-vendor.md under HOME rc=1
+V6-XDG-secrets-C-potency-ls	CONTROL	PASS	unpinned ls listed v-d072-secret.txt
+V6-XDG-secrets-C-potency-scan	CONTROL	PASS	consumer blocked visible v-d072-secret.txt
+V6-XDG-secrets-C-exploit	CONTROL	PASS	unpinned ls omitted v-d072-secret.txt
+V6-XDG-secrets	REQUIRED	PASS	consumer blocked v-d072-secret.txt under XDG rc=1
+V6-XDG-vendor-C-potency-ls	CONTROL	PASS	unpinned ls listed v-d072-vendor.md
+V6-XDG-vendor-C-potency-scan	CONTROL	PASS	consumer blocked visible v-d072-vendor.md
+V6-XDG-vendor-C-exploit	CONTROL	PASS	unpinned ls omitted v-d072-vendor.md
+V6-XDG-vendor	REQUIRED	PASS	consumer blocked v-d072-vendor.md under XDG rc=1
+R2-C-unquoted	CONTROL	PASS	ASCII usable; café not usable escaped=True
+R2-C-payload	CONTROL	PASS	ASCII vendor plant blocked
+R2-vendor	REQUIRED	PASS	vendor blocked café plant rc=1
+R2-C-z	CONTROL	PASS	-z listing still contains raw café path; R2 not claimed against secrets
+R2-secrets	REQUIRED	NOT_MEASURED	-z did not drop café path
+R5-4-readable-clean-remeasure	REQUIRED	PASS	operator HOME; gh PRIVATE; fast rc=0 deep rc=0; rename gate: clean
+R5-5-toplevel-gate	REQUIRED	PASS	no GATE PASSED; GATE FAILED; supervisor rc=5; UNVERIFIED precheck fired

@@ -1,0 +1,3 @@
+rename gate: UNVERIFIED (deep/--gate refuses unless SENTINEL_RENAME_GATE_UNVERIFIED_OK=1) — could not read visibility for johnrfite1/sentinel (auth? network?).
+  D-016 still blocks publication. Deep profile requires acknowledgement or a readable visibility check.
+  Coverage: origin visibility via gh when readable. Not covered: demos, published links, portfolio or resume references (D-016's other verbs).

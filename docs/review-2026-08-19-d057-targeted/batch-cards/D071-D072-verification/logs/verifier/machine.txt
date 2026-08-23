@@ -1,0 +1,7 @@
+date_utc=2026-08-23T22:36:37Z
+git version 2.50.1 (Apple Git-155)
+python=3.9.6
+Darwin [redacted before publication: personal context, 2026-09-05] arm64
+harness_sha_before=e24443d1fc365e09a691650e8a69bd68a7b4768fde92f2c7da816e3b7e35d12e
+ack_var=SENTINEL_RENAME_GATE_UNVERIFIED_OK
+head_expect=bdacace71e47c55301100d27341e67fc422fbcde

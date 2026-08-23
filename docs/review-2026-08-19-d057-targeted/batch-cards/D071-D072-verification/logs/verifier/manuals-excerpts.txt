@@ -1,0 +1,44 @@
+=== config key presence ===
+  GIT_CONFIG_COUNT: yes
+  GIT_CONFIG_KEY_: yes
+  GIT_CONFIG_VALUE_: yes
+  GIT_CONFIG_GLOBAL: yes
+  GIT_CONFIG_SYSTEM: yes
+  GIT_CONFIG_NOSYSTEM: yes
+  GIT_CONFIG: yes
+  core.excludesFile: yes
+  core.quotePath: yes
+=== git key presence ===
+  HOME: NO
+  GIT_CONFIG_GLOBAL: NO
+  GIT_CONFIG_SYSTEM: NO
+  GIT_CONFIG_NOSYSTEM: NO
+  XDG_CONFIG_HOME: NO
+=== gitignore key presence ===
+  core.excludesFile: NO
+  XDG_CONFIG_HOME: yes
+  $HOME/.config/git/ignore: yes
+=== core.excludesFile ===
+       core.excludesFile
+           Specifies the pathname to the file that contains patterns to
+           describe paths that are not meant to be tracked, in addition to
+           .ggiittiiggnnoorree (per-directory) and .ggiitt//iinnffoo//eexxcclluuddee. Defaults to
+           $$XXDDGG__CCOONNFFIIGG__HHOOMMEE//ggiitt//iiggnnoorree. If $$XXDDGG__CCOONNFFIIGG__HHOOMMEE is either not set
+           or empty, $$HHOOMMEE//..ccoonnffiigg//ggiitt//iiggnnoorree is used instead. See
+           ggiittiiggnnoorree(5).
+
+=== core.quotePath ===
+       core.quotePath
+           Commands that output paths (e.g.  _l_s_-_f_i_l_e_s, _d_i_f_f), will quote
+           "unusual" characters in the pathname by enclosing the pathname in
+           double-quotes and escaping those characters with backslashes in the
+           same way C escapes control characters (e.g.  \\tt for TAB, \\nn for LF,
+           \\\\ for backslash) or bytes with values larger than 0x80 (e.g. octal
+           \\330022\\226655 for "micro" in UTF-8). If this variable is set to false,
+           bytes higher than 0x80 are not considered "unusual" any more.
+           Double-quotes, backslash and control characters are always escaped
+           regardless of the setting of this variable. A simple space
+           character is not considered "unusual". Many commands can output
+           pathnames completely verbatim using the --zz option. The default
+           value is true.
+
