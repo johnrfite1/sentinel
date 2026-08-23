@@ -1,0 +1,5 @@
+BLOCKED r1-dst.txt — credential-shaped content:
+    401:API_KEY=<redacted>
+
+secret guard: 1 finding(s). Do not weaken this guard to make a commit pass (AGENTS.md).
+If this is a false positive, fix or refine the guard and document why.

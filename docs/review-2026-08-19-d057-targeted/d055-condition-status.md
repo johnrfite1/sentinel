@@ -1,5 +1,8 @@
 # D-055 condition-status — prepared material, not an assessment
 
+**2026-08-23: D-068 recorded the session; D-055 is not ruled.** This file remains prepared
+material, not an assessment. The session record lives in `docs/decisions.md`.
+
 This file is prepared material awaiting John's ruling. Nothing in it is a finding of record.
 It writes into no other file, including not into `docs/exit-criterion-packet.md`. It does not
 assess D-055. It does not flip, imply, or pre-compute any condition's status. It does not

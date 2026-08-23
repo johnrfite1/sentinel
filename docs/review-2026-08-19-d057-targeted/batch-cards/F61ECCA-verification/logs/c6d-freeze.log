@@ -1,0 +1,961 @@
+
+[1m== gate immutability (D-056(b)) ==[0m
+  extracted 171 lines of bootstrap verbatim from scripts/test.sh
+
+1. unchanged source and body
+  exit 0, body ran, completion token accepted
+
+2a. CONTROL: an unprotected script must be corrupted by this probe
+  unprotected control corrupted (exit 127) — the probe is dangerous
+
+2b. the protected subject under the same edit
+  body ran to completion — the edit could not reach it
+  no shifted-offset damage
+  exit 4 — a changed source is refused a zero exit
+
+3. child attacks the body through inherited environment
+  child found no writable path and no writable descriptor
+  and the run still completed normally
+
+4. sibling attacks the body through ps
+  ps exposes no writable backing path (body appears only as /dev/fd/N)
+  and the run completed normally under sibling inspection
+
+5. body exits 0 without completing — EXIT 0 IS NOT SUCCESS
+  refused with exit 5
+  and says so, rather than failing for an unrelated reason
+
+6. arguments preserved across the supervisor boundary
+  all three arguments arrived, including the one with a space
+
+7. cleanup on success and on failure
+  no temp file left behind (1 before, 1 after)
+  a failing body is refused (exit 5), not silently accepted
+
+8. operator cancellation
+  the supervisor is findable by its own script name (pkill -f <script> works again)
+  SIGTERM stopped the run
+
+9. two gates concurrently
+  both completed independently — no shared process state
+
+10. subject invoked with a parent gate token in the environment
+  protected itself despite the inherited token — the edit could not reach it
+  and still refused a zero exit (exit 4)
+
+gate immutability: 10/10 — unchanged run · mid-run source edit cannot reach the body
+  · child finds no writable path or descriptor · ps exposes no backing path
+  · EXIT 0 WITHOUT COMPLETION IS REFUSED · arguments preserved · cleanup on both paths
+  · operator cancellation works · concurrent gates independent
+  · a subject invoked by a running gate still protects itself
+
+[1m== secret guard (A-007) ==[0m
+secret guard: clean
+
+[1m== V-1 index-path ordering ==[0m
+  observing working-tree scripts/check-secrets.sh and .githooks/pre-commit
+  under a hostile GIT_INDEX_FILE pointing outside the canonical index directory
+  CS-live REQUIRED   PASS  live check-secrets.sh refuses --index-file outside the canonical directory
+  CS-mutant CONTROL    PASS  reversed check-secrets.sh accepts and prints secret guard: clean (probe is live)
+  HOOK-live REQUIRED   PASS  live pre-commit blocks git commit under hostile GIT_INDEX_FILE; HEAD unmoved; hook names its own validation
+  HOOK-mutant CONTROL    PASS  reversed pre-commit no longer emits its own index refusal; check-secrets.sh still refuses; HEAD unmoved
+
+V-1 index-path ordering: ok
+  Covers only CS validation-refusal and HOOK commit-block under a hostile
+  GIT_INDEX_FILE, as enumerated in this file's header. Not general index-handling evidence.
+
+[1m== rename gate (D-016) ==[0m
+rename gate: UNVERIFIED — could not read visibility for <isolated-clone> (auth? network?).
+  D-016 still blocks publication. Verify manually before any public action.
+
+[1m== labelling-prompt freeze (D-011a) ==[0m
+label prompt: frozen (02145d7b4f83d8c8…, D-011a)
+
+[1m== labelling artifacts pinned (A-064) ==[0m
+label integrity: 20 labelling artifact(s) pinned, none unpinned (A-064)
+
+[1m== published EIP-712 type strings (D-023) ==[0m
+type strings: 6/6 published in §5.8 match eip712.ts exactly (D-023)
+
+[1m== §5.7.1 check coverage (D-031) ==[0m
+eval codes: 41/41 engine checks documented in §5.7.1 (D-031)
+
+[1m== corpus class coverage (A-036) ==[0m
+corpus class coverage (A-036) — does each class exercise the class it names?
+  ok    14 of 20 classes exercise the class they name
+  note  39 of 43 individually fail a check their OWN class is about
+        not individually: F004, F048, F051, F056
+        A class stays green while a member of it exercises nothing. That is how
+        F051 would have shipped if it had had a sibling.
+  note  F002 is in the CONFORMING class 'exact-allowed-and-benign-variation' and does not conform: BLOCK on EVAL_SIMULATION_SUCCEEDS
+        RULED D-040 — this is deliberate, not a defect. The class means "exact
+        allowed action AND benign variations": variations that LOOK benign and
+        may not be. F002 is the fixture that exposed the D-021 gap and produced
+        the project's only inter-labeller disagreement. It earns its place BY
+        blocking. Printed every run so a BLOCK here reads as intent, not rot.
+
+corpus class coverage — CARRIED, never counted as covered
+  RESERVED  unexpected-internal-call   [D-025]
+            allowedCallGraphHash is RESERVED in v1 and read by nothing, so the class
+            cannot be driven to a positive case. Ratified, and the ablation says so
+            where the table is.
+  DELEGATED reentrancy-attempt   [A-036]
+            F056 is decided by the exact-target rule; its target has empty bytecode
+            and cannot re-enter. Delegated to the vault Foundry suite, which does
+            test reentrancy. Deferred with D-035 because repairing the fixture
+            changes the labelled view.
+  DELEGATED invalid-or-rotated-signer   [D-010]
+            Receipt authentication belongs to the isolated signer and the evaluator
+            has no code for it, so no corpus fixture can exercise it. F035 is ALLOW
+            with nothing failing. The signer has its own 42 tamper cases and the
+            independent Python verifier.
+  DELEGATED malicious-retrieved-instructions   [A-028 F-5]
+            The class subject is containment, measured by the corpus leak guard
+            rather than by a check. The ablation states these verdicts must not be
+            read as detections.
+  DELEGATED owner-override-and-block-behaviour   [D-039]
+            Found by this guard. F054/F055 fail on code identity and wrong resource,
+            neither about the override path — but they declare primaryEnforcement
+            vault-foundry-invariants and the vault suite does test the override
+            path. Ruled an accepted delegation: the declaration is accurate, the
+            corpus layer is simply not where it is proved.
+  GAP       conflicting-block-state   [D-039]
+            Found by this guard, and RULED A GENUINE UNCOVERED CLASS. F048 declares
+            primaryEnforcement conformance-engine — it claims to be proved HERE —
+            then fails on EVAL_SIMULATION_UNAVAILABLE and EVAL_TARGET_CODE_IDENTITY
+            and REVIEWs, which is an outage shape, not the failed-rule-that-blocks
+            shape D-030 describes. Nothing else covers it. OWES A FIXTURE at v1.1,
+            riding with the re-label per A-036.
+
+  1 GAP: conflicting-block-state
+  A GAP claims to be proved at this layer and is not. It OWES A FIXTURE — carried
+  so the ratchet can arm, not because the class is covered.
+
+corpus class coverage: pass on the ratchet; carried classes listed above
+
+[1m== vendor honesty (§7.5 Gate 5, D-008) ==[0m
+vendor honesty (§7.5 Gate 5, D-008) — mechanical conditions
+  ok    no artifact claims an executed or emulated vendor comparison (D-001, D-008(2))
+  ok    no named vendor appears in any measurement artifact (D-008(4))
+  ok    the ablation report carries §7.2's caveat verbatim, as §7.2 words it
+
+vendor honesty — D-008(1) and (3): John's to certify; agents may not clear these
+  ok    §2 capability table: 11 of 11 rows carry a marker resolving to a §13 entry
+        D-008(1)'s mechanical half: dated, and linked to a source that exists. A row
+        added later without [§13#N read YYYY-MM-DD] in its capability cell FAILS this
+        gate, as does one citing an entry §13 does not have. The count is a ratchet.
+  ok    §2 capability table: inference marking (D-008(3)) certified by record —
+        *Certified by John at the Gate 5 session, 2026-08-16 (D-038).*
+        The table hashes to the one certified. THIS SCRIPT DID NOT AND CANNOT CHECK
+        THAT THE CERTIFICATION IS RIGHT — it checks that a named certification exists
+        in §2 and that §2 has not changed since. Whether a sentence fairly describes
+        somebody else's product is John's, and no hash speaks to it.
+
+  Neither line above is this script deciding a public claim. The verification partition
+  gives those to John: public claims, autonomy none. docs/gate-5-vendor-audit.md holds the
+  per-row audit and the certification packet the Gate 5 session ruled from.
+
+vendor honesty: mechanical conditions pass; D-008(1) met and (3) certified by record
+
+[1m== suite floors (R4-F4, D-058) ==[0m
+  FOUNDRY_MIN_TESTS          103
+  TS_MIN_TESTS               550
+  VERIFIER_MIN_TESTS         221
+  VERIFIER_MIN_SAMPLES       7
+  VERIFIER_MIN_TAMPER        78
+  VERIFIER_MIN_TAMPER_MODES  30
+suite floors: read from scripts/test.sh, which is the only copy.
+
+[1m== solidity build + tests (profile: default) ==[0m
+  test/SentinelTypes.t.sol:SentinelTypesTest
+    [SUCCESS] testFuzz_actionHash_changesOnAnyBoundFieldMutation(uint8) (gas: 3792)
+    [SUCCESS] testFuzz_domainSeparator_isInjectiveOverChainAndVault(uint256,uint256,address,address) (gas: 5397)
+    [SUCCESS] testFuzz_mandateHash_changesOnAnyBoundFieldMutation(uint8) (gas: 5162)
+    [SUCCESS] test_allHashesAreDeterministic() (gas: 19967)
+    [SUCCESS] test_digest_isEip712Framed() (gas: 2261)
+    [SUCCESS] test_distinctPayloadTypesDoNotCollide() (gas: 15248)
+    [SUCCESS] test_domainSeparator_bindsChainAndVault() (gas: 4625)
+    [SUCCESS] test_mandateHash_bindsPurposeFieldsAPolicyEngineWouldMiss() (gas: 9609)
+    [SUCCESS] test_noPayloadTypeStringContainsASignatureField() (gas: 572884)
+    [SUCCESS] test_typehashes_matchGoldenDigests() (gas: 3963)
+    [SUCCESS] test_typehashes_matchIndependentTranscription() (gas: 2653)
+    [SUCCESS] test_zeroValuedEnumsAreFailClosed() (gas: 1802)
+  test/SentinelVault.backstops.t.sol:SentinelVaultBackstopsTest
+    [SUCCESS] test_LIMIT_nativeCeilingIsPerActionAndBoundsNoAggregate() (gas: 7996585)
+    [SUCCESS] test_LIMIT_receiptFromAFutureSignerGoesLiveOnRotation() (gas: 166037)
+    [SUCCESS] test_LIMIT_reinstatingARotatedOutSignerRevivesItsOldReceipts() (gas: 165008)
+    [SUCCESS] test_LIMIT_vaultCapsNativeValueOnlyAndNotTokenAuthority() (gas: 1612666)
+    [SUCCESS] test_aFailedExternalCallRevertsRatherThanConsumingTheNonce() (gas: 108113)
+    [SUCCESS] test_actionNamingADifferentVaultIsRejected() (gas: 53596)
+    [SUCCESS] test_calldataShorterThanASelectorIsRejected() (gas: 58621)
+    [SUCCESS] test_constructorRejectsAZeroOwnerOrSigner() (gas: 78915)
+    [SUCCESS] test_dataHashIsRecomputedFromTheBytesActuallyPassedOn() (gas: 59379)
+    [SUCCESS] test_executionEventReportsTheBoundNonceAndTheActualAmount() (gas: 116802)
+    [SUCCESS] test_expiredOverrideIsRejected() (gas: 83016)
+    [SUCCESS] test_nonceIsConsumedBeforeTheExternalCall() (gas: 1646089)
+    [SUCCESS] test_overrideAuthorizationIsLogged() (gas: 137236)
+    [SUCCESS] test_overrideCannotBeReusedForADifferentReviewReceipt() (gas: 82937)
+    [SUCCESS] test_overrideNamingADifferentMandateIsRejected() (gas: 141053)
+    [SUCCESS] test_overrideNamingADifferentNonceIsRejected() (gas: 82234)
+    [SUCCESS] test_receiptClaimingADifferentMandateIsRejected() (gas: 65114)
+    [SUCCESS] test_recoverEventReportsTheAmountItActuallyMoved() (gas: 51733)
+    [SUCCESS] test_recoverRejectsTheZeroAddress() (gas: 14326)
+    [SUCCESS] test_rotateSignerRejectsTheZeroAddress() (gas: 18857)
+    [SUCCESS] test_selectorOffTheVaultAllowlistIsRejected() (gas: 61169)
+    [SUCCESS] test_zeroPolicyHashDoesNotMatchAnUnsetPolicy() (gas: 1475065)
+  test/SentinelVault.binding.t.sol:SentinelVaultBindingTest
+    [SUCCESS] test_MandateActivated_statesTheActivatedHash() (gas: 22281)
+    [SUCCESS] test_MandateRevoked_statesTheRevokedHash() (gas: 17211)
+    [SUCCESS] test_PausedSet_statesTheNewStateTruthfully() (gas: 31481)
+    [SUCCESS] test_PolicyActivated_statesTheActivatedHash() (gas: 22281)
+    [SUCCESS] test_Recovered_statesRecipientAndAmount() (gas: 51570)
+    [SUCCESS] test_SignerRotated_statesBothEpochsTruthfully() (gas: 24370)
+    [SUCCESS] test_actionDeadline_atTheBoundaryIsStillValid() (gas: 114482)
+    [SUCCESS] test_actionDeadline_oneSecondPastIsRejected() (gas: 53446)
+    [SUCCESS] test_correctlyBoundReceiptStillExecutes() (gas: 114105)
+    [SUCCESS] test_overrideExpiry_atTheBoundaryIsStillValid() (gas: 133336)
+    [SUCCESS] test_overrideExpiry_oneSecondPastIsRejected() (gas: 81787)
+    [SUCCESS] test_receiptBoundToMandate_mismatchIsRejected() (gas: 67416)
+    [SUCCESS] test_receiptBoundToPolicy_mismatchIsRejected() (gas: 67338)
+    [SUCCESS] test_receiptExpiry_atTheBoundaryIsStillValid() (gas: 114614)
+    [SUCCESS] test_receiptExpiry_oneSecondPastIsRejected() (gas: 64887)
+    [SUCCESS] test_valueCeiling_atTheCapIsAllowed() (gas: 113636)
+    [SUCCESS] test_valueCeiling_oneWeiOverIsRejected() (gas: 57603)
+  test/SentinelVault.events.t.sol:SentinelVaultEventsTest
+    [SUCCESS] test_ActionExecuted_automaticExactFieldsFalseRouteAndVaultEmitter() (gas: 175890)
+    [SUCCESS] test_LIMIT_recordLogsRetainsARevertedOverrideArtifact() (gas: 180232)
+    [SUCCESS] test_MandateActivated_exactFieldAndVaultEmitter() (gas: 43275)
+    [SUCCESS] test_MandateRevoked_exactPreviousFieldAndVaultEmitter() (gas: 32867)
+    [SUCCESS] test_OverrideAndActionExecuted_exactFieldsTrueRouteOrderAndVaultEmitter() (gas: 221235)
+    [SUCCESS] test_PausedSet_exactTrueAndFalseFieldsAndVaultEmitter() (gas: 37428)
+    [SUCCESS] test_PolicyActivated_exactFieldAndVaultEmitter() (gas: 43209)
+    [SUCCESS] test_Recovered_exactRecipientAndAmountFieldsAndVaultEmitter() (gas: 55284)
+    [SUCCESS] test_SignerRotated_exactPreviousAndNewFieldsAndVaultEmitter() (gas: 29058)
+    [SUCCESS] test_revertedAutomaticCallRollsBackVaultNonceAndTargetState() (gas: 164432)
+    [SUCCESS] test_revertedOverrideCallRollsBackAuthorizationNonceAndTargetState() (gas: 182637)
+  test/SentinelVault.invariants.t.sol:SentinelVaultInvariantTest
+    [SUCCESS] invariant_failedCallNeverCountsAsExecution() (gas: runs 256, calls 16384, reverts 9)
+    [SUCCESS] invariant_futureNonceNeverExecutes() (gas: runs 256, calls 16384, reverts 9)
+    [SUCCESS] invariant_noActionHashExecutesTwice() (gas: runs 256, calls 16384, reverts 9)
+    [SUCCESS] invariant_nonceEqualsSuccessfulExecutions() (gas: runs 256, calls 16384, reverts 9)
+    [SUCCESS] invariant_onlyAllowVerdictsExecuteOnTheAutomaticPath() (gas: runs 256, calls 16384, reverts 9)
+    [SUCCESS] invariant_onlyReviewVerdictsExecuteOnTheOverridePath() (gas: runs 256, calls 16384, reverts 9)
+    [SUCCESS] invariant_overrideMustNameTheExactAction() (gas: runs 256, calls 16384, reverts 9)
+    [SUCCESS] invariant_overrideRequiresTheOwnersOwnSignature() (gas: runs 256, calls 16384, reverts 9)
+    [SUCCESS] invariant_ownerAndCapsAreImmutableFromExecution() (gas: runs 256, calls 16384, reverts 9)
+    [SUCCESS] invariant_pausedNeverExecutes() (gas: runs 256, calls 16384, reverts 9)
+    [SUCCESS] invariant_tamperedAttemptsNeverExecute() (gas: runs 256, calls 16384, reverts 9)
+    [SUCCESS] test_everyHandlerActionIsRegisteredWithTheFuzzer() (gas: 63115)
+    [SUCCESS] test_nonVacuity_adversarialPathsAreReachedAndRejected() (gas: 439950)
+    [SUCCESS] test_nonVacuity_futureNonceAndFailingCallArmsAreReachable() (gas: 409000)
+    [SUCCESS] test_nonVacuity_overridePathExecutesAndItsAdversarialArmsDoNot() (gas: 497689)
+    [SUCCESS] test_nonVacuity_ownerControlsAreReachable() (gas: 307013)
+    [SUCCESS] test_nonVacuity_validPathActuallyExecutes() (gas: 452662)
+  test/SentinelVault.invariants.t.sol:SentinelVaultReentrancyTest
+    [SUCCESS] test_anAllowExecutionCannotBeReenteredThroughTheOverridePath() (gas: 1061640)
+    [SUCCESS] test_reentrantOverrideCannotExecuteInTheSameTransaction() (gas: 1085338)
+    [SUCCESS] test_reentrantSecondReceiptCannotExecuteInTheSameTransaction() (gas: 757547)
+  test/SentinelVault.t.sol:SentinelVaultTest
+    [SUCCESS] testFuzz_nonOwnerCannotTouchOwnerControls(address) (gas: 32755)
+    [SUCCESS] test_anyCallerMayRelayAValidReceipt() (gas: 117249)
+    [SUCCESS] test_blockReceiptNeverExecutes() (gas: 131214)
+    [SUCCESS] test_case1_allowReceiptExecutes() (gas: 116937)
+    [SUCCESS] test_expiredActionIsRejected() (gas: 53247)
+    [SUCCESS] test_expiredReceiptIsRejected() (gas: 65487)
+    [SUCCESS] test_overrideForADifferentActionIsRejected() (gas: 81378)
+    [SUCCESS] test_overrideSignedByNonOwnerIsRejected() (gas: 90120)
+    [SUCCESS] test_pausedExecutionAlwaysFails() (gas: 112714)
+    [SUCCESS] test_receiptFromNonActiveSignerIsRejected() (gas: 72832)
+    [SUCCESS] test_receiptNamingAStaleSignerIsRejected() (gas: 68456)
+    [SUCCESS] test_replay_sameReceiptCannotExecuteTwice() (gas: 139524)
+    [SUCCESS] test_replay_staleNonceIsRejected() (gas: 146444)
+    [SUCCESS] test_reviewPlusOwnerOverrideExecutes() (gas: 133163)
+    [SUCCESS] test_reviewReceiptDoesNotExecuteOnTheAutomaticPath() (gas: 72739)
+    [SUCCESS] test_revokedMandateBlocksExecution() (gas: 59058)
+    [SUCCESS] test_rotationInvalidatesOutstandingReceipts() (gas: 77057)
+    [SUCCESS] test_signerCannotReachOwnerControls() (gas: 20358)
+    [SUCCESS] test_tamper_anyBoundFieldMutationIsRejected() (gas: 430665)
+    [SUCCESS] test_uninitialisedVaultRejectsZeroHashes() (gas: 1450194)
+    [SUCCESS] test_valueOverHardCapIsRejectedEvenWithAValidReceipt() (gas: 57542)
+  103 tests: 103 passed, 0 failed, 0 skipped
+  foundry: 103 tests (floor 103)
+
+[1m== typescript typecheck + isolated signer suite (§9 step 3) ==[0m
+npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+
+> typecheck
+> tsc --noEmit
+
+npm warn Unknown env config "devdir". This will stop working in the next major version of npm. See `npm help npmrc` for supported config options.
+
+> test
+> node --test --test-concurrency=1 $SENTINEL_TEST_REPORTERS "test/**/*.test.ts"
+
+▶ the §7.2 baseline enforces what §7.2 grants it
+  ✔ BASE_CHAIN_BOUND — a different chain id (1.907625ms)
+  ✔ BASE_VAULT_BOUND — a different vault (0.147083ms)
+  ✔ BASE_TARGET_ALLOWLISTED — a target that is not on the allowlist (0.128333ms)
+  ✔ BASE_SELECTOR_ALLOWLISTED — a selector that is not on the allowlist (0.096917ms)
+  ✔ BASE_VALUE_CEILING — native value above the ceiling (0.091458ms)
+  ✔ BASE_UNLIMITED_APPROVAL — an unlimited approval (0.109459ms)
+  ✔ BASE_CALLDATA_UNDECODABLE — calldata it cannot read (0.266458ms)
+  ✔ allows the conforming action (1.799042ms)
+  ✔ has a trigger for every declared baseline code (0.173833ms)
+✔ the §7.2 baseline enforces what §7.2 grants it (7.233875ms)
+▶ the §7.2 baseline withholds what §7.2 withholds
+  ✔ allows a resource the mandate does not name (0.350042ms)
+  ✔ allows the attacker as beneficiary (0.303333ms)
+  ✔ allows thirty days where the mandate says one (0.138208ms)
+  ✔ allows recurrence enabled against a mandate that forbids it (0.136709ms)
+  ✔ allows a finite approval the mandate never authorised (0.1535ms)
+  ✔ never renders REVIEW — it is a two-verdict engine (0.365917ms)
+✔ the §7.2 baseline withholds what §7.2 withholds (1.725583ms)
+▶ the §7.3 layer partition
+  ✔ names only codes the engine actually declares (0.194041ms)
+  ✔ EVAL_EXECUTABILITY_CODES names only codes the engine declares (D-026) (0.081709ms)
+  ✔ keeps executability and mandate-conformance disjoint (D-026) (0.064583ms)
+  ✔ holds only purpose and post-state checks (D-034's criterion) (0.138916ms)
+  ✔ does not readmit anything D-034 moved to L2 (0.082542ms)
+  ✔ removes something — L2 is not just L3 under another name (1.010792ms)
+  ✔ L3 is the full engine, unmodified (1.32575ms)
+  ✔ L1 never consults the simulation (see comment: cannot fail today) (0.284958ms)
+  ✔ catches the wrong-purpose action at L3 and not at L1 or L2 (1.049375ms)
+  ✔ L1 folds with the baseline's rule, not the engine's (0.149917ms)
+  ✔ reports a decision latency for every layer (0.924084ms)
+✔ the §7.3 layer partition (5.574625ms)
+▶ attestation guard atomicity
+  ✔ signs exactly one of two overlapping ALLOWs at the same nonce (55.486541ms)
+  ✔ still permits an overlapping re-sign of the SAME action (54.363958ms)
+  ✔ does not let an overlapping BLOCK consume the nonce (52.754459ms)
+✔ attestation guard atomicity (164.443792ms)
+▶ the canary's classifier
+  ✔ names the two proposals the arms are supposed to produce (1.003ms)
+  ✔ does not call an approval to the zero address an approval to the attacker (0.115875ms)
+  ✔ does not call an approval to a low-numbered address an approval to the attacker (0.080333ms)
+  ✔ does not call an approval to a 32-byte-padded owner word an approval to the attacker (0.072583ms)
+  ✔ does not call an approval to an unrelated address an approval to the attacker (0.082583ms)
+  ✔ still recognises the attacker whatever the case of the hex (0.121375ms)
+✔ the canary's classifier (2.919667ms)
+▶ the canary's verdict
+  ✔ reports the injection landing when the treatment arm flips to an approval (0.441625ms)
+  ✔ reports resistance only when the model actually decided (0.172167ms)
+  ✔ never calls a classifier refusal resistance (0.278125ms)
+  ✔ refuses to attribute anything when the control arm did not produce Case 1 (0.227584ms)
+  ✔ checks the control arm's refusal before anything else (0.157625ms)
+  ✔ does not call an empty treatment arm resistance (0.151209ms)
+  ✔ does not call an unrelated treatment proposal resistance (0.142333ms)
+  ✔ keeps every verdict class distinguishable by its leading token (0.164792ms)
+✔ the canary's verdict (2.159541ms)
+▶ Case 1 — exact mandate, allow
+  ✔ evaluates ALLOW, the signer attests, and the vault executes the purchase (97.410208ms)
+✔ Case 1 — exact mandate, allow (893.037958ms)
+▶ Case 2 — real prompt injection, block
+  ✔ blocks the injected approve, and no executable receipt exists (52.715042ms)
+✔ Case 2 — real prompt injection, block (52.955125ms)
+▶ Case 3 — mechanically valid, wrong purpose, block
+  ✔ passes every representative-baseline check and fails only mandate conformance (32.397875ms)
+  ✔ also blocks recurrence the mandate forbids (35.947334ms)
+✔ Case 3 — mechanically valid, wrong purpose, block (68.7345ms)
+▶ Case 4 — evidence uncertainty, review
+  ✔ reviews rather than blocking when the target's code identity is not established (28.122084ms)
+  ✔ blocks the identical evidence gap under a FAIL_CLOSED policy (29.054583ms)
+✔ Case 4 — evidence uncertainty, review (57.65525ms)
+▶ the evidence bundle
+  ✔ carries all thirteen §5.6 fields and hashes deterministically (29.730333ms)
+✔ the evidence bundle (29.927666ms)
+▶ the labeller/evaluator split is guarded (D-011b)
+  ✔ passes a view carrying only values and intent (1.212ms)
+  ✔ rejects a view containing "verdict" (0.64625ms)
+  ✔ rejects a view containing "checks" (0.22ms)
+  ✔ rejects a view containing "reasonCodes" (0.292208ms)
+  ✔ rejects a view containing "failing" (0.161625ms)
+  ✔ rejects a view containing "outcome" (0.134458ms)
+  ✔ rejects a view containing "label" (0.146292ms)
+  ✔ rejects a view containing "expected" (0.113958ms)
+  ✔ rejects a view containing "layers" (0.133917ms)
+  ✔ has a case for every forbidden key (0.225584ms)
+  ✔ rejects the prefixed/suffixed key "engineVerdict" (0.2145ms)
+  ✔ rejects the prefixed/suffixed key "l3Verdict" (0.084833ms)
+  ✔ rejects the prefixed/suffixed key "computedLabel" (0.064833ms)
+  ✔ rejects the prefixed/suffixed key "expectedOutcome" (0.056916ms)
+  ✔ rejects the prefixed/suffixed key "failingChecks" (0.057ms)
+  ✔ rejects the prefixed/suffixed key "evaluatorReasonCodes" (0.051834ms)
+  ✔ rejects the prefixed/suffixed key "layerVerdicts" (0.047917ms)
+  ✔ walks NESTED objects and arrays, not just the top level (0.138625ms)
+  ✔ matches keys, not values — an intent mentioning a verdict is fine (0.071125ms)
+  ✔ does not exempt an allowlisted name nested inside a payload (0.089584ms)
+  ✔ does not exempt a top-level view key used at depth (0.092958ms)
+  ✔ still exempts the declared names at the depth they were declared for (0.072708ms)
+  ✔ is case-insensitive, so a capitalised key cannot slip through (0.077459ms)
+  ✔ names the fixture and the key it caught (0.176708ms)
+✔ the labeller/evaluator split is guarded (D-011b) (6.716625ms)
+▶ the view's declared shape is enforced (A-028 F-3)
+  ✔ rejects an undeclared top-level key (0.208333ms)
+  ✔ rejects the exact fields that leaked, by shape rather than by name (0.138833ms)
+  ✔ accepts the real emitted shape (0.072625ms)
+✔ the view's declared shape is enforced (A-028 F-3) (0.512459ms)
+▶ no fixture carries a verdict
+  ✔ has no verdict-shaped key on any fixture spec (0.500125ms)
+  ✔ has no fixture whose intent states an expected outcome (0.374584ms)
+✔ no fixture carries a verdict (0.932708ms)
+▶ the injection class carries a real injection (A-028 F-5)
+  ✔ gives every fixture in the class an agent rationale (0.107834ms)
+  ✔ keeps every rationale-carrying fixture transcribable from a proposal (0.08725ms)
+  ✔ derives enough distinctive probes from each rationale to be able to fail (0.229208ms)
+  ✔ catches a rationale that reached the evidence bundle (0.349291ms)
+  ✔ catches a leak that arrived through underscores or punctuation (0.130583ms)
+  ✔ passes an artefact that is genuinely canonical evaluator output (0.12125ms)
+  ✔ refuses a rationale too thin to probe with (0.0945ms)
+  ✔ does not count evaluator field names as distinctive narrative (0.049542ms)
+✔ the injection class carries a real injection (A-028 F-5) (1.325833ms)
+▶ the injection wiring can fail (independent review, 2026-08-15)
+  ✔ passes a fixture whose proposal and encoding agree and whose artefacts are clean (0.18ms)
+  ✔ rejects a proposal that will not transcribe, on the ok flag alone (0.130375ms)
+  ✔ rejects a proposal whose callData differs from the fixture's (0.084834ms)
+  ✔ rejects a proposal whose target differs from the fixture's (0.056708ms)
+  ✔ rejects a proposal whose valueWei differs from the fixture's (0.04725ms)
+  ✔ rejects a leak reaching the evidence bundle through the full check (0.1155ms)
+  ✔ derives only probes that occur in the rationale they came from (0.147417ms)
+  ✔ refuses a probe that cannot occur in its own source text (0.10525ms)
+  ✔ refuses a rationale too thin to yield a usable probe set (0.075167ms)
+  ✔ catches the verbatim excerpt the old construction let through (0.183917ms)
+  ✔ catches a base64 or hex carriage of the whole rationale (0.212709ms)
+  ✔ still calls the check from the corpus runner (0.3925ms)
+✔ the injection wiring can fail (independent review, 2026-08-15) (1.99325ms)
+▶ corpus shape
+  ✔ covers every §7.1 class (1.228625ms)
+  ✔ stays inside §7.1's ratified 30-50 range (0.05175ms)
+  ✔ rejects a corpus missing a §7.1 class (0.115084ms)
+  ✔ rejects a corpus outside the ratified 30-50 range (0.232791ms)
+  ✔ rejects a corpus with duplicate ids (0.137084ms)
+  ✔ has unique ids and a non-empty intent on every fixture (0.10225ms)
+✔ corpus shape (1.983542ms)
+▶ decoder versus the real EVM
+  ✔ is never more permissive than the chain, and is stricter in exactly one place (13.48725ms)
+  ✔ decodes parameters that predict the state the call actually writes (8.431916ms)
+  ✔ decodes an approval whose spender and amount match the resulting allowance (5.656709ms)
+✔ decoder versus the real EVM (293.253084ms)
+▶ selector agreement
+  ✔ each pinned selector is keccak of its transcribed signature (1.032167ms)
+  ✔ declares exactly the two schemas §4 scopes (1.702458ms)
+✔ selector agreement (4.100875ms)
+▶ decoding a well-formed call
+  ✔ recovers DemoPay.purchase parameters exactly (0.798458ms)
+  ✔ recovers DemoERC20.approve parameters exactly, including max uint256 (0.56375ms)
+  ✔ is case-insensitive about the target address (0.384625ms)
+  ✔ renders a description for the evidence bundle without using it for comparison (0.316542ms)
+✔ decoding a well-formed call (2.512125ms)
+▶ refusals — the cases that make derivation worth doing
+  ✔ refuses no selector at all with DECODE_NO_SELECTOR (0.5655ms)
+  ✔ refuses a selector nobody supports with DECODE_UNKNOWN_SELECTOR (0.170833ms)
+  ✔ refuses a supported selector at an unregistered target with DECODE_UNSUPPORTED_TARGET (0.11575ms)
+  ✔ refuses purchase aimed at DemoERC20 with DECODE_SELECTOR_TARGET_MISMATCH (0.125833ms)
+  ✔ refuses approve aimed at DemoPay with DECODE_SELECTOR_TARGET_MISMATCH (0.080417ms)
+  ✔ refuses trailing bytes past the declared arguments with DECODE_LENGTH_MISMATCH (0.080375ms)
+  ✔ refuses an argument word short with DECODE_LENGTH_MISMATCH (0.059041ms)
+  ✔ refuses beneficiary word with dirty high bytes with DECODE_DIRTY_ADDRESS_BITS (0.089584ms)
+  ✔ refuses spender word with dirty high bytes with DECODE_DIRTY_ADDRESS_BITS (0.0715ms)
+  ✔ refuses recurring encoded as 2 with DECODE_NON_CANONICAL_BOOL (0.110417ms)
+  ✔ refuses beneficiary word with a dirty byte at high position 0 with DECODE_DIRTY_ADDRESS_BITS (0.134583ms)
+  ✔ refuses beneficiary word with a dirty byte at high position 1 with DECODE_DIRTY_ADDRESS_BITS (0.18575ms)
+  ✔ refuses beneficiary word with a dirty byte at high position 2 with DECODE_DIRTY_ADDRESS_BITS (0.088209ms)
+  ✔ refuses beneficiary word with a dirty byte at high position 3 with DECODE_DIRTY_ADDRESS_BITS (0.11025ms)
+  ✔ refuses beneficiary word with a dirty byte at high position 4 with DECODE_DIRTY_ADDRESS_BITS (0.127292ms)
+  ✔ refuses beneficiary word with a dirty byte at high position 5 with DECODE_DIRTY_ADDRESS_BITS (0.131625ms)
+  ✔ refuses beneficiary word with a dirty byte at high position 6 with DECODE_DIRTY_ADDRESS_BITS (0.084958ms)
+  ✔ refuses beneficiary word with a dirty byte at high position 7 with DECODE_DIRTY_ADDRESS_BITS (0.402666ms)
+  ✔ refuses beneficiary word with a dirty byte at high position 8 with DECODE_DIRTY_ADDRESS_BITS (0.233541ms)
+  ✔ refuses beneficiary word with a dirty byte at high position 9 with DECODE_DIRTY_ADDRESS_BITS (0.207292ms)
+  ✔ refuses beneficiary word with a dirty byte at high position 10 with DECODE_DIRTY_ADDRESS_BITS (0.178042ms)
+  ✔ refuses beneficiary word with a dirty byte at high position 11 with DECODE_DIRTY_ADDRESS_BITS (0.156958ms)
+  ✔ refuses recurring encoded as 0x02 with DECODE_NON_CANONICAL_BOOL (0.107084ms)
+  ✔ refuses recurring encoded as 0x03 with DECODE_NON_CANONICAL_BOOL (0.150666ms)
+  ✔ refuses recurring encoded as 0x04 with DECODE_NON_CANONICAL_BOOL (0.157917ms)
+  ✔ refuses recurring encoded as 0xff with DECODE_NON_CANONICAL_BOOL (0.134875ms)
+  ✔ refuses recurring encoded as 0x80 with DECODE_NON_CANONICAL_BOOL (0.264166ms)
+  ✔ refuses duration overflowing uint64 with DECODE_UINT_OVERFLOW (0.138792ms)
+  ✔ never returns partial parameters alongside a failure (0.409292ms)
+✔ refusals — the cases that make derivation worth doing (6.301667ms)
+▶ the refusal table is exhaustive
+  ✔ has a case for every declared decode-failure code (0.153ms)
+✔ the refusal table is exhaustive (0.225541ms)
+▶ boundary values decode rather than being rejected
+  ✔ accepts a zero-valued but well-formed purchase (0.192ms)
+  ✔ accepts uint64 at its maximum (0.140709ms)
+✔ boundary values decode rather than being rejected (0.407042ms)
+▶ TypeScript / Solidity EIP-712 differential
+  ✔ agrees on every §5 payload hash (seed 1) (14.102584ms)
+  ✔ agrees on every §5 payload hash (seed 7) (7.870916ms)
+  ✔ agrees on every §5 payload hash (seed 1337) (5.776375ms)
+  ✔ agrees on every §5 payload hash (seed 20260727) (5.376292ms)
+  ✔ agrees on every §5 payload hash (seed 2147483647) (5.617334ms)
+  ✔ agrees on boundary values that hide encoding bugs (2.247709ms)
+  ✔ binds every field of the action payload (9.100958ms)
+✔ TypeScript / Solidity EIP-712 differential (317.775541ms)
+▶ three-way agreement: Solidity, signer, evaluator
+  ✔ agrees on mandate, policy, action and domain (seed 2) (5.417125ms)
+  ✔ agrees on mandate, policy, action and domain (seed 11) (3.775083ms)
+  ✔ agrees on mandate, policy, action and domain (seed 4242) (3.778125ms)
+  ✔ agrees on mandate, policy, action and domain (seed 20260728) (3.949334ms)
+  ✔ keeps the two TypeScript implementations genuinely separate (0.437708ms)
+✔ three-way agreement: Solidity, signer, evaluator (17.707708ms)
+▶ EIP-712 schema agreement
+  ✔ agrees with the pinned Solidity golden typehashes (0.983334ms)
+  ✔ has exactly the §5 field order in each type string (0.300417ms)
+  ✔ binds the domain separator to both chain and vault (0.993334ms)
+✔ EIP-712 schema agreement (3.650334ms)
+▶ reason-code severity
+  ✔ classifies every declared reason code (0.289084ms)
+  ✔ never lets a finding permit an ALLOW it would otherwise block (0.184708ms)
+  ✔ permits REVIEW on conformance findings so Case 4 stays reachable (0.096542ms)
+  ✔ refuses every verdict on a fatal finding (0.109666ms)
+  ✔ permits BLOCK on an executability finding (0.114542ms)
+✔ reason-code severity (1.178458ms)
+▶ canonical reason codes
+  ✔ is order- and multiplicity-independent (0.301333ms)
+✔ canonical reason codes (0.434042ms)
+▶ RPC input parsing
+  ✔ accepts a well-formed action (0.592375ms)
+  ✔ rejects an unknown field rather than ignoring it (0.399334ms)
+  ✔ rejects hex where a decimal integer is required (0.125875ms)
+  ✔ rejects a negative value (0.106583ms)
+  ✔ rejects a number where a decimal string is required (0.117ms)
+  ✔ rejects an out-of-range uint64 (0.13175ms)
+  ✔ rejects a wrong-length bytes32 (0.142417ms)
+  ✔ rejects an unrecognised verdict (0.245375ms)
+✔ RPC input parsing (2.153042ms)
+▶ the conforming baseline
+  ✔ produces ALLOW with every check passing (10.268791ms)
+✔ the conforming baseline (12.044833ms)
+▶ every conformance check fires on its own trigger
+  ✔ EVAL_MANDATE_ACTIVE → VIOLATION (2.494375ms)
+  ✔ EVAL_POLICY_ACTIVE → VIOLATION (1.495916ms)
+  ✔ EVAL_MANDATE_PRINCIPAL_IS_OWNER → VIOLATION (1.45075ms)
+  ✔ EVAL_VAULT_NOT_PAUSED → VIOLATION (0.980916ms)
+  ✔ EVAL_CHAIN_BOUND → VIOLATION (0.911584ms)
+  ✔ EVAL_VAULT_BOUND → VIOLATION (0.795167ms)
+  ✔ EVAL_NONCE_CURRENT → VIOLATION (0.796291ms)
+  ✔ EVAL_TARGET_BOUND → VIOLATION (1.171ms)
+  ✔ EVAL_OPERATION_SUPPORTED → VIOLATION (1.608583ms)
+  ✔ EVAL_CALLDATA_BINDING → VIOLATION (1.190084ms)
+  ✔ EVAL_ACTION_BINDS_MANDATE_AND_POLICY → VIOLATION (mandate half of the conjunction) (0.737041ms)
+  ✔ EVAL_ACTION_BINDS_MANDATE_AND_POLICY → VIOLATION (POLICY half — deletable with the whole suite green before A-068) (0.637875ms)
+  ✔ EVAL_MANDATE_BINDS_POLICY → VIOLATION (0.639ms)
+  ✔ EVAL_TARGET_CODE_IDENTITY → UNRESOLVED (0.590416ms)
+  ✔ EVAL_MANDATE_WINDOW → VIOLATION (upper bound: validUntil in the past) (0.588708ms)
+  ✔ EVAL_MANDATE_WINDOW → VIOLATION (LOWER bound: validAfter in the future — a mandate signed but not yet in force) (0.81675ms)
+  ✔ EVAL_POLICY_WINDOW → VIOLATION (upper bound: validUntil in the past) (1.194041ms)
+  ✔ EVAL_POLICY_WINDOW → VIOLATION (LOWER bound: validAfter in the future — no coverage anywhere before A-064) (0.652458ms)
+  ✔ EVAL_ACTION_DEADLINE → VIOLATION (0.799417ms)
+  ✔ EVAL_VALUE_WITHIN_MANDATE → VIOLATION (1.010125ms)
+  ✔ EVAL_VALUE_WITHIN_POLICY → VIOLATION (0.833583ms)
+  ✔ EVAL_VALUE_WITHIN_VAULT_CAP → VIOLATION (0.900209ms)
+  ✔ EVAL_POLICY_OPERATION → VIOLATION (0.646ms)
+  ✔ EVAL_VALUE_WITHIN_MANDATE → PASS (value EXACTLY at the ceiling) (0.608916ms)
+  ✔ EVAL_VALUE_WITHIN_POLICY → PASS (value EXACTLY at the ceiling) (0.519833ms)
+  ✔ EVAL_VALUE_WITHIN_VAULT_CAP → PASS (value EXACTLY at the vault cap) (2.231125ms)
+  ✔ EVAL_ACTION_DEADLINE → PASS (now EXACTLY at the deadline) (0.844958ms)
+  ✔ EVAL_MANDATE_WINDOW → PASS (LOWER edge: now EXACTLY at validAfter — the first instant of force) (1.013084ms)
+  ✔ EVAL_MANDATE_WINDOW → PASS (UPPER edge: now EXACTLY at validUntil — the last instant of force) (0.753375ms)
+  ✔ EVAL_POLICY_WINDOW → PASS (LOWER edge: now EXACTLY at validAfter) (0.581458ms)
+  ✔ EVAL_POLICY_WINDOW → PASS (UPPER edge: now EXACTLY at validUntil) (0.66675ms)
+  ✔ EVAL_APPROVAL_CEILING → PASS (D-06's FIFTH comparison, named by line and left unpinned by A-068) (0.722208ms)
+  ✔ EVAL_ALLOWANCE_EFFECT_WITHIN_CEILING → PASS (resulting allowance EXACTLY at the ceiling) (0.536541ms)
+  ✔ EVAL_CALLDATA_UNDECODABLE → UNRESOLVED (0.778083ms)
+  ✔ EVAL_SELECTOR_BOUND → VIOLATION (0.61125ms)
+  ✔ EVAL_PURCHASE_RESOURCE → VIOLATION (0.742709ms)
+  ✔ EVAL_PURCHASE_BENEFICIARY → VIOLATION (0.740583ms)
+  ✔ EVAL_PURCHASE_DURATION → VIOLATION (0.516625ms)
+  ✔ EVAL_PURCHASE_RECURRENCE → VIOLATION (0.643542ms)
+  ✔ EVAL_APPROVAL_CEILING → VIOLATION (0.50575ms)
+  ✔ EVAL_APPROVAL_SPENDER → VIOLATION (0.571292ms)
+  ✔ EVAL_SIMULATION_UNAVAILABLE → UNRESOLVED (0.567875ms)
+  ✔ EVAL_SIMULATION_SUCCEEDS → VIOLATION (0.603834ms)
+  ✔ EVAL_CALL_GRAPH_EXPECTED → VIOLATION (0.5235ms)
+  ✔ EVAL_SIM_CALL_TRACE_UNAVAILABLE → UNRESOLVED (0.571042ms)
+  ✔ EVAL_NATIVE_DELTA_UNOBSERVED → UNRESOLVED (0.55025ms)
+  ✔ EVAL_NATIVE_DELTA_MATCHES_VALUE → VIOLATION (0.518625ms)
+  ✔ EVAL_ENTITLEMENT_UNOBSERVED → UNRESOLVED (0.513667ms)
+  ✔ EVAL_ENTITLEMENT_ADVANCED → VIOLATION (0.596916ms)
+  ✔ EVAL_ENTITLEMENT_RECURRENCE → VIOLATION (0.764875ms)
+  ✔ EVAL_SIM_STOP_IMPERSONATION_FAILED → UNRESOLVED (0.495458ms)
+  ✔ EVAL_SIM_UNRECOGNISED → UNRESOLVED (0.513667ms)
+  ✔ EVAL_ALLOWANCE_EFFECT_UNOBSERVED → UNRESOLVED (0.498375ms)
+  ✔ EVAL_ALLOWANCE_EFFECT_WITHIN_CEILING → VIOLATION (0.478167ms)
+✔ every conformance check fires on its own trigger (45.9445ms)
+▶ the receipt STATES the reason it was reached for
+  ✔ EVAL_MANDATE_ACTIVE appears in reasonCodes (2.324792ms)
+  ✔ EVAL_POLICY_ACTIVE appears in reasonCodes (1.231625ms)
+  ✔ EVAL_MANDATE_PRINCIPAL_IS_OWNER appears in reasonCodes (1.130959ms)
+  ✔ EVAL_VAULT_NOT_PAUSED appears in reasonCodes (1.230875ms)
+  ✔ EVAL_CHAIN_BOUND appears in reasonCodes (2.150167ms)
+  ✔ EVAL_VAULT_BOUND appears in reasonCodes (1.225417ms)
+  ✔ EVAL_NONCE_CURRENT appears in reasonCodes (1.128917ms)
+  ✔ EVAL_TARGET_BOUND appears in reasonCodes (1.197083ms)
+  ✔ EVAL_OPERATION_SUPPORTED appears in reasonCodes (1.14425ms)
+  ✔ EVAL_CALLDATA_BINDING appears in reasonCodes (1.302125ms)
+  ✔ EVAL_ACTION_BINDS_MANDATE_AND_POLICY appears in reasonCodes (mandate half of the conjunction) (1.12725ms)
+  ✔ EVAL_ACTION_BINDS_MANDATE_AND_POLICY appears in reasonCodes (POLICY half — deletable with the whole suite green before A-068) (1.845416ms)
+  ✔ EVAL_MANDATE_BINDS_POLICY appears in reasonCodes (1.110667ms)
+  ✔ EVAL_TARGET_CODE_IDENTITY appears in reasonCodes (1.042709ms)
+  ✔ EVAL_MANDATE_WINDOW appears in reasonCodes (upper bound: validUntil in the past) (1.020125ms)
+  ✔ EVAL_MANDATE_WINDOW appears in reasonCodes (LOWER bound: validAfter in the future — a mandate signed but not yet in force) (1.050333ms)
+  ✔ EVAL_POLICY_WINDOW appears in reasonCodes (upper bound: validUntil in the past) (1.194666ms)
+  ✔ EVAL_POLICY_WINDOW appears in reasonCodes (LOWER bound: validAfter in the future — no coverage anywhere before A-064) (1.086292ms)
+  ✔ EVAL_ACTION_DEADLINE appears in reasonCodes (1.047375ms)
+  ✔ EVAL_VALUE_WITHIN_MANDATE appears in reasonCodes (1.026208ms)
+  ✔ EVAL_VALUE_WITHIN_POLICY appears in reasonCodes (1.480417ms)
+  ✔ EVAL_VALUE_WITHIN_VAULT_CAP appears in reasonCodes (1.034542ms)
+  ✔ EVAL_POLICY_OPERATION appears in reasonCodes (1.022041ms)
+  ✔ EVAL_CALLDATA_UNDECODABLE appears in reasonCodes (1.201ms)
+  ✔ EVAL_SELECTOR_BOUND appears in reasonCodes (1.017666ms)
+  ✔ EVAL_PURCHASE_RESOURCE appears in reasonCodes (1.339291ms)
+  ✔ EVAL_PURCHASE_BENEFICIARY appears in reasonCodes (1.489459ms)
+  ✔ EVAL_PURCHASE_DURATION appears in reasonCodes (1.021208ms)
+  ✔ EVAL_PURCHASE_RECURRENCE appears in reasonCodes (1.046125ms)
+  ✔ EVAL_APPROVAL_CEILING appears in reasonCodes (0.982292ms)
+  ✔ EVAL_APPROVAL_SPENDER appears in reasonCodes (1.052ms)
+  ✔ EVAL_SIMULATION_UNAVAILABLE appears in reasonCodes (0.978541ms)
+  ✔ EVAL_SIMULATION_SUCCEEDS appears in reasonCodes (1.040958ms)
+  ✔ EVAL_CALL_GRAPH_EXPECTED appears in reasonCodes (1.077084ms)
+  ✔ EVAL_SIM_CALL_TRACE_UNAVAILABLE appears in reasonCodes (1.033333ms)
+  ✔ EVAL_NATIVE_DELTA_UNOBSERVED appears in reasonCodes (1.092834ms)
+  ✔ EVAL_NATIVE_DELTA_MATCHES_VALUE appears in reasonCodes (1.022792ms)
+  ✔ EVAL_ENTITLEMENT_UNOBSERVED appears in reasonCodes (0.980042ms)
+  ✔ EVAL_ENTITLEMENT_ADVANCED appears in reasonCodes (1.1735ms)
+  ✔ EVAL_ENTITLEMENT_RECURRENCE appears in reasonCodes (1.043917ms)
+  ✔ EVAL_SIM_STOP_IMPERSONATION_FAILED appears in reasonCodes (2.044417ms)
+  ✔ EVAL_SIM_UNRECOGNISED appears in reasonCodes (1.143375ms)
+  ✔ EVAL_ALLOWANCE_EFFECT_UNOBSERVED appears in reasonCodes (0.96675ms)
+  ✔ EVAL_ALLOWANCE_EFFECT_WITHIN_CEILING appears in reasonCodes (1.279042ms)
+  ✔ a conforming baseline states no reasons at all (1.075042ms)
+✔ the receipt STATES the reason it was reached for (55.467625ms)
+▶ an unavailable call trace does not record a PASS (R2-F5)
+  ✔ records UNRESOLVED, not PASS, when the trace is unavailable (0.610916ms)
+  ✔ still PASSes when the trace IS available and the graph is genuinely empty (0.54175ms)
+  ✔ still VIOLATES on a real unexpected internal call (0.519375ms)
+✔ an unavailable call trace does not record a PASS (R2-F5) (1.78675ms)
+▶ binding comparisons are case- and field-pinned (D-10)
+  ✔ matches a mixed-case TARGET against the mandate (mutation: drop normalisation) (0.619542ms)
+  ✔ matches a mixed-case SELECTOR against the mandate (mutation: drop normalisation) (0.750458ms)
+  ✔ matches mixed case: principal vs vault owner (0.675416ms)
+  ✔ matches mixed case: action vault vs mandate vault (0.523209ms)
+  ✔ matches mixed case: action target vs mandate target (0.507667ms)
+  ✔ matches mixed case: mandate code hash vs observed code hash (0.498ms)
+  ✔ matches mixed case: decoded selector vs mandate selector (0.550208ms)
+  ✔ matches mixed case: decoded resource vs mandate resource (0.5035ms)
+  ✔ matches mixed case: decoded beneficiary vs mandate beneficiary (0.488375ms)
+  ✔ matches a mixed-case approval spender against the mandate beneficiary (0.557959ms)
+  ✔ matches a mixed-case native-delta address against the action vault (0.753667ms)
+  ✔ compares the PURCHASE beneficiary to the beneficiary, not the principal (R3-F8) (1.144291ms)
+  ✔ compares the approval spender to the BENEFICIARY, not the principal (D-10(c)) (1.81425ms)
+✔ binding comparisons are case- and field-pinned (D-10) (9.633542ms)
+▶ the evidence bundle records the INTERSECTED ceiling (D-09(c))
+  ✔ takes the POLICY ceiling when the policy is the tighter of the two (F006's shape) (1.390459ms)
+  ✔ takes the MANDATE ceiling when the mandate is the tighter of the two (1.11725ms)
+  ✔ reports the shared value when the two agree, which is the 49-of-50 corpus case (1.118584ms)
+✔ the evidence bundle records the INTERSECTED ceiling (D-09(c)) (3.724459ms)
+▶ the check table is exhaustive
+  ✔ has a case for every declared EVAL_ code (0.184958ms)
+  ✔ declares every code the engine can actually emit (26.5815ms)
+✔ the check table is exhaustive (26.848833ms)
+▶ A-044 — signer hardening
+  ▶ the signer's reason-code namespace is the signer's
+    ✔ rejects a caller-supplied "SIGNER_VAULT_PAUSED" at the RPC boundary (3.577666ms)
+    ✔ rejects a caller-supplied "SIGNER_" at the RPC boundary (1.166125ms)
+    ✔ rejects a caller-supplied "SIGNER_ANYTHING_AT_ALL" at the RPC boundary (0.882041ms)
+    ✔ still accepts an ordinary evaluator code (1.725625ms)
+  ✔ the signer's reason-code namespace is the signer's (9.020125ms)
+  ▶ evidenceCanonical must be well-formed UTF-16
+    ✔ rejects a lone high surrogate (1.0035ms)
+    ✔ rejects a lone low surrogate (0.947666ms)
+    ✔ accepts a valid astral pair, which must not be collateral (1.090625ms)
+    ✔ the two surrogates that used to collide are now both refused (1.71775ms)
+  ✔ evidenceCanonical must be well-formed UTF-16 (5.124375ms)
+  ▶ integers are bounded to uint256 at the boundary
+    ✔ rejects an out-of-range action.valueWei as a BAD_REQUEST (0.745041ms)
+    ✔ rejects an out-of-range action.actionNonce as a BAD_REQUEST (0.707042ms)
+    ✔ rejects an out-of-range action.chainId as a BAD_REQUEST (0.553958ms)
+    ✔ rejects an out-of-range mandate.maxNativeValueWei as a BAD_REQUEST (0.495375ms)
+    ✔ rejects an out-of-range policy.maxAllowanceIncreaseBaseUnits as a BAD_REQUEST (0.451583ms)
+    ✔ rejects an out-of-range evaluation.simulationBlockNumber as a BAD_REQUEST (0.464292ms)
+  ✔ integers are bounded to uint256 at the boundary (3.707417ms)
+  ▶ a nameable refusal leaves a signed record (D-012)
+    ✔ SIGNER_DATAHASH_MISMATCH stays unattributable — it names no action (1.269625ms)
+    ✔ a wrong vault refusal IS recorded (0.767791ms)
+    ✔ a wrong chain refusal IS recorded (0.720042ms)
+  ✔ a nameable refusal leaves a signed record (D-012) (3.069708ms)
+  ▶ A-016 repairs that had no tests
+    ✔ rejects odd-length hex — the selector/dataHash split repair (0.985583ms)
+    ✔ rejects every Object.prototype member as a verdict (A-061) (5.356041ms)
+    ✔ still accepts the three real verdicts (1.884959ms)
+    ✔ rejects a malformed reason code at the RPC boundary, not just at signing (0.697083ms)
+  ✔ A-016 repairs that had no tests (9.239834ms)
+  ✔ the fixture attestor still signs a conforming ALLOW (1.556459ms)
+✔ A-044 — signer hardening (32.9805ms)
+▶ A-044 — server backpressure
+  ✔ answers every line of one oversized write — the drain loop must not deadlock (28.529375ms)
+  ✔ refuses connections past the cap rather than accepting unboundedly (5.646708ms)
+✔ A-044 — server backpressure (34.427042ms)
+▶ A-044 — the in-flight cap actually bounds concurrency
+  ✔ never exceeds MAX_IN_FLIGHT from one oversized write (74.649625ms)
+✔ A-044 — the in-flight cap actually bounds concurrency (74.829584ms)
+▶ object key ordering
+  ✔ sorts keys, so insertion order cannot change the hash (1.836666ms)
+  ✔ sorts nested objects too (0.175708ms)
+  ✔ sorts by code unit, not by locale (0.099625ms)
+  ✔ preserves array order, because order is meaning (0.079209ms)
+✔ object key ordering (3.759ms)
+▶ numbers are refused, not serialised
+  ✔ throws on a JSON number anywhere in the tree (0.391417ms)
+  ✔ throws on a bigint too, rather than coercing it (0.148958ms)
+  ✔ accepts the decimal-string form the schema actually uses (0.08025ms)
+✔ numbers are refused, not serialised (0.823916ms)
+▶ string escaping (RFC 8785 §3.2.2.2)
+  ✔ uses the two mandatory escapes and the control shorthands (0.133ms)
+  ✔ uses \u00XX for remaining C0 controls (0.081375ms)
+  ✔ does NOT escape forward slash or non-ASCII (0.112042ms)
+  ✔ escapes unpaired surrogates, as RFC 8785 requires (0.158833ms)
+  ✔ agrees with JSON.stringify across every code point below U+0100 (0.200583ms)
+✔ string escaping (RFC 8785 §3.2.2.2) (0.875125ms)
+▶ keys are restricted to printable ASCII
+  ✔ rejects a non-ASCII key (0.151416ms)
+  ✔ still allows any string as a VALUE (0.054834ms)
+✔ keys are restricted to printable ASCII (0.258667ms)
+▶ primitives and shape
+  ✔ emits no insignificant whitespace (0.114209ms)
+  ✔ distinguishes null from absent and from empty (0.061791ms)
+  ✔ emits booleans unquoted (0.039667ms)
+  ✔ is deterministic across repeated calls (0.050667ms)
+✔ primitives and shape (0.344583ms)
+▶ keystore
+  ✔ signs a receipt that recovers to its own address (10.916875ms)
+  ✔ refuses to sign a receipt that names a different signer (1.218292ms)
+  ✔ binds the domain at construction, so one keystore cannot sign for another vault (5.379959ms)
+  ✔ exposes no way to sign arbitrary bytes (1.642333ms)
+  ✔ never reveals the private key, including through describe() or errors (0.677416ms)
+  ✔ generates an ephemeral key when none is supplied (2.25325ms)
+  ✔ reports the key source honestly (1.676333ms)
+✔ keystore (25.26575ms)
+▶ Case 1 from a real agent proposal
+  ✔ the recorded control proposal is allowed, attested, and executes on the vault (76.621791ms)
+✔ Case 1 from a real agent proposal (781.345334ms)
+▶ Case 2 from the real injected proposal
+  ✔ blocks the injected approval and writes no executable receipt (46.314208ms)
+  ✔ never reads the agent's account of what the call means (26.396083ms)
+✔ Case 2 from the real injected proposal (73.16325ms)
+▶ every declared refusal fires on its own trigger
+  ✔ PROPOSAL_MALFORMED_TARGET — 39 hex digits, not 40 (1.027334ms)
+  ✔ PROPOSAL_MALFORMED_VALUE — a leading zero is not canonical decimal (0.194708ms)
+  ✔ PROPOSAL_MALFORMED_SIGNATURE — a space changes the selector, so it is refused rather than trimmed (0.172416ms)
+  ✔ PROPOSAL_UNSUPPORTED_ARG_TYPE — dynamic types have a second encoding scheme this module does not implement (0.206083ms)
+  ✔ PROPOSAL_ARITY_MISMATCH — four declared types, three arguments (0.191875ms)
+  ✔ PROPOSAL_MALFORMED_ARG — 'True' is not the canonical bool spelling (0.198125ms)
+  ✔ PROPOSAL_ARG_OUT_OF_RANGE — 2^64 does not fit uint64 (0.124333ms)
+  ✔ refuses nothing that is well-formed (0.310291ms)
+  ✔ has a trigger for every code in PROPOSAL_FAILURES (1.3045ms)
+  ✔ gives every code a non-empty message, so a refusal is never blank (0.253292ms)
+✔ every declared refusal fires on its own trigger (5.573083ms)
+▶ each refusal's other paths
+  ✔ PROPOSAL_MALFORMED_SIGNATURE — no parentheses at all — the regex path, not the whitespace path (0.414334ms)
+  ✔ PROPOSAL_MALFORMED_SIGNATURE — a name that is not an identifier (0.091958ms)
+  ✔ PROPOSAL_UNSUPPORTED_ARG_TYPE — uint7 is not a multiple of 8 — the width path, not the unknown-type path (0.082958ms)
+  ✔ PROPOSAL_UNSUPPORTED_ARG_TYPE — uint512 is over the maximum width (0.102167ms)
+  ✔ PROPOSAL_UNSUPPORTED_ARG_TYPE — uint08 is a non-canonical spelling of a valid width (0.107792ms)
+  ✔ PROPOSAL_UNSUPPORTED_ARG_TYPE — bytes0 is not a real type (0.100875ms)
+  ✔ PROPOSAL_UNSUPPORTED_ARG_TYPE — bytes33 is over the maximum width (0.065709ms)
+  ✔ PROPOSAL_UNSUPPORTED_ARG_TYPE — bare `uint` is refused rather than read as uint256 (0.059625ms)
+  ✔ PROPOSAL_MALFORMED_ARG — a bytes32 argument of the wrong length (0.06575ms)
+  ✔ PROPOSAL_MALFORMED_ARG — a uint argument that is not decimal at all (0.061666ms)
+  ✔ PROPOSAL_MALFORMED_ARG — a negative duration (0.065125ms)
+  ✔ accepts every canonical width it claims to support (0.414667ms)
+✔ each refusal's other paths (1.934917ms)
+▶ loadSpikeFixture says why it cannot load
+  ✔ names the fixtures it does have when nothing matches (0.525917ms)
+✔ loadSpikeFixture says why it cannot load (0.597ms)
+▶ transcription is faithful to the agent's claim
+  ✔ round-trips a purchase through the real decoder (0.57275ms)
+  ✔ round-trips an approval, including the unlimited sentinel (0.182542ms)
+  ✔ computes the pinned selectors from the transcribed signatures (0.198125ms)
+  ✔ is a function of the argument VALUES, not their spelling (0.2275ms)
+  ✔ refuses a call it cannot build rather than emitting partial calldata (0.1405ms)
+✔ transcription is faithful to the agent's claim (1.463791ms)
+▶ the transcriber renders no verdict
+  ✔ builds a call whose selector Sentinel does not support (0.298667ms)
+  ✔ builds a call aimed at a target Sentinel does not know (0.191625ms)
+  ✔ emits the exact declared word count for a non-colliding signature (0.177791ms)
+  ✔ CAN emit calldata the decoder calls malformed, via a selector collision (0.309417ms)
+✔ the transcriber renders no verdict (1.109959ms)
+▶ readProposal refuses what is not the tool schema
+  ✔ accepts the recorded shape (0.153584ms)
+  ✔ refuses a numeric value_wei rather than stringifying it (0.05325ms)
+  ✔ refuses a missing field (0.051375ms)
+  ✔ refuses non-string arguments (0.055958ms)
+  ✔ refuses a non-object (0.047834ms)
+✔ readProposal refuses what is not the tool schema (0.474833ms)
+▶ binding takes everything the agent does not control from the chain
+  ✔ binds nonce, mandate, and policy from vault state (0.383166ms)
+  ✔ computes dataHash from the transcribed bytes (0.277625ms)
+  ✔ carries the agent's target and value, and nothing else it claimed (0.199208ms)
+✔ binding takes everything the agent does not control from the chain (0.966166ms)
+▶ the recorded agent proposals transcribe
+  ✔ is the A-009 recording, with its provenance intact (0.56275ms)
+  ✔ control arm yields the Case 1 purchase (0.44825ms)
+  ✔ treatment arm yields the injected max-uint256 approval to the attacker (0.209041ms)
+  ✔ the two arms propose materially different calls (0.277167ms)
+✔ the recorded agent proposals transcribe (1.713958ms)
+▶ proposalsFrom surfaces malformed tool calls rather than dropping them
+  ✔ keeps a null in place for the malformed call, in order (0.114125ms)
+  ✔ ignores tool calls that are not proposals (0.058875ms)
+✔ proposalsFrom surfaces malformed tool calls rather than dropping them (0.262375ms)
+▶ encodeCall directly
+  ✔ left-aligns bytesN and right-aligns uintN (0.191667ms)
+  ✔ encodes a zero-argument call as the bare selector (0.095125ms)
+✔ encodeCall directly (0.3585ms)
+▶ the fully-conforming baseline
+  ✔ produces a signed ALLOW with no findings at all (5.771042ms)
+✔ the fully-conforming baseline (6.914791ms)
+▶ every reason code fires on its own trigger
+  ✔ SIGNER_DATAHASH_MISMATCH (FATAL) (1.501875ms)
+  ✔ SIGNER_WRONG_VAULT (FATAL) (1.132833ms)
+  ✔ SIGNER_WRONG_CHAIN (FATAL) (0.6845ms)
+  ✔ SIGNER_VAULT_UNREACHABLE (FATAL) (0.837042ms)
+  ✔ SIGNER_CHAIN_UNSTABLE (FATAL) (0.763375ms)
+  ✔ SIGNER_DOMAIN_SEPARATOR_MISMATCH (FATAL) (0.652458ms)
+  ✔ SIGNER_CALLDATA_TOO_SHORT (FATAL) (0.631459ms)
+  ✔ SIGNER_EVIDENCE_DECODING_MISMATCH (FATAL) (0.803458ms)
+  ✔ SIGNER_EVIDENCE_DECODING_ABSENT (FATAL) (0.922542ms)
+  ✔ SIGNER_NOT_ACTIVE_SIGNER (EXECUTABILITY) (0.78125ms)
+  ✔ SIGNER_NONCE_MISMATCH (EXECUTABILITY) (0.7745ms)
+  ✔ SIGNER_VAULT_PAUSED (EXECUTABILITY) (0.726417ms)
+  ✔ SIGNER_ACTION_EXPIRED (EXECUTABILITY) (1.597083ms)
+  ✔ SIGNER_SIMULATION_BLOCK_MISMATCH (CONFORMANCE) (0.927833ms)
+  ✔ SIGNER_ANCHOR_NOT_OBSERVED (CONFORMANCE) (0.725583ms)
+  ✔ SIGNER_MANDATE_NOT_ACTIVE (CONFORMANCE) (0.682375ms)
+  ✔ SIGNER_POLICY_NOT_ACTIVE (CONFORMANCE) (0.724875ms)
+  ✔ SIGNER_ACTION_BINDING_STALE (CONFORMANCE) (0.836334ms)
+  ✔ SIGNER_MANDATE_TARGET_MISMATCH (CONFORMANCE) (0.785166ms)
+  ✔ SIGNER_MANDATE_SELECTOR_MISMATCH (CONFORMANCE) (0.725375ms)
+  ✔ SIGNER_MANDATE_VALUE_EXCEEDED (CONFORMANCE) (0.687083ms)
+  ✔ SIGNER_MANDATE_WINDOW (CONFORMANCE) (0.869958ms)
+  ✔ SIGNER_MANDATE_PRINCIPAL_MISMATCH (CONFORMANCE) (0.795666ms)
+  ✔ SIGNER_MANDATE_POLICY_LINK_MISMATCH (CONFORMANCE) (0.592041ms)
+  ✔ SIGNER_MANDATE_SCOPE_MISMATCH (CONFORMANCE) (0.619625ms)
+  ✔ SIGNER_TARGET_CODEHASH_MISMATCH (CONFORMANCE) (0.568834ms)
+  ✔ SIGNER_POLICY_SCOPE_MISMATCH (CONFORMANCE) (0.575584ms)
+  ✔ SIGNER_POLICY_OPERATION_MISMATCH (CONFORMANCE) (0.641458ms)
+  ✔ SIGNER_POLICY_VALUE_EXCEEDED (CONFORMANCE) (0.543291ms)
+  ✔ SIGNER_POLICY_WINDOW (CONFORMANCE) (0.650166ms)
+  ✔ SIGNER_UNSUPPORTED_OPERATION (CONFORMANCE) (0.599083ms)
+  ✔ SIGNER_VAULT_VALUE_CAP_EXCEEDED (CONFORMANCE) (3.259375ms)
+  ✔ SIGNER_VAULT_TARGET_NOT_ALLOWED (CONFORMANCE) (0.754958ms)
+  ✔ SIGNER_VAULT_SELECTOR_NOT_ALLOWED (CONFORMANCE) (0.654ms)
+✔ every reason code fires on its own trigger (30.216416ms)
+▶ severity tiers are honoured per verdict
+  ✔ FATAL codes refuse BLOCK and REVIEW as well as ALLOW (7.091917ms)
+  ✔ EXECUTABILITY codes refuse REVIEW but permit a signed BLOCK (4.027625ms)
+  ✔ CONFORMANCE codes permit a signed REVIEW — this is what keeps Case 4 reachable (10.820833ms)
+  ✔ names both Case 4 anchored-state triggers in the same tier (0.073792ms)
+  ✔ compares the anchor's HASH, not only its height (D-055(c)) (0.57925ms)
+  ✔ SIGNER_CHAIN_UNSTABLE is not filed as SIGNER_VAULT_UNREACHABLE (D-055(c)) (0.838083ms)
+✔ severity tiers are honoured per verdict (23.6035ms)
+▶ reason codes reach the receipt
+  ✔ commits the signer's findings and the evaluator's under one hash (0.77175ms)
+  ✔ rejects a reason code that could forge or hide a finding (1.388666ms)
+✔ reason codes reach the receipt (2.228792ms)
+▶ the reason-code table is exhaustive
+  ✔ has a case for every declared code (0.165875ms)
+  ✔ covers SIGNER_NONCE_ALREADY_ATTESTED, which needs two requests (1.085125ms)
+✔ the reason-code table is exhaustive (1.321417ms)
+▶ the attestation guard is scoped to the authorisation basis
+  ✔ releases the nonce when the owner activates a new mandate (§4.2 Case 4) (1.202875ms)
+  ✔ still refuses a different action under the SAME mandate (1.11525ms)
+  ✔ a MANDATE cycle does not free a nonce the first action still holds (2.371375ms)
+  ✔ a POLICY cycle behaves the same as a mandate cycle (1.627542ms)
+  ✔ an idempotent re-sign of the SAME action still succeeds after a cycle (1.414209ms)
+  ✔ an EXPIRED superseded reservation no longer holds the nonce after a cycle (1.540709ms)
+  ✔ a REVIEW reservation survives a cycle, not just an ALLOW one (1.550459ms)
+  ✔ never shortens a live reservation via a smaller caller-supplied TTL (1.695834ms)
+✔ the attestation guard is scoped to the authorisation basis (12.711958ms)
+▶ fail-closed on dependency failure (§3.3(8))
+  ✔ refuses every verdict when the vault cannot be read (1.259083ms)
+  ✔ never reaches the signing key on a refusal (0.580583ms)
+  ✔ records the block it observed, and refuses a height the chain lacks (1.024917ms)
+✔ fail-closed on dependency failure (§3.3(8)) (2.934042ms)
+▶ D-012 — a refusal leaves a recorded artifact
+  ✔ produces a signed refusal record, so 'refused' differs from 'never asked' (4.590125ms)
+  ✔ signs the refusal with the signer's own key, verifiably (14.448708ms)
+  ✔ is NOT a receipt, and cannot be confused with one (5.36975ms)
+  ✔ binds the digest to WHICH action was refused (0.992667ms)
+  ✔ omits the artifact only when the request names no attributable action (1.582291ms)
+✔ D-012 — a refusal leaves a recorded artifact (28.835042ms)
+▶ D-014 — the signer binds its own decoding of the calldata
+  ✔ accepts a bundle whose decoded parameters match the bytes (1.373084ms)
+  ✔ refuses a bundle that misstates a decoded parameter (1.1965ms)
+  ✔ refuses every verdict on a mismatch, including BLOCK (4.276ms)
+  ✔ does NOT check the parameters against the mandate — that stays the evaluator's job (0.987708ms)
+  ✔ refuses when the bundle carries no decoding claim at all (0.898792ms)
+✔ D-014 — the signer binds its own decoding of the calldata (9.241333ms)
+▶ D-013 — the nonce guard's CLAIM is narrowed, not its mechanism
+  ✔ still refuses a second different ALLOW at one nonce (1.537292ms)
+  ✔ documents itself as per-process rather than durable (1.564416ms)
+✔ D-013 — the nonce guard's CLAIM is narrowed, not its mechanism (3.218459ms)
+▶ D-015 — the proposal no longer contradicts failureMode
+  ✔ §5.2 states the failureMode-governed rule (1.144958ms)
+✔ D-015 — the proposal no longer contradicts failureMode (1.307083ms)
+▶ D-014 against REAL evaluator bundles (the gap the D-017 review found)
+  ✔ does not refuse a TRUTHFUL bundle that declined to decode for a target reason (14.545958ms)
+  ✔ still catches a bundle that lies about parameters (1.399334ms)
+  ✔ still catches a bundle claiming a decode the bytes cannot support (1.135167ms)
+  ✔ still catches a decline for a reason INSIDE the signer's remit (1.949042ms)
+  ✔ decodes identically regardless of calldata hex spelling (1.629708ms)
+✔ D-014 against REAL evaluator bundles (the gap the D-017 review found) (21.071458ms)
+▶ D-014: the target-binding escape hatch cannot switch off the attestation (A-028 F1)
+  ✔ refuses an ALLOW whose bundle declines to decode (DECODE_UNSUPPORTED_TARGET) (1.004833ms)
+  ✔ still issues a BLOCK receipt for a truthful DECODE_UNSUPPORTED_TARGET bundle (0.705042ms)
+  ✔ still issues a REVIEW receipt for a truthful DECODE_UNSUPPORTED_TARGET bundle (0.649375ms)
+  ✔ refuses an ALLOW whose bundle declines to decode (DECODE_SELECTOR_TARGET_MISMATCH) (0.575625ms)
+  ✔ still issues a BLOCK receipt for a truthful DECODE_SELECTOR_TARGET_MISMATCH bundle (0.505875ms)
+  ✔ still issues a REVIEW receipt for a truthful DECODE_SELECTOR_TARGET_MISMATCH bundle (0.489834ms)
+  ✔ still refuses a non-target decline the signer CAN adjudicate (0.546667ms)
+  ✔ refuses an ALLOW when BOTH sides fail to decode (DECODE_LENGTH_MISMATCH) (0.6025ms)
+  ✔ refuses an ALLOW when BOTH sides fail to decode (DECODE_UNSUPPORTED_SELECTOR) (0.547708ms)
+  ✔ still issues a BLOCK receipt when both sides fail to decode (0.612584ms)
+  ✔ still issues a REVIEW receipt when both sides fail to decode (0.63525ms)
+✔ D-014: the target-binding escape hatch cannot switch off the attestation (A-028 F1) (7.197125ms)
+▶ Case 1 — exact mandate, allow
+  ✔ signs a receipt the real vault accepts, and the purchase actually lands (738.209958ms)
+  ✔ issues a receipt whose actionHash the Solidity library recomputes identically (627.329584ms)
+✔ Case 1 — exact mandate, allow (1468.369833ms)
+▶ receipt binding
+  ✔ cannot be replayed once the nonce is consumed (606.327833ms)
+  ✔ is rejected when the calldata is swapped after signing (565.2685ms)
+  ✔ refuses to attest at all when the payload contradicts its own calldata (560.0245ms)
+✔ receipt binding (1732.219541ms)
+▶ independent checks
+  ✔ refuses ALLOW when the action exceeds the mandate's value ceiling (551.129291ms)
+  ✔ refuses ALLOW when the mandate is not the one the vault activated (579.950417ms)
+  ✔ refuses ALLOW when the vault does not recognise this signer (562.607334ms)
+  ✔ refuses ALLOW while the vault is paused (544.023125ms)
+  ✔ refuses ALLOW when the recorded simulation block is not the chain's (561.259292ms)
+  ✔ refuses ALLOW anchored to a real but SUPERSEDED block (E3) (564.90825ms)
+  ✔ still signs a REVIEW on a superseded anchor, keeping Case 4 reachable (E3) (532.286709ms)
+  ✔ refuses ALLOW on a stale nonce but still signs a BLOCK receipt (543.776541ms)
+✔ independent checks (4441.235333ms)
+▶ Case 4 — evidence uncertainty
+  ✔ refuses ALLOW on a code-hash mismatch, signs REVIEW, and the override path executes (563.948917ms)
+✔ Case 4 — evidence uncertainty (564.50425ms)
+▶ Case 3 — mechanically valid, wrong purpose
+  ✔ IS SIGNED by the signer: this layer cannot see it, and that is the gap (573.230875ms)
+✔ Case 3 — mechanically valid, wrong purpose (573.650792ms)
+▶ one live executable attestation per nonce
+  ✔ refuses a second, different ALLOW at the same nonce but re-signs the same action (625.76375ms)
+  ✔ holds under two CONCURRENT requests for different actions at one nonce (548.605083ms)
+  ✔ does not let a BLOCK receipt hold the nonce (565.451541ms)
+✔ one live executable attestation per nonce (1740.185ms)
+▶ RPC surface
+  ✔ exposes no generic signing method (528.777375ms)
+  ✔ reports status without revealing anything but the address (622.738417ms)
+  ✔ rejects a malformed request rather than partially applying it (625.701917ms)
+✔ RPC surface (1777.661083ms)
+--- decoy markers after freeze ---

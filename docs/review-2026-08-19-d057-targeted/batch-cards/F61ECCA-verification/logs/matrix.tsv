@@ -1,0 +1,18 @@
+id	kind	status	desc
+C4-x	CONTROL	PASS	mutant café-only: hole live (clean)
+C4-a	CONTROL	PASS	mutant ASCII-only: still BLOCKED (scanner not inert)
+C4	REQUIRED	PASS	freeze café-only: BLOCKED
+C4b	REQUIRED	PASS	freeze ASCII-only: BLOCKED
+R1-xR	CONTROL	PASS	mutant staged rename: hole live (clean)
+R1-xT	CONTROL	PASS	mutant staged typechange: hole live (clean)
+R1-R	REQUIRED	PASS	freeze staged rename: BLOCKED, destination named
+R1-T	REQUIRED	PASS	freeze staged typechange: BLOCKED, destination named
+C6a-x	CONTROL	PASS	mutant from decoy cwd: read decoy ledger (MISMATCH)
+C6a	REQUIRED	PASS	freeze from decoy cwd: still matches Sentinel ledger
+C6b-x	CONTROL	PASS	mutant from decoy cwd: printed distinctive decoy floor
+C6b	REQUIRED	PASS	freeze from decoy cwd did not print decoy floor
+C6c-x	CONTROL	PASS	mutant wrote core.hooksPath into the foreign repo (.githooks)
+C6c	REQUIRED	PASS	freeze refused; foreign repo unchanged
+C6d-x	CONTROL	PASS	mutant test.sh from decoy cwd fired decoy shim(s)
+C6d-shim	REQUIRED	PASS	freeze test.sh from decoy cwd fired no decoy shim
+C6d-start	REQUIRED	PASS	freeze from decoy cwd: Sentinel stages actually started

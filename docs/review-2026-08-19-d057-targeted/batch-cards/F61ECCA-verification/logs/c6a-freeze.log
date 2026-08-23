@@ -1,0 +1,10 @@
+findings ledger (derived from docs/review-2026-08-18-d055e/FINDINGS-LEDGER.tsv, one row per finding):
+  finding IDs                  : 23   (22 confirmed, 1 refuted)
+  confirmed CRITICAL / HIGH    : 1 / 0
+  severity downgrades          : 3  (countersigned by John, D-057(2))
+  REPAIR-PATTERN cluster       : 4 findings = 1 disposition item, 4 regression obligations
+  disposition items            : 20 total (19 confirmed)
+  other confirmed findings     : 17   (excl. Critical, 3 downgrades, R4-F1)
+  other disposition items      : 14   (same set, cluster grouped)
+  dispositions                 : 19 repair · 3 accepted-limit · 1 no-action
+  all totals match D-057(1) as ruled

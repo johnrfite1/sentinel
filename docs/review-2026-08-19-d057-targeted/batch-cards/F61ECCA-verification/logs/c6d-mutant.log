@@ -1,0 +1,56 @@
+
+[1m== gate immutability (D-056(b)) ==[0m
+
+[1m== secret guard (A-007) ==[0m
+
+[1m== V-1 index-path ordering ==[0m
+
+[1m== rename gate (D-016) ==[0m
+
+[1m== labelling-prompt freeze (D-011a) ==[0m
+
+[1m== labelling artifacts pinned (A-064) ==[0m
+
+[1m== published EIP-712 type strings (D-023) ==[0m
+
+[1m== §5.7.1 check coverage (D-031) ==[0m
+
+[1m== corpus class coverage (A-036) ==[0m
+
+[1m== vendor honesty (§7.5 Gate 5, D-008) ==[0m
+
+[1m== suite floors (R4-F4, D-058) ==[0m
+
+[1m== solidity build + tests (profile: default) ==[0m
+  FORGE PRODUCED NO JSON REPORT — treating as failure, not as clean.
+  /dev/fd/9: line 322: cd: contracts: No such file or directory
+  FOUNDRY SUITE PRODUCED NO REPORT — treating as failure, not as clean.
+
+[1m== typescript typecheck + isolated signer suite (§9 step 3) ==[0m
+ts/node_modules missing. Run: npm --prefix ts ci
+
+[1m== §7.3 ablation report is the output of its generator (A-062) ==[0m
+ablation report: GENERATOR FAILED TO RUN — treated as a failure, because a check
+  that cannot execute must never read as a check that passed.
+
+[1m== D-010 receipt verifier (independent Python; §14.2, D-010) ==[0m
+  SUITE NOT CLEAN — errors: 1
+    A test that is skipped, expected to fail, or unexpectedly succeeds RAN
+    without asserting what it names. Argue for it here, in the open.
+
+[31mGATE DID NOT REACH COMPLETION[0m
+  The body exited 1 without emitting its completion token.
+  EXIT STATUS 0 IS NOT SUCCESS: a body damaged mid-run can still exit 0, and
+  that is precisely what this check exists to refuse. DISCARD THIS RUN.
+--- decoy markers after mutant ---
+check-gate-immutability.sh
+check-secrets.sh
+check-v1-index-ordering.sh
+check-rename-gate.sh
+check-label-prompt.sh
+check-label-integrity.sh
+check-type-strings.sh
+check-eval-codes.sh
+check-class-coverage.sh
+check-vendor-honesty.sh
+check-suite-floors.sh

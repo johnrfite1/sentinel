@@ -1,0 +1,7 @@
+  FOUNDRY_MIN_TESTS          99999
+  TS_MIN_TESTS               1
+  VERIFIER_MIN_TESTS         1
+  VERIFIER_MIN_SAMPLES       1
+  VERIFIER_MIN_TAMPER        1
+  VERIFIER_MIN_TAMPER_MODES  1
+suite floors: read from scripts/test.sh, which is the only copy.

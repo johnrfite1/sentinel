@@ -1,13 +1,17 @@
 # Gate 5 / `V3-N2` — prepared admissibility material
 
-This file is prepared material awaiting John's ruling. Nothing in it is a finding of record.
+**Ruled 2026-08-23 at D-067.** This file remains prepared material; the ruling lives in
+`docs/decisions.md`. It does not recertify Gate 5.
+
+This file is prepared material. Nothing in it is a finding of record.
 It writes into no other file. It does not revoke, reaffirm, or recertify the Gate 5
 certification — D-059(1)'s own three verbs. It does not rule D-059(1)'s bar met. It does not
 write a recommended verdict.
 
-D-059(1)'s inadmissibility is the standing state of record. What would change it is John's
-ruling that the bar's two conjuncts now hold, or a different ruling he makes. Laying out the
-basis both ways is the deliverable; concluding is his.
+**Standing state of record after D-067:** the Gate 5 certification is untouched (none of
+D-059(1)'s three verbs). The supplementary §7.2 condition's evidence bar is MET; `R2` and
+`V-6` are named completeness limits on D-008(2)/(4) only. The argument below is the prepared
+material that session used; it is not a recertification.
 
 ---
 

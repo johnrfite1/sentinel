@@ -3,20 +3,20 @@
 Rewritten at the end of each working session. **This file, not the conversation, is the
 memory.** If it disagrees with anything an agent remembers, this file wins.
 
-Last updated: **2026-08-22 (post-A-098). Phase 1 of the V-1 / 1e / 1f stretch is frozen.
-D-058 confirmed batches HOLD inside their declared boundaries. Batch A1 remains closed
-through the D-062 exception, not on the merits. D-055 is not assessed. The 2026-08-22
-lift of A1's "no further A1 test" clause is spent.** Branch `step-3/isolated-signer`.
+Last updated: **2026-08-23 (post-A-099 Phase A freeze). John's 2026-08-23 session is
+recorded (D-067, D-068). D-055 is not ruled. Gate 5 is not recertified. Phase B
+(signed-prefix annotation) is not applied. The 2026-08-23 lift of A1's "no further A1
+test" clause is spent at the F61ECCA card freeze.** Branch `step-3/isolated-signer`.
 
 > ## READ THIS BEFORE ANYTHING ELSE
 >
-> **YOUR JOB IS NOTHING WITHOUT AN INSTRUCTION FROM JOHN.** A1 is closed: **no A1 reopening
-> and no further A1 production change is authorised.** The 2026-08-22 lift of the "no further
-> A1 test" clause was **spent** at the Phase 1 freeze that added the V-1 behavioural guard; it
-> is not standing permission. The D-058 confirmed
-> batches (A-EXTRACT, B-EVENTS, C-SNAPSHOT, A-FLOORS, D-CLAIMS) independently HOLD. **Do not
-> assess D-055. Do not sign or reopen a gate. Do not publish, rename, or push.** Report the
-> state below and wait.
+> **YOUR JOB IS NOTHING WITHOUT AN INSTRUCTION FROM JOHN.** Phase A of the 2026-08-23
+> stretch is frozen and waiting on him: class-credit number, R5 design, V-6 repair shape,
+> and the Phase B annotation `D-` identifier. **Do not start Phase B.** A1 is closed: **no
+> A1 reopening and no further A1 production change is authorised.** The 2026-08-23 lift of
+> the "no further A1 test" clause was **spent** at the F61ECCA card freeze. The D-058
+> confirmed batches independently HOLD. **Do not assess D-055. Do not sign or reopen a
+> gate. Do not publish, rename, or push.** Report the state below and wait.
 >
 > **THE `GIT_INDEX_FILE` FAIL-OPEN IS FIXED — the warning that stood here is withdrawn.**
 > It was real: clearing the variable made the pre-commit guard read `.git/index` while git was
@@ -60,11 +60,11 @@ only on John's explicit direction for a specific state.**
    **§10 is the authoritative residual list**, and `IMPLEMENTATION.md` is the implementer's own
    claim rather than evidence. **D-063 withdrew standing force authorization: any forced removal
    now needs new, exact approval after every stated precondition holds.**
-7. **`docs/decisions.md`: D-066, then A-089, A-091, A-093, A-094, A-095, A-096, A-097, A-098.**
-   The five confirmed D-058 batches after A1, each independently HOLD. D-058(10) is the remaining
-   mechanical closeout at the Phase 1 freeze this file describes — the commit that closes the
-   V-1 / 1e / 1f / 1g stretch — not at the A-095 rewrite. Do not treat a later conversation as
-   having signed D-055.
+7. **`docs/decisions.md`: D-066, D-067, D-068, then A-089, A-091, A-093, A-094, A-095, A-096,
+   A-097, A-098, A-099.** D-067 records the Gate 5 / V3-N2 bar for the supplementary §7.2
+   condition only, and names R2 and V-6 as D-008(2)/(4) completeness limits. D-068 records
+   the 2026-08-23 D-055 session without ruling D-055. A-099 is the Phase A freeze. Do not
+   treat any of that as having signed D-055 or recertified a gate.
 
 **DO NOT QUOTE COUNTS FROM THIS FILE.** Suite floors: `./scripts/check-suite-floors.sh`.
 Findings: `./scripts/check-findings-ledger.sh`. Review verdicts:
@@ -220,7 +220,7 @@ autonomy *none*).
 The D-058 confirmed batches HOLD inside their declared boundaries. **D-055 is not assessed.**
 If you arrived with no instruction, report the state below and wait.
 
-### WHERE THE PROJECT IS, 2026-08-22
+### WHERE THE PROJECT IS, 2026-08-23
 
 | | |
 |---|---|
@@ -229,8 +229,9 @@ If you arrived with no instruction, report the state below and wait.
 | Remediation | **A-081 reverified 11 items — 3 held, 8 FAILED.** The convergence reset (D-058/059/060) replaced the method with batch cards. **Batch A1's two ordinary attempts BOTH FAILED and stay failed** |
 | Batch A1 | **CLOSED — through the D-062 containment exception, NOT on the merits of either attempt.** One named regression repaired and independently verified HOLD. **Neither ordinary attempt is relabelled successful (D-061(4)).** |
 | Confirmed D-058 batches | **HOLD**, each inside its card: A-EXTRACT (A-089), B-EVENTS (A-091), C-SNAPSHOT (A-093), A-FLOORS (A-094), D-CLAIMS (A-095) |
-| D-055 exit | **NOT ASSESSED.** Conditions 1 and 2 were already MET; condition 3 is John's to confirm; **condition 4 is John's.** Batch D repaired the five named live false claims in its declared boundary. That is not a D-055 verdict |
-| Next | **NOTHING without an instruction from John.** Push, publication, rename, gate signatures, and D-055 remain his |
+| D-055 exit | **NOT RULED (D-068).** Condition 3 waits on the F61ECCA card (independent HOLD; R1 severity High, first adjudication). Condition 4 waits on the Phase B annotation and on John's number for class-credit. Saying conditions 1 and 2 have measured evidence is not ruling them |
+| 2026-08-23 Phase A | **FROZEN at A-099.** F61ECCA card HOLD. Class-credit: CREDIT all three UNRESOLVED-only classes; per-class approach collapsed to one rule — number is John's. R5 design to John, not built. V-6 enumerated, not repaired. R3 dispositioned. §2a annotation held, not applied |
+| Next | **NOTHING without an instruction from John.** Phase B is his. Push, publication, rename, gate signatures, and D-055 remain his |
 | Publication | **BLOCKED and untouched.** D-048 precondition unmet; Gate 8 needs the D-009 dashboard and John's five held questions; D-016 blocks everything |
 
 ### HOW BATCH A1 ACTUALLY CLOSED — the record, stated so it cannot be rounded up
@@ -278,15 +279,16 @@ them as unrepaired current work. Do not treat the HOLDs as a D-055 assessment.
    `docs/review-2026-08-19-d057-targeted/batch-cards/D062-containment-tests/VERIFICATION.md` §10,
    which is the authoritative record. Copying their prose into this file is how this file has
    drifted before.
-3. **DEFERRED AND UNRESOLVED — `R2`, `R3`, `R5`.** `R2` (`check-vendor-honesty.sh` quotePath),
-   `R3` (the inert Case 4 scorer residual) and `R5` (`check-rename-gate.sh` exiting zero while
-   printing `UNVERIFIED`) were deferred by D-061(2) and **are still deferred and still
-   unresolved.** D-062 did not reach them. `R5` in particular means the rename gate's exit status
-   is not evidence — read its output.
-4. **Gate 5's status fork.** `V3-N2` is CONFIRMED. Per D-059(1) the certification **STANDS**,
-   but **`check-vendor-honesty.sh` is NOT admissible as evidence for that supplementary
-   condition until repaired and independently reverified.** An agent may not revoke, reaffirm or
-   recertify it.
+3. **RESIDUALS AFTER THE 2026-08-23 SESSION (D-067, D-068).** `R2` is **named** as a
+   completeness limit on D-008(2)/(4), not carded, not repaired (D-067). `R3` is
+   **DISPOSITIONED** as a permanent recorded limit; the frozen A1 harness is untouched (D-068(6)).
+   `R5` is queued for repair; the design is with John and is **not built** (D-068(4)). `V-6` is
+   **carded and enumerated, not repaired** (D-068(5)). None of that is a D-055 verdict.
+4. **Gate 5 supplementary §7.2 condition.** D-067 records that D-059(1)'s bar is **MET for that
+   condition only**: `check-vendor-honesty.sh` is restored as admissible evidence for §7.2.
+   **The Gate 5 certification is not revoked, reaffirmed, or recertified.** `R2` and `V-6` are
+   named completeness limits on D-008(2) and D-008(4); they do not load-bear §7.2 (fixed paths,
+   no `artifacts()`). An agent may not recertify the gate.
 5. **D-058(10) final verification** is owed at the Phase 1 freeze this file describes — the
    commit that closes the V-1 / 1e / 1f / 1g stretch, which Phase 2 measures. That SHA cannot
    be written from inside the commit that creates it; the out-of-tree Phase 2 pack carries it.
@@ -305,19 +307,23 @@ them as unrepaired current work. Do not treat the HOLDs as a D-055 assessment.
    **no A1 reopening and no further A1 production change is authorised.** The 2026-08-22 lift
    of the "no further A1 test" clause was **spent** at the Phase 1 freeze that added the V-1
    behavioural guard; it is not standing permission.
-3. **Gate 5's status fork**, as above.
+3. **Phase B of the 2026-08-23 stretch** — class-credit number (the collapsed rule is with
+   him), R5 design, V-6 repair shape, and the `D-` identifier for the ratified §2a annotation.
+   **Do not start Phase B.**
 4. ~~**The push.**~~ Prior private backups happened at John's direction. Count anything
    outstanding with `git log --oneline origin/step-3/isolated-signer..HEAD`; **do not quote a
    number from this file.** D-016 is unchanged and the repository is still PRIVATE: backup is
-   not publication. **The freeze that includes A-095 has not been pushed unless John directed
+   not publication. **The freeze that includes A-099 has not been pushed unless John directed
    that exact state.**
-5. **D-055**, publication, rename, and any gate signature or reopening.
+5. **D-055**, publication, rename, and any gate signature or reopening. D-055 is **not ruled**
+   (D-068). Conditions 1 and 2 having measured evidence is not a ruling of them.
 
 ### WHAT IS NOT AUTHORISED, and none of it has changed
 
 - **NO A1 REOPENING OF ANY KIND** — no third implementation attempt (D-061(4)), and no
   further A1 production change. The 2026-08-22 lift of the "no further A1 test" clause was
-  **spent** at the Phase 1 freeze that added the V-1 behavioural guard; it is not standing
+  **spent** at the Phase 1 freeze that added the V-1 behavioural guard. The 2026-08-23 lift
+  of the same clause was **spent** at the F61ECCA card freeze (A-099). Neither is standing
   permission.
 - **No D-055 assessment**, no gate signed or reopened, no public claim certified, no correction
   ratified.

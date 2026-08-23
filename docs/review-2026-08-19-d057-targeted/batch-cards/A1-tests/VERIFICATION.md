@@ -446,6 +446,12 @@ implementation whose only refusal is a failed `cd` would pass Case 4. Narrowing 
 something like `(inside|outside|identity of) the .* repository root` would close it. This is a
 weakness in a test, not in the repair.
 
+> **DISPOSITION — John, 2026-08-23.** Item 9's HOLD in this file rests on a scorer its own
+> author flagged as weak (the paragraph above). Do not take that HOLD at full strength. R3 is a
+> permanent recorded limit. The frozen A1 harness is not touched. Reversal: if item 9's
+> verdict is ever load-bearing for a decision, the scorer weakness must be resolved before
+> that decision, not after.
+
 **R4 — an open fork was resolved by the implementer and attributed to a ruling that does not contain
 it.** `check-secrets.sh:186–189` reads:
 

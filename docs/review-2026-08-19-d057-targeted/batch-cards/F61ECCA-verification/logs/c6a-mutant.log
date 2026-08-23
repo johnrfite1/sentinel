@@ -1,0 +1,16 @@
+findings ledger (derived from docs/review-2026-08-18-d055e/FINDINGS-LEDGER.tsv, one row per finding):
+  finding IDs                  : 24   (23 confirmed, 1 refuted)
+  confirmed CRITICAL / HIGH    : 1 / 1
+  severity downgrades          : 3  (countersigned by John, D-057(2))
+  REPAIR-PATTERN cluster       : 4 findings = 1 disposition item, 4 regression obligations
+  disposition items            : 21 total (20 confirmed)
+  other confirmed findings     : 18   (excl. Critical, 3 downgrades, R4-F1)
+  other disposition items      : 15   (same set, cluster grouped)
+  dispositions                 : 20 repair · 3 accepted-limit · 1 no-action
+  MISMATCH: finding IDs is 24, John's ruling says 23
+  MISMATCH: confirmed is 23, John's ruling says 22
+  MISMATCH: disposition items total is 21, John's ruling says 20
+  MISMATCH: disposition confirmed is 20, John's ruling says 19
+  MISMATCH: other confirmed is 18, John's ruling says 17
+  MISMATCH: other disposition items is 15, John's ruling says 14
+findings ledger: DERIVED TOTALS DISAGREE WITH THE RECORDED RULING.

@@ -1,0 +1,4 @@
+  FAIL  refusing to install Sentinel hooks into another repository.
+        invoked from : /private/var/folders/59/4wnx2cd52598yk1567y_9lnh0000gn/T/f61ecca.MDxtRUE5/foreign
+        this script's: /private/var/folders/59/4wnx2cd52598yk1567y_9lnh0000gn/T/f61ecca.MDxtRUE5/c6c-freeze
+        Nothing was written. Run it from Sentinel if that is what you meant.
