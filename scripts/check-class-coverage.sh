@@ -393,7 +393,7 @@ for (const u of unexercised) {
   }
 }
 
-console.log(`  ok    ${exercised.length} of ${corpusClasses.size} classes exercise the class they name`);
+console.log(`  ok    ${exercised.length} of ${corpusClasses.size} classes exercise the class they name (credit iff an ABOUT check ran against the named phenomenon and recorded the outcome the spec assigns to it, UNRESOLVED included)`);
 
 // PER-FIXTURE VACUITY, REPORTED BECAUSE THE CLASS-LEVEL NUMBER HIDES IT.
 //

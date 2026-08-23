@@ -122,7 +122,7 @@ does **not** ride on the re-label decision: asserting a property of the existing
 no fixture and moves no label.
 
 **BUILT 2026-08-16 — `scripts/check-class-coverage.sh`, wired into the gate (A-038).** It
-reports **14 of 20 classes exercise the class they name**. Four of the six carried are known and
+reports **14 of 20 classes exercise the class they name** (credit iff an ABOUT check ran against the named phenomenon and recorded the outcome the spec assigns to it, UNRESOLVED included). Four of the six carried are known and
 reasoned; **two are new and unruled**, and they are the register's newest items:
 
 - **`owner-override-and-block-behaviour`** — F054/F055 fail on code identity and wrong resource.
