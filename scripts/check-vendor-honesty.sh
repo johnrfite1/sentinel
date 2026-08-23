@@ -197,8 +197,8 @@ EXCLUDED_LABELS='^(Sentinel_Protocol_Lab_Proposal_v0_2\.md|docs/decisions\.md|do
 artifacts() {
     local excl="${1:-$EXCLUDED}"
     {
-        git ls-files
-        git ls-files --others --exclude-standard
+        git -c core.excludesFile= -c core.quotePath=false ls-files
+        git -c core.excludesFile= -c core.quotePath=false ls-files --others --exclude-standard
     } | sort -u | grep -Ev "$excl" | while IFS= read -r f; do
         case "$f" in
             *.png|*.jpg|*.jpeg|*.gif|*.pdf|*.zip|*.gz|*.wasm|*.ico) continue ;;

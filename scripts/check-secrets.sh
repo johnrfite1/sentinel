@@ -278,7 +278,7 @@ else
     sec_hasidx+=("1")
     _i=$((_i + 1))
   done
-  if ! git ls-files --others --exclude-standard -z >"$_sec_lst" 2>"$_sec_err"; then
+  if ! git -c core.excludesFile= -c core.quotePath=false ls-files --others --exclude-standard -z >"$_sec_lst" 2>"$_sec_err"; then
     echo "${RED}FAIL${RST} git ls-files --others failed; refusing to report a clean scan:"
     printf '    %s\n' "$(cat "$_sec_err")"
     _sec_cleanup; exit 1

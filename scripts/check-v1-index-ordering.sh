@@ -127,40 +127,43 @@ export GIT_CONFIG_SYSTEM="$V1HOME/.gitconfig-system"
 export XDG_CONFIG_HOME="$V1HOME/.config"
 export GIT_TERMINAL_PROMPT=0
 unset GIT_INDEX_FILE GIT_DIR GIT_WORK_TREE GIT_COMMON_DIR GIT_PREFIX || true
+# V-6: pin enumeration-sensitive keys at the call site. COUNT still applies on top of
+# GLOBAL/SYSTEM; command-line -c outranks every config source. Not a denylist.
+git_pinned() { git -c core.excludesFile= -c core.quotePath=false "$@"; }
 
 # Isolated subject. Clone the committed tree, then overlay the WORKING-TREE bytes of
 # the two production files so an uncommitted reversal is what this guard sees —
 # the same bytes the rest of this gate run is about to execute.
 SUT="$WORK/sut"
-git clone -q --local --no-hardlinks "$SENTINEL_ROOT" "$SUT" >/dev/null 2>&1 \
+git_pinned clone -q --local --no-hardlinks "$SENTINEL_ROOT" "$SUT" >/dev/null 2>&1 \
     || die "clone of the repository under test failed"
 cp "$SENTINEL_ROOT/scripts/check-secrets.sh" "$SUT/scripts/check-secrets.sh" \
     || die "cannot overlay working-tree check-secrets.sh"
 cp "$SENTINEL_ROOT/.githooks/pre-commit" "$SUT/.githooks/pre-commit" \
     || die "cannot overlay working-tree pre-commit"
 chmod +x "$SUT/scripts/check-secrets.sh" "$SUT/.githooks/pre-commit"
-git -C "$SUT" config user.email "v1-guard@example.invalid"
-git -C "$SUT" config user.name  "V1 guard"
-git -C "$SUT" config commit.gpgsign false
-git -C "$SUT" config core.hooksPath .githooks
+git_pinned -C "$SUT" config user.email "v1-guard@example.invalid"
+git_pinned -C "$SUT" config user.name  "V1 guard"
+git_pinned -C "$SUT" config commit.gpgsign false
+git_pinned -C "$SUT" config core.hooksPath .githooks
 
 FIX="v1-guard-fixture.txt"
 printf 'v1 guard fixture\n' > "$SUT/$FIX"
-git -C "$SUT" add -- "$FIX" >/dev/null 2>&1 || die "cannot stage the fixture"
-git -C "$SUT" -c core.hooksPath=/dev/null commit -qn -m "v1 guard fixture base" \
+git_pinned -C "$SUT" add -- "$FIX" >/dev/null 2>&1 || die "cannot stage the fixture"
+git_pinned -C "$SUT" -c core.hooksPath=/dev/null commit -qn -m "v1 guard fixture base" \
     || die "cannot create the fixture base commit"
-BASE="$(git -C "$SUT" rev-parse HEAD)" || die "cannot read fixture base"
+BASE="$(git_pinned -C "$SUT" rev-parse HEAD)" || die "cannot read fixture base"
 
 ATTACK_DIR="$WORK/attacker"
 mkdir -p "$ATTACK_DIR"
 ATTACK_INDEX="$ATTACK_DIR/index"
 
 # P2 — the V-1 premise itself: --git-path index honours GIT_INDEX_FILE on this git.
-GIT_INDEX_FILE="$ATTACK_INDEX" git -C "$SUT" read-tree HEAD >/dev/null 2>&1 \
+GIT_INDEX_FILE="$ATTACK_INDEX" git_pinned -C "$SUT" read-tree HEAD >/dev/null 2>&1 \
     || die "cannot build an attacker-controlled index"
 unset GIT_INDEX_FILE
-canon_plain="$(cd "$SUT" && git rev-parse --git-path index 2>/dev/null)" || canon_plain=""
-canon_hostile="$(cd "$SUT" && GIT_INDEX_FILE="$ATTACK_INDEX" git rev-parse --git-path index 2>/dev/null)" || canon_hostile=""
+canon_plain="$(cd "$SUT" && git_pinned rev-parse --git-path index 2>/dev/null)" || canon_plain=""
+canon_hostile="$(cd "$SUT" && GIT_INDEX_FILE="$ATTACK_INDEX" git_pinned rev-parse --git-path index 2>/dev/null)" || canon_hostile=""
 [ -n "$canon_plain" ] || die "cannot resolve --git-path index with GIT_INDEX_FILE unset"
 [ -n "$canon_hostile" ] || die "cannot resolve --git-path index with GIT_INDEX_FILE set"
 [ "$canon_plain" != "$canon_hostile" ] \
@@ -186,9 +189,9 @@ reset_sut() {
     unset GIT_INDEX_FILE GIT_DIR GIT_WORK_TREE GIT_COMMON_DIR GIT_PREFIX || true
     rm -f "$SUT/.git/index.lock" 2>/dev/null
     rm -f "$SUT"/.git/next-index-*.lock 2>/dev/null
-    git -C "$SUT" reset -q --hard "$BASE" >/dev/null 2>&1 || die "reset --hard failed"
-    git -C "$SUT" clean -qfd >/dev/null 2>&1
-    git -C "$SUT" config core.hooksPath .githooks
+    git_pinned -C "$SUT" reset -q --hard "$BASE" >/dev/null 2>&1 || die "reset --hard failed"
+    git_pinned -C "$SUT" clean -qfd >/dev/null 2>&1
+    git_pinned -C "$SUT" config core.hooksPath .githooks
     # Overlay live bytes again: reset restored HEAD copies.
     cp "$SENTINEL_ROOT/scripts/check-secrets.sh" "$SUT/scripts/check-secrets.sh"
     cp "$SENTINEL_ROOT/.githooks/pre-commit" "$SUT/.githooks/pre-commit"
@@ -199,14 +202,14 @@ setup_cs() {
     reset_sut
     unset GIT_INDEX_FILE
     rm -f "$ATTACK_INDEX"
-    GIT_INDEX_FILE="$ATTACK_INDEX" git -C "$SUT" read-tree HEAD >/dev/null 2>&1 \
+    GIT_INDEX_FILE="$ATTACK_INDEX" git_pinned -C "$SUT" read-tree HEAD >/dev/null 2>&1 \
         || die "cannot rebuild attacker index"
     unset GIT_INDEX_FILE
     cred_line >> "$SUT/$FIX"
-    git -C "$SUT" add -- "$FIX" >/dev/null 2>&1 || die "cannot stage the credential-shaped fixture"
-    git -C "$SUT" show ":$FIX" 2>/dev/null | /usr/bin/grep -q "$CRED_HEX" \
+    git_pinned -C "$SUT" add -- "$FIX" >/dev/null 2>&1 || die "cannot stage the credential-shaped fixture"
+    git_pinned -C "$SUT" show ":$FIX" 2>/dev/null | /usr/bin/grep -q "$CRED_HEX" \
         || die "real staged blob does not carry the runtime credential — probe would be vacuous"
-    if GIT_INDEX_FILE="$ATTACK_INDEX" git -C "$SUT" show ":$FIX" 2>/dev/null | /usr/bin/grep -q "$CRED_HEX"; then
+    if GIT_INDEX_FILE="$ATTACK_INDEX" git_pinned -C "$SUT" show ":$FIX" 2>/dev/null | /usr/bin/grep -q "$CRED_HEX"; then
         die "attacker index also carries the credential — setup is not discriminating"
     fi
 }
@@ -241,12 +244,12 @@ setup_hook() {
     reset_sut
     unset GIT_INDEX_FILE
     cred_line >> "$SUT/$FIX"
-    git -C "$SUT" add -- "$FIX" >/dev/null 2>&1 || die "cannot stage the credential-shaped fixture for the hook"
+    git_pinned -C "$SUT" add -- "$FIX" >/dev/null 2>&1 || die "cannot stage the credential-shaped fixture for the hook"
     printf 'benign attacker-index content\n' > "$SUT/v1-benign.txt"
     rm -f "$ATTACK_INDEX"
-    GIT_INDEX_FILE="$ATTACK_INDEX" git -C "$SUT" read-tree HEAD >/dev/null 2>&1 \
+    GIT_INDEX_FILE="$ATTACK_INDEX" git_pinned -C "$SUT" read-tree HEAD >/dev/null 2>&1 \
         || die "cannot rebuild attacker index for the hook"
-    GIT_INDEX_FILE="$ATTACK_INDEX" git -C "$SUT" add -- "v1-benign.txt" >/dev/null 2>&1 \
+    GIT_INDEX_FILE="$ATTACK_INDEX" git_pinned -C "$SUT" add -- "v1-benign.txt" >/dev/null 2>&1 \
         || die "cannot stage a benign path into the attacker index"
     unset GIT_INDEX_FILE
 }
@@ -254,16 +257,16 @@ setup_hook() {
 run_hook_commit() {
     local tag="$1"
     unset GIT_INDEX_FILE
-    git -C "$SUT" rev-parse HEAD > "$WORK/${tag}.head_before"
+    git_pinned -C "$SUT" rev-parse HEAD > "$WORK/${tag}.head_before"
     (
         cd "$SUT" || exit 2
         export GIT_INDEX_FILE="$ATTACK_INDEX"
         set +e
-        git commit -m "v1-guard $tag" >"$WORK/${tag}.out" 2>"$WORK/${tag}.err"
+        git_pinned commit -m "v1-guard $tag" >"$WORK/${tag}.out" 2>"$WORK/${tag}.err"
         echo $? > "$WORK/${tag}.rc"
     )
     unset GIT_INDEX_FILE
-    git -C "$SUT" rev-parse HEAD > "$WORK/${tag}.head_after"
+    git_pinned -C "$SUT" rev-parse HEAD > "$WORK/${tag}.head_after"
 }
 
 head_unmoved() {
