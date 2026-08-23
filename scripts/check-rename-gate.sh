@@ -36,6 +36,41 @@ cd "$SENTINEL_ROOT" || { echo "  FAIL  cannot enter the Sentinel repository root
 # git 2.50.1 — an inert variable today is not a guarantee tomorrow.
 unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_PREFIX
 
+# D-071 / D-059(7). Invoked by both gate profiles (scripts/test.sh shared prefix).
+# Fast: UNVERIFIED exits 0. Deep/--gate: UNVERIFIED exits 1 unless
+# SENTINEL_RENAME_GATE_UNVERIFIED_OK=1. The env var name is printed ON the
+# UNVERIFIED line. An acknowledged deep run states that D-016 was acknowledged,
+# not verified. Coverage: origin visibility via gh when readable. Not covered:
+# demos, published links, portfolio or resume references (D-016's other verbs).
+PROFILE="fast"
+for _arg in "$@"; do
+    case "$_arg" in
+        --gate) PROFILE="gate" ;;
+    esac
+done
+ACK="${SENTINEL_RENAME_GATE_UNVERIFIED_OK:-}"
+
+unverified() {
+    local reason="$1"
+    local cover="Coverage: origin visibility via gh when readable. Not covered: demos, published links, portfolio or resume references (D-016's other verbs)."
+    if [ "$PROFILE" = "gate" ]; then
+        if [ "$ACK" = "1" ]; then
+            echo "${YEL}rename gate: UNVERIFIED${RST} (SENTINEL_RENAME_GATE_UNVERIFIED_OK=1) — ${reason}"
+            echo "  This --gate run ACKNOWLEDGES D-016 was not verified; it was acknowledged, not verified private."
+            echo "  D-016 still blocks publication. ${cover}"
+            exit 0
+        fi
+        echo "${YEL}rename gate: UNVERIFIED${RST} (deep/--gate refuses unless SENTINEL_RENAME_GATE_UNVERIFIED_OK=1) — ${reason}"
+        echo "  D-016 still blocks publication. Deep profile requires acknowledgement or a readable visibility check."
+        echo "  ${cover}"
+        exit 1
+    fi
+    echo "${YEL}rename gate: UNVERIFIED${RST} (SENTINEL_RENAME_GATE_UNVERIFIED_OK=1 acknowledges in --gate) — ${reason}"
+    echo "  D-016 still blocks publication. Verify by hand before any public action."
+    echo "  ${cover}"
+    exit 0
+}
+
 RED=$'\033[31m'; YEL=$'\033[33m'; RST=$'\033[0m'
 [ -t 1 ] || { RED=""; YEL=""; RST=""; }
 
@@ -46,20 +81,14 @@ if [ -z "$remote_url" ]; then
 fi
 
 if ! command -v gh >/dev/null 2>&1; then
-    # Deliberately not a silent pass. An unverifiable guard must say so, or a reader will
-    # take its silence for a green light.
-    echo "${YEL}rename gate: UNVERIFIED${RST} — gh CLI not available, cannot check visibility."
-    echo "  D-016 still blocks publication. Verify manually before any public action."
-    exit 0
+    unverified "gh CLI not available, cannot check visibility."
 fi
 
 slug="$(printf '%s' "$remote_url" | sed -E 's#(git@github.com:|https://github.com/)##; s#\.git$##')"
 visibility="$(gh repo view "$slug" --json visibility --jq .visibility 2>/dev/null || true)"
 
 if [ -z "$visibility" ]; then
-    echo "${YEL}rename gate: UNVERIFIED${RST} — could not read visibility for $slug (auth? network?)."
-    echo "  D-016 still blocks publication. Verify manually before any public action."
-    exit 0
+    unverified "could not read visibility for $slug (auth? network?)."
 fi
 
 if [ "$visibility" != "PRIVATE" ]; then

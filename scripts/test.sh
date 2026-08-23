@@ -228,7 +228,11 @@ step "V-1 index-path ordering"
 ./scripts/check-v1-index-ordering.sh || fail=1
 
 step "rename gate (D-016)"
-./scripts/check-rename-gate.sh || fail=1
+if [ "$PROFILE" = "gate" ]; then
+    ./scripts/check-rename-gate.sh --gate || fail=1
+else
+    ./scripts/check-rename-gate.sh || fail=1
+fi
 
 step "labelling-prompt freeze (D-011a)"
 ./scripts/check-label-prompt.sh || fail=1
