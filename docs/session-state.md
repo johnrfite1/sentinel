@@ -3,14 +3,17 @@
 Rewritten at the end of each working session. **This file, not the conversation, is the
 memory.** If it disagrees with anything an agent remembers, this file wins.
 
-Last updated: **2026-08-22 (post-A-095). D-058 confirmed batches HOLD inside their
-declared boundaries. Batch A1 remains closed through the D-062 exception, not on the merits.
-D-055 is not assessed.** Branch `step-3/isolated-signer`.
+Last updated: **2026-08-22 (post-A-098). Phase 1 of the V-1 / 1e / 1f stretch is frozen.
+D-058 confirmed batches HOLD inside their declared boundaries. Batch A1 remains closed
+through the D-062 exception, not on the merits. D-055 is not assessed. The 2026-08-22
+lift of A1's "no further A1 test" clause is spent.** Branch `step-3/isolated-signer`.
 
 > ## READ THIS BEFORE ANYTHING ELSE
 >
-> **YOUR JOB IS NOTHING WITHOUT AN INSTRUCTION FROM JOHN.** A1 is closed and **no A1 reopening,
-> no further A1 test and no further A1 production change is authorised.** The D-058 confirmed
+> **YOUR JOB IS NOTHING WITHOUT AN INSTRUCTION FROM JOHN.** A1 is closed: **no A1 reopening
+> and no further A1 production change is authorised.** The 2026-08-22 lift of the "no further
+> A1 test" clause was **spent** at the Phase 1 freeze that added the V-1 behavioural guard; it
+> is not standing permission. The D-058 confirmed
 > batches (A-EXTRACT, B-EVENTS, C-SNAPSHOT, A-FLOORS, D-CLAIMS) independently HOLD. **Do not
 > assess D-055. Do not sign or reopen a gate. Do not publish, rename, or push.** Report the
 > state below and wait.
@@ -26,10 +29,12 @@ D-055 is not assessed.** Branch `step-3/isolated-signer`.
 > **CARRIED AND UNACCEPTED — `V-1`, and it is the one to know.** `git rev-parse --git-path index`
 > **honours `GIT_INDEX_FILE`.** The repair is therefore correct **only because both files scrub
 > that variable BEFORE asking git for the canonical index path** (`.githooks/pre-commit` 39→86,
-> `scripts/check-secrets.sh` 76→121). **Reversing that ordering would reopen the hole and NO TEST
-> IN ANY HARNESS WOULD FAIL** — every card case would still pass. A correctness property held by
-> ordering alone and pinned by nothing. **It is carried, not accepted, and it has no regression
-> test.**
+> `scripts/check-secrets.sh` 76→121). ~~**Reversing that ordering would reopen the hole and NO TEST
+> IN ANY HARNESS WOULD FAIL** — every card case would still pass.~~ **Corrected 2026-08-22
+> (A-098):** a behavioural guard now observes the hostile-export hole and is bound to both gate
+> profiles. Reversing the ordering still reopens the hole; the guard is required to fail.
+> **A regression test is not acceptance.** ~~**It is carried, not accepted, and it has no
+> regression test.**~~ **It remains carried, not accepted.**
 
 **Count what is unpushed with `git log --oneline origin/step-3/isolated-signer..HEAD`; do not
 quote a number from here** — this file has published a stale one before, including one line
@@ -55,10 +60,11 @@ only on John's explicit direction for a specific state.**
    **§10 is the authoritative residual list**, and `IMPLEMENTATION.md` is the implementer's own
    claim rather than evidence. **D-063 withdrew standing force authorization: any forced removal
    now needs new, exact approval after every stated precondition holds.**
-7. **`docs/decisions.md`: D-066, then A-089, A-091, A-093, A-094, A-095.** The five confirmed
-   D-058 batches after A1, each independently HOLD. D-058(10) is the remaining mechanical
-   closeout at the freeze of this rewrite; do not treat a later conversation as having signed
-   D-055.
+7. **`docs/decisions.md`: D-066, then A-089, A-091, A-093, A-094, A-095, A-096, A-097, A-098.**
+   The five confirmed D-058 batches after A1, each independently HOLD. D-058(10) is the remaining
+   mechanical closeout at the Phase 1 freeze this file describes — the commit that closes the
+   V-1 / 1e / 1f / 1g stretch — not at the A-095 rewrite. Do not treat a later conversation as
+   having signed D-055.
 
 **DO NOT QUOTE COUNTS FROM THIS FILE.** Suite floors: `./scripts/check-suite-floors.sh`.
 Findings: `./scripts/check-findings-ledger.sh`. Review verdicts:
@@ -266,7 +272,8 @@ them as unrepaired current work. Do not treat the HOLDs as a D-055 assessment.
 1. **D-055.** Not assessed. Condition 4 is John's. An agent does not flip it to MET because Batch
    D's named claims are repaired.
 2. **RESIDUALS CARRIED FROM THE D-062 VERIFICATION — carried, not accepted.**
-   **`V-1` is stated in full in the header above and has NO regression test.** **`V-2` through
+   **`V-1` is stated in full in the header above.** It remains carried and unaccepted; a
+   regression test is not acceptance. **`V-2` through
    `V-10` are NOT reproduced here** — read them in
    `docs/review-2026-08-19-d057-targeted/batch-cards/D062-containment-tests/VERIFICATION.md` §10,
    which is the authoritative record. Copying their prose into this file is how this file has
@@ -280,19 +287,24 @@ them as unrepaired current work. Do not treat the HOLDs as a D-055 assessment.
    but **`check-vendor-honesty.sh` is NOT admissible as evidence for that supplementary
    condition until repaired and independently reverified.** An agent may not revoke, reaffirm or
    recertify it.
-5. **D-058(10) final verification** is owed at the freeze of this rewrite: focused suites, fast
-   gate, isolated exact-commit deep gate, scope/ledger/secret/workspace guards, committed views
-   file-by-file, ratcheted debt and coverage exclusions. **Do not quote those results from this
-   file.** If any tracked file changes after that freeze, the verification is invalid and must
-   be rerun.
+5. **D-058(10) final verification** is owed at the Phase 1 freeze this file describes — the
+   commit that closes the V-1 / 1e / 1f / 1g stretch, which Phase 2 measures. That SHA cannot
+   be written from inside the commit that creates it; the out-of-tree Phase 2 pack carries it.
+   Focused suites, fast gate, isolated exact-commit deep gate, scope/ledger/secret/workspace
+   guards, committed views file-by-file, ratcheted debt and coverage exclusions. **Do not quote
+   those results from this file.** If any tracked file changes after that freeze, the
+   verification is invalid and must be rerun.
 
 ### WHAT IS WAITING ON JOHN — all of it is his
 
 1. ~~**The `GIT_INDEX_FILE` fail-open.**~~ **CLOSED** under the D-062 exception — repaired at
-   `4920213`, independently verified HOLD at `c163195`, accepted by John. **`V-1` remains carried
-   and untested** and is the live piece of this item.
-2. ~~**Whether Batch A1 is recarded.**~~ **RULED: it is not.** A1's closure is accepted and **no
-   A1 reopening, no further A1 test and no further A1 production change is authorised.**
+   `4920213`, independently verified HOLD at `c163195`, accepted by John. **`V-1` remains
+   carried and unaccepted** and is the live piece of this item; a regression test is not
+   acceptance.
+2. ~~**Whether Batch A1 is recarded.**~~ **RULED: it is not.** A1's closure is accepted and
+   **no A1 reopening and no further A1 production change is authorised.** The 2026-08-22 lift
+   of the "no further A1 test" clause was **spent** at the Phase 1 freeze that added the V-1
+   behavioural guard; it is not standing permission.
 3. **Gate 5's status fork**, as above.
 4. ~~**The push.**~~ Prior private backups happened at John's direction. Count anything
    outstanding with `git log --oneline origin/step-3/isolated-signer..HEAD`; **do not quote a
@@ -303,8 +315,10 @@ them as unrepaired current work. Do not treat the HOLDs as a D-055 assessment.
 
 ### WHAT IS NOT AUTHORISED, and none of it has changed
 
-- **NO A1 REOPENING OF ANY KIND** — no third implementation attempt (D-061(4)), and after the
-  closure was accepted, **no further A1 test and no further A1 production change either.**
+- **NO A1 REOPENING OF ANY KIND** — no third implementation attempt (D-061(4)), and no
+  further A1 production change. The 2026-08-22 lift of the "no further A1 test" clause was
+  **spent** at the Phase 1 freeze that added the V-1 behavioural guard; it is not standing
+  permission.
 - **No D-055 assessment**, no gate signed or reopened, no public claim certified, no correction
   ratified.
 - **D-016 blocks all publication**; the repository is PRIVATE and the rename gate checks it.

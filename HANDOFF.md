@@ -52,10 +52,12 @@ ON THE MERITS OF EITHER ORDINARY ATTEMPT — do not compress that into "A1 passe
 assertions (`B3-index`, `B4`) fail against the repair and were **expressly SUPERSEDED by D-064 for
 the hook path only, never silently treated as passing**; the verifier confirmed exactly two moved
 and no third, so D-064's reversal condition did not fire and the rest of A2 remained stable.
-**`V-1` is a carried, unaccepted residual with no regression test:** `git rev-parse --git-path
+**`V-1` is a carried, unaccepted residual ~~with no regression test~~:** `git rev-parse --git-path
 index` honours `GIT_INDEX_FILE`, so the repair is correct only because both files scrub that
 variable before resolving the canonical index — reverse that ordering and the hole reopens with
-**no harness failing.** `V-2`–`V-10` are carried by reference in
+~~**no harness failing.**~~ **Corrected 2026-08-22 (A-098):** a behavioural guard now observes
+that hole and is bound to both gate profiles; reversing the ordering is required to fail the
+guard. **A regression test is not acceptance; `V-1` remains carried and unaccepted.** `V-2`–`V-10` are carried by reference in
 `.../batch-cards/D062-containment-tests/VERIFICATION.md` §10; `R2`, `R3` and `R5` remain
 **deferred and unresolved.** **D-055's exit is UNCHANGED at NOT MET,** ~~NO SUBSEQUENT BATCH HAS
 BEGUN~~ **— that present-tense claim was true of A-086's date and is false now (A-095).** D-063 withdrew standing force authorization, and nothing is signed, certified, published
@@ -69,6 +71,16 @@ A-EXTRACT (A-089), B-EVENTS (A-091), C-SNAPSHOT (A-093), A-FLOORS (A-094), D-CLA
 **That is not a D-055 assessment, not a gate signature, not certification, not publication, and
 not a push.** D-016 still blocks all publication; the repository is PRIVATE; an agent pushes
 only on John's explicit direction for a specific state. Held D-008 questions remain unseen.
+
+**2026-08-22 (later) — V-1 HAS A BEHAVIOURAL REGRESSION GUARD; IT IS STILL CARRIED AND
+UNACCEPTED.** The 2026-08-20 (later) paragraph stands as written, with the two struck phrases
+above. A guard that observes a hostile `GIT_INDEX_FILE` is bound to both gate profiles
+(`scripts/check-v1-index-ordering.sh`, D-059(7)). **That is not acceptance of `V-1`.** The
+2026-08-22 lift of A1's "no further A1 test" clause is **spent** at this freeze. Two dossiers
+under `docs/review-2026-08-19-d057-targeted/` (`gate5-v3n2-admissibility.md`,
+`d055-condition-status.md`) are prepared material awaiting John's ruling and are not findings
+of record. D-058(10) is owed at this freeze, reported out of tree. Nothing is signed,
+certified, published, renamed, or pushed.
 
 Amended 2026-07-27 by Opus 5 at build start: D-007…D-011 (delegated rulings) resolve four open forks and the labeling blind spot. Sections below reflect them. Proposal mirror: §14.9.
 
