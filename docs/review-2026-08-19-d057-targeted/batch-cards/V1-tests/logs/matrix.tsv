@@ -1,0 +1,3 @@
+G1	REQUIRED	PASS	unchanged fast gate passes; V-1 stage ok
+G2	REQUIRED	PASS	mutated check-secrets.sh makes the gate fail at the V-1 stage
+G2c	CONTROL	PASS	same mutant with V-1 step ignored: FAIL still prints, gate passes

@@ -218,6 +218,15 @@ step "gate immutability (D-056(b))"
 step "secret guard (A-007)"
 ./scripts/check-secrets.sh || fail=1
 
+# V-1: git rev-parse --git-path index honours GIT_INDEX_FILE. The two production
+# sites that resolve a canonical index path must scrub that variable BEFORE asking
+# git for the path. This step observes that behaviour under a hostile export; it
+# is not a source-text order check. Coverage is enumerated in the guard's header
+# (D-059(7)): CS validation-refusal and HOOK commit-block only. Wiring a new
+# guard here is gate plumbing, not an A1 production change.
+step "V-1 index-path ordering"
+./scripts/check-v1-index-ordering.sh || fail=1
+
 step "rename gate (D-016)"
 ./scripts/check-rename-gate.sh || fail=1
 
