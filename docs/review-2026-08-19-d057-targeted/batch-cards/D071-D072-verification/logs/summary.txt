@@ -1,0 +1,9 @@
+r5_sha=558d001546b55bd80156bc875cf080fef0e301eb
+v6_sha=1ae684cec83c7bfdb24a8c18ffdeba87c535874f
+req_fail=15
+ctl_fail=0
+not_measured=5
+invalid=0
+git=git version 2.50.1 (Apple Git-155)
+r5_5=completed: GATE PASSED, gate_rc=0, real 1269.37s
+r5_5_first_attempt=incomplete (ts/node_modules missing); not counted

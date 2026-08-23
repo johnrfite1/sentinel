@@ -1,0 +1,62 @@
+R5-C-unverified-origin	CONTROL	PASS	origin is local path: /private/tmp/sentinel-r5-base
+R5-C-unverified-output	CONTROL	PASS	fast output contains UNVERIFIED (rc=0)
+R5-1-fast-varname	REQUIRED	FAIL	UNVERIFIED line does not name SENTINEL_RENAME_GATE_UNVERIFIED_OK (rc=0)
+R5-2-deep-refuse	REQUIRED	FAIL	deep UNVERIFIED no-ack rc=0
+R5-3-deep-ack-disclose	REQUIRED	FAIL	ack deep rc=0 disclose=0 (need both)
+R5-C-gh-private	CONTROL	PASS	gh repo view johnrfite1/sentinel visibility=PRIVATE
+R5-4-readable-clean	REQUIRED	PASS	fast rc=0 deep rc=0 clean line present
+V6-COUNT-secrets-C-potency-ls	CONTROL	PASS	unpinned ls-files listed scratch-d072-secret.env before injection
+V6-COUNT-secrets-C-potency-scan	CONTROL	PASS	consumer blocked visible scratch-d072-secret.env
+V6-COUNT-secrets-C-exploit	CONTROL	PASS	unpinned ls-files omitted scratch-d072-secret.env after COUNT
+V6-COUNT-secrets	REQUIRED	FAIL	consumer missed scratch-d072-secret.env (rc=0)
+V6-COUNT-vendor-C-potency-ls	CONTROL	PASS	unpinned ls-files listed scratch-d072-vendor.md before injection
+V6-COUNT-vendor-C-potency-scan	CONTROL	PASS	consumer blocked visible scratch-d072-vendor.md
+V6-COUNT-vendor-C-exploit	CONTROL	PASS	unpinned ls-files omitted scratch-d072-vendor.md after COUNT
+V6-COUNT-vendor	REQUIRED	FAIL	consumer missed scratch-d072-vendor.md (rc=0)
+V6-GLOBAL-secrets-C-potency-ls	CONTROL	PASS	unpinned ls-files listed scratch-d072-secret.env before injection
+V6-GLOBAL-secrets-C-potency-scan	CONTROL	PASS	consumer blocked visible scratch-d072-secret.env
+V6-GLOBAL-secrets-C-exploit	CONTROL	PASS	unpinned ls-files omitted scratch-d072-secret.env after GLOBAL
+V6-GLOBAL-secrets	REQUIRED	FAIL	consumer missed scratch-d072-secret.env (rc=0)
+V6-GLOBAL-vendor-C-potency-ls	CONTROL	PASS	unpinned ls-files listed scratch-d072-vendor.md before injection
+V6-GLOBAL-vendor-C-potency-scan	CONTROL	PASS	consumer blocked visible scratch-d072-vendor.md
+V6-GLOBAL-vendor-C-exploit	CONTROL	PASS	unpinned ls-files omitted scratch-d072-vendor.md after GLOBAL
+V6-GLOBAL-vendor	REQUIRED	FAIL	consumer missed scratch-d072-vendor.md (rc=0)
+V6-SYSTEM-secrets-C-potency-ls	CONTROL	PASS	unpinned ls-files listed scratch-d072-secret.env before injection
+V6-SYSTEM-secrets-C-potency-scan	CONTROL	PASS	consumer blocked visible scratch-d072-secret.env
+V6-SYSTEM-secrets-C-exploit	CONTROL	PASS	unpinned ls-files omitted scratch-d072-secret.env after SYSTEM
+V6-SYSTEM-secrets	REQUIRED	FAIL	consumer missed scratch-d072-secret.env (rc=0)
+V6-SYSTEM-vendor-C-potency-ls	CONTROL	PASS	unpinned ls-files listed scratch-d072-vendor.md before injection
+V6-SYSTEM-vendor-C-potency-scan	CONTROL	PASS	consumer blocked visible scratch-d072-vendor.md
+V6-SYSTEM-vendor-C-exploit	CONTROL	PASS	unpinned ls-files omitted scratch-d072-vendor.md after SYSTEM
+V6-SYSTEM-vendor	REQUIRED	FAIL	consumer missed scratch-d072-vendor.md (rc=0)
+V6-NOSYSTEM-secrets-C-potency-ls	CONTROL	PASS	unpinned ls-files listed scratch-d072-secret.env before injection
+V6-NOSYSTEM-secrets-C-potency-scan	CONTROL	PASS	consumer blocked visible scratch-d072-secret.env
+V6-NOSYSTEM-secrets-C-exploit	CONTROL	NOT_MEASURED	GIT_CONFIG_NOSYSTEM did not hide scratch-d072-secret.env on this machine
+V6-NOSYSTEM-secrets	REQUIRED	NOT_MEASURED	NOSYSTEM exploit control did not hide the plant
+V6-NOSYSTEM-vendor-C-potency-ls	CONTROL	PASS	unpinned ls-files listed scratch-d072-vendor.md before injection
+V6-NOSYSTEM-vendor-C-potency-scan	CONTROL	PASS	consumer blocked visible scratch-d072-vendor.md
+V6-NOSYSTEM-vendor-C-exploit	CONTROL	NOT_MEASURED	GIT_CONFIG_NOSYSTEM did not hide scratch-d072-vendor.md on this machine
+V6-NOSYSTEM-vendor	REQUIRED	NOT_MEASURED	NOSYSTEM exploit control did not hide the plant
+V6-HOME-secrets-C-potency-ls	CONTROL	PASS	unpinned ls-files listed scratch-d072-secret.env before injection
+V6-HOME-secrets-C-potency-scan	CONTROL	PASS	consumer blocked visible scratch-d072-secret.env
+V6-HOME-secrets-C-exploit	CONTROL	PASS	unpinned ls-files omitted scratch-d072-secret.env after HOME
+V6-HOME-secrets	REQUIRED	FAIL	consumer missed scratch-d072-secret.env (rc=0)
+V6-HOME-vendor-C-potency-ls	CONTROL	PASS	unpinned ls-files listed scratch-d072-vendor.md before injection
+V6-HOME-vendor-C-potency-scan	CONTROL	PASS	consumer blocked visible scratch-d072-vendor.md
+V6-HOME-vendor-C-exploit	CONTROL	PASS	unpinned ls-files omitted scratch-d072-vendor.md after HOME
+V6-HOME-vendor	REQUIRED	FAIL	consumer missed scratch-d072-vendor.md (rc=0)
+V6-XDG-secrets-C-potency-ls	CONTROL	PASS	unpinned ls-files listed scratch-d072-secret.env before injection
+V6-XDG-secrets-C-potency-scan	CONTROL	PASS	consumer blocked visible scratch-d072-secret.env
+V6-XDG-secrets-C-exploit	CONTROL	PASS	unpinned ls-files omitted scratch-d072-secret.env after XDG
+V6-XDG-secrets	REQUIRED	FAIL	consumer missed scratch-d072-secret.env (rc=0)
+V6-XDG-vendor-C-potency-ls	CONTROL	PASS	unpinned ls-files listed scratch-d072-vendor.md before injection
+V6-XDG-vendor-C-potency-scan	CONTROL	PASS	consumer blocked visible scratch-d072-vendor.md
+V6-XDG-vendor-C-exploit	CONTROL	PASS	unpinned ls-files omitted scratch-d072-vendor.md after XDG
+V6-XDG-vendor	REQUIRED	FAIL	consumer missed scratch-d072-vendor.md (rc=0)
+R2-C-unquoted	CONTROL	PASS	ASCII sibling usable; café path not a usable [ -f ] token (escaped=1)
+R2-C-payload	CONTROL	PASS	vendor-honesty blocked ASCII sibling cafe-d072.md
+R2-vendor	REQUIRED	FAIL	vendor-honesty missed café plant
+R2-C-z	CONTROL	PASS	-z listing still contains raw café path; R2 is not a secrets hole here
+R2-secrets	REQUIRED	NOT_MEASURED	-z did not drop the café path; R2 not claimed against secrets
+R5-C-clone-still-unverified	CONTROL	PASS	clone still UNVERIFIED immediately before test.sh --gate (precheck rc=0)
+R5-5-toplevel-gate	REQUIRED	FAIL	test.sh --gate printed GATE PASSED (rc=0) after UNVERIFIED rename-gate

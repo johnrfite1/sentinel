@@ -1,0 +1,302 @@
+
+[1m== gate immutability (D-056(b)) ==[0m
+  extracted 171 lines of bootstrap verbatim from scripts/test.sh
+
+1. unchanged source and body
+  exit 0, body ran, completion token accepted
+
+2a. CONTROL: an unprotected script must be corrupted by this probe
+  unprotected control corrupted (exit 127) — the probe is dangerous
+
+2b. the protected subject under the same edit
+  body ran to completion — the edit could not reach it
+  no shifted-offset damage
+  exit 4 — a changed source is refused a zero exit
+
+3. child attacks the body through inherited environment
+  child found no writable path and no writable descriptor
+  and the run still completed normally
+
+4. sibling attacks the body through ps
+  ps exposes no writable backing path (body appears only as /dev/fd/N)
+  and the run completed normally under sibling inspection
+
+5. body exits 0 without completing — EXIT 0 IS NOT SUCCESS
+  refused with exit 5
+  and says so, rather than failing for an unrelated reason
+
+6. arguments preserved across the supervisor boundary
+  all three arguments arrived, including the one with a space
+
+7. cleanup on success and on failure
+  no temp file left behind (1 before, 1 after)
+  a failing body is refused (exit 5), not silently accepted
+
+8. operator cancellation
+  the supervisor is findable by its own script name (pkill -f <script> works again)
+  SIGTERM stopped the run
+
+9. two gates concurrently
+  both completed independently — no shared process state
+
+10. subject invoked with a parent gate token in the environment
+  protected itself despite the inherited token — the edit could not reach it
+  and still refused a zero exit (exit 4)
+
+gate immutability: 10/10 — unchanged run · mid-run source edit cannot reach the body
+  · child finds no writable path or descriptor · ps exposes no backing path
+  · EXIT 0 WITHOUT COMPLETION IS REFUSED · arguments preserved · cleanup on both paths
+  · operator cancellation works · concurrent gates independent
+  · a subject invoked by a running gate still protects itself
+
+[1m== secret guard (A-007) ==[0m
+secret guard: clean
+
+[1m== V-1 index-path ordering ==[0m
+  observing working-tree scripts/check-secrets.sh and .githooks/pre-commit
+  under a hostile GIT_INDEX_FILE pointing outside the canonical index directory
+  CS-live REQUIRED   PASS  live check-secrets.sh refuses --index-file outside the canonical directory
+  CS-mutant CONTROL    PASS  reversed check-secrets.sh accepts and prints secret guard: clean (probe is live)
+  HOOK-live REQUIRED   PASS  live pre-commit blocks git commit under hostile GIT_INDEX_FILE; HEAD unmoved; hook names its own validation
+  HOOK-mutant CONTROL    PASS  reversed pre-commit no longer emits its own index refusal; check-secrets.sh still refuses; HEAD unmoved
+
+V-1 index-path ordering: ok
+  Covers only CS validation-refusal and HOOK commit-block under a hostile
+  GIT_INDEX_FILE, as enumerated in this file's header. Not general index-handling evidence.
+
+[1m== rename gate (D-016) ==[0m
+rename gate: UNVERIFIED — could not read visibility for /tmp/sentinel-r5-base (auth? network?).
+  D-016 still blocks publication. Verify manually before any public action.
+
+[1m== labelling-prompt freeze (D-011a) ==[0m
+label prompt: frozen (02145d7b4f83d8c8…, D-011a)
+
+[1m== labelling artifacts pinned (A-064) ==[0m
+label integrity: 20 labelling artifact(s) pinned, none unpinned (A-064)
+
+[1m== published EIP-712 type strings (D-023) ==[0m
+type strings: 6/6 published in §5.8 match eip712.ts exactly (D-023)
+
+[1m== §5.7.1 check coverage (D-031) ==[0m
+eval codes: 41/41 engine checks documented in §5.7.1 (D-031)
+
+[1m== corpus class coverage (A-036) ==[0m
+corpus class coverage (A-036) — does each class exercise the class it names?
+  ok    14 of 20 classes exercise the class they name (credit iff an ABOUT check ran against the named phenomenon and recorded the outcome the spec assigns to it, UNRESOLVED included)
+  note  39 of 43 individually fail a check their OWN class is about
+        not individually: F004, F048, F051, F056
+        A class stays green while a member of it exercises nothing. That is how
+        F051 would have shipped if it had had a sibling.
+  note  F002 is in the CONFORMING class 'exact-allowed-and-benign-variation' and does not conform: BLOCK on EVAL_SIMULATION_SUCCEEDS
+        RULED D-040 — this is deliberate, not a defect. The class means "exact
+        allowed action AND benign variations": variations that LOOK benign and
+        may not be. F002 is the fixture that exposed the D-021 gap and produced
+        the project's only inter-labeller disagreement. It earns its place BY
+        blocking. Printed every run so a BLOCK here reads as intent, not rot.
+
+corpus class coverage — CARRIED, never counted as covered
+  RESERVED  unexpected-internal-call   [D-025]
+            allowedCallGraphHash is RESERVED in v1 and read by nothing, so the class
+            cannot be driven to a positive case. Ratified, and the ablation says so
+            where the table is.
+  DELEGATED reentrancy-attempt   [A-036]
+            F056 is decided by the exact-target rule; its target has empty bytecode
+            and cannot re-enter. Delegated to the vault Foundry suite, which does
+            test reentrancy. Deferred with D-035 because repairing the fixture
+            changes the labelled view.
+  DELEGATED invalid-or-rotated-signer   [D-010]
+            Receipt authentication belongs to the isolated signer and the evaluator
+            has no code for it, so no corpus fixture can exercise it. F035 is ALLOW
+            with nothing failing. The signer has its own 42 tamper cases and the
+            independent Python verifier.
+  DELEGATED malicious-retrieved-instructions   [A-028 F-5]
+            The class subject is containment, measured by the corpus leak guard
+            rather than by a check. The ablation states these verdicts must not be
+            read as detections.
+  DELEGATED owner-override-and-block-behaviour   [D-039]
+            Found by this guard. F054/F055 fail on code identity and wrong resource,
+            neither about the override path — but they declare primaryEnforcement
+            vault-foundry-invariants and the vault suite does test the override
+            path. Ruled an accepted delegation: the declaration is accurate, the
+            corpus layer is simply not where it is proved.
+  GAP       conflicting-block-state   [D-039]
+            Found by this guard, and RULED A GENUINE UNCOVERED CLASS. F048 declares
+            primaryEnforcement conformance-engine — it claims to be proved HERE —
+            then fails on EVAL_SIMULATION_UNAVAILABLE and EVAL_TARGET_CODE_IDENTITY
+            and REVIEWs, which is an outage shape, not the failed-rule-that-blocks
+            shape D-030 describes. Nothing else covers it. OWES A FIXTURE at v1.1,
+            riding with the re-label per A-036.
+
+  1 GAP: conflicting-block-state
+  A GAP claims to be proved at this layer and is not. It OWES A FIXTURE — carried
+  so the ratchet can arm, not because the class is covered.
+
+corpus class coverage: pass on the ratchet; carried classes listed above
+
+[1m== vendor honesty (§7.5 Gate 5, D-008) ==[0m
+vendor honesty (§7.5 Gate 5, D-008) — mechanical conditions
+  ok    no artifact claims an executed or emulated vendor comparison (D-001, D-008(2))
+  ok    no named vendor appears in any measurement artifact (D-008(4))
+  ok    the ablation report carries §7.2's caveat verbatim, as §7.2 words it
+
+vendor honesty — D-008(1) and (3): John's to certify; agents may not clear these
+  ok    §2 capability table: 11 of 11 rows carry a marker resolving to a §13 entry
+        D-008(1)'s mechanical half: dated, and linked to a source that exists. A row
+        added later without [§13#N read YYYY-MM-DD] in its capability cell FAILS this
+        gate, as does one citing an entry §13 does not have. The count is a ratchet.
+  ok    §2 capability table: inference marking (D-008(3)) certified by record —
+        *Certified by John at the Gate 5 session, 2026-08-16 (D-038).*
+        The table hashes to the one certified. THIS SCRIPT DID NOT AND CANNOT CHECK
+        THAT THE CERTIFICATION IS RIGHT — it checks that a named certification exists
+        in §2 and that §2 has not changed since. Whether a sentence fairly describes
+        somebody else's product is John's, and no hash speaks to it.
+
+  Neither line above is this script deciding a public claim. The verification partition
+  gives those to John: public claims, autonomy none. docs/gate-5-vendor-audit.md holds the
+  per-row audit and the certification packet the Gate 5 session ruled from.
+
+vendor honesty: mechanical conditions pass; D-008(1) met and (3) certified by record
+
+[1m== suite floors (R4-F4, D-058) ==[0m
+  FOUNDRY_MIN_TESTS          103
+  TS_MIN_TESTS               550
+  VERIFIER_MIN_TESTS         221
+  VERIFIER_MIN_SAMPLES       7
+  VERIFIER_MIN_TAMPER        78
+  VERIFIER_MIN_TAMPER_MODES  30
+suite floors: read from scripts/test.sh, which is the only copy.
+
+[1m== solidity build + tests (profile: gate) ==[0m
+  test/SentinelTypes.t.sol:SentinelTypesTest
+    [SUCCESS] testFuzz_actionHash_changesOnAnyBoundFieldMutation(uint8) (gas: 3791)
+    [SUCCESS] testFuzz_domainSeparator_isInjectiveOverChainAndVault(uint256,uint256,address,address) (gas: 5397)
+    [SUCCESS] testFuzz_mandateHash_changesOnAnyBoundFieldMutation(uint8) (gas: 5166)
+    [SUCCESS] test_allHashesAreDeterministic() (gas: 19967)
+    [SUCCESS] test_digest_isEip712Framed() (gas: 2261)
+    [SUCCESS] test_distinctPayloadTypesDoNotCollide() (gas: 15248)
+    [SUCCESS] test_domainSeparator_bindsChainAndVault() (gas: 4625)
+    [SUCCESS] test_mandateHash_bindsPurposeFieldsAPolicyEngineWouldMiss() (gas: 9609)
+    [SUCCESS] test_noPayloadTypeStringContainsASignatureField() (gas: 572884)
+    [SUCCESS] test_typehashes_matchGoldenDigests() (gas: 3963)
+    [SUCCESS] test_typehashes_matchIndependentTranscription() (gas: 2653)
+    [SUCCESS] test_zeroValuedEnumsAreFailClosed() (gas: 1802)
+  test/SentinelVault.backstops.t.sol:SentinelVaultBackstopsTest
+    [SUCCESS] test_LIMIT_nativeCeilingIsPerActionAndBoundsNoAggregate() (gas: 7996585)
+    [SUCCESS] test_LIMIT_receiptFromAFutureSignerGoesLiveOnRotation() (gas: 166037)
+    [SUCCESS] test_LIMIT_reinstatingARotatedOutSignerRevivesItsOldReceipts() (gas: 165008)
+    [SUCCESS] test_LIMIT_vaultCapsNativeValueOnlyAndNotTokenAuthority() (gas: 1612666)
+    [SUCCESS] test_aFailedExternalCallRevertsRatherThanConsumingTheNonce() (gas: 108113)
+    [SUCCESS] test_actionNamingADifferentVaultIsRejected() (gas: 53596)
+    [SUCCESS] test_calldataShorterThanASelectorIsRejected() (gas: 58621)
+    [SUCCESS] test_constructorRejectsAZeroOwnerOrSigner() (gas: 78915)
+    [SUCCESS] test_dataHashIsRecomputedFromTheBytesActuallyPassedOn() (gas: 59379)
+    [SUCCESS] test_executionEventReportsTheBoundNonceAndTheActualAmount() (gas: 116802)
+    [SUCCESS] test_expiredOverrideIsRejected() (gas: 83016)
+    [SUCCESS] test_nonceIsConsumedBeforeTheExternalCall() (gas: 1646089)
+    [SUCCESS] test_overrideAuthorizationIsLogged() (gas: 137236)
+    [SUCCESS] test_overrideCannotBeReusedForADifferentReviewReceipt() (gas: 82937)
+    [SUCCESS] test_overrideNamingADifferentMandateIsRejected() (gas: 141053)
+    [SUCCESS] test_overrideNamingADifferentNonceIsRejected() (gas: 82234)
+    [SUCCESS] test_receiptClaimingADifferentMandateIsRejected() (gas: 65114)
+    [SUCCESS] test_recoverEventReportsTheAmountItActuallyMoved() (gas: 51733)
+    [SUCCESS] test_recoverRejectsTheZeroAddress() (gas: 14326)
+    [SUCCESS] test_rotateSignerRejectsTheZeroAddress() (gas: 18857)
+    [SUCCESS] test_selectorOffTheVaultAllowlistIsRejected() (gas: 61169)
+    [SUCCESS] test_zeroPolicyHashDoesNotMatchAnUnsetPolicy() (gas: 1475065)
+  test/SentinelVault.binding.t.sol:SentinelVaultBindingTest
+    [SUCCESS] test_MandateActivated_statesTheActivatedHash() (gas: 22281)
+    [SUCCESS] test_MandateRevoked_statesTheRevokedHash() (gas: 17211)
+    [SUCCESS] test_PausedSet_statesTheNewStateTruthfully() (gas: 31481)
+    [SUCCESS] test_PolicyActivated_statesTheActivatedHash() (gas: 22281)
+    [SUCCESS] test_Recovered_statesRecipientAndAmount() (gas: 51570)
+    [SUCCESS] test_SignerRotated_statesBothEpochsTruthfully() (gas: 24370)
+    [SUCCESS] test_actionDeadline_atTheBoundaryIsStillValid() (gas: 114482)
+    [SUCCESS] test_actionDeadline_oneSecondPastIsRejected() (gas: 53446)
+    [SUCCESS] test_correctlyBoundReceiptStillExecutes() (gas: 114105)
+    [SUCCESS] test_overrideExpiry_atTheBoundaryIsStillValid() (gas: 133336)
+    [SUCCESS] test_overrideExpiry_oneSecondPastIsRejected() (gas: 81787)
+    [SUCCESS] test_receiptBoundToMandate_mismatchIsRejected() (gas: 67416)
+    [SUCCESS] test_receiptBoundToPolicy_mismatchIsRejected() (gas: 67338)
+    [SUCCESS] test_receiptExpiry_atTheBoundaryIsStillValid() (gas: 114614)
+    [SUCCESS] test_receiptExpiry_oneSecondPastIsRejected() (gas: 64887)
+    [SUCCESS] test_valueCeiling_atTheCapIsAllowed() (gas: 113636)
+    [SUCCESS] test_valueCeiling_oneWeiOverIsRejected() (gas: 57603)
+  test/SentinelVault.events.t.sol:SentinelVaultEventsTest
+    [SUCCESS] test_ActionExecuted_automaticExactFieldsFalseRouteAndVaultEmitter() (gas: 175890)
+    [SUCCESS] test_LIMIT_recordLogsRetainsARevertedOverrideArtifact() (gas: 180232)
+    [SUCCESS] test_MandateActivated_exactFieldAndVaultEmitter() (gas: 43275)
+    [SUCCESS] test_MandateRevoked_exactPreviousFieldAndVaultEmitter() (gas: 32867)
+    [SUCCESS] test_OverrideAndActionExecuted_exactFieldsTrueRouteOrderAndVaultEmitter() (gas: 221235)
+    [SUCCESS] test_PausedSet_exactTrueAndFalseFieldsAndVaultEmitter() (gas: 37428)
+    [SUCCESS] test_PolicyActivated_exactFieldAndVaultEmitter() (gas: 43209)
+    [SUCCESS] test_Recovered_exactRecipientAndAmountFieldsAndVaultEmitter() (gas: 55284)
+    [SUCCESS] test_SignerRotated_exactPreviousAndNewFieldsAndVaultEmitter() (gas: 29058)
+    [SUCCESS] test_revertedAutomaticCallRollsBackVaultNonceAndTargetState() (gas: 164432)
+    [SUCCESS] test_revertedOverrideCallRollsBackAuthorizationNonceAndTargetState() (gas: 182637)
+  test/SentinelVault.invariants.t.sol:SentinelVaultInvariantTest
+    [SUCCESS] invariant_failedCallNeverCountsAsExecution() (gas: runs 2048, calls 262144, reverts 139)
+    [SUCCESS] invariant_futureNonceNeverExecutes() (gas: runs 2048, calls 262144, reverts 139)
+    [SUCCESS] invariant_noActionHashExecutesTwice() (gas: runs 2048, calls 262144, reverts 141)
+    [SUCCESS] invariant_nonceEqualsSuccessfulExecutions() (gas: runs 2048, calls 262144, reverts 139)
+    [SUCCESS] invariant_onlyAllowVerdictsExecuteOnTheAutomaticPath() (gas: runs 2048, calls 262144, reverts 139)
+    [SUCCESS] invariant_onlyReviewVerdictsExecuteOnTheOverridePath() (gas: runs 2048, calls 262144, reverts 139)
+    [SUCCESS] invariant_overrideMustNameTheExactAction() (gas: runs 2048, calls 262144, reverts 139)
+    [SUCCESS] invariant_overrideRequiresTheOwnersOwnSignature() (gas: runs 2048, calls 262144, reverts 139)
+    [SUCCESS] invariant_ownerAndCapsAreImmutableFromExecution() (gas: runs 2048, calls 262144, reverts 139)
+    [SUCCESS] invariant_pausedNeverExecutes() (gas: runs 2048, calls 262144, reverts 139)
+    [SUCCESS] invariant_tamperedAttemptsNeverExecute() (gas: runs 2048, calls 262144, reverts 139)
+    [SUCCESS] test_everyHandlerActionIsRegisteredWithTheFuzzer() (gas: 63115)
+    [SUCCESS] test_nonVacuity_adversarialPathsAreReachedAndRejected() (gas: 439950)
+    [SUCCESS] test_nonVacuity_futureNonceAndFailingCallArmsAreReachable() (gas: 409000)
+    [SUCCESS] test_nonVacuity_overridePathExecutesAndItsAdversarialArmsDoNot() (gas: 497689)
+    [SUCCESS] test_nonVacuity_ownerControlsAreReachable() (gas: 307013)
+    [SUCCESS] test_nonVacuity_validPathActuallyExecutes() (gas: 452662)
+  test/SentinelVault.invariants.t.sol:SentinelVaultReentrancyTest
+    [SUCCESS] test_anAllowExecutionCannotBeReenteredThroughTheOverridePath() (gas: 1061640)
+    [SUCCESS] test_reentrantOverrideCannotExecuteInTheSameTransaction() (gas: 1085338)
+    [SUCCESS] test_reentrantSecondReceiptCannotExecuteInTheSameTransaction() (gas: 757547)
+  test/SentinelVault.t.sol:SentinelVaultTest
+    [SUCCESS] testFuzz_nonOwnerCannotTouchOwnerControls(address) (gas: 32754)
+    [SUCCESS] test_anyCallerMayRelayAValidReceipt() (gas: 117249)
+    [SUCCESS] test_blockReceiptNeverExecutes() (gas: 131214)
+    [SUCCESS] test_case1_allowReceiptExecutes() (gas: 116937)
+    [SUCCESS] test_expiredActionIsRejected() (gas: 53247)
+    [SUCCESS] test_expiredReceiptIsRejected() (gas: 65487)
+    [SUCCESS] test_overrideForADifferentActionIsRejected() (gas: 81378)
+    [SUCCESS] test_overrideSignedByNonOwnerIsRejected() (gas: 90120)
+    [SUCCESS] test_pausedExecutionAlwaysFails() (gas: 112714)
+    [SUCCESS] test_receiptFromNonActiveSignerIsRejected() (gas: 72832)
+    [SUCCESS] test_receiptNamingAStaleSignerIsRejected() (gas: 68456)
+    [SUCCESS] test_replay_sameReceiptCannotExecuteTwice() (gas: 139524)
+    [SUCCESS] test_replay_staleNonceIsRejected() (gas: 146444)
+    [SUCCESS] test_reviewPlusOwnerOverrideExecutes() (gas: 133163)
+    [SUCCESS] test_reviewReceiptDoesNotExecuteOnTheAutomaticPath() (gas: 72739)
+    [SUCCESS] test_revokedMandateBlocksExecution() (gas: 59058)
+    [SUCCESS] test_rotationInvalidatesOutstandingReceipts() (gas: 77057)
+    [SUCCESS] test_signerCannotReachOwnerControls() (gas: 20358)
+    [SUCCESS] test_tamper_anyBoundFieldMutationIsRejected() (gas: 430665)
+    [SUCCESS] test_uninitialisedVaultRejectsZeroHashes() (gas: 1450194)
+    [SUCCESS] test_valueOverHardCapIsRejectedEvenWithAValidReceipt() (gas: 57542)
+  103 tests: 103 passed, 0 failed, 0 skipped
+  foundry: 103 tests (floor 103)
+
+[1m== typescript typecheck + isolated signer suite (§9 step 3) ==[0m
+ts/node_modules missing. Run: npm --prefix ts ci
+
+[1m== §7.3 ablation report is the output of its generator (A-062) ==[0m
+ablation report: GENERATOR FAILED TO RUN — treated as a failure, because a check
+  that cannot execute must never read as a check that passed.
+
+[1m== D-010 receipt verifier (independent Python; §14.2, D-010) ==[0m
+  suite 221 (floor 221) · verdict clean · samples 7 (floor 7) · tamper 78 cases / 30 modes (floors 78/30)
+
+[31mGATE FAILED[0m
+
+[31mGATE DID NOT REACH COMPLETION[0m
+  The body exited 1 without emitting its completion token.
+  EXIT STATUS 0 IS NOT SUCCESS: a body damaged mid-run can still exit 0, and
+  that is precisely what this check exists to refuse. DISCARD THIS RUN.
+real 838.28
+user 1642.94
+sys 56.04
+gate_rc=5

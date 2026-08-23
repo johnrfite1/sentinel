@@ -1,0 +1,30 @@
+vendor honesty (§7.5 Gate 5, D-008) — mechanical conditions
+  FAIL  cafe-d072.md labels a vendor comparison 'executed' or 'faithfully emulated'
+        D-001 cut executed comparisons from v1; §10.1's other two labels must stay empty.
+  FAIL  cafe-d072.md names a vendor in a measurement artifact:
+          1:The comparison was executed directly against Coinbase.
+        A number beside a vendor's name is a claim about that vendor, whatever the
+        surrounding prose says. Rewrite to the capability class — §7.2's baseline is
+        called 'representative' for this reason.
+        The exclusion list is for DELIBERATION records that carry no measurement, and
+        adding a file to it is a claim about that file. If the file reports a result,
+        excluding it is how this gate gets defeated.
+  ok    the ablation report carries §7.2's caveat verbatim, as §7.2 words it
+
+vendor honesty — D-008(1) and (3): John's to certify; agents may not clear these
+  ok    §2 capability table: 11 of 11 rows carry a marker resolving to a §13 entry
+        D-008(1)'s mechanical half: dated, and linked to a source that exists. A row
+        added later without [§13#N read YYYY-MM-DD] in its capability cell FAILS this
+        gate, as does one citing an entry §13 does not have. The count is a ratchet.
+  ok    §2 capability table: inference marking (D-008(3)) certified by record —
+        *Certified by John at the Gate 5 session, 2026-08-16 (D-038).*
+        The table hashes to the one certified. THIS SCRIPT DID NOT AND CANNOT CHECK
+        THAT THE CERTIFICATION IS RIGHT — it checks that a named certification exists
+        in §2 and that §2 has not changed since. Whether a sentence fairly describes
+        somebody else's product is John's, and no hash speaks to it.
+
+  Neither line above is this script deciding a public claim. The verification partition
+  gives those to John: public claims, autonomy none. docs/gate-5-vendor-audit.md holds the
+  per-row audit and the certification packet the Gate 5 session ruled from.
+
+vendor honesty: MECHANICAL CONDITIONS FAILED

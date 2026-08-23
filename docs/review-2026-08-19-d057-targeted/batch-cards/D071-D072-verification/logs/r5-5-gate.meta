@@ -1,0 +1,14 @@
+clone=/tmp/d071-gate-unverified
+origin=/tmp/sentinel-r5-base
+head=558d001546b55bd80156bc875cf080fef0e301eb
+precheck_log=r5-5-precheck.log
+precheck_unverified=1
+precheck_rc=0
+npm_prefix=ts
+npm_reason=first completing attempt died: ts/node_modules missing; GATE FAILED; GATE DID NOT REACH COMPLETION (r5-5-gate-incomplete-no-node-modules.log). That run is not the R5-5 observation.
+gate_command=./scripts/test.sh --gate
+gate_rc=0
+unverified_line=68
+gate_passed_line=1054
+elapsed_real_s=1269.37
+lockfile_note=ts/package-lock.json at the R5 parent matched HEAD (shasum equal) before npm --prefix ts ci in the clone only
