@@ -779,7 +779,7 @@ relying on it, and prefer the entry it cites (`A-06x`, `D-05x`) to this cell.
 | `F-VAULT-3` | CONFIRMED | MEDIUM stands, and would be MEDIUM even framed as document-only | **FIXED (A-068)**, and its 'the campaign corroborates' clause WITHDRAWN by **A-073** (marginal power measured ZERO), ratified D-054(b) |
 | `F-VAULT-4` | CONFIRMED | LOW stands | **ACCEPTED (D-051(b), §11.0)** · T1 basis VERIFIED, and now stronger than when accepted (D-054(b)) |
 | `F-VAULT-5` | CONFIRMED | LOW stands, but I would raise the confidence above the finding's own 'medium' | **ACCEPTED (D-051(b), §11.0)** · T1 basis VERIFIED — the docstring is intact at `SentinelVault.sol:39-45` |
-| `G-3` | CONFIRMED | MEDIUM -> LOW | **ACCEPTED (D-051(b), §11.0)** · T1 basis VERIFIED and MEASURED — exactly two classes are credited only on UNRESOLVED |
+| `G-3` | CONFIRMED | MEDIUM -> LOW | **ACCEPTED (D-051(b), §11.0)** · T1 basis VERIFIED and MEASURED — three classes are credited only on UNRESOLVED (`malformed-calldata-or-unknown-selector`, `rpc-simulator-or-context-outage`, `runtime-code-change-or-proxy-target`; `conflicting-block-state` is not among them). Aligns with §11.0's correction of the two-class count. |
 | `G-4` | CONFIRMED | MEDIUM stands, but for a different reason than the finding gives | **FIXED (A-068)** — a sample-size floor, and the caveat derived from the sample |
 | `G-5` | CONFIRMED | LOW stands | **FIXED (A-076)** — count and fixture caveats now derived from the result records. **The repair found the prose was ALREADY FALSE: it named `F057`, whose enforcement is the conformance engine, and omitted the five that qualify** |
 | `H-4` | CONFIRMED | unchanged | **FIXED (A-067)** |

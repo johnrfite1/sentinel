@@ -1,8 +1,10 @@
 # D-055 condition-status — prepared material, not an assessment
 
-**2026-08-23, after Phase B accepted (A-101) and this stretch's freeze (A-102). D-055 is
-not ruled.** D-068 recorded the session; this file remains prepared material, not an
-assessment. The session record lives in `docs/decisions.md`.
+**2026-08-23, after A-103 freeze. D-055 remains NOT MET on John's Session Five ruling.
+This file is prepared material, not an assessment.** D-068 recorded the earlier session
+without a D-055 verdict; Session Five ruled NOT MET on four named grounds. This refresh
+describes the A-103 tree. It does not re-rule D-055. The session record lives in
+`docs/decisions.md`. A-103.
 
 This file is prepared material awaiting John's ruling. Nothing in it is a finding of record.
 It writes into no other file, including not into `docs/exit-criterion-packet.md`. It does not
@@ -49,7 +51,8 @@ gate (`R1-F1`). John ruled on all of them (D-057). The evidence directory is
 **What is not established.** Whether that review still counts as "using the REPAIRED
 apparatus" after the later A-077 / A-078 / A-081 cycle, the D-058 reset, Batch A1's two
 FAILED attempts, and the D-062 containment exception. Whether any later independent review
-is owed before condition 1 can be considered. This file does not answer that.
+is owed before condition 1 can be considered. John deferred apparatus-drift on
+condition 1 as a disposition, not a new gating item. This file does not answer that.
 
 ---
 
@@ -75,15 +78,16 @@ Condition 2's evidence from that run is qualified on D-016.
 ### Verified-origin run (this stretch)
 
 **What is owed, and where it lives.** Isolation is the tree and the commit, not which URL
-`origin` names. This stretch runs an isolated exact-commit `--gate` **after A-102 lands**,
+`origin` names. This stretch runs an isolated exact-commit `--gate` **after A-103 lands**,
 at that freeze, with `origin` set to the repository's real remote, **without** the
 acknowledgement variable. The rename stage is required to read `clean` and name the
 repository as private. If it reads `UNVERIFIED`, or if the acknowledgement is reached for,
 that is a result — not something to route around.
 
 **Sequencing.** That run cannot be a committed fact inside the freeze that creates the SHA
-it measures. Results are reported **out of tree** after freeze. This file records the
-protocol and the acknowledged sibling; it does not pre-print the verified run.
+it measures. A-102 named the same protocol; this stretch's verified-origin run is after
+**A-103**, out of tree. This file records the protocol and the acknowledged sibling; it
+does not pre-print the verified run.
 
 **What is not established.** Whether condition 2 is MET. An agent filling that blank from
 either run would be ruling D-055. T4's carried-and-ratcheted statement still has to be
@@ -124,10 +128,26 @@ ruling condition 3 MET.
 REPAIR (D-057(3)). A-077 third design; A-078 independent HOLD. Not reopened by this
 stretch.
 
-**What is not established.** Whether condition 3 is MET. Whether any later High remains
-unresolved outside this class. D-055(e)'s ledger arithmetic is a statement about that
-ledger, not a live repository-wide severity census. This file does not assign residual
-severity and does not treat existence as flipping the condition.
+**Census assembled at this freeze, not ruled.** Prepared material:
+`docs/review-2026-08-19-d057-targeted/critical-high-census.md`. Independent residual
+scores (not the D-062 verifier, not an implementer):
+`docs/review-2026-08-19-d057-targeted/batch-cards/D062-containment-tests/RESIDUAL-SEVERITY.md`.
+
+Returned to John, no retiring clause applied in this stretch:
+
+- `V-1` **High** — unset-before-resolve remains load-bearing; A-098 is a guard, not acceptance.
+- `R-C` **High** — `GIT_CONFIG_COUNT` + `core.excludesFile` as recorded; D-072 pin measured
+  in scratch is not silent closure of the residual.
+- `V-3` **UNSCORED** — validate/scan windows exist twice; scoring without a timing probe
+  would be a guess. Pending until scored.
+
+Assembled with a verified-repair clause named, not applied as a D-055 ruling: `R1-F1`
+(Critical, A-078 HOLD), `R1` (High, F61ECCA HOLD), `R5` (High, D-071 card HOLD), `V-6`
+(High, D-072 card HOLD). D-067 is not lifted.
+
+**What is not established.** Whether condition 3 is MET. Assembling the census is not
+ruling it. Two Highs and one unscored lead are returned. D-055(e)'s ledger arithmetic is
+a statement about that ledger, not a live repository-wide severity census.
 
 ---
 
@@ -142,6 +162,7 @@ as read today of subsection §11.0 alone**, which did not exist at signature. **
 2026-08-16 signature does not cover §11.0.** That is the only signed-prefix edit in Phase
 B. `docs/gate-s1-evidence.md` is byte-identical to its pre-Phase-B blob (remeasured
 `git hash-object` at the working tree before A-102:
+`66f7b843888cf1eca7d719d0f23c6120969fae30`; remeasured at the A-103 working tree:
 `66f7b843888cf1eca7d719d0f23c6120969fae30`).
 
 **Class-count contradiction, resolved under D-070's rule, not by picking a side in prose.**
@@ -152,14 +173,30 @@ changed. Remeasured immediately before A-102, `scripts/check-class-coverage.sh` 
 carry the rule beside the figure. Signed-prefix present-tense occurrences of the figure
 are historical signed text and were not rewritten.
 
-**The three blind spots that qualify that figure**, restated here rather than left only
-in the pack (independent class-credit review, recorded at D-070):
+**The four blind spots that qualify that figure** (D-070 as amended at A-103; the fourth
+is the class John personally widened):
 
 1. **malformed-calldata-or-unknown-selector** — no fixture in the class fails
    `EVAL_SELECTOR_BOUND` or `EVAL_OPERATION_SUPPORTED`.
 2. **runtime-code-change-or-proxy-target** — no fixture in the class is an actual proxy.
 3. **rpc-simulator-or-context-outage** — outage sibling codes on the non-null simulation
    branch never fire.
+4. **evaluator-or-signer-compromise** — credited on 1 of 4 mapped codes; F057 is counted
+   among the covered, so the 1-of-4 shortfall is not visible in the per-fixture note.
+   This supersedes D-040(b)'s visibility sentence; the map widening stands.
+
+**Register `G-3` (A-103).** `docs/v1-1-register.md` now names three UNRESOLVED-only
+credited classes, aligned with `docs/gate-s2-evidence.md` §11.0. The prior two-class
+wording is corrected, not re-adjudicated.
+
+**`D-09`(a),(b) T1 row (A-103).** Stated basis `*(none recorded)*`; verification **No
+basis to verify** — same treatment as `H-5` and `H-8`. The cell that stood there was the
+severity verdict "LOW stands", which is not a file, line, count, or command. No basis
+was invented. Acceptance of (a),(b) as limits is not re-opened.
+
+**Standing.** D-057(2) ruled condition 4 **NOT MET**. That ruling is not reversed here.
+The D-069 annotation and the record corrections above are facts assembled for John's
+re-ruling. This file does not reverse NOT MET.
 
 The figure is the right number under the rule and it rests on single-code credits in
 several classes. Both halves are written down. Stating that is not ruling condition 4.
@@ -218,8 +255,14 @@ itself, recertify Gate 5.
 | `R3` | Permanent recorded limit (D-068(6)) | Dispositioned; frozen A1 harness untouched |
 | `R5` | Repaired as D-071 option C | Fast UNVERIFIED exit 0; deep refuses unless ack; ack discloses |
 | `V-6` | Closed at the pin (D-072) | D-067 limit **not lifted** until John rules |
-| `V-1` | Carried, unaccepted | Regression guard is not acceptance (A-098) |
-| `V-2`–`V-5`, `V-7`–`V-10` | Carried by reference | D-062 `VERIFICATION.md` §10; not copied here |
+| `V-1` | Independent residual **High**; carried, unaccepted | Returned to John. A-098 is a guard, not acceptance. **No retiring clause applied.** |
+| `V-3` | **UNSCORED** (timing probe required) | Returned to John. Pending until scored. **Not probed.** |
+| `R-C` | Independent residual **High** | Returned to John. D-072 pin measured in scratch is not silent closure. **No retiring clause applied.** |
+| `V-2`, `V-4` | Independent residual Low | Scored; not repaired in this stretch |
+| `V-5`, `V-7`, `V-8`, `V-9` | Independent residual Info | Scored; not repaired in this stretch |
+| `V-10` | Independent residual Medium (silence over A2 residuals including High-class R-C) | Scored; not repaired in this stretch |
+| `R-A`, `R-B`, `R-D`, `R-E` | Independent residual Info | Scored; not repaired in this stretch |
+| `R-F` | Independent residual Medium | Scored; not repaired in this stretch |
 | Gate 5 certification | Standing (D-059(1) option A) | Not revoked, reaffirmed, or recertified |
 | D-008(2)/(4) completeness limits | Named at D-067 | Prepared item; see `R2`/`V-6` above |
 | A1 | Closed through D-062 exception | No reopening; test-clause lifts spent |
@@ -239,7 +282,7 @@ fixed and accepted sets.)
 
 **What is not established.** This stretch did not re-run those basis probes. Register
 §13.4 is a maintained table this project has already caught stale. `G-3`'s credited-class
-count now sits under D-070's stated rule with the three blind spots above; treating the
+count now sits under D-070's stated rule with the four blind spots above; treating the
 register as T1-complete for `G-3` without re-verifying the basis is still John's.
 
 ---
@@ -254,8 +297,12 @@ downgrade.
 The F61ECCA reviewer assigned `R1` **High**. That is the first adjudication of that
 item's severity. It is not a countersignature by John of condition 3.
 
+**This stretch (T2).** An independent adjudicator — not the D-062 verifier, not an
+implementer, not a party this exit depends on — scored V-1–V-5, V-7–V-10 and R-A–R-F.
+V-3 was left UNSCORED rather than guessed. Anything High was returned, not repaired.
+
 **What is not established.** Whether every other residual has an independent severity
-John has countersigned.
+John has countersigned. Whether V-3's score, once probed, is below High.
 
 ---
 
@@ -274,23 +321,37 @@ review the criterion named. That is his.
 ## T4 — the exit record states the gate's carried and ratcheted items explicitly
 
 **The class-coverage figure is no longer a live contradiction in maintained prose.**
-D-070 stated the crediting rule; the guard prints the figure with the rule; the three
+D-070 stated the crediting rule; the guard prints the figure with the rule; the four
 blind spots are recorded. That is not T4 complete.
 
 T4 still requires the exit record to state, in those terms, what the **deep gate that
 is offered as condition 2** passed *on the ratchet* (baselined workspace findings,
-carried corpus classes, rename-gate verified vs acknowledged, anything else).
-"Passes on ratcheted debt" is not "clean". The acknowledged pack and the verified-origin
-pack (out of tree, after freeze) are the places that statement can be read. Filling T4
-from a stale batch-verifier run is the defect T4 exists to prevent.
+carried corpus classes, rename-gate **verified** with coverage = origin visibility only,
+anything else). "Passes on ratcheted debt" is not "clean". The acknowledged pack and the
+verified-origin pack (out of tree, **after A-103**) are the places that statement can be
+read. Filling T4 from a stale batch-verifier run is the defect T4 exists to prevent.
+`scripts/check-findings-ledger.sh` and `scripts/check-review-scope.sh` are not gate
+stages.
 
 **What is not established.** Whether T4 is complete. This file does not complete it.
 
 ---
+
+## Deferrals, recorded as dispositions
+
+John named these deferred. Deferral is a disposition, not an open inventory item, and
+not a new precondition:
+
+- apparatus drift on condition 1 (John will rule at the next session)
+- `docs/exit-criterion-packet.md` §7 reconciliation
+- `NEW-FINDINGS.tsv` repair annotations
+- sanitization-manifest rows for the session-four redacted files
+- harness-pin disposition (`VERIFICATION.md` pin vs post-redaction hash; the verifier's
+  pin is not overwritten)
 
 ## What this dossier is not
 
 It is not an assessment of D-055. It is not a recommended verdict. It is not a
 follow-on plan. It does not lift the D-067 limits. It does not sign, reopen, or
 annotate a gate. It does not certify or alter a public claim. It does not rewrite a
-frozen harness.
+frozen harness. D-055 remains NOT MET until John re-rules.
