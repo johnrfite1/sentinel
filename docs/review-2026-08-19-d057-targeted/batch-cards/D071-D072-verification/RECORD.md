@@ -68,3 +68,22 @@ None of those three wrote the production repairs.
 ```
 
 Stash empty. Those paths were present at A-102 and were not discarded.
+
+## Redaction (session four)
+
+John ruled that this card's committed vendor plants broke
+`scripts/check-vendor-honesty.sh` at the freeze above, so condition 2
+did not hold there. This commit redacts those literals to named tokens
+and synthesises vendor plants at run time in `d071-d072-observe.sh`,
+the same discipline the card already used for credentials.
+
+- No production change. No guard change. No exclusion list.
+- HOLD, R5 High, V-6 High, R2 Medium, and upgrade/downgrade conditions
+  are unchanged. Disclosures sit in VERIFICATION.md and SEVERITY.md.
+- Frozen harness sha256 at the verification freeze (measured then, still
+  the pin in VERIFICATION.md):
+  `e24443d1fc365e09a691650e8a69bd68a7b4768fde92f2c7da816e3b7e35d12e`.
+  After this redaction the harness hash moved. Measured at this commit:
+  `284d8974331fecddc505e88037201e6d572410a5f83d5e65dfad1209ae8b143e`
+  (`d071-d072-observe.sh`). The verifier's pin is not overwritten.
+- D-055 is not ruled. D-067 is not lifted. No gate is signed.

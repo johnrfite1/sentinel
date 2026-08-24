@@ -4,6 +4,8 @@
 
 Every REQUIRED row that was actually measured at HEAD passed. Controls fired before observe on those rows. Independent probes `[V]` and the frozen harness `[H]` agree where both ran. No measured REQUIRED failed.
 
+**Redaction (John, session four, 2026-08-23).** Live D-008(2)/(4) scanner literals in this file were replaced with named tokens (`<D-008-2-label>`, `<vendor-name>`). **Verdict HOLD is unchanged. No row score, no reasoning, and no confounder logic is changed.** The tokens stand in for the literals that were in this file (and in the committed card files the R5-5 confounder names) at the freeze this document scored. The frozen-harness sha256 recorded below was measured before this redaction; after vendor plants were synthesised at run time the harness hash moved. That movement is recorded in RECORD.md. This paragraph does not re-pin the hash.
+
 This document does not assign severity. It does not lift D-067. It does not give a D-055 verdict. It does not change production.
 
 **Authority:** D-058(1) third role — independent of the test author and of the implementer. CARD.md is the contract. EXPLOIT-CONTROL.md is the control protocol. BASELINE-RESULTS.md is the author's FAIL-at-parent claim, not this score.
@@ -145,7 +147,7 @@ rename gate: UNVERIFIED (deep/--gate refuses unless SENTINEL_RENAME_GATE_UNVERIF
 
 This is not a script-only `check-rename-gate.sh` result. It is the top-level instrument completing its fail path.
 
-**Confounder, stated so it is not hidden:** vendor-honesty also failed on this clone because **committed** card files (`EXPLOIT-CONTROL.md`, `d071-d072-observe.sh`, baseline `logs/v6-*-vendor.potency.log`) contain `executed directly` and `Coinbase`. Those files are in HEAD. So `fail=1` has more than one cause. Rename-gate **did** refuse UNVERIFIED/no-ack. `GATE PASSED` was withheld. The REQUIRED is that pair, not "rename-gate was the only failing step."
+**Confounder, stated so it is not hidden:** vendor-honesty also failed on this clone because **committed** card files (`EXPLOIT-CONTROL.md`, `d071-d072-observe.sh`, baseline `logs/v6-*-vendor.potency.log`) contain `<D-008-2-label>` and `<vendor-name>`. Those files are in HEAD. So `fail=1` has more than one cause. Rename-gate **did** refuse UNVERIFIED/no-ack. `GATE PASSED` was withheld. The REQUIRED is that pair, not "rename-gate was the only failing step."
 
 ---
 

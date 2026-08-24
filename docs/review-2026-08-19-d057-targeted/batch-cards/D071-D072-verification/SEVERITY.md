@@ -5,6 +5,13 @@ document scores the **pre-repair defects** at the parents the card
 measured. It does not score whether the repairs hold. HOLD/FAIL of the
 card is the verifier's job.
 
+**Redaction (John, session four, 2026-08-23).** Live D-008(2)/(4)
+scanner literals in the scan-description parentheticals were replaced
+with named tokens (`<D-008-2-label>`, `<D-008-2-label-alt>`,
+`<vendor-name>`). **Severities (R5 High, V-6 High, R2 Medium),
+reasoning, and upgrade/downgrade conditions are unchanged.** This
+paragraph is disclosure of the redaction, not a rescoring.
+
 It does not score D-055. It does not lift D-067. Named completeness
 limits stay named. D-016 stands. No gate is signed, reopened, or
 annotated.
@@ -182,9 +189,9 @@ That vector is **NOT_MEASURED**, not a pass.
   `./scripts/check-secrets.sh || fail=1` with no `--staged`. A hidden
   untracked plant yields `secret guard: clean` and does not set `fail`.
 - **Instrument 2:** `scripts/check-vendor-honesty.sh` `artifacts()`,
-  which feeds the D-008(2) label scan (`executed directly` /
-  `faithfully emulated`) and the D-008(4) vendor-name scan (roster
-  including `Coinbase`). Same `--gate` runner:
+  which feeds the D-008(2) label scan (`<D-008-2-label>` /
+  `<D-008-2-label-alt>`) and the D-008(4) vendor-name scan (roster
+  including `<vendor-name>`). Same `--gate` runner:
   `./scripts/check-vendor-honesty.sh || fail=1`.
 - **Claim:** that those two censuses see untracked files that are not
   ignored **by the repository**. At the parent they also honoured

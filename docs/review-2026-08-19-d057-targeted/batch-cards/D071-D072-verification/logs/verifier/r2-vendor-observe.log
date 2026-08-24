@@ -1,45 +1,45 @@
 vendor honesty (§7.5 Gate 5, D-008) — mechanical conditions
-  FAIL  café-d072.md labels a vendor comparison 'executed' or 'faithfully emulated'
+  FAIL  café-d072.md labels a vendor comparison 'executed' or '<D-008-2-label-alt>'
         D-001 cut executed comparisons from v1; §10.1's other two labels must stay empty.
-  FAIL  docs/review-2026-08-19-d057-targeted/batch-cards/D071-D072-verification/EXPLOIT-CONTROL.md labels a vendor comparison 'executed' or 'faithfully emulated'
+  FAIL  docs/review-2026-08-19-d057-targeted/batch-cards/D071-D072-verification/EXPLOIT-CONTROL.md labels a vendor comparison 'executed' or '<D-008-2-label-alt>'
         D-001 cut executed comparisons from v1; §10.1's other two labels must stay empty.
-  FAIL  docs/review-2026-08-19-d057-targeted/batch-cards/D071-D072-verification/d071-d072-observe.sh labels a vendor comparison 'executed' or 'faithfully emulated'
+  FAIL  docs/review-2026-08-19-d057-targeted/batch-cards/D071-D072-verification/d071-d072-observe.sh labels a vendor comparison 'executed' or '<D-008-2-label-alt>'
         D-001 cut executed comparisons from v1; §10.1's other two labels must stay empty.
-  FAIL  docs/review-2026-08-19-d057-targeted/batch-cards/D071-D072-verification/logs/r2-ascii-potency.log labels a vendor comparison 'executed' or 'faithfully emulated'
+  FAIL  docs/review-2026-08-19-d057-targeted/batch-cards/D071-D072-verification/logs/r2-ascii-potency.log labels a vendor comparison 'executed' or '<D-008-2-label-alt>'
         D-001 cut executed comparisons from v1; §10.1's other two labels must stay empty.
-  FAIL  docs/review-2026-08-19-d057-targeted/batch-cards/D071-D072-verification/logs/v6-COUNT-vendor.potency.log labels a vendor comparison 'executed' or 'faithfully emulated'
+  FAIL  docs/review-2026-08-19-d057-targeted/batch-cards/D071-D072-verification/logs/v6-COUNT-vendor.potency.log labels a vendor comparison 'executed' or '<D-008-2-label-alt>'
         D-001 cut executed comparisons from v1; §10.1's other two labels must stay empty.
-  FAIL  docs/review-2026-08-19-d057-targeted/batch-cards/D071-D072-verification/logs/v6-GLOBAL-vendor.potency.log labels a vendor comparison 'executed' or 'faithfully emulated'
+  FAIL  docs/review-2026-08-19-d057-targeted/batch-cards/D071-D072-verification/logs/v6-GLOBAL-vendor.potency.log labels a vendor comparison 'executed' or '<D-008-2-label-alt>'
         D-001 cut executed comparisons from v1; §10.1's other two labels must stay empty.
-  FAIL  docs/review-2026-08-19-d057-targeted/batch-cards/D071-D072-verification/logs/v6-HOME-vendor.potency.log labels a vendor comparison 'executed' or 'faithfully emulated'
+  FAIL  docs/review-2026-08-19-d057-targeted/batch-cards/D071-D072-verification/logs/v6-HOME-vendor.potency.log labels a vendor comparison 'executed' or '<D-008-2-label-alt>'
         D-001 cut executed comparisons from v1; §10.1's other two labels must stay empty.
-  FAIL  docs/review-2026-08-19-d057-targeted/batch-cards/D071-D072-verification/logs/v6-NOSYSTEM-vendor.potency.log labels a vendor comparison 'executed' or 'faithfully emulated'
+  FAIL  docs/review-2026-08-19-d057-targeted/batch-cards/D071-D072-verification/logs/v6-NOSYSTEM-vendor.potency.log labels a vendor comparison 'executed' or '<D-008-2-label-alt>'
         D-001 cut executed comparisons from v1; §10.1's other two labels must stay empty.
-  FAIL  docs/review-2026-08-19-d057-targeted/batch-cards/D071-D072-verification/logs/v6-SYSTEM-vendor.potency.log labels a vendor comparison 'executed' or 'faithfully emulated'
+  FAIL  docs/review-2026-08-19-d057-targeted/batch-cards/D071-D072-verification/logs/v6-SYSTEM-vendor.potency.log labels a vendor comparison 'executed' or '<D-008-2-label-alt>'
         D-001 cut executed comparisons from v1; §10.1's other two labels must stay empty.
-  FAIL  docs/review-2026-08-19-d057-targeted/batch-cards/D071-D072-verification/logs/v6-XDG-vendor.potency.log labels a vendor comparison 'executed' or 'faithfully emulated'
+  FAIL  docs/review-2026-08-19-d057-targeted/batch-cards/D071-D072-verification/logs/v6-XDG-vendor.potency.log labels a vendor comparison 'executed' or '<D-008-2-label-alt>'
         D-001 cut executed comparisons from v1; §10.1's other two labels must stay empty.
   FAIL  café-d072.md names a vendor in a measurement artifact:
-          1:The comparison was executed directly against Coinbase.
+          1:<vendor-plant>
   FAIL  docs/review-2026-08-19-d057-targeted/batch-cards/D071-D072-verification/EXPLOIT-CONTROL.md names a vendor in a measurement artifact:
-          14:matches the vendor roster including `Coinbase`.
-          99:   Vendor: a file containing both `executed directly` and `Coinbase`.
+          14:matches the vendor roster including `<vendor-name>`.
+          99:   Vendor: a file containing both `<D-008-2-label>` and `<vendor-name>`.
   FAIL  docs/review-2026-08-19-d057-targeted/batch-cards/D071-D072-verification/d071-d072-observe.sh names a vendor in a measurement artifact:
-          51:VENDOR_LINE="The comparison was executed directly against Coinbase."
+          51:VENDOR_LINE="<vendor-plant>"
   FAIL  docs/review-2026-08-19-d057-targeted/batch-cards/D071-D072-verification/logs/r2-ascii-potency.log names a vendor in a measurement artifact:
-          5:          1:The comparison was executed directly against Coinbase.
+          5:          1:<vendor-plant>
   FAIL  docs/review-2026-08-19-d057-targeted/batch-cards/D071-D072-verification/logs/v6-COUNT-vendor.potency.log names a vendor in a measurement artifact:
-          5:          1:The comparison was executed directly against Coinbase.
+          5:          1:<vendor-plant>
   FAIL  docs/review-2026-08-19-d057-targeted/batch-cards/D071-D072-verification/logs/v6-GLOBAL-vendor.potency.log names a vendor in a measurement artifact:
-          5:          1:The comparison was executed directly against Coinbase.
+          5:          1:<vendor-plant>
   FAIL  docs/review-2026-08-19-d057-targeted/batch-cards/D071-D072-verification/logs/v6-HOME-vendor.potency.log names a vendor in a measurement artifact:
-          5:          1:The comparison was executed directly against Coinbase.
+          5:          1:<vendor-plant>
   FAIL  docs/review-2026-08-19-d057-targeted/batch-cards/D071-D072-verification/logs/v6-NOSYSTEM-vendor.potency.log names a vendor in a measurement artifact:
-          5:          1:The comparison was executed directly against Coinbase.
+          5:          1:<vendor-plant>
   FAIL  docs/review-2026-08-19-d057-targeted/batch-cards/D071-D072-verification/logs/v6-SYSTEM-vendor.potency.log names a vendor in a measurement artifact:
-          5:          1:The comparison was executed directly against Coinbase.
+          5:          1:<vendor-plant>
   FAIL  docs/review-2026-08-19-d057-targeted/batch-cards/D071-D072-verification/logs/v6-XDG-vendor.potency.log names a vendor in a measurement artifact:
-          5:          1:The comparison was executed directly against Coinbase.
+          5:          1:<vendor-plant>
         A number beside a vendor's name is a claim about that vendor, whatever the
         surrounding prose says. Rewrite to the capability class — §7.2's baseline is
         called 'representative' for this reason.

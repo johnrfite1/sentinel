@@ -48,18 +48,43 @@ MATRIX="$LOGDIR/matrix.tsv"
 WORK="$(mktemp -d "${TMPDIR:-/tmp}/d071d072.XXXXXXXX")"
 SECRET_HEX="$(openssl rand -hex 16)"
 SECRET_LINE="API_KEY=${SECRET_HEX}"
-VENDOR_LINE="The comparison was executed directly against Coinbase."
+# D-008(2)/(4) plant assembled at run time so committed bytes never carry live scanner literals.
+_vp1='execu'
+_vp2='ted dir'
+_vp3='ectly'
+_vn='Coin'
+_vn="${_vn}base"
+_alt1='faith'
+_alt2='fully emu'
+_alt3='lated'
+VENDOR_LINE="The comparison was ${_vp1}${_vp2}${_vp3} against ${_vn}."
 export SECRET_HEX
+export VENDOR_LINE
+export VP_LABEL="${_vp1}${_vp2}${_vp3}"
+export VP_NAME="${_vn}"
+export VP_LABEL_ALT="${_alt1}${_alt2}${_alt3}"
 
 trap 'rm -rf "$WORK"' EXIT
 
 redact() {
   python3 -c 'import os,sys
 h=os.environ.get("SECRET_HEX","")
+v=os.environ.get("VENDOR_LINE","")
+lab=os.environ.get("VP_LABEL","")
+name=os.environ.get("VP_NAME","")
+alt=os.environ.get("VP_LABEL_ALT","")
 t=sys.stdin.read()
 if h:
     t=t.replace("API_KEY="+h,"API_KEY=<redacted>")
     t=t.replace(h,"<redacted-hex>")
+if v:
+    t=t.replace(v,"<vendor-plant>")
+if lab:
+    t=t.replace(lab,"<D-008-2-label>")
+if name:
+    t=t.replace(name,"<vendor-name>")
+if alt:
+    t=t.replace(alt,"<D-008-2-label-alt>")
 sys.stdout.write(t)'
 }
 

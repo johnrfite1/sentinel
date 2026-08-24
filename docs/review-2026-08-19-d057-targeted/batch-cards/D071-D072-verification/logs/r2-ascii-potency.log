@@ -1,8 +1,8 @@
 vendor honesty (§7.5 Gate 5, D-008) — mechanical conditions
-  FAIL  cafe-d072.md labels a vendor comparison 'executed' or 'faithfully emulated'
+  FAIL  cafe-d072.md labels a vendor comparison 'executed' or '<D-008-2-label-alt>'
         D-001 cut executed comparisons from v1; §10.1's other two labels must stay empty.
   FAIL  cafe-d072.md names a vendor in a measurement artifact:
-          1:The comparison was executed directly against Coinbase.
+          1:<vendor-plant>
         A number beside a vendor's name is a claim about that vendor, whatever the
         surrounding prose says. Rewrite to the capability class — §7.2's baseline is
         called 'representative' for this reason.
