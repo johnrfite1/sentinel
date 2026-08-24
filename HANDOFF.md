@@ -64,7 +64,7 @@ BEGUN~~ **— that present-tense claim was true of A-086's date and is false now
 or renamed under D-016. **Do not quote suite counts from any handoff file — run
 `./scripts/test.sh` and read its output, or `./scripts/check-suite-floors.sh`.**
 
-**2026-08-22 — THE D-058 CONFIRMED BATCHES HOLD; D-055 IS STILL JOHN'S.** Start at
+**2026-08-22 — THE D-058 CONFIRMED BATCHES HOLD; ~~D-055 IS STILL JOHN'S~~ D-055 was still unruled at this date.** Start at
 `docs/session-state.md` §1. Batch A1's closure through the D-062 exception is unchanged and is
 not relabelled successful. Independently verified HOLD, each inside its declared boundary:
 A-EXTRACT (A-089), B-EVENTS (A-091), C-SNAPSHOT (A-093), A-FLOORS (A-094), D-CLAIMS (A-095).
@@ -72,15 +72,29 @@ A-EXTRACT (A-089), B-EVENTS (A-091), C-SNAPSHOT (A-093), A-FLOORS (A-094), D-CLA
 not a push.** D-016 still blocks all publication; the repository is PRIVATE; an agent pushes
 only on John's explicit direction for a specific state. Held D-008 questions remain unseen.
 
-**2026-08-22 (later) — V-1 HAS A BEHAVIOURAL REGRESSION GUARD; IT IS STILL CARRIED AND
-UNACCEPTED.** The 2026-08-20 (later) paragraph stands as written, with the two struck phrases
+**2026-08-22 (later) — V-1 HAS A BEHAVIOURAL REGRESSION GUARD; ~~IT IS STILL CARRIED AND
+UNACCEPTED~~ retired under D-073 (2026-08-24) via that guard's independent HOLD.** The 2026-08-20 (later) paragraph stands as written, with the two struck phrases
 above. A guard that observes a hostile `GIT_INDEX_FILE` is bound to both gate profiles
-(`scripts/check-v1-index-ordering.sh`, D-059(7)). **That is not acceptance of `V-1`.** The
+(`scripts/check-v1-index-ordering.sh`, D-059(7)). ~~**That is not acceptance of `V-1`.**~~
+**D-073 applied the verified-repair clause to `V-1`.** The
 2026-08-22 lift of A1's "no further A1 test" clause is **spent** at this freeze. Two dossiers
 under `docs/review-2026-08-19-d057-targeted/` (`gate5-v3n2-admissibility.md`,
-`d055-condition-status.md`) are prepared material awaiting John's ruling and are not findings
-of record. D-058(10) is owed at this freeze, reported out of tree. Nothing is signed,
+`d055-condition-status.md`) ~~are prepared material awaiting John's ruling and are not findings
+of record~~ **— `d055-condition-status.md` is the D-055 exit record as of D-073 / A-104.** D-058(10) is owed at this freeze, reported out of tree. Nothing is signed,
 certified, published, renamed, or pushed.
+
+**2026-08-24 — D-055 IS MET (D-073). IT UNLOCKS NOTHING.** Start at
+`docs/session-state.md` §1. John ruled D-055(a)'s terminating condition MET at Session Six.
+**That is a precondition under D-048, never a trigger.** D-016 still blocks all publication;
+the repository is PRIVATE; Gate 8 remains PRE-PUBLICATION under D-032; no gate is signed or
+reopened; Gate 5 is not recertified; the D-067 D-008(2)/(4) limits are HISTORICAL and the
+§7.2 admissibility sentence is untouched. The exit record is
+`docs/review-2026-08-19-d057-targeted/d055-condition-status.md`. The census of record is
+`docs/review-2026-08-19-d057-targeted/critical-high-census.md`. `V-3` is accepted as a
+documented product boundary already declared at `scripts/check-secrets.sh` 148–152. A-104
+froze that record; the isolated verified-origin `--gate` is after that freeze, out of tree.
+**Do not prepare a publication path, a rename plan, a Gate 8 packet, a v1.1 plan, or any
+follow-on stretch.** Held D-008 questions remain unseen.
 
 Amended 2026-07-27 by Opus 5 at build start: D-007…D-011 (delegated rulings) resolve four open forks and the labeling blind spot. Sections below reflect them. Proposal mirror: §14.9.
 

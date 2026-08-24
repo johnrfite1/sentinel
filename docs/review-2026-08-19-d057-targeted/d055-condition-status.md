@@ -1,19 +1,20 @@
-# D-055 condition-status — prepared material, not an assessment
+# D-055 exit record (D-073)
 
-**2026-08-23, after A-103 freeze. D-055 remains NOT MET on John's Session Five ruling.
-This file is prepared material, not an assessment.** D-068 recorded the earlier session
-without a D-055 verdict; Session Five ruled NOT MET on four named grounds. This refresh
-describes the A-103 tree. It does not re-rule D-055. The session record lives in
-`docs/decisions.md`. A-103.
+**2026-08-24. D-055(a)'s terminating condition is MET (D-073, John, Session Six).**
+This file is no longer prepared material. It is the exit record. **A MET D-055
+unlocks nothing.** D-048 makes a clean result a PRECONDITION, never a trigger.
+D-016 blocks publication and the rename. Gate 8 is pre-publication under D-032
+and needs the D-009 dashboard and John's five held questions, which the build
+loop never sees. No gate is signed or reopened. The §14.8 ladder is still not
+an agent's to start climbing.
 
-This file is prepared material awaiting John's ruling. Nothing in it is a finding of record.
-It writes into no other file, including not into `docs/exit-criterion-packet.md`. It does not
-assess D-055. It does not flip, imply, or pre-compute any condition's status. It does not
-write a recommended verdict. John rules D-055 at a facilitated session — he answers, not
-an agent.
+The session record lives in `docs/decisions.md` (D-073). A-104 is the agent
+entry that froze this record. Session Five's NOT MET (at `dffe6f8`) is history;
+its reversal condition fired on the six gating items and the clauses below.
 
-For each of D-055(a)'s conditions and each of T1–T4: what was measured, when, at what commit,
-by whom, and — stated as plainly as the rest — **what is not established.**
+For each of D-055(a)'s conditions and each of T1–T4: what was measured, when, at
+what commit, by whom, and — stated as plainly as the rest — **what is not
+established.** A met exit criterion is evidence only for what D-055(a) asked.
 
 ---
 
@@ -26,222 +27,210 @@ Exit requires, replacing D-047:
 3. ZERO unresolved confirmed Critical/High defects;
 4. ZERO known false or unsupported signed/certified claims.
 
-Confirmed Medium/Low findings may remain only when individually adjudicated, accurately
-documented as limits, and reflected in affected claims. "Zero findings of any severity" is
-expressly not the termination condition.
+Confirmed Medium/Low findings may remain only when individually adjudicated,
+accurately documented as limits, and reflected in affected claims. "Zero
+findings of any severity" is expressly not the termination condition.
 
-John's clarification: an unadjudicated Critical/High lead is PENDING, not silently
-"unconfirmed". A confirmed High ceases to block only through verified repair, or through
-John's explicit acceptance as a documented product boundary. An agent may do neither on its
-own.
+John's clarification: an unadjudicated Critical/High lead is PENDING, not
+silently "unconfirmed". A confirmed High ceases to block only through verified
+repair, or through John's explicit acceptance as a documented product boundary.
 
-T1–T4 were adopted with it. They are recorded below as themselves, not as a second exit.
-
----
-
-## Condition 1 — one independent, fixed-scope post-D-052 review using the repaired apparatus
-
-**What was measured.** D-055(e) (2026-08-18): four reviewers, scope fixed by John in advance
-(D-056(d)), each in its own worktree with its own persistent evidence directory, at most two
-concurrent, every deliverable written to disk before the reviewer was counted complete.
-Returned 23 finding IDs (22 confirmed, 1 refuted) including a CRITICAL in the certification
-gate (`R1-F1`). John ruled on all of them (D-057). The evidence directory is
-`docs/review-2026-08-18-d055e/` with briefs preserved unaltered.
-
-**What is not established.** Whether that review still counts as "using the REPAIRED
-apparatus" after the later A-077 / A-078 / A-081 cycle, the D-058 reset, Batch A1's two
-FAILED attempts, and the D-062 containment exception. Whether any later independent review
-is owed before condition 1 can be considered. John deferred apparatus-drift on
-condition 1 as a disposition, not a new gating item. This file does not answer that.
+T1–T4 were adopted with it. They are recorded below as themselves, not as a
+second exit.
 
 ---
 
-## Condition 2 — a passing deep gate and workspace guards
+## Condition 1 — SATISFIED. The qualifying review still qualifies.
 
-Two isolated exact-commit deep gates exist after Phase B. They are different measurements.
-Neither is a ruling of condition 2.
+**What was measured.** D-055(e) (2026-08-18): four reviewers, scope fixed by
+John in advance (D-056(d)), each in its own worktree with its own persistent
+evidence directory, at most two concurrent, every deliverable written to disk
+before the reviewer was counted complete. Returned 23 finding IDs (22 confirmed,
+1 refuted) including a CRITICAL in the certification gate (`R1-F1`). John ruled
+on all of them (D-057). The evidence directory is
+`docs/review-2026-08-18-d055e/` with briefs preserved unaltered. Frozen commit
+reviewed: `7e0ab7f1057de278c09cc803ab4ca266f53399e1`.
 
-### Acknowledged run (Phase B)
+**Drift, ruled rather than left to implication.** Session Five deferred
+apparatus-drift as a disposition, not a gating item. Session Six ruled: **the
+review still qualifies.** D-055 deliberately replaced D-047's unbounded loop so
+that later repairs do not re-trigger the qualifying review; ruling otherwise
+would restore that loop under another name. The instrument rewrites since are
+**the repairs that review demanded** (A-077, A-078, the batch cards).
 
-**What was measured.** After the Phase B freeze (A-101), an isolated clone at that freeze
-whose `origin` was the clone's own path ran `./scripts/test.sh --gate` with
-`SENTINEL_RENAME_GATE_UNVERIFIED_OK=1`. The scored body printed `GATE PASSED`. The rename
-stage printed `UNVERIFIED` and, on its own line, that the run **ACKNOWLEDGES D-016 was not
-verified**. That is the D-071 option-C path for an origin that is not a GitHub slug. The
-pack is out of tree (`_sentinel-out-of-tree/phase-b-2026-08-23/`); it is not a repository
-file. Workspace guards on the freeze tree reported OK on ratcheted machine-state debt (all
-baselined, none new).
+**Counts, independently remeasured, not copied from the session note.**
 
-**What that run does not establish.** Rename-gate privacy was **acknowledged, not verified**.
-Condition 2's evidence from that run is qualified on D-016.
+Session Six's note cites 122 commits / 685 new tracked files / 678 under
+`docs/` / 571 in the batch-card evidence tree / 7 non-doc. Those figures are
+exact at Session Five's freeze `dffe6f8a0048fc3f051e766c453537dd8d883e81`
+(`git diff --diff-filter=A --name-only 7e0ab7f dffe6f8`; `git rev-list --count
+7e0ab7f..dffe6f8`).
 
-### Verified-origin run (this stretch)
+Session Six names freeze `8c74537f9d85f97b1d0133fd6869e3d79115c8ef` (A-103).
+Remeasured there against the same D-055(e) base:
 
-**What is owed, and where it lives.** Isolation is the tree and the commit, not which URL
-`origin` names. This stretch runs an isolated exact-commit `--gate` **after A-103 lands**,
-at that freeze, with `origin` set to the repository's real remote, **without** the
-acknowledgement variable. The rename stage is required to read `clean` and name the
-repository as private. If it reads `UNVERIFIED`, or if the acknowledgement is reached for,
-that is a result — not something to route around.
+| | `dffe6f8` (Session Five) | `8c74537` (Session Six freeze) |
+|---|---|---|
+| commits since `7e0ab7f` | 122 | 123 |
+| new tracked files (`--diff-filter=A`) | 685 | 687 |
+| of those under `docs/` | 678 | 680 |
+| of those under `…/batch-cards/` | 571 | 572 |
+| new non-doc | 7 | 7 |
 
-**Sequencing.** That run cannot be a committed fact inside the freeze that creates the SHA
-it measures. A-102 named the same protocol; this stretch's verified-origin run is after
-**A-103**, out of tree. This file records the protocol and the acknowledged sibling; it
-does not pre-print the verified run.
+The two files added at A-103 are
+`docs/review-2026-08-19-d057-targeted/batch-cards/D062-containment-tests/RESIDUAL-SEVERITY.md`
+and `docs/review-2026-08-19-d057-targeted/critical-high-census.md` — the census
+Session Five commissioned. The seven non-doc files are unchanged:
 
-**What is not established.** Whether condition 2 is MET. An agent filling that blank from
-either run would be ruling D-055. T4's carried-and-ratcheted statement still has to be
-read from the pack that actually ran, not from a prior batch-verifier.
+- `contracts/test/SentinelVault.binding.t.sol`
+- `contracts/test/SentinelVault.events.t.sol`
+- `scripts/check-findings-ledger.sh`
+- `scripts/check-suite-floors.sh`
+- `scripts/check-v1-index-ordering.sh`
+- `scripts/extract-markdown-section.py`
+- `ts/test/vault.snapshot.classification.test.ts`
 
----
+The drift is evidence accretion. The load-bearing figure — seven new non-doc
+files — is the same at both freezes.
 
-## Condition 3 — zero unresolved confirmed Critical/High
-
-**The F61ECCA class, independently HOLD.**
-
-The bounded card at
-`docs/review-2026-08-19-d057-targeted/batch-cards/F61ECCA-verification/` commissioned
-independent behavioural verification of `C4`, `C6a`, `C6b`, `C6c`, `C6d`, and `R1`, with a
-positive exploit control per item before the observing test. A reviewer who authored
-neither the `f61ecca` repairs nor the card returned **HOLD** on all six
-(`INDEPENDENT-REVIEW.md`). The harness matrix recorded REQUIRED failures: none, CONTROL
-failures: none (`RESULTS.md`). `C6d` completing `GATE PASSED` from a decoy cwd was **not
-observed** (wait bound); identity held (no decoy shims; Sentinel stages started). That
-limit is recorded on the card. It is not a FAIL of the six.
-
-**`R1` — first severity adjudication: High.** T2 puts severity with the independent
-reviewer. A2's own adjudication said *"No claim about severity or priority."* The F61ECCA
-reviewer assigned **High**: `.githooks/pre-commit` execs `check-secrets.sh --staged`; ACM
-drops `R` and `T`, so a credential on a rename or typechange destination could be admitted.
-Not Critical: ordinary `A`/`C`/`M` still block; with `diff.renames` off the same edit
-scores `D`+`A` and ACM sees the `A`. Freeze observations: staged rename and typechange
-**BLOCKED**, destinations named. Mutants printed `secret guard: clean`.
-
-**How that High stops blocking — which clause, not a verdict.** D-055(a)'s clarification:
-a confirmed High ceases to block only through **verified repair**, or through **John's
-explicit acceptance as a documented product boundary**. The F61ECCA card is verified
-repair at the freeze (exploit control live; freeze blocks; independent HOLD). It is **not**
-John's acceptance of `R1` as a product boundary. An agent may take neither clause as
-ruling condition 3 MET.
-
-**The earlier CRITICAL (`R1-F1`).** D-055(e): certification-gate corruption, John ruled
-REPAIR (D-057(3)). A-077 third design; A-078 independent HOLD. Not reopened by this
-stretch.
-
-**Census assembled at this freeze, not ruled.** Prepared material:
-`docs/review-2026-08-19-d057-targeted/critical-high-census.md`. Independent residual
-scores (not the D-062 verifier, not an implementer):
-`docs/review-2026-08-19-d057-targeted/batch-cards/D062-containment-tests/RESIDUAL-SEVERITY.md`.
-
-Returned to John, no retiring clause applied in this stretch:
-
-- `V-1` **High** — unset-before-resolve remains load-bearing; A-098 is a guard, not acceptance.
-- `R-C` **High** — `GIT_CONFIG_COUNT` + `core.excludesFile` as recorded; D-072 pin measured
-  in scratch is not silent closure of the residual.
-- `V-3` **UNSCORED** — validate/scan windows exist twice; scoring without a timing probe
-  would be a guess. Pending until scored.
-
-Assembled with a verified-repair clause named, not applied as a D-055 ruling: `R1-F1`
-(Critical, A-078 HOLD), `R1` (High, F61ECCA HOLD), `R5` (High, D-071 card HOLD), `V-6`
-(High, D-072 card HOLD). D-067 is not lifted.
-
-**What is not established.** Whether condition 3 is MET. Assembling the census is not
-ruling it. Two Highs and one unscored lead are returned. D-055(e)'s ledger arithmetic is
-a statement about that ledger, not a live repository-wide severity census.
+**What is not established.** Whether any later independent review is owed for
+any purpose other than D-055(a) condition 1. Condition 1 does not re-open
+because instruments were repaired.
 
 ---
 
-## Condition 4 — zero known false or unsupported signed/certified claims
+## Condition 2 — SATISFIED at the Session Six freeze.
 
-**D-069 applied.** The signed paragraph at `docs/gate-s2-evidence.md` (the block ending
-that §11 is part of what was signed) is preserved byte-exact relative to Phase A. Immediately
-after it, as its own blockquote, the ratified annotation sits with identifier **D-069**.
-The annotation states that both of the paragraph's claims about §11 are true of §11's own
-body, still present at the end of that section and unchanged signed text; they are **false
-as read today of subsection §11.0 alone**, which did not exist at signature. **The
-2026-08-16 signature does not cover §11.0.** That is the only signed-prefix edit in Phase
-B. `docs/gate-s1-evidence.md` is byte-identical to its pre-Phase-B blob (remeasured
-`git hash-object` at the working tree before A-102:
-`66f7b843888cf1eca7d719d0f23c6120969fae30`; remeasured at the A-103 working tree:
-`66f7b843888cf1eca7d719d0f23c6120969fae30`).
+**Verified-origin isolated exact-commit deep gate** at
+`8c74537f9d85f97b1d0133fd6869e3d79115c8ef`, out of tree
+(`_sentinel-out-of-tree/a103-verified-gate-2026-08-23/`). Clone porcelain empty
+before and after `--gate`. `origin` =
+`https://github.com/johnrfite1/sentinel.git`. Acknowledgement variable
+`SENTINEL_RENAME_GATE_UNVERIFIED_OK` unset. Quoted from `gate.log`, not from
+exit status:
 
-**Class-count contradiction, resolved under D-070's rule, not by picking a side in prose.**
-D-070: credit iff an ABOUT check ran against the named phenomenon and recorded the outcome
-the spec assigns to it, UNRESOLVED included. The guard's credit loop and ratchet were not
-changed. Remeasured immediately before A-102, `scripts/check-class-coverage.sh` prints
-`14 of 20` **with that rule on the same line**. Present-tense maintained publications
-carry the rule beside the figure. Signed-prefix present-tense occurrences of the figure
-are historical signed text and were not rewritten.
+```
+rename gate: clean (johnrfite1/sentinel is private; D-016 publication block intact)
+```
 
-**The four blind spots that qualify that figure** (D-070 as amended at A-103; the fourth
-is the class John personally widened):
+```
+vendor honesty: mechanical conditions pass; D-008(1) met and (3) certified by record
+```
 
-1. **malformed-calldata-or-unknown-selector** — no fixture in the class fails
-   `EVAL_SELECTOR_BOUND` or `EVAL_OPERATION_SUPPORTED`.
-2. **runtime-code-change-or-proxy-target** — no fixture in the class is an actual proxy.
-3. **rpc-simulator-or-context-outage** — outage sibling codes on the non-null simulation
-   branch never fire.
-4. **evaluator-or-signer-compromise** — credited on 1 of 4 mapped codes; F057 is counted
-   among the covered, so the 1-of-4 shortfall is not visible in the per-fixture note.
-   This supersedes D-040(b)'s visibility sentence; the map widening stands.
+```
+GATE PASSED
+```
 
-**Register `G-3` (A-103).** `docs/v1-1-register.md` now names three UNRESOLVED-only
-credited classes, aligned with `docs/gate-s2-evidence.md` §11.0. The prior two-class
-wording is corrected, not re-adjudicated.
+Wrapper exit `0` (`gate-exit.txt`). Coverage of the rename line: origin
+visibility via `gh` only. D-071's "Not covered: demos, published links,
+portfolio or resume references" is not printed on the pass branch.
 
-**`D-09`(a),(b) T1 row (A-103).** Stated basis `*(none recorded)*`; verification **No
-basis to verify** — same treatment as `H-5` and `H-8`. The cell that stood there was the
-severity verdict "LOW stands", which is not a file, line, count, or command. No basis
-was invented. Acceptance of (a),(b) as limits is not re-opened.
+An earlier acknowledged run (Phase B, A-101) printed UNVERIFIED and disclosed
+acknowledgement. That run is not this condition's evidence.
 
-**Standing.** D-057(2) ruled condition 4 **NOT MET**. That ruling is not reversed here.
-The D-069 annotation and the record corrections above are facts assembled for John's
-re-ruling. This file does not reverse NOT MET.
+**A-104's isolated exact-commit `--gate` is after the freeze that creates its
+SHA**, same sequencing as A-102/A-103, reported out of tree. It is not a
+committed fact inside this file.
 
-The figure is the right number under the rule and it rests on single-code credits in
-several classes. Both halves are written down. Stating that is not ruling condition 4.
-
-**Live prefix vs frozen D-CLAIMS pin, remeasured.** `d-claims.py` `C-D2-prefix` still
-compares live bytes before `## 11. What is NOT in evidence` to its frozen pin. Live prefix
-sha256 and that pin differ (authorised D-069 text in the prefix). Full-file sha256 differs
-from A-EXTRACT `Z-signed`'s `PRE_REPAIR_SHA` blob. A-100 dispositions both as authorised
-edits of a pinned file, A-097 shape. Neither frozen harness is rewritten.
-
-**Both ways, without a verdict.**
-
-- *That D-069 plus the class-credit rule satisfy condition 4:* the false-as-read-today
-  claim D-057(2) named now carries a ratified annotation; the signed paragraph is
-  untouched; the class-count contradiction is one number under one stated rule, with
-  blind spots beside it.
-- *That they do not:* the signed header still asserts that §11 was part of what was
-  signed, and that assertion is still false for post-signature text the same document
-  continues to carry. An annotation after the paragraph is not a rewrite of the
-  paragraph. Blind spots on the class figure are still qualifications.
-
-Whether that satisfies condition 4 is John's to rule.
-
-**What is not established.** Whether any other signed or certified sentence is presently
-false. This stretch did not re-audit the signed packs beyond the hashes above and the
-D-CLAIMS / A-EXTRACT dispositions already recorded.
+**What is not established.** Whether any later freeze still passes. Condition 2
+at D-073 is the 8c74537 run.
 
 ---
 
-## `R2` and `V-6` — closed at the pin; the D-067 limits are a prepared item
+## Condition 3 — SATISFIED. Each Critical/High retired by a named clause.
 
-D-072 pinned `core.excludesFile=` and `core.quotePath=false` at enumerating call sites.
-Live exploit-then-observe controls: the five injection vectors hid plants from the
-unpinned call and did not hide them from the pinned call; production secrets and
-vendor-honesty scripts still saw the plants. The same `quotePath=false` recovers the
-non-ASCII path the bare call octal-escapes (`R2`).
+The census of record is
+`docs/review-2026-08-19-d057-targeted/critical-high-census.md`.
 
-**D-067 named `R2` and `V-6` as completeness limits on D-008(2) and D-008(4).** If those
-defects are closed, those limits would lift. **That is a status change John rules, not
-one this file records as done.** D-067 is not rewritten. This paragraph presents the
-item. It does not lift the limits.
+| ID | Severity | Clause applied |
+|---|---|---|
+| `R1-F1` | Critical | Verified repair — A-078 independent HOLD |
+| `R1` | High | Verified repair — F61ECCA independent HOLD |
+| `R5` | High | Verified repair — D-071, card HOLD |
+| `V-6` | High | Verified repair — D-072, card HOLD |
+| `V-1` | High | Verified repair — A-098's behavioural guard, independent HOLD |
+| `R-C` | High | Verified repair — D-072's pin (coverage explicit; see census) |
+| `V-3` | UNSCORED | John's explicit acceptance as a documented product boundary |
 
-The §7.2 admissibility ruling in D-067 is a separate sentence: that condition reads two
-fixed paths and never calls `artifacts()`. Closing `R2`/`V-6` on the scans does not, by
-itself, recertify Gate 5.
+**V-1.** The defect was that nothing observed the unset-before-resolve
+ordering. A-098 observes it. Independent HOLD at review-only
+`8d8820c03043844b3281d35d81578890eee1ecdf`. The facilitator confirmed it FAILS
+against an order-preserving refactor that a source-text lint would pass.
+Reversing the ordering still reopens the hole; the guard is required to fail.
+
+**R-C.** The D-072 card HOLD is scoped to V-6 **and** to default-mode
+`check-secrets.sh` (REQUIRED rows `V6-*-secrets`). R-C is that secrets path.
+Independently remeasured at `8c74537` on all five live vectors (COUNT, GLOBAL,
+SYSTEM, HOME, XDG): unpinned listing hid the plant; the pin restored it;
+production `check-secrets.sh` BLOCKED and never printed `secret guard: clean`
+over it. See the census. Not assumed.
+
+**V-3.** Unprobed TOCTOU on the validate/scan windows. The adjudicator declined
+to score it without a timing probe rather than guess. Accepted because
+`scripts/check-secrets.sh` lines 148–152 already declare the same-user
+limitation: *"NOT a defence against a hostile process running as this same
+user, which can replace git's temporary index between validation and scan, and
+can equally well edit this file."* The hook states the same bound. John accepts
+a boundary the product already states. Reflected here and in the census per
+D-055(a). Not repaired. Not probed.
+
+The F61ECCA class HOLDs on all six (`INDEPENDENT-REVIEW.md`). `R3` remains
+dispositioned (D-068(6)). Medium/Low residuals stay scored and unrepaired in
+this stretch; they are not condition-3 blockers.
+
+**What is not established.** Whether every Medium/Low residual would stay below
+High if rescored. Condition 3 asked for unresolved confirmed Critical/High.
+Those are retired.
+
+---
+
+## Condition 4 — SATISFIED.
+
+**D-069 applied.** The signed paragraph at `docs/gate-s2-evidence.md` (the block
+ending that §11 is part of what was signed) is preserved byte-exact relative to
+Phase A. Immediately after it, as its own blockquote, the ratified annotation
+sits with identifier **D-069**. Both of the paragraph's claims about §11 are
+true of §11's own body; they are **false as read today of subsection §11.0
+alone**. **The 2026-08-16 signature does not cover §11.0.**
+
+`docs/gate-s1-evidence.md` remeasured `git hash-object` at this working tree:
+`66f7b843888cf1eca7d719d0f23c6120969fae30` (matches the A-103 working-tree
+measurement). This stretch does not edit it.
+
+**Class-count contradiction, resolved under D-070.** Credit iff an ABOUT check
+ran against the named phenomenon and recorded the outcome the spec assigns to
+it, UNRESOLVED included. Guard credit loop and ratchet unchanged. The four
+blind spots remain recorded beside the figure. Register `G-3` names three
+UNRESOLVED-only credited classes. `D-09`(a),(b) T1 row: stated basis
+`*(none recorded)*`; verification **No basis to verify**.
+
+A-096 superseded A-077's detail sentence. The register/pack contradiction was
+fixed at A-103.
+
+Live prefix vs frozen D-CLAIMS pin: authorised D-069 text in the prefix.
+A-100 dispositions both frozen-harness control failures. Neither frozen
+harness is rewritten.
+
+**What is not established.** Whether any other signed or certified sentence is
+presently false. This record did not re-audit the signed packs beyond the
+hashes above and the D-CLAIMS / A-EXTRACT dispositions already recorded. A MET
+D-055 certifies no public claim.
+
+---
+
+## `R2` and `V-6` — D-067 limits HISTORICAL as of D-073
+
+D-072 pinned `core.excludesFile=` and `core.quotePath=false` at enumerating
+call sites. Independent HOLD in the D-058(1) shape (D-071/D-072 card). V-6
+measured effective on five vectors; R2 at the vendor consumer, the only place
+it applied.
+
+**D-067 named `R2` and `V-6` as completeness limits on D-008(2) and D-008(4).**
+Those limits **stood from D-067 until D-073** and now lift. They are recorded
+as HISTORICAL on D-067 rather than deleted. **D-067's §7.2 admissibility
+sentence is untouched and stays exactly as scoped.** This lift does not
+recertify Gate 5 and does not touch D-059(1)'s three verbs (not revoked,
+reaffirmed, or recertified).
 
 ---
 
@@ -249,109 +238,151 @@ itself, recertify Gate 5.
 
 | Item | Standing | Disposition |
 |---|---|---|
-| `R1-F1` (certification gate) | Independent HOLD (A-078) | Repair held; not reopened |
-| F61ECCA `C4`, `C6a`–`C6d`, `R1` | Independent HOLD; `R1` High | Verified repair at freeze; High takes the repair clause, not acceptance |
-| `R2` | Closed at enumerating call sites (D-072) | D-067 limit **not lifted** until John rules |
+| `R1-F1` (certification gate) | Independent HOLD (A-078) | Verified repair; not reopened |
+| F61ECCA `C4`, `C6a`–`C6d`, `R1` | Independent HOLD; `R1` High | Verified repair; High takes the repair clause |
+| `R2` | Closed at enumerating call sites (D-072) | D-008(2)/(4) limit **HISTORICAL** as of D-073 |
 | `R3` | Permanent recorded limit (D-068(6)) | Dispositioned; frozen A1 harness untouched |
 | `R5` | Repaired as D-071 option C | Fast UNVERIFIED exit 0; deep refuses unless ack; ack discloses |
-| `V-6` | Closed at the pin (D-072) | D-067 limit **not lifted** until John rules |
-| `V-1` | Independent residual **High**; carried, unaccepted | Returned to John. A-098 is a guard, not acceptance. **No retiring clause applied.** |
-| `V-3` | **UNSCORED** (timing probe required) | Returned to John. Pending until scored. **Not probed.** |
-| `R-C` | Independent residual **High** | Returned to John. D-072 pin measured in scratch is not silent closure. **No retiring clause applied.** |
+| `V-6` | Closed at the pin (D-072) | D-008(2)/(4) limit **HISTORICAL** as of D-073 |
+| `V-1` | High, verified repair (A-098) | Retired under D-073; guard remains load-bearing |
+| `V-3` | UNSCORED; accepted boundary (D-073) | Source declaration in `scripts/check-secrets.sh` 148–152 |
+| `R-C` | High, verified repair (D-072 pin) | Coverage explicit in the census; same call site as V6-*-secrets |
 | `V-2`, `V-4` | Independent residual Low | Scored; not repaired in this stretch |
 | `V-5`, `V-7`, `V-8`, `V-9` | Independent residual Info | Scored; not repaired in this stretch |
-| `V-10` | Independent residual Medium (silence over A2 residuals including High-class R-C) | Scored; not repaired in this stretch |
+| `V-10` | Independent residual Medium | Scored; not repaired in this stretch |
 | `R-A`, `R-B`, `R-D`, `R-E` | Independent residual Info | Scored; not repaired in this stretch |
 | `R-F` | Independent residual Medium | Scored; not repaired in this stretch |
 | Gate 5 certification | Standing (D-059(1) option A) | Not revoked, reaffirmed, or recertified |
-| D-008(2)/(4) completeness limits | Named at D-067 | Prepared item; see `R2`/`V-6` above |
+| D-008(2)/(4) completeness limits | Named at D-067 | **HISTORICAL** as of D-073 |
 | A1 | Closed through D-062 exception | No reopening; test-clause lifts spent |
 | D-016 | Stands | Repository PRIVATE; no push, publication, or rename |
 
-No named residual above is left without a disposition. A disposition is not a D-055
-verdict.
+Batch cards' completeness claims remain bounded to their declared boundaries
+and do not become repository-wide. D-060(1)'s abandonment of repository-wide
+enumeration guarantees is unchanged.
 
 ---
 
 ## T1 — a limit's basis must be verified, not just its wording
 
-**Remaining accepted limits**, as derived in §11.0 and register §13.4, not re-counted by
-hand here: `D-07`, `D-09`(a),(b), `E5`, `F-VAULT-4`, `F-VAULT-5`, `G-3`.
-(`D-09`(c) was reopened and then FIXED at A-076; `D-09` therefore sits in both the
-fixed and accepted sets.)
+**Remaining accepted limits**, as derived in §11.0 and register §13.4, not
+re-counted by hand here: `D-07`, `D-09`(a),(b), `E5`, `F-VAULT-4`,
+`F-VAULT-5`, `G-3`. (`D-09`(c) was reopened and then FIXED at A-076; `D-09`
+therefore sits in both the fixed and accepted sets.) **V-3 is now among
+accepted limits**, with its basis the source declaration cited above.
 
-**What is not established.** This stretch did not re-run those basis probes. Register
-§13.4 is a maintained table this project has already caught stale. `G-3`'s credited-class
-count now sits under D-070's stated rule with the four blind spots above; treating the
-register as T1-complete for `G-3` without re-verifying the basis is still John's.
+**What is not established.** This stretch did not re-run those basis probes.
+Register §13.4 is a maintained table this project has already caught stale.
 
 ---
 
 ## T2 — severity is assigned by the independent reviewer/adjudicator
 
-D-057(4) countersigned three downgrades (`R1-F2` HIGH→MEDIUM, `R1-F3` MEDIUM→LOW,
-`R2-F1` HIGH→LOW) and stated the countersignature does not dispose of the underlying
-finding. D-056(a) re-classified `D-10`(c) MEDIUM rather than leaving an undocumented
-downgrade.
+D-057(4) countersigned three downgrades. The F61ECCA reviewer assigned `R1`
+High. An independent adjudicator scored V-1–V-5, V-7–V-10 and R-A–R-F. V-3
+was left UNSCORED rather than guessed, then accepted by John as a documented
+boundary. R5 and V-6 were scored High on the D-071/D-072 card at their
+pre-repair parents.
 
-The F61ECCA reviewer assigned `R1` **High**. That is the first adjudication of that
-item's severity. It is not a countersignature by John of condition 3.
-
-**This stretch (T2).** An independent adjudicator — not the D-062 verifier, not an
-implementer, not a party this exit depends on — scored V-1–V-5, V-7–V-10 and R-A–R-F.
-V-3 was left UNSCORED rather than guessed. Anything High was returned, not repaired.
-
-**What is not established.** Whether every other residual has an independent severity
-John has countersigned. Whether V-3's score, once probed, is below High.
+**What is not established.** Whether every other residual has an independent
+severity John has countersigned.
 
 ---
 
 ## T3 — scope is fixed by John before the review
 
-D-056(d) fixed the D-055(e) scope. D-058 abandoned the repository-wide contract method
-after two independent audits failed. Subsequent work has been batch cards whose
-completeness is inside a declared boundary.
-
-**What is not established.** Whether T3 requires a new John-fixed scope before any
-further review that would feed D-055, or whether D-055(e) remains the one bounded
-review the criterion named. That is his.
+D-056(d) fixed the D-055(e) scope. D-058 abandoned the repository-wide
+contract method after two independent audits failed. Subsequent work has been
+batch cards whose completeness is inside a declared boundary.
 
 ---
 
-## T4 — the exit record states the gate's carried and ratcheted items explicitly
+## T4 — carried and ratcheted, from the run that happened
 
-**The class-coverage figure is no longer a live contradiction in maintained prose.**
-D-070 stated the crediting rule; the guard prints the figure with the rule; the four
-blind spots are recorded. That is not T4 complete.
+Written from the verified-origin isolated `--gate` at `8c74537`, out of tree
+(`a103-verified-gate-2026-08-23`), not copied from an earlier pack. "Passes on
+ratcheted debt" is not "clean".
 
-T4 still requires the exit record to state, in those terms, what the **deep gate that
-is offered as condition 2** passed *on the ratchet* (baselined workspace findings,
-carried corpus classes, rename-gate **verified** with coverage = origin visibility only,
-anything else). "Passes on ratcheted debt" is not "clean". The acknowledged pack and the
-verified-origin pack (out of tree, **after A-103**) are the places that statement can be
-read. Filling T4 from a stale batch-verifier run is the defect T4 exists to prevent.
-`scripts/check-findings-ledger.sh` and `scripts/check-review-scope.sh` are not gate
-stages.
+### Workspace machine-state
 
-**What is not established.** Whether T4 is complete. This file does not complete it.
+Load-bearing measurement is against the project path whose basename is
+`Sentinel` (the guard keys its baseline on `basename`).
+`guards-sentinel-path.log`:
+
+```
+[machine-state] Sentinel — 13 finding(s), 13 baselined, 0 new
+[machine-state] PASS
+== guards: Sentinel — OK ==
+```
+
+Aspect and contrast guards **do not apply to this project and did not
+execute**. They are not a pass. They are absent from that log.
+
+A first probe against the pack's directory named `clone` printed
+`13 finding(s), 0 baselined, 13 new` and FAIL (`guards.log`). That is the
+basename missing the Sentinel baseline, not thirteen new findings in the tree.
+
+### Corpus classes, as that gate enumerated them
+
+`ok 14 of 20` with D-070's rule on the same line (`gate.log`). Carried, never
+counted as covered:
+
+- RESERVED `unexpected-internal-call` [D-025]
+- DELEGATED `reentrancy-attempt` [A-036]
+- DELEGATED `invalid-or-rotated-signer` [D-010]
+- DELEGATED `malicious-retrieved-instructions` [A-028 F-5]
+- DELEGATED `owner-override-and-block-behaviour` [D-039]
+- GAP `conflicting-block-state` [D-039] — **OWES A FIXTURE at v1.1**
+
+Three of the fourteen credited classes are credited by UNRESOLVED only, under
+D-070's rule. The four D-070 blind spots remain.
+
+### Six suite floors (that run)
+
+Printed in `gate.log`: foundry 103 (floor 103); typescript 550 (floor 550);
+suite 221 (floor 221); samples 7 (floor 7); tamper 78 cases / 30 modes
+(floors 78/30). Headroom on each printed floor was 0.
+
+### Vendor honesty
+
+- D-008(1) and (3): certified by record. The script states it did not and
+  cannot check the certification is right.
+- D-008(2) and (4): re-measured each run. The D-067 completeness limits on
+  those two scans are HISTORICAL as of D-073.
+
+### Rename gate
+
+**Verified** (acknowledgement unset; no `UNVERIFIED` line). Coverage = origin
+visibility only.
+
+### Not gate stages
+
+`scripts/check-findings-ledger.sh` and `scripts/check-review-scope.sh` are not
+invoked from `scripts/test.sh` or `.githooks/pre-commit`.
 
 ---
 
 ## Deferrals, recorded as dispositions
 
-John named these deferred. Deferral is a disposition, not an open inventory item, and
-not a new precondition:
+John named these deferred. Deferral is a disposition (D-059(2)), not an open
+inventory item, and not a new precondition:
 
-- apparatus drift on condition 1 (John will rule at the next session)
 - `docs/exit-criterion-packet.md` §7 reconciliation
 - `NEW-FINDINGS.tsv` repair annotations
 - sanitization-manifest rows for the session-four redacted files
-- harness-pin disposition (`VERIFICATION.md` pin vs post-redaction hash; the verifier's
-  pin is not overwritten)
+- harness-pin disposition (`VERIFICATION.md` pin vs post-redaction hash; the
+  verifier's pin is not overwritten)
+- the three items volunteered and not done: the class-coverage visibility
+  sentence, the "eight bases hold" headline, the rename-gate pass line
+
+**Do not work them.**
+
+---
 
 ## What this dossier is not
 
-It is not an assessment of D-055. It is not a recommended verdict. It is not a
-follow-on plan. It does not lift the D-067 limits. It does not sign, reopen, or
-annotate a gate. It does not certify or alter a public claim. It does not rewrite a
-frozen harness. D-055 remains NOT MET until John re-rules.
+It is not a publication path, a rename plan, a Gate 8 packet, a v1.1 plan, or
+any follow-on stretch. It does not sign, reopen, or annotate a gate. It does
+not recertify Gate 5. It does not certify or alter a public claim. It does not
+rewrite a frozen harness. **A MET D-055 certifies nothing and unlocks
+nothing.**
