@@ -50,7 +50,7 @@ cd "$ROOT" || { echo "  FAIL  cannot enter the Sentinel repository root; refusin
 unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_PREFIX
 cd "$ROOT"
 
-PROPOSAL="Sentinel_Protocol_Lab_Proposal_v0_2.md"
+PROPOSAL="Sentinel_Lab_Proposal_v0_2.md"
 fail=0
 
 # The vendors §2 and §10.1 name. Sentinel's honesty obligation is specifically about THESE
@@ -139,7 +139,7 @@ VENDORS_EXACTCASE='Safe|SAFE'
 # table naming three vendors plus both banned §10.1 labels, defeating conditions (2) and (4) at
 # once. Found by an independent adversarial review, 2026-08-16, with that exact file. Directory
 # entries keep the prefix form deliberately; file entries now end at `$`.
-EXCLUDED='^(Sentinel_Protocol_Lab_Proposal_v0_2\.md|HANDOFF\.md|docs/decisions\.md|docs/session-state\.md|docs/gate-5-vendor-audit\.md|docs/v1-1-register\.md|scripts/check-vendor-honesty\.sh)$|^docs/review-2026-08-15/artifacts/'
+EXCLUDED='^(Sentinel_Lab_Proposal_v0_2\.md|HANDOFF\.md|docs/decisions\.md|docs/session-state\.md|docs/gate-5-vendor-audit\.md|docs/v1-1-register\.md|scripts/check-vendor-honesty\.sh)$|^docs/review-2026-08-15/artifacts/'
 
 # CONDITION (2) HAS A DIFFERENT, MUCH NARROWER EXCLUSION LIST, and the split is the point.
 #
@@ -165,7 +165,7 @@ EXCLUDED='^(Sentinel_Protocol_Lab_Proposal_v0_2\.md|HANDOFF\.md|docs/decisions\.
 # every vendor above" to `docs/gate-5-vendor-audit.md` passes this gate. Of the twelve exploits
 # an adversarial review built against these two guards, this is the ONE that survives the fix.
 # Reading that file is the only control, which is the honest description of an honour system.
-EXCLUDED_LABELS='^(Sentinel_Protocol_Lab_Proposal_v0_2\.md|docs/decisions\.md|docs/gate-5-vendor-audit\.md|scripts/check-vendor-honesty\.sh)$'
+EXCLUDED_LABELS='^(Sentinel_Lab_Proposal_v0_2\.md|docs/decisions\.md|docs/gate-5-vendor-audit\.md|scripts/check-vendor-honesty\.sh)$'
 
 # TRACKED **AND** UNTRACKED-BUT-NOT-IGNORED, and the second half is not belt-and-braces.
 #

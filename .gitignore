@@ -27,3 +27,6 @@ contracts/cache/
 # Isolated signer runtime state: the default Unix socket path (ts/src/signer/main.ts).
 # A socket is not a file to commit, and the directory is created at signer boot.
 .sentinel/
+
+# Serena language-server / tool state. Not a project artifact.
+.serena/

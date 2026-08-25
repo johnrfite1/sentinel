@@ -1,0 +1,39 @@
+{
+  "refused": false,
+  "receipt": {
+    "schemaVersion": "1",
+    "decisionId": "0x7bbc14bca587c74bb4524a4d97695edc87ab9f01385c7813dd763510ea349ab7",
+    "actionHash": "0xcfedfdc525f2148db9d2b4240e531791616e8cda0f71fcdd1d7a8fdffa96deac",
+    "mandateHash": "0x6a5147a3add511ac685f08b7cfe41d30e7f2bd02caa4a6d8acb1e116067d580a",
+    "policyHash": "0x8abd037dc7df8d7fa4dce928139c9c1306555aa6853d82b58daa8891a13b0bff",
+    "verdict": "0",
+    "reasonCodesHash": "0xe7c3b5a802979a70f2121e7073dcffd515a882ce2c2cadc4935cec2818418c76",
+    "evidenceHash": "0x3499f83695cefda521fc82291af999071ecc7fc5a4c5a2dde23502f9b53f3496",
+    "simulationBlockNumber": "7",
+    "simulationBlockHash": "0x87aafe0714956798cb296dcd34a7af8c2fff9c980e79356730f2af15a162c0c9",
+    "issuedAt": "1786844784",
+    "expiresAt": "1786845084",
+    "signer": "0x70997970c51812dc3a010c7d01b50e0d17dc79c8"
+  },
+  "signature": "0x02cdd43b5dead9915170ae1ed93f61bbaba849e7c65b1b1676d9bde3907cd8661873520116a34ab1fef02913fb818f928e9f80a90c2f6ca016d47a90e7f238551c",
+  "reasonCodes": [
+    "EVAL_ALLOWANCE_EFFECT_WITHIN_CEILING",
+    "EVAL_APPROVAL_CEILING",
+    "EVAL_APPROVAL_SPENDER",
+    "EVAL_SELECTOR_BOUND",
+    "EVAL_TARGET_BOUND",
+    "EVAL_TARGET_CODE_IDENTITY",
+    "SIGNER_MANDATE_SELECTOR_MISMATCH",
+    "SIGNER_MANDATE_TARGET_MISMATCH",
+    "SIGNER_NONCE_ALREADY_ATTESTED",
+    "SIGNER_TARGET_CODEHASH_MISMATCH",
+    "SIGNER_VAULT_TARGET_NOT_ALLOWED"
+  ],
+  "signerFindings": [
+    "SIGNER_NONCE_ALREADY_ATTESTED",
+    "SIGNER_MANDATE_TARGET_MISMATCH",
+    "SIGNER_MANDATE_SELECTOR_MISMATCH",
+    "SIGNER_TARGET_CODEHASH_MISMATCH",
+    "SIGNER_VAULT_TARGET_NOT_ALLOWED"
+  ]
+}

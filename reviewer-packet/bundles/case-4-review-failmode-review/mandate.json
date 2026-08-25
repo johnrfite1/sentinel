@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "1",
+  "mandateId": "0x9cd295e3042542f0111170c983836686c07751b65b1eac778e0b626c439c9ec5",
+  "principal": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+  "vault": "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512",
+  "chainId": "31337",
+  "target": "0x5fbdb2315678afecb367f032d93f642f64180aa3",
+  "targetCodeHash": "0x65b43f8fb67adeb2617e124b9993590ef7f97bc471966d2b1a49aa3f5567625a",
+  "selector": "0xc188528b",
+  "maxNativeValueWei": "10000000000000000",
+  "purposeKind": "0x4336b7f13de4d1e4bd8f722e5afab30ffc50665228344405ba944d77957fb614",
+  "resourceId": "0x1878e089565039fe0f4ac9769a9fb8f9b28aa23ed7c9e9f9dfa9b926988a5264",
+  "beneficiary": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+  "durationSeconds": "86400",
+  "recurringAllowed": false,
+  "validAfter": "0",
+  "validUntil": "4000000000",
+  "policyHash": "0x8abd037dc7df8d7fa4dce928139c9c1306555aa6853d82b58daa8891a13b0bff"
+}

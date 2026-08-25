@@ -1,0 +1,11 @@
+{
+  "id": "case-3-wrong-purpose-block",
+  "title": "§4.2 Case 3 — mechanically valid, wrong purpose",
+  "note": "Passes every representative-baseline check; fails only mandate conformance.",
+  "verdict": "BLOCK",
+  "reasonCodes": [
+    "EVAL_PURCHASE_RESOURCE"
+  ],
+  "failureMode": "REVIEW",
+  "signerRefused": false
+}

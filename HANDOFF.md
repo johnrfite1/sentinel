@@ -96,17 +96,25 @@ froze that record; the isolated verified-origin `--gate` is after that freeze, o
 **Do not prepare a publication path, a rename plan, a Gate 8 packet, a v1.1 plan, or any
 follow-on stretch.** Held D-008 questions remain unseen.
 
+**2026-08-25 — THE NAME IS "SENTINEL" (D-074). D-016'S NAMING BLOCK LIFTS. PUBLICATION
+REMAINS BLOCKED.** Start at `docs/session-state.md` §1. Session Eight ratified the project
+name after collision review. **What lifted is a naming block. Nothing else.** Gate 8 is
+pre-publication under D-032 and has not run. D-048 still makes a clean D-055 a
+precondition, never a trigger. No repository visibility change, public demo, posted
+artifact, or Gate 8 run is authorised. Held D-008 questions remain unseen. The spec file
+is now `Sentinel_Lab_Proposal_v0_2.md`.
+
 Amended 2026-07-27 by Opus 5 at build start: D-007…D-011 (delegated rulings) resolve four open forks and the labeling blind spot. Sections below reflect them. Proposal mirror: §14.9.
 
 ## Mission
 
-Build Sentinel v1 as specified in `Sentinel_Protocol_Lab_Proposal_v0_2.md` — the §4 scope as amended by §14.8 — through Gate S2. The evaluation harness is the primary artifact (§7, §11). This is a testnet portfolio lab, not a production custody product.
+Build Sentinel v1 as specified in `Sentinel_Lab_Proposal_v0_2.md` — the §4 scope as amended by §14.8 — through Gate S2. The evaluation harness is the primary artifact (§7, §11). This is a testnet portfolio lab, not a production custody product.
 
 ## Read these before architecting
 
 In order:
 
-1. `Sentinel_Protocol_Lab_Proposal_v0_2.md` — the full spec, including §14.8 (John's rulings). §14.8 and `docs/decisions.md` supersede any conflicting prose elsewhere in the proposal.
+1. `Sentinel_Lab_Proposal_v0_2.md` — the full spec, including §14.8 (John's rulings). §14.8 and `docs/decisions.md` supersede any conflicting prose elsewhere in the proposal.
 2. `docs/decisions.md` — the canonical decision log. Record every ratified fork there, attributed to John; log agent-made calls separately as flagged assumptions.
 3. `../AGENTS.md` — workspace-wide agent rules (decision authority, mechanical guards, test-coverage discipline, change discipline). Binding.
 4. `../vault/Topics/AI-ML/prompting-agents-playbook.md` — the build-loop method: wide goal fenced by house rules, a checkable bar, an independent fresh-context grader told to prove the work fails, kill criteria declared before looping. The generator never grades itself.
@@ -173,7 +181,7 @@ Note on framing: D-002 calls Gate S1 the riskiest-mechanism gate. The vault, non
 5. Never weaken a mechanical guard to make a task pass.
 6. No secrets, credentials, or machine-specific absolute paths in repository files. Testnet keys only, and only lab-generated ones — never John's.
 7. The §9 deferral list holds. Scope additions go through John.
-8. "Sentinel" is an internal codename (see the working-name warning at the top of the proposal). Nothing goes public before the rename gate.
+8. "Sentinel" is the ratified project name (D-074). Publication remains blocked by Gate 8 under D-032 and by D-048's precondition. D-016's naming block has lifted; that is not publication permission.
 
 ## Flagged assumptions (agent-made, cheap to reverse — see decisions.md)
 

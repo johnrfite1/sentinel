@@ -3,27 +3,31 @@
 Rewritten at the end of each working session. **This file, not the conversation, is the
 memory.** If it disagrees with anything an agent remembers, this file wins.
 
-Last updated: **2026-08-24 (second name round presented; name-agnostic packet on disk).**
-D-055 is MET (D-073). It unlocks nothing. Session Seven started the
-pre-publication path; the name is not chosen. John's candidate slot in
-the brief was empty, so that grid was not run. Branch `step-3/isolated-signer`.
-**WORKING TREE: `README.md` carries John's restored Icon line, uncommitted. Do not
-discard it. `assets/` and `.serena/` are untracked and stay that way.
-`reviewer-packet/` is new, untracked, name-agnostic, private handoff only.**
+Last updated: **2026-08-25 (Session Eight: name ratified "Sentinel"; D-016 naming block
+lifts; publication still blocked by Gate 8).**
+D-055 is MET (D-073). It unlocks nothing. **"Sentinel" is the project name (D-074).**
+The EIP-712 domain string is also `"Sentinel"` (D-075, recorded late). There is no
+name/domain split. Branch `step-3/isolated-signer`.
+**WORKING TREE AT THE START OF THIS STRETCH:** `README.md` carried John's restored Icon
+line, uncommitted. `assets/` and `reviewer-packet/` were untracked; they are committed
+under D-074 with review-scope assignment arms. `.serena/` is tool state and is
+gitignored, not committed.
 
 > ## READ THIS BEFORE ANYTHING ELSE
 >
 > **YOUR JOB IS NOTHING WITHOUT AN INSTRUCTION FROM JOHN.** D-055 is MET (D-073).
 > **A MET D-055 unlocks nothing.** D-048 makes a clean result a PRECONDITION, never
-> a trigger. D-016 still blocks publication and the rename. The name is John's.
-> Gate 8 is pre-publication under D-032. A name-agnostic private packet now lives
-> at `reviewer-packet/` (demo bundles, Python verifier, static dashboard, one-page
-> script). The README and any name-carrying text still wait. No gate is signed or
-> reopened. Do not publish, rename, push, register, or reserve. A1 is closed:
+> a trigger. **D-016's naming block has lifted (D-074). That is not publication
+> permission.** Gate 8 is pre-publication under D-032 and has not run. The private
+> packet at `reviewer-packet/` carries the EIP-712 domain name as a signature
+> preimage and renders it under **Cryptographically bound** on every case screen;
+> calling it "name-agnostic" was **false** — John's recording error, Session Eight,
+> not a discovery. No gate is signed or reopened. Do not publish, change repository
+> visibility, post a demo, or prepare any of it. A1 is closed:
 > **no A1 reopening and no further A1 production change is authorised.** The
 > 2026-08-23 lift of the "no further A1 test" clause remains **spent** at the
 > F61ECCA card freeze. The D-058 confirmed batches independently HOLD.
-> **Do not discard the uncommitted `README.md` Icon line.** Report the state
+> **The Icon line in `README.md` is kept.** Report the state
 > below and wait.
 >
 > **THE `GIT_INDEX_FILE` FAIL-OPEN IS FIXED — the warning that stood here is withdrawn.**
@@ -47,9 +51,10 @@ discard it. `assets/` and `.serena/` are untracked and stay that way.
 
 **Count what is unpushed with `git log --oneline origin/step-3/isolated-signer..HEAD`; do not
 quote a number from here** — this file has published a stale one before, including one line
-below its own instruction not to. The repository is PRIVATE and **D-016 still blocks all
-publication.** Pushing to the private remote is backup, never publication, and **an agent pushes
-only on John's explicit direction for a specific state.**
+below its own instruction not to. The repository is PRIVATE and **publication remains blocked
+by Gate 8 under D-032 and by D-048.** D-016's naming block has lifted (D-074); that is not
+publication permission. Pushing to the private remote is backup, never publication, and **an
+agent pushes only on John's explicit direction for a specific state.**
 
 **READING ORDER FOR A FRESH INSTANCE.**
 
@@ -91,10 +96,11 @@ numbers repeatedly and been caught by independent verifiers doing it.
 **D-002's two mid-build gates are now both behind the project.**
 
 **What S2 does NOT authorise, stated first because a signed gate is the moment scope creeps.**
-D-016 still blocks all publication and the repository is PRIVATE. Gate 8 (five-minute
-comprehension) is PRE-PUBLICATION under D-032 — it needs the dashboard D-009 deferred and John's
-five held questions, which the build loop must never see. Certification of public claims is
-still autonomy NONE. **S2 was signed on the state in `docs/gate-s2-evidence.md` §11 INCLUDING
+D-016's naming block has lifted (D-074) and the repository is still PRIVATE. **Publication
+remains blocked.** Gate 8 (five-minute comprehension) is PRE-PUBLICATION under D-032 — it needs
+John's five held questions, which the build loop must never see, and it has not run.
+Certification of public claims is still autonomy NONE. **S2 was signed on the state in
+`docs/gate-s2-evidence.md` §11 INCLUDING
 its limits, not despite them** — 14 of 20 classes exercising the class they name (credit iff an ABOUT check ran against the named phenomenon and recorded the outcome the spec assigns to it, UNRESOLVED included), and no live
 agent in CI. D-041 carries an annotation naming what became known after it was signed.
 
@@ -230,10 +236,11 @@ autonomy *none*).
 ### YOUR JOB: NOTHING, WITHOUT AN INSTRUCTION FROM JOHN. Say so and stop.
 
 The D-058 confirmed batches HOLD inside their declared boundaries. **D-055 is MET (D-073)
-and unlocks nothing.** The name is John's. A name-agnostic private packet is at
-`reviewer-packet/`. If you arrived with no instruction, report the state below and wait.
+and unlocks nothing.** The name is "Sentinel" (D-074). The private packet at
+`reviewer-packet/` is not name-agnostic. If you arrived with no instruction, report the
+state below and wait.
 
-### WHERE THE PROJECT IS, 2026-08-24
+### WHERE THE PROJECT IS, 2026-08-25
 
 | | |
 |---|---|
@@ -244,9 +251,10 @@ and unlocks nothing.** The name is John's. A name-agnostic private packet is at
 | Confirmed D-058 batches | **HOLD**, each inside its card: A-EXTRACT (A-089), B-EVENTS (A-091), C-SNAPSHOT (A-093), A-FLOORS (A-094), D-CLAIMS (A-095) |
 | D-055 exit | **MET (D-073, Session Six).** Unlocks nothing. D-048: a clean result is a PRECONDITION, never a trigger. Census of record: `critical-high-census.md`. Exit record: `d055-condition-status.md`. V-3 accepted as a documented boundary at `scripts/check-secrets.sh` 148–152. D-067 D-008(2)/(4) limits HISTORICAL. Gate 5 not recertified. |
 | 2026-08-23 Phase B | **ACCEPTED.** Frozen at A-101. D-069–D-072 recorded. A-100 dispositions both frozen-harness control failures. D-067 §7.2 sentence untouched; D-008(2)/(4) limits now HISTORICAL at D-073 |
-| 2026-08-24 record stretch | **FROZEN at A-104.** D-073 recorded. Census and dossier are the exit record. README Icon line remains **uncommitted**. Isolated verified-origin `--gate` is after this freeze, out of tree |
-| Next | **The name is John's.** README and name-carrying text wait. Name-agnostic packet is at `reviewer-packet/`. No publication, rename, push, or gate signature. **Do not discard the uncommitted README line** |
-| Publication | **BLOCKED and untouched.** D-055 MET is a D-048 precondition, not a trigger. Gate 8 needs the D-009 dashboard and John's five held questions; D-016 blocks everything |
+| 2026-08-24 record stretch | **FROZEN at A-104.** D-073 recorded. Census and dossier are the exit record. Isolated verified-origin `--gate` is after that freeze, out of tree |
+| 2026-08-25 Session Eight | **Name ratified "Sentinel" (D-074).** D-016 naming block lifts. Domain-string ruling recorded (D-075). Packet and `assets/` tracked. Rename-gate re-scope designed, not built |
+| Next | **Gate 8 is John's to start.** Rename-gate re-scope design is waiting on him. No publication, visibility change, demo, push, or gate signature |
+| Publication | **BLOCKED.** D-055 MET is a D-048 precondition, not a trigger. D-016's naming block has lifted. Gate 8 under D-032 has not run. **A lifted naming block is not publication permission** |
 
 ### HOW BATCH A1 ACTUALLY CLOSED — the record, stated so it cannot be rounded up
 
@@ -284,8 +292,9 @@ them as unrepaired current work. Do not treat the HOLDs as repository-wide closu
 
 ### WHAT IS STILL OPEN, AND NONE OF IT IS THIS INSTANCE'S TO CLOSE
 
-1. **Publication, rename, Gate 8, any gate signature or reopening.** D-055 MET does not
-   start any of these. D-016 stands. The five D-008 comprehension questions stay unseen.
+1. **Publication, Gate 8, any gate signature or reopening, and the rename-gate re-scope.** D-055 MET does not
+   start any of these. D-016's naming block has lifted (D-074). The five D-008 comprehension questions stay unseen.
+   `scripts/check-rename-gate.sh` still encodes the pre-D-074 messages until John rules the design.
 2. **RESIDUALS FROM THE D-062 VERIFICATION — scored, not all repaired.**
    **`V-1` is retired under D-073** (A-098 verified repair) and remains load-bearing as
    stated in the header. **`V-3` is accepted as a documented boundary** at
@@ -326,8 +335,8 @@ them as unrepaired current work. Do not treat the HOLDs as repository-wide closu
    outstanding with `git log --oneline origin/step-3/isolated-signer..HEAD`; **do not quote a
    number from this file.** D-016 is unchanged and the repository is still PRIVATE: backup is
    not publication.
-5. **Publication, rename, any gate signature or reopening, and any follow-on stretch.**
-   D-055 is **MET** and unlocks none of these.
+5. **Publication, Gate 8, any gate signature or reopening, the rename-gate re-scope, and any follow-on stretch.**
+   D-055 is **MET** and unlocks none of these. D-074 lifted a naming block. **It did not authorise publication.**
 
 ### WHAT IS NOT AUTHORISED, and none of it has changed
 
@@ -336,12 +345,15 @@ them as unrepaired current work. Do not treat the HOLDs as repository-wide closu
   **spent** at the Phase 1 freeze that added the V-1 behavioural guard. The 2026-08-23 lift
   of the same clause was **spent** at the F61ECCA card freeze (A-099). Neither is standing
   permission.
-- **No follow-on because D-055 is MET.** No publication path, rename, push, v1.1 plan, or
-  stretch. The name-agnostic private packet at `reviewer-packet/` is assembled, not published.
-  The README still waits on the name. No gate signed or reopened, no public claim certified,
+- **No follow-on because D-055 is MET.** No publication path, visibility change, public demo,
+  push, v1.1 plan, or stretch unless John starts it. The private packet at `reviewer-packet/`
+  is assembled, not published. No gate signed or reopened, no public claim certified,
   no correction ratified. A MET D-055 certifies nothing.
-- **D-016 blocks all publication**; the repository is PRIVATE and the rename gate checks it.
+- **Publication remains blocked** by Gate 8 under D-032 and by D-048. The repository is
+  PRIVATE. `scripts/check-rename-gate.sh` still checks origin visibility; it has not been
+  re-scoped (design brought, not built).
 - **No pre-publication.** D-048 makes a clean result a PRECONDITION, never a trigger.
+  D-074's naming-block lift is not a trigger either.
 - **The five D-008 comprehension questions stay unseen.**
 - **No push** without John's explicit direction for a specific state.
 

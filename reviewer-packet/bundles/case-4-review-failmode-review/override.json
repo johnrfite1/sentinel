@@ -1,0 +1,16 @@
+{
+  "note": "§5.5 OverrideAuthorizationPayload, signed by the OWNER (not the Sentinel signer). Verifies against the same EIP-712 domain as the receipt; its chain and vault binding is transitive, through the mandateHash and policyHash it references.",
+  "override": {
+    "schemaVersion": "1",
+    "reviewReceiptHash": "0x79a67637d5996203570e1540811b786e13110a05685411acee9b70d10544cebd",
+    "actionHash": "0x10be15bbf9181a16b3e99a205bc122f8a94211b2c0b57721a1b3f0422fd0e1c5",
+    "mandateHash": "0x00ff21a5b52e5a9d1c646aebf636eb69acbb893681c119a0ab8ccc3886d0c113",
+    "policyHash": "0x8abd037dc7df8d7fa4dce928139c9c1306555aa6853d82b58daa8891a13b0bff",
+    "actionNonce": "0",
+    "reasonHash": "0x7a9ab1ebcee0036e59c9e29d224d9abf76a41098b1a20f1cc410161588781cf4",
+    "issuedAt": "0",
+    "expiresAt": "4000000000"
+  },
+  "ownerSignature": "0x58bf68cb958f03b726aa8b14e4111d66c4542178cae46b01c09cce3e6ecc8fa71d842d5f660be07d219c935c49afba290c4ab5f43a8cfc159e41607cccc5b7fa1b",
+  "ownerAddress": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+}

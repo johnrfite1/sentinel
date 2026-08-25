@@ -1,0 +1,285 @@
+{
+  "schema": "sentinel.evidence.v0.2",
+  "verdict": "BLOCK",
+  "normalizedAction": {
+    "schemaVersion": "1",
+    "chainId": "31337",
+    "vault": "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512",
+    "actionNonce": "0",
+    "target": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0",
+    "valueWei": "0",
+    "dataHash": "0x94acadc14a4a976198f95cf50e4777b91f7a5f149bc1c99898189e6df9c72ef1",
+    "operation": "0",
+    "mandateHash": "0x6a5147a3add511ac685f08b7cfe41d30e7f2bd02caa4a6d8acb1e116067d580a",
+    "policyHash": "0x8abd037dc7df8d7fa4dce928139c9c1306555aa6853d82b58daa8891a13b0bff",
+    "deadline": "4000000000",
+    "callData": "0x095ea7b300000000000000000000000000000000000000000000000000000000deadbeefffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+  },
+  "decodedSelectorAndParameters": {
+    "decoded": "true",
+    "selector": "0x095ea7b3",
+    "schema": "DemoERC20.approve",
+    "description": "DemoERC20.approve(spender=0x00000000000000000000000000000000deadbeef, amount=115792089237316195423570985008687907853269984665640564039457584007913129639935)",
+    "parameters": {
+      "spender": "0x00000000000000000000000000000000deadbeef",
+      "amount": "115792089237316195423570985008687907853269984665640564039457584007913129639935"
+    }
+  },
+  "policyChecks": [
+    {
+      "code": "EVAL_MANDATE_ACTIVE",
+      "outcome": "PASS",
+      "detail": ""
+    },
+    {
+      "code": "EVAL_POLICY_ACTIVE",
+      "outcome": "PASS",
+      "detail": ""
+    },
+    {
+      "code": "EVAL_MANDATE_PRINCIPAL_IS_OWNER",
+      "outcome": "PASS",
+      "detail": ""
+    },
+    {
+      "code": "EVAL_VAULT_NOT_PAUSED",
+      "outcome": "PASS",
+      "detail": ""
+    },
+    {
+      "code": "EVAL_CHAIN_BOUND",
+      "outcome": "PASS",
+      "detail": ""
+    },
+    {
+      "code": "EVAL_VAULT_BOUND",
+      "outcome": "PASS",
+      "detail": ""
+    },
+    {
+      "code": "EVAL_NONCE_CURRENT",
+      "outcome": "PASS",
+      "detail": ""
+    },
+    {
+      "code": "EVAL_TARGET_BOUND",
+      "outcome": "VIOLATION",
+      "detail": "action target 0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0 is not the mandate's 0x5fbdb2315678afecb367f032d93f642f64180aa3"
+    },
+    {
+      "code": "EVAL_OPERATION_SUPPORTED",
+      "outcome": "PASS",
+      "detail": ""
+    },
+    {
+      "code": "EVAL_CALLDATA_BINDING",
+      "outcome": "PASS",
+      "detail": ""
+    },
+    {
+      "code": "EVAL_ACTION_BINDS_MANDATE_AND_POLICY",
+      "outcome": "PASS",
+      "detail": ""
+    },
+    {
+      "code": "EVAL_MANDATE_BINDS_POLICY",
+      "outcome": "PASS",
+      "detail": ""
+    },
+    {
+      "code": "EVAL_TARGET_CODE_IDENTITY",
+      "outcome": "UNRESOLVED",
+      "detail": "target code hash 0x3715c0836193ddf75afe858ba6d9ea4744ea3f450c56bab3ddbf41e577c9b0cd is not the pinned 0x28b986ea45370917941b4baa7c9f4c3131216a87d1543071acdc841c39b5b726; the target's behaviour is no longer established"
+    },
+    {
+      "code": "EVAL_MANDATE_WINDOW",
+      "outcome": "PASS",
+      "detail": ""
+    },
+    {
+      "code": "EVAL_POLICY_WINDOW",
+      "outcome": "PASS",
+      "detail": ""
+    },
+    {
+      "code": "EVAL_ACTION_DEADLINE",
+      "outcome": "PASS",
+      "detail": ""
+    },
+    {
+      "code": "EVAL_VALUE_WITHIN_MANDATE",
+      "outcome": "PASS",
+      "detail": ""
+    },
+    {
+      "code": "EVAL_VALUE_WITHIN_POLICY",
+      "outcome": "PASS",
+      "detail": ""
+    },
+    {
+      "code": "EVAL_VALUE_WITHIN_VAULT_CAP",
+      "outcome": "PASS",
+      "detail": ""
+    },
+    {
+      "code": "EVAL_POLICY_OPERATION",
+      "outcome": "PASS",
+      "detail": ""
+    },
+    {
+      "code": "EVAL_SELECTOR_BOUND",
+      "outcome": "VIOLATION",
+      "detail": "selector 0x095ea7b3 is not the mandate's 0xc188528b"
+    },
+    {
+      "code": "EVAL_APPROVAL_CEILING",
+      "outcome": "VIOLATION",
+      "detail": "approves 115792089237316195423570985008687907853269984665640564039457584007913129639935, policy ceiling is 0"
+    },
+    {
+      "code": "EVAL_APPROVAL_SPENDER",
+      "outcome": "VIOLATION",
+      "detail": "spender 0x00000000000000000000000000000000deadbeef is not the mandate's beneficiary"
+    },
+    {
+      "code": "EVAL_SIMULATION_SUCCEEDS",
+      "outcome": "PASS",
+      "detail": ""
+    },
+    {
+      "code": "EVAL_CALL_GRAPH_EXPECTED",
+      "outcome": "PASS",
+      "detail": ""
+    },
+    {
+      "code": "EVAL_NATIVE_DELTA_MATCHES_VALUE",
+      "outcome": "PASS",
+      "detail": ""
+    },
+    {
+      "code": "EVAL_ALLOWANCE_EFFECT_WITHIN_CEILING",
+      "outcome": "VIOLATION",
+      "detail": "resulting allowance 115792089237316195423570985008687907853269984665640564039457584007913129639935 exceeds ceiling 0"
+    }
+  ],
+  "expectedEffects": {
+    "maxNativeValueWei": "10000000000000000",
+    "target": "0x5fbdb2315678afecb367f032d93f642f64180aa3",
+    "selector": "0xc188528b",
+    "resourceId": "0x1878e089565039fe0f4ac9769a9fb8f9b28aa23ed7c9e9f9dfa9b926988a5264",
+    "beneficiary": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+    "durationSeconds": "86400",
+    "recurringAllowed": false,
+    "maxAllowanceIncreaseBaseUnits": "0"
+  },
+  "observedPreState": {
+    "nativeBalances": [
+      {
+        "address": "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512",
+        "wei": "1000000000000000000"
+      },
+      {
+        "address": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0",
+        "wei": "0"
+      },
+      {
+        "address": "0x00000000000000000000000000000000deadbeef",
+        "wei": "0"
+      }
+    ],
+    "allowances": [
+      {
+        "token": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0",
+        "owner": "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512",
+        "spender": "0x00000000000000000000000000000000deadbeef",
+        "amount": "0"
+      }
+    ],
+    "entitlements": []
+  },
+  "observedPostState": {
+    "outcome": "success",
+    "revertReason": null,
+    "gasUsed": "46077",
+    "nativeBalances": [
+      {
+        "address": "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512",
+        "wei": "1000000000000000000"
+      },
+      {
+        "address": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0",
+        "wei": "0"
+      },
+      {
+        "address": "0x00000000000000000000000000000000deadbeef",
+        "wei": "0"
+      }
+    ],
+    "allowances": [
+      {
+        "token": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0",
+        "owner": "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512",
+        "spender": "0x00000000000000000000000000000000deadbeef",
+        "amount": "115792089237316195423570985008687907853269984665640564039457584007913129639935"
+      }
+    ],
+    "entitlements": [],
+    "events": [
+      {
+        "address": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0",
+        "topics": [
+          "0x8c5be1e5ebec7d5bd14f71427d1e84f3dd0314c0f7b2291e5b200ac8c7c3b925",
+          "0x000000000000000000000000e7f1725e7734ce288f8367e1bb143e90bb3f0512",
+          "0x00000000000000000000000000000000000000000000000000000000deadbeef"
+        ],
+        "data": "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+      }
+    ]
+  },
+  "nativeBalanceDeltas": [
+    {
+      "address": "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512",
+      "before": "1000000000000000000",
+      "after": "1000000000000000000",
+      "delta": "0"
+    },
+    {
+      "address": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0",
+      "before": "0",
+      "after": "0",
+      "delta": "0"
+    },
+    {
+      "address": "0x00000000000000000000000000000000deadbeef",
+      "before": "0",
+      "after": "0",
+      "delta": "0"
+    }
+  ],
+  "allowanceDeltas": [
+    {
+      "token": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0",
+      "owner": "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512",
+      "spender": "0x00000000000000000000000000000000deadbeef",
+      "before": "0",
+      "after": "115792089237316195423570985008687907853269984665640564039457584007913129639935",
+      "delta": "115792089237316195423570985008687907853269984665640564039457584007913129639935"
+    }
+  ],
+  "internalCallTrace": [],
+  "targetCodeIdentity": {
+    "target": "0x9fe46736679d2d9a65f0992f2272de9f3c7fa6e0",
+    "pinnedByMandate": "0x28b986ea45370917941b4baa7c9f4c3131216a87d1543071acdc841c39b5b726",
+    "observedOnChain": "0x3715c0836193ddf75afe858ba6d9ea4744ea3f450c56bab3ddbf41e577c9b0cd",
+    "matches": false
+  },
+  "citedContextReferences": [],
+  "unresolvedChecks": [
+    "EVAL_TARGET_CODE_IDENTITY"
+  ],
+  "aiExplanation": null,
+  "anchor": {
+    "blockNumber": "7",
+    "blockHash": "0x87aafe0714956798cb296dcd34a7af8c2fff9c980e79356730f2af15a162c0c9"
+  }
+}

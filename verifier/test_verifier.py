@@ -1020,7 +1020,7 @@ class TestPublishedTypeStrings(unittest.TestCase):
     sufficient -- and that it agrees with what was independently recovered."""
 
     def _published(self):
-        spec = os.path.join(REPO, "Sentinel_Protocol_Lab_Proposal_v0_2.md")
+        spec = os.path.join(REPO, "Sentinel_Lab_Proposal_v0_2.md")
         with open(spec, encoding="utf-8") as handle:
             text = handle.read()
         return published_type_strings(text)
@@ -1200,7 +1200,7 @@ class TestPublishedTypeStringsSectionExtent(unittest.TestCase):
     def test_the_live_proposal_still_publishes_six(self):
         # The opposite outcome for every refusal above: the real document is not
         # ambiguous, so none of these rules may fire on it.
-        spec = os.path.join(REPO, "Sentinel_Protocol_Lab_Proposal_v0_2.md")
+        spec = os.path.join(REPO, "Sentinel_Lab_Proposal_v0_2.md")
         with open(spec, encoding="utf-8") as handle:
             text = handle.read()
         self.assertEqual(len(published_type_strings(text)), 6)

@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "1",
+  "policyVersion": "1",
+  "vault": "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512",
+  "chainId": "31337",
+  "allowedOperation": "0",
+  "allowedTargetsHash": "0xb73a8fa98fa2f83e67843710c2e55b44b03c7ce8131b9c74f17bc6ea9e6f48bd",
+  "allowedSelectorsHash": "0x5df20c98bb1f5d95e7f2d8d65c352745743f65f64e761da96098a682bc436b73",
+  "maxNativeValueWei": "10000000000000000",
+  "maxAllowanceIncreaseBaseUnits": "0",
+  "allowedCallGraphHash": "0x2dd6702379ffadfc4954198f2c29d82da042f017eb8136a44ff32b3bfd650911",
+  "validAfter": "0",
+  "validUntil": "4000000000",
+  "failureMode": "1"
+}

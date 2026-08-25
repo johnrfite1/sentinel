@@ -34,7 +34,7 @@ cd "$ROOT" || { echo "  FAIL  cannot enter the Sentinel repository root; refusin
 # install-hooks write into a victim repository. GIT_PREFIX is included although inert on
 # git 2.50.1 — an inert variable today is not a guarantee tomorrow.
 unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_PREFIX
-SPEC="$ROOT/Sentinel_Protocol_Lab_Proposal_v0_2.md"
+SPEC="$ROOT/Sentinel_Lab_Proposal_v0_2.md"
 
 # SCOPED TO §5.8, THE SECTION THIS GUARD NAMES (R4-F3, D-055(e), CONFIRMED).
 #

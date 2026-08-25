@@ -347,7 +347,7 @@ describe("D-015 — the proposal no longer contradicts failureMode", () => {
         const {join} = await import("node:path");
         const {REPO_ROOT} = await import("./harness.ts");
         const spec = readFileSync(
-            join(REPO_ROOT, "Sentinel_Protocol_Lab_Proposal_v0_2.md"),
+            join(REPO_ROOT, "Sentinel_Lab_Proposal_v0_2.md"),
             "utf8",
         );
         // The amendment ruled in D-015(a). Asserted mechanically because a spec contradiction

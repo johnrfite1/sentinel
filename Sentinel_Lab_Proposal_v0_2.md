@@ -23,7 +23,7 @@ changelog:
   - "2026-07-27: Build-start amendments D-007..D-011 (delegated rulings) added as §14.9; §8 gained the procedural-not-organizational limit on corpus labeling. §14.8 preserved unchanged."
 ---
 
-# Sentinel Protocol Lab
+# Sentinel — a testnet mandate-to-effects conformance lab
 ## Portfolio MVP and Market-Discovery Proposal
 
 Version: v0.2  
@@ -39,7 +39,7 @@ Purpose: Define an Artifact Hub flagship that demonstrates bounded AI action at 
 
 Build Sentinel, but build a much narrower system than v0.1 proposed.
 
-Sentinel Protocol Lab is a testnet mandate-to-effects conformance lab for agent-proposed EVM actions. It binds an exact action to a human-signed mandate, evaluates deterministic policy and pinned-state execution evidence, and permits execution only through a testnet vault that enforces the result.
+Sentinel is a testnet mandate-to-effects conformance lab for agent-proposed EVM actions. It binds an exact action to a human-signed mandate, evaluates deterministic policy and pinned-state execution evidence, and permits execution only through a testnet vault that enforces the result.
 
 The project is an Artifact Hub flagship first and a startup-discovery vehicle second. It is not a wallet, custody product, generalized smart-contract auditor, token ecosystem, or production security guarantee.
 

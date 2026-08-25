@@ -81,6 +81,14 @@ assign() {
         docs/gate-s1-evidence.md|docs/gate-s2-evidence.md) echo R1 ;;
         docs/decisions.md|docs/session-state.md)     echo R1 ;;
         HANDOFF.md|README.md)                        echo R1 ;;
+        # Visual identity shipped with the README (D-074). R1 already owns the
+        # canonical public-facing records; the mark sits with them.
+        assets/*)                                    echo R1 ;;
+        # Gate 8 private packet: demo bundles, static dashboard, D-010 verifier
+        # copy, one-page script. R1 already owns `verifier/*` and
+        # `fixtures/samples/*`; this directory is that instrument package, not
+        # the authorization pipeline (R2) or onchain/corpus (R3).
+        reviewer-packet/*)                           echo R1 ;;
         docs/repair-protocol.md|docs/exit-criterion-packet.md|docs/v1-1-register.md) echo R1 ;;
         docs/gate-5-vendor-audit.md|docs/round-six-brief.md) echo R1 ;;
         # This manifest itself. R1, because it is a CLAIM about coverage and whether a claim
@@ -106,7 +114,7 @@ assign() {
         docs/ablation-report.md)                     echo R3 ;;
 
         ts/src/*|ts/test/*|ts/*)                     echo R2 ;;
-        Sentinel_Protocol_Lab_Proposal_v0_2.md)      echo R2 ;;
+        Sentinel_Lab_Proposal_v0_2.md)               echo R2 ;;
         *)                                           echo UNASSIGNED ;;
     esac
 }

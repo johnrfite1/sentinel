@@ -1,0 +1,26 @@
+{
+  "refused": false,
+  "receipt": {
+    "schemaVersion": "1",
+    "decisionId": "0x59d562b0b6c42bad050baa1bce817dc9592ccae7fffa4561c3d38a3e25da5c72",
+    "actionHash": "0x10be15bbf9181a16b3e99a205bc122f8a94211b2c0b57721a1b3f0422fd0e1c5",
+    "mandateHash": "0x00ff21a5b52e5a9d1c646aebf636eb69acbb893681c119a0ab8ccc3886d0c113",
+    "policyHash": "0x8abd037dc7df8d7fa4dce928139c9c1306555aa6853d82b58daa8891a13b0bff",
+    "verdict": "1",
+    "reasonCodesHash": "0x504ab6e7579f2c566dc354738c8a67973dd0a099ad2e68c0a62e7434dbb8b826",
+    "evidenceHash": "0xbb7e21ef4b524f0dc6d75e9dfb3080c10ef367d77107c2a1f50c5a3c6be89d2c",
+    "simulationBlockNumber": "11",
+    "simulationBlockHash": "0x1931c54923b7ee06300b661758d1777036ec31333632c6b15e7976ebc5a2397f",
+    "issuedAt": "1786844784",
+    "expiresAt": "1786845084",
+    "signer": "0x70997970c51812dc3a010c7d01b50e0d17dc79c8"
+  },
+  "signature": "0x21b5b63bfbe8ea8e638569839c82a60b30ea1ebdce986e8203d8e49904a3ecd20709730738ccbc73f650eee304fc40e442921af390b769a3908a4f6ff94281c51b",
+  "reasonCodes": [
+    "EVAL_TARGET_CODE_IDENTITY",
+    "SIGNER_TARGET_CODEHASH_MISMATCH"
+  ],
+  "signerFindings": [
+    "SIGNER_TARGET_CODEHASH_MISMATCH"
+  ]
+}
