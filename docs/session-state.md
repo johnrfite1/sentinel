@@ -3,15 +3,14 @@
 Rewritten at the end of each working session. **This file, not the conversation, is the
 memory.** If it disagrees with anything an agent remembers, this file wins.
 
-Last updated: **2026-08-25 (Session Eight: name ratified "Sentinel"; D-016 naming block
-lifts; publication still blocked by Gate 8).**
+Last updated: **2026-08-25 (Session Eight, continued: rename-gate Option A / D-076;
+publication still blocked by Gate 8).**
 D-055 is MET (D-073). It unlocks nothing. **"Sentinel" is the project name (D-074).**
 The EIP-712 domain string is also `"Sentinel"` (D-075, recorded late). There is no
 name/domain split. Branch `step-3/isolated-signer`.
-**WORKING TREE AT THE START OF THIS STRETCH:** `README.md` carried John's restored Icon
-line, uncommitted. `assets/` and `reviewer-packet/` were untracked; they are committed
-under D-074 with review-scope assignment arms. `.serena/` is tool state and is
-gitignored, not committed.
+**WORKING TREE AT THE START OF THIS STRETCH:** clean at the D-074 freeze
+(`276a22e`). One commit unpushed relative to `origin/step-3/isolated-signer`; no
+push is authorised. `.serena/` remains gitignored.
 
 > ## READ THIS BEFORE ANYTHING ELSE
 >
@@ -75,10 +74,11 @@ agent pushes only on John's explicit direction for a specific state.**
    claim rather than evidence. **D-063 withdrew standing force authorization: any forced removal
    now needs new, exact approval after every stated precondition holds.**
 7. **`docs/decisions.md`: D-066, D-067, D-068, D-069, D-070, D-071, D-072, D-073, then A-089, A-091, A-093, A-094, A-095, A-096,
-   A-097, A-098, A-099, A-100, A-101, A-102, A-103, A-104.** D-073 records that D-055 is MET
+   A-097, A-098, A-099, A-100, A-101, A-102, A-103, A-104, D-074, D-075, A-105, D-076, A-106.** D-073 records that D-055 is MET
    and that it unlocks nothing. D-067's D-008(2)/(4) completeness limits are HISTORICAL as of
    D-073; the §7.2 admissibility sentence is untouched. Gate 5 is not recertified. A-104
-   froze the exit record. **Do not treat MET as publication, rename, a gate signature, or a
+   froze the exit record. D-076 re-scopes the visibility gate and amends D-071's citation
+   only. **Do not treat MET as publication, rename, a gate signature, or a
    follow-on plan.** The exit record is
    `docs/review-2026-08-19-d057-targeted/d055-condition-status.md`. The census of record is
    `docs/review-2026-08-19-d057-targeted/critical-high-census.md`.
@@ -252,8 +252,8 @@ state below and wait.
 | D-055 exit | **MET (D-073, Session Six).** Unlocks nothing. D-048: a clean result is a PRECONDITION, never a trigger. Census of record: `critical-high-census.md`. Exit record: `d055-condition-status.md`. V-3 accepted as a documented boundary at `scripts/check-secrets.sh` 148–152. D-067 D-008(2)/(4) limits HISTORICAL. Gate 5 not recertified. |
 | 2026-08-23 Phase B | **ACCEPTED.** Frozen at A-101. D-069–D-072 recorded. A-100 dispositions both frozen-harness control failures. D-067 §7.2 sentence untouched; D-008(2)/(4) limits now HISTORICAL at D-073 |
 | 2026-08-24 record stretch | **FROZEN at A-104.** D-073 recorded. Census and dossier are the exit record. Isolated verified-origin `--gate` is after that freeze, out of tree |
-| 2026-08-25 Session Eight | **Name ratified "Sentinel" (D-074).** D-016 naming block lifts. Domain-string ruling recorded (D-075). Packet and `assets/` tracked. Rename-gate re-scope designed, not built |
-| Next | **Gate 8 is John's to start.** Rename-gate re-scope design is waiting on him. No publication, visibility change, demo, push, or gate signature |
+| 2026-08-25 Session Eight | **Name ratified "Sentinel" (D-074).** D-016 naming block lifts. Domain-string ruling recorded (D-075). Packet and `assets/` tracked. Rename-gate re-scoped Option A (D-076); D-071 citation amended, substance untouched |
+| Next | **Gate 8 is John's to start, and is not yet.** No publication, visibility change, demo, push, packet assembly, or gate signature |
 | Publication | **BLOCKED.** D-055 MET is a D-048 precondition, not a trigger. D-016's naming block has lifted. Gate 8 under D-032 has not run. **A lifted naming block is not publication permission** |
 
 ### HOW BATCH A1 ACTUALLY CLOSED — the record, stated so it cannot be rounded up
@@ -292,9 +292,9 @@ them as unrepaired current work. Do not treat the HOLDs as repository-wide closu
 
 ### WHAT IS STILL OPEN, AND NONE OF IT IS THIS INSTANCE'S TO CLOSE
 
-1. **Publication, Gate 8, any gate signature or reopening, and the rename-gate re-scope.** D-055 MET does not
+1. **Publication, Gate 8, and any gate signature or reopening.** D-055 MET does not
    start any of these. D-016's naming block has lifted (D-074). The five D-008 comprehension questions stay unseen.
-   `scripts/check-rename-gate.sh` still encodes the pre-D-074 messages until John rules the design.
+   `scripts/check-rename-gate.sh` is re-scoped under D-076 (visibility still PRIVATE; citation is now D-032 / D-048 / D-074). That is not publication permission.
 2. **RESIDUALS FROM THE D-062 VERIFICATION — scored, not all repaired.**
    **`V-1` is retired under D-073** (A-098 verified repair) and remains load-bearing as
    stated in the header. **`V-3` is accepted as a documented boundary** at
@@ -333,10 +333,10 @@ them as unrepaired current work. Do not treat the HOLDs as repository-wide closu
    HISTORICAL as of D-073.
 4. ~~**The push.**~~ Prior private backups happened at John's direction. Count anything
    outstanding with `git log --oneline origin/step-3/isolated-signer..HEAD`; **do not quote a
-   number from this file.** D-016 is unchanged and the repository is still PRIVATE: backup is
-   not publication.
-5. **Publication, Gate 8, any gate signature or reopening, the rename-gate re-scope, and any follow-on stretch.**
-   D-055 is **MET** and unlocks none of these. D-074 lifted a naming block. **It did not authorise publication.**
+   number from this file.** D-016's naming block has lifted (D-074); the repository is still
+   PRIVATE: backup is not publication.
+5. **Publication, Gate 8, any gate signature or reopening, and any follow-on stretch.**
+   D-055 is **MET** and unlocks none of these. D-074 lifted a naming block. D-076 re-scoped a visibility check. **Neither authorised publication.** Gate 8 is ruled not yet.
 
 ### WHAT IS NOT AUTHORISED, and none of it has changed
 
@@ -350,8 +350,8 @@ them as unrepaired current work. Do not treat the HOLDs as repository-wide closu
   is assembled, not published. No gate signed or reopened, no public claim certified,
   no correction ratified. A MET D-055 certifies nothing.
 - **Publication remains blocked** by Gate 8 under D-032 and by D-048. The repository is
-  PRIVATE. `scripts/check-rename-gate.sh` still checks origin visibility; it has not been
-  re-scoped (design brought, not built).
+  PRIVATE. `scripts/check-rename-gate.sh` still checks origin visibility (D-076 Option A);
+  D-071's substance is unchanged. The re-scope is not publication permission.
 - **No pre-publication.** D-048 makes a clean result a PRECONDITION, never a trigger.
   D-074's naming-block lift is not a trigger either.
 - **The five D-008 comprehension questions stay unseen.**

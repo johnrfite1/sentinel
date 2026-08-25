@@ -1,18 +1,20 @@
 #!/usr/bin/env bash
-# Sentinel — pre-publication rename gate (D-016).
+# Sentinel — pre-publication visibility gate (D-032 / D-048 / D-074).
 #
-# "Sentinel" is a private working codename that collides with existing projects. John ruled
-# on 2026-07-28 that the collision is NOT accepted: repository visibility, public demos,
-# published links, and portfolio or resume references are blocked until he approves a
-# replacement name following domain and trademark/collision review.
+# D-074 ratified the project name "Sentinel" and lifted D-016's naming block.
+# Publication remains blocked: Gate 8 is pre-publication under D-032 and has
+# not run; D-048 makes a clean D-055 a precondition, never a trigger. This
+# guard's mechanical job is unchanged: fail if the repository has become
+# public. A lifted naming block is not publication permission.
 #
-# AGENTS.md requires a durable project rule to get a mechanical check rather than prose, and
-# "nothing goes public" is exactly the rule that gets violated by one click months from now,
-# by someone who never read the decision log. So this fails the gate if the repository has
-# become public.
+# AGENTS.md requires a durable project rule to get a mechanical check rather
+# than prose, and "nothing goes public" is exactly the rule that gets violated
+# by one click months from now, by someone who never read the decision log.
 #
-# NOT an S1 condition (D-016 is explicit). It is a publication gate, checked continuously so
-# that a violation is caught the day it happens rather than at the next review.
+# NOT an S1 condition. It is a publication-visibility gate, checked continuously
+# so that a visibility change is caught the day it happens rather than at the
+# next review. D-071 option C (fast/deep UNVERIFIED acknowledgement) is
+# unchanged in substance; D-076 amends only the citation in its output.
 set -uo pipefail
 
 # --- Sentinel repository identity (D-060(2)) ---------------------------------
@@ -36,12 +38,13 @@ cd "$SENTINEL_ROOT" || { echo "  FAIL  cannot enter the Sentinel repository root
 # git 2.50.1 — an inert variable today is not a guarantee tomorrow.
 unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_PREFIX
 
-# D-071 / D-059(7). Invoked by both gate profiles (scripts/test.sh shared prefix).
-# Fast: UNVERIFIED exits 0. Deep/--gate: UNVERIFIED exits 1 unless
-# SENTINEL_RENAME_GATE_UNVERIFIED_OK=1. The env var name is printed ON the
-# UNVERIFIED line. An acknowledged deep run states that D-016 was acknowledged,
-# not verified. Coverage: origin visibility via gh when readable. Not covered:
-# demos, published links, portfolio or resume references (D-016's other verbs).
+# D-071 / D-059(7), citation amended D-076. Invoked by both gate profiles
+# (scripts/test.sh shared prefix). Fast: UNVERIFIED exits 0. Deep/--gate:
+# UNVERIFIED exits 1 unless SENTINEL_RENAME_GATE_UNVERIFIED_OK=1. The env var
+# name is printed ON the UNVERIFIED line. An acknowledged deep run states that
+# the visibility check was acknowledged, not verified. Coverage: origin
+# visibility via gh when readable. Not covered: demos, published links,
+# portfolio or resume references.
 PROFILE="fast"
 for _arg in "$@"; do
     case "$_arg" in
@@ -52,21 +55,21 @@ ACK="${SENTINEL_RENAME_GATE_UNVERIFIED_OK:-}"
 
 unverified() {
     local reason="$1"
-    local cover="Coverage: origin visibility via gh when readable. Not covered: demos, published links, portfolio or resume references (D-016's other verbs)."
+    local cover="Coverage: origin visibility via gh when readable. Not covered: demos, published links, portfolio or resume references."
     if [ "$PROFILE" = "gate" ]; then
         if [ "$ACK" = "1" ]; then
             echo "${YEL}rename gate: UNVERIFIED${RST} (SENTINEL_RENAME_GATE_UNVERIFIED_OK=1) — ${reason}"
-            echo "  This --gate run ACKNOWLEDGES D-016 was not verified; it was acknowledged, not verified private."
-            echo "  D-016 still blocks publication. ${cover}"
+            echo "  This --gate run ACKNOWLEDGES the visibility check was not verified; it was acknowledged, not verified private."
+            echo "  Publication remains blocked by Gate 8 under D-032 and D-048 (D-074). ${cover}"
             exit 0
         fi
         echo "${YEL}rename gate: UNVERIFIED${RST} (deep/--gate refuses unless SENTINEL_RENAME_GATE_UNVERIFIED_OK=1) — ${reason}"
-        echo "  D-016 still blocks publication. Deep profile requires acknowledgement or a readable visibility check."
+        echo "  Publication remains blocked by Gate 8 under D-032 and D-048 (D-074). Deep profile requires acknowledgement or a readable visibility check."
         echo "  ${cover}"
         exit 1
     fi
     echo "${YEL}rename gate: UNVERIFIED${RST} (SENTINEL_RENAME_GATE_UNVERIFIED_OK=1 acknowledges in --gate) — ${reason}"
-    echo "  D-016 still blocks publication. Verify by hand before any public action."
+    echo "  Publication remains blocked by Gate 8 under D-032 and D-048 (D-074). Verify by hand before any public action."
     echo "  ${cover}"
     exit 0
 }
@@ -93,9 +96,9 @@ fi
 
 if [ "$visibility" != "PRIVATE" ]; then
     echo "${RED}RENAME GATE VIOLATED${RST} — $slug is $visibility."
-    echo "  D-016: publication is blocked until John approves a replacement name after"
-    echo "  domain and trademark/collision review. Make the repository private again."
+    echo "  Publication remains blocked by Gate 8 under D-032 and D-048 (D-074)."
+    echo "  Make the repository private again."
     exit 1
 fi
 
-echo "rename gate: clean ($slug is private; D-016 publication block intact)"
+echo "rename gate: clean ($slug is private; publication remains blocked by Gate 8 under D-032 and D-048)"
