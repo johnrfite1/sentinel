@@ -3,27 +3,28 @@
 Rewritten at the end of each working session. **This file, not the conversation, is the
 memory.** If it disagrees with anything an agent remembers, this file wins.
 
-Last updated: **2026-08-24 (A-104 freeze). D-055 is MET (D-073). It unlocks
-nothing.** Phase B is accepted. The D-055 dossier is the exit record, not
-prepared material. Gate 5 is not recertified. The D-067 D-008(2)/(4) limits are
-HISTORICAL. The 2026-08-23 lift of A1's "no further A1 test" clause remains spent
-at the F61ECCA card freeze. Branch `step-3/isolated-signer`.
+Last updated: **2026-08-24 (second name round presented; name-agnostic packet on disk).**
+D-055 is MET (D-073). It unlocks nothing. Session Seven started the
+pre-publication path; the name is not chosen. John's candidate slot in
+the brief was empty, so that grid was not run. Branch `step-3/isolated-signer`.
 **WORKING TREE: `README.md` carries John's restored Icon line, uncommitted. Do not
-discard it. `assets/` and `.serena/` are untracked and stay that way.**
+discard it. `assets/` and `.serena/` are untracked and stay that way.
+`reviewer-packet/` is new, untracked, name-agnostic, private handoff only.**
 
 > ## READ THIS BEFORE ANYTHING ELSE
 >
 > **YOUR JOB IS NOTHING WITHOUT AN INSTRUCTION FROM JOHN.** D-055 is MET (D-073).
 > **A MET D-055 unlocks nothing.** D-048 makes a clean result a PRECONDITION, never
-> a trigger. D-016 blocks publication and the rename. Gate 8 is pre-publication
-> under D-032. No gate is signed or reopened. Do not prepare a publication path, a
-> rename plan, a Gate 8 packet, a v1.1 plan, or any follow-on stretch. Do not climb
-> the §14.8 ladder. A1 is closed: **no A1 reopening and no further A1 production
-> change is authorised.** The 2026-08-23 lift of the "no further A1 test" clause
-> remains **spent** at the F61ECCA card freeze. The D-058 confirmed batches
-> independently HOLD. **Do not sign or reopen a gate. Do not publish, rename, or
-> push.** **Do not discard the uncommitted `README.md` Icon line.** Report the
-> state below and wait.
+> a trigger. D-016 still blocks publication and the rename. The name is John's.
+> Gate 8 is pre-publication under D-032. A name-agnostic private packet now lives
+> at `reviewer-packet/` (demo bundles, Python verifier, static dashboard, one-page
+> script). The README and any name-carrying text still wait. No gate is signed or
+> reopened. Do not publish, rename, push, register, or reserve. A1 is closed:
+> **no A1 reopening and no further A1 production change is authorised.** The
+> 2026-08-23 lift of the "no further A1 test" clause remains **spent** at the
+> F61ECCA card freeze. The D-058 confirmed batches independently HOLD.
+> **Do not discard the uncommitted `README.md` Icon line.** Report the state
+> below and wait.
 >
 > **THE `GIT_INDEX_FILE` FAIL-OPEN IS FIXED — the warning that stood here is withdrawn.**
 > It was real: clearing the variable made the pre-commit guard read `.git/index` while git was
@@ -229,7 +230,8 @@ autonomy *none*).
 ### YOUR JOB: NOTHING, WITHOUT AN INSTRUCTION FROM JOHN. Say so and stop.
 
 The D-058 confirmed batches HOLD inside their declared boundaries. **D-055 is MET (D-073)
-and unlocks nothing.** If you arrived with no instruction, report the state below and wait.
+and unlocks nothing.** The name is John's. A name-agnostic private packet is at
+`reviewer-packet/`. If you arrived with no instruction, report the state below and wait.
 
 ### WHERE THE PROJECT IS, 2026-08-24
 
@@ -243,7 +245,7 @@ and unlocks nothing.** If you arrived with no instruction, report the state belo
 | D-055 exit | **MET (D-073, Session Six).** Unlocks nothing. D-048: a clean result is a PRECONDITION, never a trigger. Census of record: `critical-high-census.md`. Exit record: `d055-condition-status.md`. V-3 accepted as a documented boundary at `scripts/check-secrets.sh` 148–152. D-067 D-008(2)/(4) limits HISTORICAL. Gate 5 not recertified. |
 | 2026-08-23 Phase B | **ACCEPTED.** Frozen at A-101. D-069–D-072 recorded. A-100 dispositions both frozen-harness control failures. D-067 §7.2 sentence untouched; D-008(2)/(4) limits now HISTORICAL at D-073 |
 | 2026-08-24 record stretch | **FROZEN at A-104.** D-073 recorded. Census and dossier are the exit record. README Icon line remains **uncommitted**. Isolated verified-origin `--gate` is after this freeze, out of tree |
-| Next | **NOTHING without an instruction from John.** No publication path, rename plan, Gate 8 packet, v1.1 plan, or follow-on stretch. **Do not discard the uncommitted README line** |
+| Next | **The name is John's.** README and name-carrying text wait. Name-agnostic packet is at `reviewer-packet/`. No publication, rename, push, or gate signature. **Do not discard the uncommitted README line** |
 | Publication | **BLOCKED and untouched.** D-055 MET is a D-048 precondition, not a trigger. Gate 8 needs the D-009 dashboard and John's five held questions; D-016 blocks everything |
 
 ### HOW BATCH A1 ACTUALLY CLOSED — the record, stated so it cannot be rounded up
@@ -334,9 +336,10 @@ them as unrepaired current work. Do not treat the HOLDs as repository-wide closu
   **spent** at the Phase 1 freeze that added the V-1 behavioural guard. The 2026-08-23 lift
   of the same clause was **spent** at the F61ECCA card freeze (A-099). Neither is standing
   permission.
-- **No follow-on because D-055 is MET.** No publication path, rename plan, Gate 8 packet,
-  v1.1 plan, or stretch. No gate signed or reopened, no public claim certified, no correction
-  ratified. A MET D-055 certifies nothing.
+- **No follow-on because D-055 is MET.** No publication path, rename, push, v1.1 plan, or
+  stretch. The name-agnostic private packet at `reviewer-packet/` is assembled, not published.
+  The README still waits on the name. No gate signed or reopened, no public claim certified,
+  no correction ratified. A MET D-055 certifies nothing.
 - **D-016 blocks all publication**; the repository is PRIVATE and the rename gate checks it.
 - **No pre-publication.** D-048 makes a clean result a PRECONDITION, never a trigger.
 - **The five D-008 comprehension questions stay unseen.**
