@@ -119,6 +119,12 @@ are in the README; generator and operator sit under `scripts/` so a zip of
 `reviewer-packet/` is the four artifacts. No reviewers, brief, scoring sheet, or public
 URL. Publication remains blocked. The five D-008 questions stay unseen.
 
+**2026-08-25 — SESSION NINE, CONTINUED: D-014 ANNOTATED (D-079). STILL NOT GATE 8.** A
+later dated entry clarifies D-014's summarising phrase. D-014's text is not rewritten.
+No signer check changed. Gate 8 waits on this landing and remains John's to start. The
+five D-008 questions stay unseen. Publication remains blocked. The prior backup
+authorisation is spent.
+
 Amended 2026-07-27 by Opus 5 at build start: D-007…D-011 (delegated rulings) resolve four open forks and the labeling blind spot. Sections below reflect them. Proposal mirror: §14.9.
 
 ## Mission
