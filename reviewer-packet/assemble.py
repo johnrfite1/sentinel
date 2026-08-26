@@ -5,6 +5,11 @@ Private handoff only. Fixture bytes are copied as they stand. The EIP-712
 domain name is a signature preimage in `bundles/domain.json` and is rendered
 under Cryptographically bound on every dashboard case screen; this packet is
 not name-agnostic. Not a live Anvil walkthrough. Not a public URL.
+
+Reviewers receive the standalone README (repository navigation omitted), the
+dashboard, and the demo (bundles plus verifier). `operator/` is procedure for
+the person assembling the handoff, not reviewer material. This file is the
+generator; it is not part of what reviewers receive.
 """
 from __future__ import annotations
 
@@ -129,7 +134,9 @@ def case_payload(case_id: str) -> dict:
 
     return {
         "id": case_id,
-        "title": meta.get("title", case_id),
+        # Dashboard titles must stand without the proposal. Bundle meta.json is
+        # copied byte-for-byte and may still carry a spec-section prefix.
+        "title": packet_title(meta.get("title", case_id)),
         "note": meta.get("note", ""),
         "verdict": meta.get("verdict", ""),
         "receiptVerdict": VERDICT_NAMES.get(str(receipt.get("verdict")), str(receipt.get("verdict"))),
@@ -200,12 +207,45 @@ def copy_packet() -> None:
         shutil.copy2(VERIFIER_SRC / name, verifier / name)
 
 
-SCRIPT = """# Demonstration packet — one-page script
+def packet_title(raw: str) -> str:
+    prefix = "§4.2 "
+    if isinstance(raw, str) and raw.startswith(prefix):
+        return raw[len(prefix) :]
+    return raw
 
-Private handoff. No repository. No live chain. No network.
 
-You have three things: this page, a static case viewer, and a Python verifier
-that re-checks pre-baked signed receipts.
+README_OMIT_HEADING = "\n## In this repository\n"
+
+
+WHAT_TO_HAND = """# What to hand a reviewer
+
+Private handoff. No public URL. No repository. No live chain. No network.
+
+Give the reviewer only these, as a self-contained folder:
+
+- `README.md`
+- `dashboard/`
+- `bundles/`
+- `verifier/`
+
+Do not include `operator/`, `assemble.py`, or anything from the repository.
+Do not recruit, brief, or score from this file. The Gate 8 run is John's to start.
+
+`SCRIPT.md` beside this file is your procedure for walking the demo yourself.
+"""
+
+
+SCRIPT = """# Demonstration packet — operator script
+
+Private handoff. No repository. No live chain. No network. No public URL.
+
+This page is **operator procedure**. Do not include it in what reviewers receive.
+
+Reviewers receive four things and nothing else: the standalone `README.md`,
+the static case viewer, the demo bundles, and the Python verifier.
+
+You have this page, the viewer, and the verifier that re-checks pre-baked
+signed receipts.
 
 ## 1. Open the case viewer
 
@@ -230,7 +270,8 @@ what the receipt claims; what it does not claim.
 
 ## 2. Verify a receipt offline
 
-Needs Python 3.8+ and nothing else. From this packet's root:
+Needs Python 3.8+ and nothing else. From the packet directory that contains
+`dashboard/`, `bundles/`, and `verifier/` — not from this `operator/` folder:
 
 ```
 python3 verifier/verify.py --domain bundles/domain.json bundles/case-1-allow
@@ -266,6 +307,26 @@ def html_escape(s: str) -> str:
         .replace(">", "&gt;")
         .replace('"', "&quot;")
     )
+
+
+def write_operator_and_readme() -> None:
+    operator = ROOT / "operator"
+    operator.mkdir(exist_ok=True)
+    (operator / "SCRIPT.md").write_text(SCRIPT)
+    (operator / "WHAT-TO-HAND.md").write_text(WHAT_TO_HAND)
+    leftover = ROOT / "SCRIPT.md"
+    if leftover.is_file():
+        leftover.unlink()
+    src = (REPO / "README.md").read_text()
+    idx = src.find(README_OMIT_HEADING)
+    if idx < 0:
+        print(
+            "README.md has no '## In this repository' section; "
+            "refusing to emit a packet copy that would include repository navigation",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+    (ROOT / "README.md").write_text(src[:idx].rstrip() + "\n")
 
 
 def write_dashboard(cases: list) -> None:
@@ -642,7 +703,7 @@ def main() -> int:
     copy_packet()
     cases = [case_payload(cid) for cid in CASE_IDS]
     write_dashboard(cases)
-    (ROOT / "SCRIPT.md").write_text(SCRIPT)
+    write_operator_and_readme()
     print(f"assembled {ROOT}")
     print("cases:", ", ".join(CASE_IDS))
     return 0

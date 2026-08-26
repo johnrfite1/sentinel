@@ -60,13 +60,3 @@ A verified receipt does not prove that the target code is benign. A code-hash mi
 It does not prove that the agent was honest, or that a prompt was or was not injected. The agent’s story never enters the bound fields.
 
 It does not prove anything about any other product.
-
-## In this repository
-
-These links are for people working in the repository. They are not part of a standalone reading of this file.
-
-- **Spec:** [Sentinel_Lab_Proposal_v0_2.md](Sentinel_Lab_Proposal_v0_2.md) — §14.8 records the intake rulings, §14.9 the build-start amendments
-- **Build handoff:** [HANDOFF.md](HANDOFF.md)
-- **Decision log:** [docs/decisions.md](docs/decisions.md)
-- **Session state (read first when resuming):** [docs/session-state.md](docs/session-state.md)
-- **Icon:** [assets/icon.png](assets/icon.png) — standard mark (nested chamber, cyan alignment line)

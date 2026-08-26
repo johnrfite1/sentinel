@@ -104,6 +104,13 @@ precondition, never a trigger. No repository visibility change, public demo, pos
 artifact, or Gate 8 run is authorised. Held D-008 questions remain unseen. The spec file
 is now `Sentinel_Lab_Proposal_v0_2.md`.
 
+**2026-08-25 — GATE 8 PACKET ASSEMBLED (D-077). THE RUN IS NOT STARTED.** The repository
+`README.md` now stands alone on the five D-008 topics; repository navigation is a labelled
+final section omitted from the packet copy. Reviewers receive that standalone README, the
+dashboard, and the demo (bundles plus verifier). `reviewer-packet/operator/` is procedure
+for the person assembling the handoff, not reviewer material. No reviewers, brief, scoring
+sheet, or public URL. Publication remains blocked.
+
 Amended 2026-07-27 by Opus 5 at build start: D-007…D-011 (delegated rulings) resolve four open forks and the labeling blind spot. Sections below reflect them. Proposal mirror: §14.9.
 
 ## Mission

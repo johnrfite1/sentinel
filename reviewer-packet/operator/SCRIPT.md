@@ -1,9 +1,14 @@
-# Demonstration packet — one-page script
+# Demonstration packet — operator script
 
-Private handoff. No repository. No live chain. No network.
+Private handoff. No repository. No live chain. No network. No public URL.
 
-You have three things: this page, a static case viewer, and a Python verifier
-that re-checks pre-baked signed receipts.
+This page is **operator procedure**. Do not include it in what reviewers receive.
+
+Reviewers receive four things and nothing else: the standalone `README.md`,
+the static case viewer, the demo bundles, and the Python verifier.
+
+You have this page, the viewer, and the verifier that re-checks pre-baked
+signed receipts.
 
 ## 1. Open the case viewer
 
@@ -28,7 +33,8 @@ what the receipt claims; what it does not claim.
 
 ## 2. Verify a receipt offline
 
-Needs Python 3.8+ and nothing else. From this packet's root:
+Needs Python 3.8+ and nothing else. From the packet directory that contains
+`dashboard/`, `bundles/`, and `verifier/` — not from this `operator/` folder:
 
 ```
 python3 verifier/verify.py --domain bundles/domain.json bundles/case-1-allow

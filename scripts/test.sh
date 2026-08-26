@@ -227,7 +227,7 @@ step "secret guard (A-007)"
 step "V-1 index-path ordering"
 ./scripts/check-v1-index-ordering.sh || fail=1
 
-step "rename gate (D-016)"
+step "publication visibility (D-032/D-048)"
 if [ "$PROFILE" = "gate" ]; then
     ./scripts/check-rename-gate.sh --gate || fail=1
 else
