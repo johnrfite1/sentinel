@@ -1,7 +1,7 @@
 {
   "id": "case-4-blocked-failmode-failclosed",
-  "title": "§4.2 Case 4 — identical evidence, failureMode = FAIL_CLOSED",
-  "note": "The same code-hash uncertainty under the other legitimate policy setting.",
+  "title": "§4.2 Case 4 — same unresolved condition, failureMode = FAIL_CLOSED",
+  "note": "The same code-hash uncertainty — same pin, same observed hash — under the other legitimate policy setting. The two bundles are not byte-identical: the policy differs, so the policyHash, mandateHash, actionHash, evidence and anchor block all differ. That the mandate hash moves when only the policy moved is the transitive binding working.",
   "verdict": "BLOCK",
   "reasonCodes": [
     "EVAL_TARGET_CODE_IDENTITY"

@@ -1,0 +1,67 @@
+# Demonstration packet — operator script
+
+Private handoff. No repository. No live chain. No network. No public URL.
+
+This page is **operator procedure**. It does not live in `reviewer-packet/`.
+Zip `reviewer-packet/` — that directory is the four artifacts and nothing else.
+
+Reviewers receive four things: the standalone `README.md`, the static case
+viewer, the demo bundles, and the Python verifier.
+
+## 1. Open the case viewer
+
+Open `dashboard/index.html` in a browser from the handoff directory. It is a
+local file. It does not call a server and does not drive a signer.
+
+Nav order is Case 1, Case 3, Case 2, then the two Case 4 screens. Case 3 is
+the load-bearing case; Case 2 is the dramatic one.
+
+Five screens:
+
+- **Case 1** — the call matches the mandate. ALLOW.
+- **Case 3** — the load-bearing case. The call is mechanically valid and the
+  simulation succeeds. It still BLOCKs because the **purpose** is wrong
+  (a different resource than the mandate authorised). Not because the call
+  "looks dangerous."
+- **Case 2** — the agent proposed a different call (unlimited approval to an
+  attacker). BLOCK. Memorable, and the weak evidence: it trips checks a
+  commodity allowance guard also trips.
+- **Case 4 · REVIEW** and **Case 4 · FAIL_CLOSED** — the same unresolved
+  condition (target code hash no longer matches the pin) under the two
+  legitimate `failureMode` settings. The bundles are not byte-identical:
+  the policy differs, so hashes and the anchor block move. Unresolved is
+  not "malicious."
+
+On every screen, look for: what is bound; who signs what; the check colours;
+what the receipt claims; what it does not claim. The header names Case 3 as
+the case that matters.
+
+## 2. Verify a receipt offline
+
+Needs Python 3.8+ and nothing else. From the handoff directory (`reviewer-packet/`):
+
+```
+python3 verifier/verify.py --domain bundles/domain.json bundles/case-1-allow
+python3 verifier/verify.py --domain bundles/domain.json bundles/case-3-wrong-purpose-block
+```
+
+`--domain` is the trust root **you** assert. The `bundles/domain.json` in this
+packet is presenter-supplied: a PASS against it certifies hashing and signature
+recovery and says nothing about signer identity. Without `--domain` the tool
+reports diagnostics and does not PASS.
+
+Case 3's receipt should still verify: BLOCK is a signed decision, not a
+missing artifact.
+
+Optional self-test (mutates a copy in memory; does not write your files):
+
+```
+python3 verifier/verify.py --tamper --domain bundles/domain.json bundles/case-1-allow
+```
+
+## 3. What you are not being asked to do
+
+Do not start Anvil, Node, Foundry, or a signer. Do not clone a repository.
+Do not treat a verified receipt as proof that the simulation is still true
+of a chain, that the target code is benign, or that the signer is the
+deployment's signer.

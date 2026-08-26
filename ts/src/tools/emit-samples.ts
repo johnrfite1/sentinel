@@ -307,11 +307,12 @@ const SAMPLES: SampleSpec[] = [
     {
         // D-015(b): both failureMode settings must appear in the demo, not only in the tests,
         // because Case 4's outcome turns on a policy setting and a reviewer will reasonably
-        // suspect the setting was chosen to produce the wanted result. Showing the identical
-        // evidence under both is what answers that.
+        // suspect the setting was chosen to produce the wanted result. Showing the same
+        // unresolved condition under both is what answers that. The two bundles are not
+        // byte-identical: the policy differs, so hashes and the anchor block move.
         id: "case-4-blocked-failmode-failclosed",
-        title: "§4.2 Case 4 — identical evidence, failureMode = FAIL_CLOSED",
-        note: "The same code-hash uncertainty under the other legitimate policy setting.",
+        title: "§4.2 Case 4 — same unresolved condition, failureMode = FAIL_CLOSED",
+        note: "The same code-hash uncertainty — same pin, same observed hash — under the other legitimate policy setting. The two bundles are not byte-identical: the policy differs, so the policyHash, mandateHash, actionHash, evidence and anchor block all differ. That the mandate hash moves when only the policy moved is the transitive binding working.",
         target: demoPay,
         callData: purchaseCalldata(RESOURCE),
         valueWei: VALUE,

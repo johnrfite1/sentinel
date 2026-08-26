@@ -85,9 +85,9 @@ assign() {
         # canonical public-facing records; the mark sits with them.
         assets/*)                                    echo R1 ;;
         # Gate 8 private packet: demo bundles, static dashboard, D-010 verifier
-        # copy, one-page script. R1 already owns `verifier/*` and
-        # `fixtures/samples/*`; this directory is that instrument package, not
-        # the authorization pipeline (R2) or onchain/corpus (R3).
+        # copy. The generator and operator procedure live under `scripts/` so a
+        # zip of this directory cannot ship them. R1 already owns `verifier/*`
+        # and `fixtures/samples/*`; this directory is the four-artifact handoff.
         reviewer-packet/*)                           echo R1 ;;
         docs/repair-protocol.md|docs/exit-criterion-packet.md|docs/v1-1-register.md) echo R1 ;;
         docs/gate-5-vendor-audit.md|docs/round-six-brief.md) echo R1 ;;

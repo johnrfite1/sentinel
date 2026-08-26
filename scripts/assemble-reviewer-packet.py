@@ -6,10 +6,11 @@ domain name is a signature preimage in `bundles/domain.json` and is rendered
 under Cryptographically bound on every dashboard case screen; this packet is
 not name-agnostic. Not a live Anvil walkthrough. Not a public URL.
 
-Reviewers receive the standalone README (repository navigation omitted), the
-dashboard, and the demo (bundles plus verifier). `operator/` is procedure for
-the person assembling the handoff, not reviewer material. This file is the
-generator; it is not part of what reviewers receive.
+This file is the generator. It lives under `scripts/` so zipping
+`reviewer-packet/` cannot ship it. Reviewers receive exactly four artifacts:
+the standalone README (repository navigation omitted), the dashboard, the
+demo bundles, and the verifier. Operator procedure is written beside this
+script, not into the handoff directory.
 """
 from __future__ import annotations
 
@@ -18,8 +19,10 @@ import shutil
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
-REPO = ROOT.parent
+REPO = Path(__file__).resolve().parent.parent
+HANDOFF = REPO / "reviewer-packet"
+OPERATOR = Path(__file__).resolve().parent / "reviewer-packet-operator"
+ROOT = HANDOFF
 SAMPLES = REPO / "fixtures" / "samples"
 VERIFIER_SRC = REPO / "verifier"
 
@@ -217,19 +220,24 @@ def packet_title(raw: str) -> str:
 README_OMIT_HEADING = "\n## In this repository\n"
 
 
+HANDOFF_ALLOWED = frozenset({"README.md", "dashboard", "bundles", "verifier"})
+
+
 WHAT_TO_HAND = """# What to hand a reviewer
 
 Private handoff. No public URL. No repository. No live chain. No network.
 
-Give the reviewer only these, as a self-contained folder:
+The directory `reviewer-packet/` **is** the handoff. Zip that directory. It
+contains exactly four artifacts:
 
 - `README.md`
 - `dashboard/`
 - `bundles/`
 - `verifier/`
 
-Do not include `operator/`, `assemble.py`, or anything from the repository.
-Do not recruit, brief, or score from this file. The Gate 8 run is John's to start.
+Do not include this `scripts/` folder, this generator, or anything from the
+repository. Do not recruit, brief, or score from this file. The Gate 8 run
+is John's to start.
 
 `SCRIPT.md` beside this file is your procedure for walking the demo yourself.
 """
@@ -239,48 +247,53 @@ SCRIPT = """# Demonstration packet — operator script
 
 Private handoff. No repository. No live chain. No network. No public URL.
 
-This page is **operator procedure**. Do not include it in what reviewers receive.
+This page is **operator procedure**. It does not live in `reviewer-packet/`.
+Zip `reviewer-packet/` — that directory is the four artifacts and nothing else.
 
-Reviewers receive four things and nothing else: the standalone `README.md`,
-the static case viewer, the demo bundles, and the Python verifier.
-
-You have this page, the viewer, and the verifier that re-checks pre-baked
-signed receipts.
+Reviewers receive four things: the standalone `README.md`, the static case
+viewer, the demo bundles, and the Python verifier.
 
 ## 1. Open the case viewer
 
-Open `dashboard/index.html` in a browser. It is a local file. It does not
-call a server and does not drive a signer.
+Open `dashboard/index.html` in a browser from the handoff directory. It is a
+local file. It does not call a server and does not drive a signer.
+
+Nav order is Case 1, Case 3, Case 2, then the two Case 4 screens. Case 3 is
+the load-bearing case; Case 2 is the dramatic one.
 
 Five screens:
 
 - **Case 1** — the call matches the mandate. ALLOW.
-- **Case 2** — the agent proposed a different call (unlimited approval to an
-  attacker). BLOCK. Caught from the decoded call, not from the agent's story.
 - **Case 3** — the load-bearing case. The call is mechanically valid and the
   simulation succeeds. It still BLOCKs because the **purpose** is wrong
   (a different resource than the mandate authorised). Not because the call
   "looks dangerous."
-- **Case 4 · REVIEW** and **Case 4 · FAIL_CLOSED** — identical evidence gap
-  (target code hash no longer matches the pin). The policy's `failureMode`
-  is the only difference. Unresolved is not "malicious."
+- **Case 2** — the agent proposed a different call (unlimited approval to an
+  attacker). BLOCK. Memorable, and the weak evidence: it trips checks a
+  commodity allowance guard also trips.
+- **Case 4 · REVIEW** and **Case 4 · FAIL_CLOSED** — the same unresolved
+  condition (target code hash no longer matches the pin) under the two
+  legitimate `failureMode` settings. The bundles are not byte-identical:
+  the policy differs, so hashes and the anchor block move. Unresolved is
+  not "malicious."
 
 On every screen, look for: what is bound; who signs what; the check colours;
-what the receipt claims; what it does not claim.
+what the receipt claims; what it does not claim. The header names Case 3 as
+the case that matters.
 
 ## 2. Verify a receipt offline
 
-Needs Python 3.8+ and nothing else. From the packet directory that contains
-`dashboard/`, `bundles/`, and `verifier/` — not from this `operator/` folder:
+Needs Python 3.8+ and nothing else. From the handoff directory (`reviewer-packet/`):
 
 ```
 python3 verifier/verify.py --domain bundles/domain.json bundles/case-1-allow
 python3 verifier/verify.py --domain bundles/domain.json bundles/case-3-wrong-purpose-block
 ```
 
-`--domain` is the trust root **you** assert (the deployment's signer identity).
-A bundle that only carries its own copy of that file cannot certify itself.
-Without `--domain` the tool reports diagnostics and does not PASS.
+`--domain` is the trust root **you** assert. The `bundles/domain.json` in this
+packet is presenter-supplied: a PASS against it certifies hashing and signature
+recovery and says nothing about signer identity. Without `--domain` the tool
+reports diagnostics and does not PASS.
 
 Case 3's receipt should still verify: BLOCK is a signed decision, not a
 missing artifact.
@@ -295,7 +308,8 @@ python3 verifier/verify.py --tamper --domain bundles/domain.json bundles/case-1-
 
 Do not start Anvil, Node, Foundry, or a signer. Do not clone a repository.
 Do not treat a verified receipt as proof that the simulation is still true
-of a chain, or that the target code is benign.
+of a chain, that the target code is benign, or that the signer is the
+deployment's signer.
 """
 
 
@@ -310,13 +324,16 @@ def html_escape(s: str) -> str:
 
 
 def write_operator_and_readme() -> None:
-    operator = ROOT / "operator"
-    operator.mkdir(exist_ok=True)
-    (operator / "SCRIPT.md").write_text(SCRIPT)
-    (operator / "WHAT-TO-HAND.md").write_text(WHAT_TO_HAND)
-    leftover = ROOT / "SCRIPT.md"
-    if leftover.is_file():
-        leftover.unlink()
+    OPERATOR.mkdir(exist_ok=True)
+    (OPERATOR / "SCRIPT.md").write_text(SCRIPT)
+    (OPERATOR / "WHAT-TO-HAND.md").write_text(WHAT_TO_HAND)
+    for leftover_name in ("SCRIPT.md", "assemble.py"):
+        leftover = ROOT / leftover_name
+        if leftover.is_file():
+            leftover.unlink()
+    leftover_dir = ROOT / "operator"
+    if leftover_dir.is_dir():
+        shutil.rmtree(leftover_dir)
     src = (REPO / "README.md").read_text()
     idx = src.find(README_OMIT_HEADING)
     if idx < 0:
@@ -327,6 +344,21 @@ def write_operator_and_readme() -> None:
         )
         sys.exit(2)
     (ROOT / "README.md").write_text(src[:idx].rstrip() + "\n")
+
+
+def assert_clean_handoff() -> None:
+    extra = sorted(
+        p.name
+        for p in ROOT.iterdir()
+        if p.name not in HANDOFF_ALLOWED and not p.name.startswith(".")
+    )
+    if extra:
+        print(
+            "handoff directory contains more than the four artifacts: "
+            + ", ".join(extra),
+            file=sys.stderr,
+        )
+        sys.exit(2)
 
 
 def write_dashboard(cases: list) -> None:
@@ -388,9 +420,15 @@ header.top h1 {
   text-transform: uppercase;
 }
 header.top p.kicker {
-  margin: 0.15rem 0 0.55rem;
+  margin: 0.15rem 0 0.45rem;
   color: var(--muted);
   font-size: 0.85rem;
+}
+header.top p.pull {
+  margin: 0 0 0.65rem;
+  max-width: 52rem;
+  color: var(--ink);
+  font-size: 0.92rem;
 }
 nav {
   display: flex;
@@ -534,6 +572,7 @@ section h3 {
 <header class="top">
   <h1>Demonstration cases</h1>
   <p class="kicker">Exact-action binding · fixture receipts · no live chain</p>
+  <p class="pull">Case 2 is the dramatic one. Case 3 is the one that matters: it passes every mechanical check and the simulation succeeds, and it blocks because the purpose is wrong. A reader who leaves thinking Sentinel is a threat detector has missed the point of the artifact.</p>
   <nav id="nav"></nav>
 </header>
 <main id="main"></main>
@@ -542,8 +581,8 @@ const CASES = /*__CASES__*/;
 
 const NAV = [
   ["case-1-allow", "Case 1"],
-  ["case-2-injection-block", "Case 2"],
   ["case-3-wrong-purpose-block", "Case 3"],
+  ["case-2-injection-block", "Case 2"],
   ["case-4-review-failmode-review", "Case 4 · REVIEW"],
   ["case-4-blocked-failmode-failclosed", "Case 4 · FAIL_CLOSED"],
 ];
@@ -602,7 +641,7 @@ function screen(c) {
       <div><strong>Agent</strong><span>Proposes the call. Does not sign.</span></div>
       <div><strong>Evaluator</strong><span>Compares call and simulated effects to the mandate. Does not sign.</span></div>
       <div><strong>Isolated signer</strong><span>Attests the receipt. Signs.</span></div>
-      <div><strong>Vault</strong><span>Enforces the exact action at execution. Does not sign the receipt.</span></div>
+      <div><strong>Vault</strong><span>Enforces the exact action at execution. Not in this packet.</span></div>
     </div>
     <div class="grid">
       <section>
@@ -664,9 +703,11 @@ function screen(c) {
       <section>
         <h3>It does not prove</h3>
         <ul>
-          <li>That the simulation is still true of any later chain state. Effects were judged at the recorded block. The vault will bind the exact call at execution; it will not re-prove the effects.</li>
+          <li>That the simulation is still true of any later chain state. Effects were judged at the recorded block. Vault enforcement is a design claim in this packet; the vault is not present.</li>
           <li>That the target code is benign. A code-hash mismatch is insufficient evidence, not a malice label.</li>
           <li>That the agent was honest, or that a prompt was or was not injected. The agent’s story never enters the bound fields.</li>
+          <li>That the receipt is still valid. These fixtures use a 300-second expiresAt; the offline verifier does not check a clock.</li>
+          <li>Signer identity, unless --domain came from a deployment record you already trust. The domain.json in this packet is presenter-supplied.</li>
           <li>Anything about any other product.</li>
         </ul>
       </section>
@@ -704,7 +745,9 @@ def main() -> int:
     cases = [case_payload(cid) for cid in CASE_IDS]
     write_dashboard(cases)
     write_operator_and_readme()
+    assert_clean_handoff()
     print(f"assembled {ROOT}")
+    print("operator:", OPERATOR)
     print("cases:", ", ".join(CASE_IDS))
     return 0
 

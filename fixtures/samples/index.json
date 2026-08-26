@@ -25,7 +25,7 @@
   },
   {
     "id": "case-4-blocked-failmode-failclosed",
-    "title": "§4.2 Case 4 — identical evidence, failureMode = FAIL_CLOSED",
+    "title": "§4.2 Case 4 — same unresolved condition, failureMode = FAIL_CLOSED",
     "verdict": "BLOCK",
     "signerRefused": false
   },

@@ -111,6 +111,14 @@ dashboard, and the demo (bundles plus verifier). `reviewer-packet/operator/` is 
 for the person assembling the handoff, not reviewer material. No reviewers, brief, scoring
 sheet, or public URL. Publication remains blocked.
 
+**2026-08-25 — SESSION NINE: PACKET CORRECTED (D-078). STILL NOT GATE 8.** Pre-read
+findings (not a scored run) are applied: Case 3 before Case 2 on the dashboard plus the
+load-bearing sentence on every screen; Case 4 fail-closed label no longer says identical
+evidence; signer boundary, mandate-signature exhibit, verdict encoding, and honest limits
+are in the README; generator and operator sit under `scripts/` so a zip of
+`reviewer-packet/` is the four artifacts. No reviewers, brief, scoring sheet, or public
+URL. Publication remains blocked. The five D-008 questions stay unseen.
+
 Amended 2026-07-27 by Opus 5 at build start: D-007…D-011 (delegated rulings) resolve four open forks and the labeling blind spot. Sections below reflect them. Proposal mirror: §14.9.
 
 ## Mission

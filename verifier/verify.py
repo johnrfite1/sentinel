@@ -13,9 +13,9 @@ presenting an unsigned claim that the signer refused, fails -- §5.5.1: "a
 verifier must treat an absent record as an unestablished refusal rather than an
 established one."
 
-    python3 verifier/verify.py fixtures/samples/case-1-allow
-    python3 verifier/verify.py --tamper fixtures/samples/case-1-allow
-    python3 verifier/verify.py --all fixtures/samples
+    python3 verifier/verify.py --domain <deployment-domain.json> fixtures/samples/case-1-allow
+    python3 verifier/verify.py --tamper --domain <deployment-domain.json> fixtures/samples/case-1-allow
+    python3 verifier/verify.py --all --domain <deployment-domain.json> fixtures/samples
 
 Exit status is 0 only if every check passes.
 """
@@ -38,11 +38,15 @@ from secp256k1 import (  # noqa: E402
     public_key_to_address, recover_address, sign_digest,
 )
 
-# §5.4 lists `verdict` with no enumeration and no encoding. The receipts carry
-# it numerically. Recovered from the samples against index.json/meta.json:
-#   0 = BLOCK, 1 = REVIEW, 2 = ALLOW.
-# See REPORT.md F-4: the spec never states this and §4.2 lists the cases in the
-# opposite order, so ALLOW=0 is an equally defensible misreading.
+# §5.9 (D-024) enumerates verdict as a uint8: BLOCK = 0, REVIEW = 1, ALLOW = 2.
+# Fail-closed: the zero value denies. The numbering is the reverse of the prose
+# order in §4.2 / §5.4 / §5.7; a reader inferring from that order gets ALLOW = 0,
+# which is precisely inverted. The spec states this inversion explicitly because
+# it is the one error in §5 that fails silently in both directions — a verifier
+# holding the enum backwards still passes every cryptographic check and then
+# reports the opposite verdict.
+# REPORT.md F-4 recorded the gap before §5.9 existed. That finding caused the
+# warning. The claim that "the spec never states this" is no longer true.
 VERDICT_NAMES = {0: "BLOCK", 1: "REVIEW", 2: "ALLOW"}
 
 GREEN, RED, YELLOW, DIM, RESET = "\033[32m", "\033[31m", "\033[33m", "\033[2m", "\033[0m"
