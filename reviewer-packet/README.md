@@ -12,6 +12,8 @@ Sentinel is not a detector. It does not infer danger from bytecode, from a story
 
 This packet is the off-chain half. SentinelVault is not in it — no source, no ABI, no tests — so “the vault will execute that exact call, or nothing” is a **design claim here, not a demonstrated one**. The fixtures were produced on chain 31337, a local devnet, using the standard local development accounts. Nothing here is a deployment.
 
+The verifier source also ships the published local test keys for the fixture signer and owner. Anyone holding this packet can mint new receipts and owner overrides that verify against the presenter-supplied `bundles/domain.json`. These signatures demonstrate the payload format, hashing, and signature recovery — **not custody of either signing key**.
+
 The packet also cannot demonstrate its own headline trust-root property. See the verifier section below.
 
 ## What is cryptographically bound
@@ -53,7 +55,7 @@ The call is mechanically valid: chain, vault, target, selector, value, and opera
 
 It still BLOCKs because the **purpose is wrong**. The purchase is for a different resource than the mandate authorised. Not because the call looks dangerous. A reader who leaves thinking Sentinel is a threat detector has missed the point of the artifact.
 
-Case 2 — an infinite approval to an attacker address on an uncommitted contract — is the memorable screen, and it is the weak evidence: it trips independent checks several of which a commodity allowance guard also trips. Case 3 trips exactly one, and only because a human pre-committed to a purpose. If you are choosing which case to remember, it is Case 3.
+Case 2 — an infinite approval to an attacker address on an uncommitted contract — is the memorable screen, and it is the weak evidence: it trips independent checks several of which a commodity allowance guard also trips. Case 3 trips exactly one **evaluator policy check**: `EVAL_PURCHASE_RESOURCE` is a VIOLATION because a human pre-committed to a purpose. Its signed receipt also commits to `SIGNER_NONCE_ALREADY_ATTESTED`, a signer finding produced because the packet's fixtures reuse action nonce 0 under the same live authorisation basis. That finding is a note in the receipt, not the ground of the BLOCK. Removing it would require regenerating the signed fixture, which this record does not authorise. If you are choosing which case to remember, it is Case 3.
 
 ## What a receipt proves
 

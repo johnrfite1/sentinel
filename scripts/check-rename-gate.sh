@@ -2,10 +2,11 @@
 # Sentinel — pre-publication visibility gate (D-032 / D-048 / D-074).
 #
 # D-074 ratified the project name "Sentinel" and lifted D-016's naming block.
-# Publication remains blocked: Gate 8 is pre-publication under D-032 and has
-# not run; D-048 makes a clean D-055 a precondition, never a trigger. This
-# guard's mechanical job is unchanged: fail if the repository has become
-# public. A lifted naming block is not publication permission.
+# Gate 8 has passed with recorded limits (D-080), but that removes a
+# precondition and does not authorise publication. D-048 makes a clean result
+# a precondition, never a trigger. This guard's mechanical job is unchanged:
+# fail if the repository has become public. A passed gate is not publication
+# permission.
 #
 # AGENTS.md requires a durable project rule to get a mechanical check rather
 # than prose, and "nothing goes public" is exactly the rule that gets violated
@@ -60,16 +61,16 @@ unverified() {
         if [ "$ACK" = "1" ]; then
             echo "${YEL}rename gate: UNVERIFIED${RST} (SENTINEL_RENAME_GATE_UNVERIFIED_OK=1) — ${reason}"
             echo "  This --gate run ACKNOWLEDGES the visibility check was not verified; it was acknowledged, not verified private."
-            echo "  Publication remains blocked by Gate 8 under D-032 and D-048 (D-074). ${cover}"
+            echo "  Publication is not authorised; Gate 8 passed with limits, and D-048 makes that a precondition rather than a trigger (D-080). ${cover}"
             exit 0
         fi
         echo "${YEL}rename gate: UNVERIFIED${RST} (deep/--gate refuses unless SENTINEL_RENAME_GATE_UNVERIFIED_OK=1) — ${reason}"
-        echo "  Publication remains blocked by Gate 8 under D-032 and D-048 (D-074). Deep profile requires acknowledgement or a readable visibility check."
+        echo "  Publication is not authorised; Gate 8 passed with limits, and D-048 makes that a precondition rather than a trigger (D-080). Deep profile requires acknowledgement or a readable visibility check."
         echo "  ${cover}"
         exit 1
     fi
     echo "${YEL}rename gate: UNVERIFIED${RST} (SENTINEL_RENAME_GATE_UNVERIFIED_OK=1 acknowledges in --gate) — ${reason}"
-    echo "  Publication remains blocked by Gate 8 under D-032 and D-048 (D-074). Verify by hand before any public action."
+    echo "  Publication is not authorised; Gate 8 passed with limits, and D-048 makes that a precondition rather than a trigger (D-080). Verify by hand before any public action."
     echo "  ${cover}"
     exit 0
 }
@@ -96,9 +97,9 @@ fi
 
 if [ "$visibility" != "PRIVATE" ]; then
     echo "${RED}RENAME GATE VIOLATED${RST} — $slug is $visibility."
-    echo "  Publication remains blocked by Gate 8 under D-032 and D-048 (D-074)."
+    echo "  Publication is not authorised; Gate 8 passed with limits, and D-048 makes that a precondition rather than a trigger (D-080)."
     echo "  Make the repository private again."
     exit 1
 fi
 
-echo "rename gate: clean ($slug is private; publication remains blocked by Gate 8 under D-032 and D-048)"
+echo "rename gate: clean ($slug is private; publication is not authorised; Gate 8 passed with limits under D-080)"

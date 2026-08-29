@@ -114,11 +114,13 @@ def _find_domain(sample_dir, override):
 
     THE ARGUMENT, GENERALISED: no location inside the material handed over can establish
     provenance, because the presenter chooses all of it. The trust root must be ASSERTED by the
-    VERIFYING PARTY. So `override` — `--domain`, or the directory the caller NAMED under
-    `--all`, resolved by `main()` for the same reason — is the only certifying source. Anything
-    merely found next to a bundle is presenter-supplied, whichever directory it sits in, and the
-    caller FAILS the sample on it: "here is a bundle and here is who I say signed it" is not a
-    certifiable claim, and answering it with PASS was the defect both times.
+    VERIFYING PARTY. So `override` — the file explicitly named by `--domain` — is the only
+    certifying source. The directory named under `--all` is only a corpus location; `main()`
+    passes the same explicit `--domain` value to every bundle and makes no trust assertion from
+    that directory. Anything merely found next to a bundle is presenter-supplied, whichever
+    directory it sits in, and the caller FAILS the sample on it: "here is a bundle and here is
+    who I say signed it" is not a certifiable claim, and answering it with PASS was the defect
+    both times.
 
     A discovered copy is still LOADED, so the rest of the run produces real diagnostics rather
     than one bare error — but it can never carry a PASS.

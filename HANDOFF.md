@@ -125,6 +125,20 @@ No signer check changed. Gate 8 waits on this landing and remains John's to star
 five D-008 questions stay unseen. Publication remains blocked. The prior backup
 authorisation is spent.
 
+**2026-08-25 — SESSION ELEVEN: GATE 8 PASSED WITH LIMITS (D-080); FOUR FINDINGS FIXED
+(A-110); PUBLICATION IS NOT AUTHORISED.** The governing result reports three fresh-context
+reviewers at full marks on all five held questions. Record all three limits beside that result:
+the questions mirror the README headings; the dashboard was read as source rather than rendered;
+and reviewers read verifier source. The fixes state that Case 3 has one evaluator VIOLATION plus
+a signer nonce finding, disclose that the packet's embedded local test keys make receipts and
+overrides forgeable against the shipped presenter-supplied domain, correct `_find_domain`'s
+docstring, and correct the facilitator's false self-contained claim. The packet still cites spec
+sections, decisions, findings and absent documents; it has no absolute path, URL, or repository
+locator. Signed bundles were not regenerated. **Gate 8 passing removes a named pre-publication
+condition and authorises nothing.** Publication is a fresh decision John has not taken. No path,
+plan, draft, visibility change, public URL, posted artifact, portfolio or résumé use, rerun, or
+request for the five questions is authorised. No push.
+
 Amended 2026-07-27 by Opus 5 at build start: D-007…D-011 (delegated rulings) resolve four open forks and the labeling blind spot. Sections below reflect them. Proposal mirror: §14.9.
 
 ## Mission
@@ -202,7 +216,7 @@ Note on framing: D-002 calls Gate S1 the riskiest-mechanism gate. The vault, non
 5. Never weaken a mechanical guard to make a task pass.
 6. No secrets, credentials, or machine-specific absolute paths in repository files. Testnet keys only, and only lab-generated ones — never John's.
 7. The §9 deferral list holds. Scope additions go through John.
-8. "Sentinel" is the ratified project name (D-074). Publication remains blocked by Gate 8 under D-032 and by D-048's precondition. D-016's naming block has lifted; that is not publication permission.
+8. "Sentinel" is the ratified project name (D-074). Gate 8 passed with recorded limits (D-080), and D-048 makes clean results preconditions rather than triggers. Publication is not authorised; D-016's naming-block lift and the Gate 8 pass are not publication permission.
 
 ## Flagged assumptions (agent-made, cheap to reverse — see decisions.md)
 

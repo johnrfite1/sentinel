@@ -3,13 +3,12 @@
 Rewritten at the end of each working session. **This file, not the conversation, is the
 memory.** If it disagrees with anything an agent remembers, this file wins.
 
-Last updated: **2026-08-25 (Session Nine, continued: D-014 annotated / D-079; Gate 8
-run is not started; publication still blocked by Gate 8).**
+Last updated: **2026-08-29 (Session Eleven recorded: Gate 8 passed with its limits / D-080;
+four ruled findings fixed; publication is not authorised).**
 D-055 is MET (D-073). It unlocks nothing. **"Sentinel" is the project name (D-074).**
 The EIP-712 domain string is also `"Sentinel"` (D-075, recorded late). There is no
 name/domain split. Branch `step-3/isolated-signer`.
-**WORKING TREE AT THE START OF THIS STRETCH:** clean at the D-078 freeze; origin
-even (John pushed).
+**WORKING TREE AT THE START OF THIS STRETCH:** clean at the A-109 freeze.
 Count what is unpushed with `git log --oneline origin/step-3/isolated-signer..HEAD`;
 no push is authorised. `.serena/` remains gitignored.
 
@@ -18,10 +17,12 @@ no push is authorised. `.serena/` remains gitignored.
 > **YOUR JOB IS NOTHING WITHOUT AN INSTRUCTION FROM JOHN.** D-055 is MET (D-073).
 > **A MET D-055 unlocks nothing.** D-048 makes a clean result a PRECONDITION, never
 > a trigger. **D-016's naming block has lifted (D-074). That is not publication
-> permission.** Gate 8 is pre-publication under D-032 and has not run. The private
-> packet at `reviewer-packet/` is assembled for a private handoff (D-077) and corrected
-> (D-078). D-014's summarising phrase is annotated (D-079), not rewritten; that is not
-> the run. It carries the EIP-712 domain name as a signature
+> permission.** Gate 8 passed under D-080 with three limits recorded beside the result:
+> the questions mirror README headings; the dashboard was read as source, not rendered;
+> and reviewers read verifier source. Passing removes a named pre-publication condition
+> and authorises nothing. The private packet at `reviewer-packet/` is assembled for a
+> private handoff (D-077), corrected (D-078), and carries D-080's four finding fixes.
+> D-014's summarising phrase is annotated (D-079), not rewritten. The packet carries the EIP-712 domain name as a signature
 > preimage and renders it under **Cryptographically bound** on every case screen;
 > calling it "name-agnostic" was **false** — John's recording error, Session Eight,
 > not a discovery. No gate is signed or reopened. Do not publish, change repository
@@ -53,9 +54,9 @@ no push is authorised. `.serena/` remains gitignored.
 
 **Count what is unpushed with `git log --oneline origin/step-3/isolated-signer..HEAD`; do not
 quote a number from here** — this file has published a stale one before, including one line
-below its own instruction not to. The repository is PRIVATE and **publication remains blocked
-by Gate 8 under D-032 and by D-048.** D-016's naming block has lifted (D-074); that is not
-publication permission. Pushing to the private remote is backup, never publication, and **an
+below its own instruction not to. The repository is PRIVATE and **publication is not authorised.**
+Gate 8 passed with limits (D-080); D-048 makes that a precondition, never a trigger. D-016's
+naming block has lifted (D-074); neither fact is publication permission. Pushing to the private remote is backup, never publication, and **an
 agent pushes only on John's explicit direction for a specific state.**
 
 **READING ORDER FOR A FRESH INSTANCE.**
@@ -78,13 +79,14 @@ agent pushes only on John's explicit direction for a specific state.**
    now needs new, exact approval after every stated precondition holds.**
 7. **`docs/decisions.md`: D-066, D-067, D-068, D-069, D-070, D-071, D-072, D-073, then A-089, A-091, A-093, A-094, A-095, A-096,
    A-097, A-098, A-099, A-100, A-101, A-102, A-103, A-104, D-074, D-075, A-105, D-076, A-106,
-   D-077, A-107, D-078, A-108, D-079, A-109.** D-073 records that D-055 is MET
+   D-077, A-107, D-078, A-108, D-079, A-109, D-080, A-110.** D-073 records that D-055 is MET
    and that it unlocks nothing. D-067's D-008(2)/(4) completeness limits are HISTORICAL as of
    D-073; the §7.2 admissibility sentence is untouched. Gate 5 is not recertified. A-104
    froze the exit record. D-076 re-scopes the visibility gate and amends D-071's citation
-   only. D-077 retitles the live gate heading and assembles the Gate 8 packet; the run
-   is not started. D-078 corrects that packet from a cold pre-read; still not the run.
-   D-079 annotates D-014's summarising phrase without rewriting D-014.
+   only. D-077 retitles the live gate heading and assembles the Gate 8 packet. D-078 corrects
+   that packet from a cold pre-read. D-079 annotates D-014's summarising phrase without
+   rewriting D-014. D-080 records the Gate 8 pass with all three limits and orders four fixes;
+   A-110 records those fixes and the freeze. Publication remains a fresh decision John has not taken.
    **Do not treat MET as publication, rename, a gate signature, or a follow-on plan.**
    The exit record is
    `docs/review-2026-08-19-d057-targeted/d055-condition-status.md`. The census of record is
@@ -104,8 +106,9 @@ numbers repeatedly and been caught by independent verifiers doing it.
 
 **What S2 does NOT authorise, stated first because a signed gate is the moment scope creeps.**
 D-016's naming block has lifted (D-074) and the repository is still PRIVATE. **Publication
-remains blocked.** Gate 8 (five-minute comprehension) is PRE-PUBLICATION under D-032 — it needs
-John's five held questions, which the build loop must never see, and it has not run.
+is not authorised.** Gate 8 (five-minute comprehension) passed under D-080, with the three
+limits in that entry recorded beside the result. The five held questions remain unseen by the
+build loop. A passed pre-publication condition is not a publication decision.
 Certification of public claims is still autonomy NONE. **S2 was signed on the state in
 `docs/gate-s2-evidence.md` §11 INCLUDING
 its limits, not despite them** — 14 of 20 classes exercising the class they name (credit iff an ABOUT check ran against the named phenomenon and recorded the outcome the spec assigns to it, UNRESOLVED included), and no live
@@ -247,7 +250,7 @@ and unlocks nothing.** The name is "Sentinel" (D-074). The private packet at
 `reviewer-packet/` is not name-agnostic. If you arrived with no instruction, report the
 state below and wait.
 
-### WHERE THE PROJECT IS, 2026-08-25
+### WHERE THE PROJECT IS, 2026-08-29
 
 | | |
 |---|---|
@@ -261,8 +264,9 @@ state below and wait.
 | 2026-08-24 record stretch | **FROZEN at A-104.** D-073 recorded. Census and dossier are the exit record. Isolated verified-origin `--gate` is after that freeze, out of tree |
 | 2026-08-25 Session Eight | **Name ratified "Sentinel" (D-074).** D-016 naming block lifts. Domain-string ruling recorded (D-075). Rename-gate re-scoped Option A (D-076). **Gate 8 packet assembled (D-077); the run is not started** |
 | 2026-08-25 Session Nine | **Packet corrected (D-078)** from a cold pre-read (not Gate 8). Case 2 pull fixed; honest limits stated; handoff zip is four artifacts. **D-014 annotated (D-079)** — phrase clarified, ruling and behaviour unchanged. **The run is still not started** |
-| Next | **Gate 8 run is John's to start, and is not yet.** Packet assembly, Session Nine corrections, and the D-014 annotation are done. No publication, visibility change, public URL, push, or gate signature |
-| Publication | **BLOCKED.** D-055 MET is a D-048 precondition, not a trigger. D-016's naming block has lifted. Gate 8 under D-032 has not run. **A lifted naming block is not publication permission** |
+| 2026-08-25 Session Eleven | **Gate 8 PASSED (D-080), with three limits recorded beside the result.** Four findings ruled FIX. The packet and record corrections are frozen at A-110; signed bundles were not regenerated. |
+| Next | **Nothing without John's next instruction.** No publication, preparation toward it, visibility change, public URL, push, gate signature, Gate 8 rerun, or request for the held questions. |
+| Publication | **NOT AUTHORISED.** D-055 MET and Gate 8 PASS are D-048 preconditions, never triggers. D-016's naming block has lifted. Publication remains a fresh decision John has not taken. |
 
 ### HOW BATCH A1 ACTUALLY CLOSED — the record, stated so it cannot be rounded up
 
@@ -300,9 +304,10 @@ them as unrepaired current work. Do not treat the HOLDs as repository-wide closu
 
 ### WHAT IS STILL OPEN, AND NONE OF IT IS THIS INSTANCE'S TO CLOSE
 
-1. **Publication, the Gate 8 run, and any gate signature or reopening.** D-055 MET does not
-   start any of these. D-016's naming block has lifted (D-074). The packet is assembled (D-077)
-   and corrected (D-078). D-014 is annotated (D-079); the run is not started. The five D-008 comprehension questions stay unseen.
+1. **Publication, any preparation toward it, any Gate 8 rerun, and any gate signature or reopening.**
+   D-055 MET and the D-080 Gate 8 pass start none of these. D-016's naming block has lifted
+   (D-074). The packet is assembled (D-077), corrected (D-078), and carries D-080's finding fixes.
+   D-014 is annotated (D-079). The five D-008 comprehension questions stay unseen.
    `scripts/check-rename-gate.sh` is re-scoped under D-076 (visibility still PRIVATE; citation is now D-032 / D-048 / D-074). That is not publication permission.
 2. **RESIDUALS FROM THE D-062 VERIFICATION — scored, not all repaired.**
    **`V-1` is retired under D-073** (A-098 verified repair) and remains load-bearing as
@@ -344,8 +349,9 @@ them as unrepaired current work. Do not treat the HOLDs as repository-wide closu
    spent. Count anything outstanding with `git log --oneline origin/step-3/isolated-signer..HEAD`;
    **do not quote a number from this file.** An agent pushes only on John's explicit direction
    for a specific later state. The repository is still PRIVATE: backup is not publication.
-5. **Publication, the Gate 8 run, any gate signature or reopening, and any follow-on stretch.**
-   D-055 is **MET** and unlocks none of these. D-074 lifted a naming block. D-076 re-scoped a visibility check. D-077 assembled the packet. D-078 corrected it from a pre-read. D-079 annotated D-014's phrase. **None of those authorised publication or the Gate 8 run.** The run is still John's to start.
+5. **Publication, any preparation toward it, any Gate 8 rerun, any gate signature or reopening,
+   and any follow-on stretch.** D-055 is **MET** and Gate 8 **PASSED with limits** under D-080.
+   Those are preconditions, not triggers. Publication remains a fresh decision John has not taken.
 
 ### WHAT IS NOT AUTHORISED, and none of it has changed
 
@@ -356,15 +362,15 @@ them as unrepaired current work. Do not treat the HOLDs as repository-wide closu
   permission.
 - **No follow-on because D-055 is MET.** No publication path, visibility change, public demo,
   push, v1.1 plan, or stretch unless John starts it. The private packet at `reviewer-packet/`
-  is assembled for a private handoff (D-077) and corrected (D-078), not published, and the
-  Gate 8 run has not started. D-079 annotates a dated phrase; it is not a product change. No gate signed or reopened, no public claim certified, no
+  is assembled for a private handoff (D-077), corrected (D-078), and carries D-080's finding
+  fixes; it is not published. Gate 8 passed with its limits and may not be rerun without a new
+  ruling. D-079 annotates a dated phrase; it is not a product change. No gate signed or reopened, no public claim certified, no
   correction ratified.
   A MET D-055 certifies nothing.
-- **Publication remains blocked** by Gate 8 under D-032 and by D-048. The repository is
-  PRIVATE. `scripts/check-rename-gate.sh` still checks origin visibility (D-076 Option A);
-  D-071's substance is unchanged. The re-scope is not publication permission.
-- **No pre-publication.** D-048 makes a clean result a PRECONDITION, never a trigger.
-  D-074's naming-block lift is not a trigger either.
+- **Publication is not authorised.** Gate 8 passed with limits under D-080; D-048 makes clean
+  results preconditions, never triggers. The repository is PRIVATE. `scripts/check-rename-gate.sh`
+  still checks origin visibility (D-076 Option A); D-071's substance is unchanged.
+- **No preparation toward publication.** D-074's naming-block lift and D-080's pass are not triggers.
 - **The five D-008 comprehension questions stay unseen.**
 - **No push** without John's explicit direction for a specific state.
 
