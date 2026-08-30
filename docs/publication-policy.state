@@ -1,0 +1,70 @@
+# Sentinel — canonical publication policy state.
+#
+# THIS FILE IS THE STATE `scripts/check-rename-gate.sh` JUDGES AGAINST, and it is
+# deliberately a tracked repository artifact rather than an environment variable. A change
+# of publication policy has to appear in a diff and be reviewable by someone who was not in
+# the room; an export in one operator's shell is neither, and it evaporates. The guard that
+# reads this file refuses to run without it.
+#
+# IT DOES NOT AUTHORISE ANYTHING BY ITSELF. It records what the project's expected
+# publication state IS, so that a machine can notice the day reality stops matching it.
+# Editing this file is not permission to publish; it is a declaration that permission was
+# given elsewhere, and the guard checks that the elsewhere exists.
+#
+# ---------------------------------------------------------------------------------------
+# FORMAT
+#
+# Blank lines and lines whose first character is `#` are ignored. EVERY other line must be
+# exactly `KEY=VALUE`: no surrounding spaces, no quotes, no `export`, no substitution, no
+# carriage returns. The guard PARSES this file line by line; it never sources it, because a
+# policy artifact that can execute code is not a policy artifact.
+#
+# Unknown keys, duplicate keys, missing keys, empty values, and unrecognised values all make
+# the guard REFUSE. That is the project's zero-value principle applied to its own
+# configuration: an unset or damaged state reads as refusal, never as permission.
+#
+# ---------------------------------------------------------------------------------------
+# KEYS
+#
+# PUBLICATION_STATE      HELD_PRIVATE | AUTHORIZED_PUBLIC
+#
+#   HELD_PRIVATE       — the default and the current state. Every configured GitHub remote
+#                        must read PRIVATE. One found public is a hard failure, immediately,
+#                        on whichever run notices it first.
+#   AUTHORIZED_PUBLIC  — a public transition has been authorised. This value is NOT
+#                        reachable by editing one word: it additionally requires a resolved
+#                        RIGHTS_MODE and a SMITH_DECISION reference that is actually recorded
+#                        in `docs/decisions.md`, and it requires this file to be committed.
+#
+# RIGHTS_MODE            UNDECIDED | OPEN_SOURCE | PROPRIETARY | SOURCE_AVAILABLE
+#
+#   UNDECIDED is the current value and is a DELIBERATE HOLD, not an unfilled field
+#   (D-082(c)): John has deferred the proprietary-versus-open-source choice pending a
+#   commercial check, and no agent may add or select a licence or resolve this value.
+#   UNDECIDED is legal while HELD_PRIVATE and is a CONTRADICTION under AUTHORIZED_PUBLIC —
+#   you cannot authorise publication of a work whose terms of use nobody has chosen.
+#
+# SMITH_DECISION         NONE | a recorded decision reference
+#
+#   `NONE` while held. Under AUTHORIZED_PUBLIC it must be a `D-NNN` decision-log id or an
+#   `S-YYYYMMDD-...` session id, AND the guard greps `docs/decisions.md` for it. A reference
+#   to a ruling nobody wrote down is not a ruling.
+#
+# CANONICAL_REPOSITORY   host/owner/name
+#
+#   The repository this policy is ABOUT. The guard normalises every configured remote URL
+#   and requires one of them to resolve to this value, so that it can state it is judging
+#   the repository it thinks it is rather than whatever remote it happened to find. Every
+#   OTHER configured GitHub remote is inspected too — the point of the census is that a
+#   second remote added later must not slip past a guard hardcoded to `origin`.
+#
+# ---------------------------------------------------------------------------------------
+# CURRENT STATE, ruled by John on 2026-08-30 and transcribed as D-082(b)/(c). Publication is
+# not authorised. Gate 8 passed with limits under D-080, and D-048 makes a clean result a
+# precondition rather than a trigger. The licence is deliberately held pending John's
+# proprietary-versus-open-source choice; no agent may resolve it.
+
+PUBLICATION_STATE=HELD_PRIVATE
+RIGHTS_MODE=UNDECIDED
+SMITH_DECISION=NONE
+CANONICAL_REPOSITORY=github.com/johnrfite1/sentinel

@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import {spawn, spawnSync} from "node:child_process";
+import {spawn, spawnSync, type SpawnSyncReturns} from "node:child_process";
 import {
     existsSync,
     mkdirSync,
@@ -12,6 +12,8 @@ import {
 import {tmpdir} from "node:os";
 import {join, relative} from "node:path";
 import {
+    BaseError,
+    ContractFunctionRevertedError,
     createPublicClient,
     createWalletClient,
     encodeFunctionData,
@@ -40,10 +42,16 @@ mkdirSync(output, {recursive: true});
 
 const ownerKey = generatePrivateKey();
 const signerKey = generatePrivateKey();
-const authorityKey = generatePrivateKey();
+// LAB AUTHORITY, NOT A TRUST ROOT (R-A018-10). This demo generates the deployment authority
+// itself, signs its own deployment manifest with it, and then hands the SAME address back to
+// the verifier as `--deployment-authority`. That is a self-consistency loop, and it is only
+// honest while it is labelled as one. An out-of-band authority is out-of-band precisely because
+// the publisher did not choose it; nothing this process prints can be that. The name carries the
+// caveat so that no later reader of this file mistakes `authority` for a production identity.
+const labAuthorityKey = generatePrivateKey();
 const owner = privateKeyToAccount(ownerKey);
 const signerAccount = privateKeyToAccount(signerKey);
-const authority = privateKeyToAccount(authorityKey);
+const labAuthority = privateKeyToAccount(labAuthorityKey);
 
 const port = 9400 + Math.floor(Number(process.hrtime.bigint() % 400n));
 const rpcUrl = `http://127.0.0.1:${port}`;
@@ -95,9 +103,228 @@ async function waitForNode(client: ReturnType<typeof createPublicClient>): Promi
     throw new Error("Anvil did not start");
 }
 
-async function mustReject(label: string, operation: () => Promise<unknown>): Promise<void> {
-    try { await operation(); } catch { console.log(`PASS negative: ${label}`); return; }
-    throw new Error(`negative control was accepted: ${label}`);
+/**
+ * THIS DEMO KEEPS CHAIN TIME, NOT WALL TIME (R-A018-15).
+ *
+ * There are two clocks here and only one of them is authoritative. `SentinelVault` checks the
+ * receipt window against `block.timestamp`; the receipt's `issuedAt` is stamped by the ISOLATED
+ * SIGNER from its own wall clock, in a separate process, which is correct — that process is the
+ * thing under test and takes no clock injection from its caller.
+ *
+ * MEASURED against anvil 1.7.1 and viem 2.55.10, the versions this demo runs — and NOT what the
+ * first report of this defect assumed, so the measurement is recorded rather than the guess:
+ *
+ *   - Anvil does NOT advance block timestamps per block. Each mined block carries the wall-clock
+ *     second at which it was mined, and that value then STANDS STILL until the next block is
+ *     mined. No block is mined between activating the mandate and executing.
+ *   - The `pending` block tracks the wall clock; the `latest` block does not. Anything evaluated
+ *     against `latest` therefore sees the second in which `activateMandate` was mined, however
+ *     long ago that was.
+ *   - viem builds a transaction for a local account with `eth_fillTransaction`, and anvil
+ *     evaluates that against the LATEST block environment. So the receipt's time check is applied
+ *     against the frozen timestamp while the transaction is still being built, before anything is
+ *     ever sent, and the block the transaction would eventually land in never gets a say.
+ *
+ * The consequence is a clean predicate rather than a race: if the signer's clock crosses a second
+ * boundary between the mandate-activation block and stamping `issuedAt`, then
+ * `latest.timestamp < receipt.issuedAt` and `_checkAction` reverts `ReceiptNotYetValid()` — and
+ * because `latest` never advances on its own, waiting cannot rescue it. The demo's POSITIVE
+ * control then fails for a reason with nothing to do with enforcement. Measured directly, by
+ * issuing the same `eth_fillTransaction` the pre-fix demo issued: 8 of 12 serial runs would have
+ * reverted, every one of them with `0x118a0502` = `ReceiptNotYetValid()`, at a drift of exactly
+ * one second. The same drift landing one step earlier makes the `altered calldata` negative refuse
+ * on the wrong check, which R-A018-09's typed controls now catch rather than score as a pass.
+ *
+ * The fix is not a retry, a sleep, or a widened validity window — each of those leaves the defect
+ * in place and hides it, and the third would weaken the very window under test. It is to stop
+ * having two clocks:
+ *
+ *   1. every window this demo authors is read from the chain (`const now`, below), not from
+ *      `Date.now()`, so the demo can never author a window the chain is not yet inside; and
+ *   2. once the receipt exists, the chain is moved to cover it, explicitly and once.
+ *
+ * After that alignment `block.timestamp >= receipt.issuedAt` holds by construction — for the
+ * transaction build, for the mined execution, and for the negative controls either side of it —
+ * however slow the run is. Anvil's clock never runs backwards, so a single alignment is
+ * sufficient and no later step can undo it.
+ */
+async function alignChainClockTo(
+    client: ReturnType<typeof createPublicClient>, instant: bigint,
+): Promise<{before: bigint; after: bigint; drift: bigint}> {
+    const before = (await client.getBlock({blockTag: "latest"})).timestamp;
+    // `evm_setNextBlockTimestamp` requires a value strictly greater than the latest block's, so
+    // an already-covered instant still costs one block rather than an error.
+    const next = instant > before ? instant : before + 1n;
+    await client.request({
+        method: "evm_setNextBlockTimestamp" as never,
+        params: [`0x${next.toString(16)}`] as never,
+    });
+    await client.request({method: "evm_mine" as never, params: [] as never});
+    const after = (await client.getBlock({blockTag: "latest"})).timestamp;
+    if (after < instant) {
+        throw new Error(
+            `chain clock alignment failed: the latest block timestamp is ${after}, still behind ` +
+            `the receipt's issuedAt of ${instant}. Executing now would revert ReceiptNotYetValid() ` +
+            `for a harness reason rather than an enforcement one, so the demo stops instead.`,
+        );
+    }
+    // Reported, not swallowed. `drift` is exactly how many seconds this run WOULD have executed
+    // ahead of the chain, so a reader can see the defect this alignment removes rather than
+    // taking the removal on trust; a run printing drift=0 is one that would have passed anyway.
+    return {before, after, drift: instant > before ? instant - before : 0n};
+}
+
+/**
+ * TYPED NEGATIVE CONTROLS (R-A018-09).
+ *
+ * The previous `mustReject` wrapped each negative in a bare `catch` and printed `PASS negative`
+ * for ANY thrown value. A killed Anvil, an RPC hiccup, an ABI-encoding mistake, a missing file,
+ * a `python3` that is not on PATH, and a receipt that had simply not become valid yet all scored
+ * identically to the refusal the control exists to demonstrate. A negative control that cannot
+ * fail for the wrong reason is not evidence, and this one demonstrably could: the demo's own
+ * positive execution intermittently reverts `ReceiptNotYetValid()` when Anvil's block clock
+ * drifts behind wall time, and under the bare catch that same drift landing one step earlier
+ * would have printed `PASS negative: altered calldata`.
+ *
+ * Every negative below now declares, and asserts, three things:
+ *
+ *   stage      which component must do the refusing (the Vault, or the publication verifier)
+ *   class      how it must fail — an EVM revert with return data, or a verifier exit
+ *   identity   the exact refusal: a locally computed 4-byte custom-error selector for the
+ *              Vault, or a matched `FAIL:` line plus exit status for the verifier
+ *
+ * Anything else is re-thrown with the observed classification attached, and the demo fails.
+ */
+
+/** Describe an unknown throw without dumping a viem error's full multi-page body. */
+function describe(error: unknown): string {
+    if (error instanceof BaseError) return `${error.name}: ${error.shortMessage}`;
+    if (error instanceof Error) return `${error.name}: ${error.message.split("\n")[0]}`;
+    return `non-Error throw: ${String(error)}`;
+}
+
+/**
+ * The 4-byte selector of a Solidity custom error, computed here from the signature rather than
+ * read back out of the ABI. The ABI is the same artifact the vault under test was built from,
+ * so recovering the expected selector from it would let one wrong build satisfy both sides.
+ */
+function errorSelector(signature: string): Hex {
+    return keccak256(stringToBytes(signature)).slice(0, 10) as Hex;
+}
+
+class NegativeControlFailure extends Error {
+    override name = "NegativeControlFailure";
+}
+
+/**
+ * Assert that `operation` is refused by the Vault with exactly `signature`.
+ * stage = vault-execution, class = evm-revert, identity = the custom-error selector.
+ */
+async function mustRevertWith(
+    label: string, signature: string, operation: () => Promise<unknown>,
+): Promise<void> {
+    const expected = errorSelector(signature);
+    let thrown: unknown;
+    let accepted = false;
+    try { await operation(); accepted = true; } catch (error) { thrown = error; }
+
+    if (accepted) {
+        throw new NegativeControlFailure(
+            `negative control was ACCEPTED: ${label} (expected the vault to revert ${signature})`,
+        );
+    }
+    if (!(thrown instanceof BaseError)) {
+        throw new NegativeControlFailure(
+            `negative control "${label}" failed OUTSIDE the vault. Expected an EVM revert with ` +
+            `${signature}; got ${describe(thrown)}. This is a harness or transport failure, ` +
+            `not a refusal, and it proves nothing about enforcement.`,
+        );
+    }
+    const reverted = thrown.walk((error) => error instanceof ContractFunctionRevertedError);
+    if (!(reverted instanceof ContractFunctionRevertedError)) {
+        throw new NegativeControlFailure(
+            `negative control "${label}" never reached an EVM revert. Expected ${signature}; ` +
+            `got ${describe(thrown)}.`,
+        );
+    }
+    const raw = reverted.raw;
+    if (typeof raw !== "string" || !raw.startsWith("0x") || raw.length < 10) {
+        throw new NegativeControlFailure(
+            `negative control "${label}" reverted with no usable return data (${String(raw)}); ` +
+            `expected ${signature} (${expected}).`,
+        );
+    }
+    const actual = raw.slice(0, 10).toLowerCase();
+    if (actual !== expected) {
+        throw new NegativeControlFailure(
+            `negative control "${label}" reverted for the WRONG reason: expected ${signature} ` +
+            `(${expected}), observed ${reverted.data?.errorName ?? "<undecodable>"}() (${actual}). ` +
+            `A negative that refuses on an unintended check is not the control it claims to be.`,
+        );
+    }
+    console.log(
+        `PASS negative: ${label} — stage=vault-execution class=evm-revert ` +
+        `error=${signature} selector=${actual}`,
+    );
+}
+
+/**
+ * Assert that a publication-verifier run is refused, with the exit status and the specific
+ * `FAIL:` line the refusal is supposed to produce.
+ * stage = publication-verifier, class = the named refusal, identity = the matched FAIL line.
+ *
+ * Exit status alone cannot carry this: an uncaught Python exception, an unreadable bundle and a
+ * genuine authentication refusal all leave `python3` with status 1, and `verify_publication.py`
+ * catches `OSError` too, so `FAIL: [Errno 2] No such file or directory` is a *caught* failure
+ * that looks exactly like a contract refusal from the outside.
+ */
+function mustRefuseVerification(
+    label: string,
+    expected: {classification: string; exitStatus: number; failure: RegExp},
+    run: () => SpawnSyncReturns<string>,
+): void {
+    const result = run();
+    const stdout = result.stdout ?? "";
+    const stderr = result.stderr ?? "";
+
+    if (result.error) {
+        throw new NegativeControlFailure(
+            `negative control "${label}" never ran the verifier: ${describe(result.error)}`,
+        );
+    }
+    if (result.signal) {
+        throw new NegativeControlFailure(
+            `negative control "${label}": the verifier was killed by ${result.signal} rather ` +
+            `than refusing.`,
+        );
+    }
+    if (stderr.includes("Traceback (most recent call last)")) {
+        throw new NegativeControlFailure(
+            `negative control "${label}": the verifier CRASHED instead of refusing.\n${stderr}`,
+        );
+    }
+    if (stdout.includes("PASS:")) {
+        throw new NegativeControlFailure(
+            `negative control was ACCEPTED: ${label}\n${stdout}`,
+        );
+    }
+    if (result.status !== expected.exitStatus) {
+        throw new NegativeControlFailure(
+            `negative control "${label}": expected exit ${expected.exitStatus}, got ` +
+            `${String(result.status)}.\n${stdout}${stderr}`,
+        );
+    }
+    const matched = expected.failure.exec(stderr);
+    if (!matched) {
+        throw new NegativeControlFailure(
+            `negative control "${label}" exited ${result.status} for an UNEXPECTED reason. ` +
+            `Expected a FAIL line matching ${expected.failure}; observed:\n${stderr}`,
+        );
+    }
+    console.log(
+        `PASS negative: ${label} — stage=publication-verifier class=${expected.classification} ` +
+        `exit=${result.status} reason=${matched[0].trim()}`,
+    );
 }
 
 try {
@@ -128,7 +355,13 @@ try {
     const code = await publicClient.getCode({address: demoPay});
     const vaultCode = await publicClient.getCode({address: vault});
     const block = await publicClient.getBlock({blockNumber: vaultReceipt.blockNumber});
-    const now = BigInt(Math.floor(Date.now() / 1000));
+    // R-A018-15. CHAIN TIME, read from the chain, not `Date.now()`. Every window below — the
+    // policy's, the mandate's, the action deadline, and the deployment manifest's `issuedAt` — is
+    // derived from this one instant, so none of them can be authored ahead of the block clock
+    // that will judge them. Read explicitly at `latest` rather than reused from the deployment
+    // block above: that block happens to be the newest one right now, and an edit inserting any
+    // further transaction would quietly make it stale.
+    const now = (await publicClient.getBlock({blockTag: "latest"})).timestamp;
     const validUntil = now + 3600n;
 
     const policy: PolicyPayload = {
@@ -199,6 +432,17 @@ try {
     });
     if (signed.refused) throw new Error("isolated signer refused the conforming cold-demo action");
 
+    // R-A018-15. The receipt now exists and carries the signer process's own `issuedAt`; move the
+    // chain to cover it before ANY vault call reads it. Placed here rather than immediately before
+    // the positive execution so that the `altered calldata` negative in between is also judged
+    // inside the receipt window and can only refuse on the binding it was written to exercise.
+    const clock = await alignChainClockTo(publicClient, signed.receipt.issuedAt);
+    console.log(
+        `Chain clock aligned to the receipt: latest block was ${clock.before}, receipt issuedAt ` +
+        `${signed.receipt.issuedAt}, drift ${clock.drift}s, latest block now ${clock.after} ` +
+        `(receipt expiresAt ${signed.receipt.expiresAt}).`,
+    );
+
     const sample = join(output, "sample");
     mkdirSync(sample, {recursive: true});
     writeFileSync(join(sample, "mandate.json"), json(mandate));
@@ -223,22 +467,47 @@ try {
     };
     const manifestDigest = keccak256(stringToBytes(`sentinel.deployment-manifest.v1\n${canonicalObject(manifestPayload)}`));
     const manifest = {schema: "sentinel.deployment-manifest.v1", payload: manifestPayload,
-        authoritySignature: await authority.sign({hash: manifestDigest})};
+        authoritySignature: await labAuthority.sign({hash: manifestDigest})};
     const manifestPath = join(output, "deployment-manifest.json");
     writeFileSync(manifestPath, json(manifest));
 
+    // R-A018-10: say what the next run is before it prints PASS, so nobody reads the verifier's
+    // output as an out-of-band authentication. The demo signed this manifest with a key it made
+    // itself, seconds ago, and is about to hand the verifier that same address.
+    console.log(
+        "NOTE: this demo generated the deployment authority itself and signed its own manifest " +
+        "with it,\n      so the verification below is a SELF-CONSISTENCY loop, not an " +
+        "independent authentication.",
+    );
     const verifier = spawnSync("python3", [join(REPO, "verifier", "verify_publication.py"), sample,
-        "--deployment-manifest", manifestPath, "--deployment-authority", authority.address], {encoding: "utf8"});
+        "--deployment-manifest", manifestPath, "--deployment-authority", labAuthority.address],
+        {encoding: "utf8"});
     if (verifier.status !== 0) throw new Error(`publication verifier failed:\n${verifier.stdout}${verifier.stderr}`);
     process.stdout.write(verifier.stdout);
-    const wrongAuthority = privateKeyToAccount(generatePrivateKey()).address;
-    const wrongVerifier = spawnSync("python3", [join(REPO, "verifier", "verify_publication.py"), sample,
-        "--deployment-manifest", manifestPath, "--deployment-authority", wrongAuthority], {encoding: "utf8"});
-    if (wrongVerifier.status === 0) throw new Error("unauthenticated deployment authority was accepted");
-    console.log("PASS negative: unauthenticated deployment identity");
+
+    const wrongAuthority = privateKeyToAccount(generatePrivateKey()).address.toLowerCase();
+    mustRefuseVerification("unauthenticated deployment identity", {
+        classification: "authority-signature-refusal",
+        exitStatus: 1,
+        // The FAIL line must name BOTH addresses. That is what separates an authentication
+        // refusal from a crash, a missing bundle, or a malformed manifest: the verifier has to
+        // have recovered the lab authority from the signature and rejected it against the
+        // out-of-band address it was handed, rather than failing before it ever got there.
+        failure: new RegExp(
+            `^FAIL: deployment manifest recovered ${labAuthority.address.toLowerCase()}, ` +
+            `expected out-of-band authority ${wrongAuthority}$`,
+            "m",
+        ),
+    }, () => spawnSync("python3", [join(REPO, "verifier", "verify_publication.py"), sample,
+        "--deployment-manifest", manifestPath, "--deployment-authority", wrongAuthority],
+        {encoding: "utf8"}));
 
     const altered = `${callData.slice(0, -2)}${callData.endsWith("00") ? "01" : "00"}` as Hex;
-    await mustReject("altered calldata", () => wallet.writeContract({
+    // The vault recomputes keccak256(callData) and compares it to the signed action's dataHash.
+    // Nothing earlier in `_checkAction` can fire here: same nonce, same active mandate and
+    // policy, same target, same value. If anything but CalldataMismatch comes back, the control
+    // did not exercise the exact-call binding.
+    await mustRevertWith("altered calldata", "CalldataMismatch()", () => wallet.writeContract({
         address: vault, abi: vaultArtifact.abi, functionName: "executeWithReceipt",
         args: [action, altered, signed.receipt, signed.signature], account: owner,
     }));
@@ -249,13 +518,27 @@ try {
     const executionReceipt = await publicClient.waitForTransactionReceipt({hash: execution});
     if (executionReceipt.status !== "success") throw new Error("exact execution failed");
     console.log("PASS positive: exact authenticated call executed");
-    await mustReject("receipt replay", () => wallet.writeContract({
+    // The execution above consumed the nonce, so the replay is refused by the nonce check --
+    // the FIRST state comparison in `_checkAction`. `BadNonce()` is the assertion that replay
+    // died on nonce currency and not on some later, incidental check.
+    await mustRevertWith("receipt replay", "BadNonce()", () => wallet.writeContract({
         address: vault, abi: vaultArtifact.abi, functionName: "executeWithReceipt",
         args: [action, callData, signed.receipt, signed.signature], account: owner,
     }));
     await client.close();
     console.log(`Cold demo artifacts: ${output}`);
-    console.log(`Deployment authority (obtain out of band): ${authority.address}`);
+    // R-A018-10. This address was `Deployment authority (obtain out of band)`, which presented a
+    // key the demo had generated 20 seconds earlier as the recipient's independent trust root --
+    // the exact confusion the out-of-band requirement exists to prevent.
+    console.log("");
+    console.log("LAB-GENERATED DEPLOYMENT AUTHORITY -- NOT PRODUCTION, NOT A TRUST ROOT");
+    console.log(`  address: ${labAuthority.address}`);
+    console.log("  This process generated that key in memory at start-up, signed its own");
+    console.log("  deployment manifest with it, and discards it on exit. Nothing independent of");
+    console.log("  this process attests to it, so it is NOT an out-of-band authority and the");
+    console.log("  verification above was a self-consistency check, not an authentication.");
+    console.log("  A real recipient's --deployment-authority arrives over a channel the");
+    console.log("  publisher does not control. Do not reuse, publish, or trust this address.");
 } finally {
     signerProcess?.kill("SIGKILL");
     node.kill("SIGKILL");

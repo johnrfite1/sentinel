@@ -191,4 +191,25 @@ for name in names:
     print(f"  {name:<26} {values[name]}")
 print("suite floors: read from scripts/test.sh, which is the only copy.")
 PY
-exit $?
+_floors_rc=$?
+
+# --- ADDITIVE (F6). NOTHING ABOVE THIS LINE IS CHANGED. ----------------------
+# The six floors above are the ones scripts/test.sh declares, and they cover
+# `test_verifier` only. `verifier/test_publication_verifier.py` and
+# `verifier/test_publication_override.py` — the closure evidence for R-A018-06 and
+# R-A018-16 — had no floor at all, so this listing was silently incomplete: a reader
+# checking "which suites are floored?" got six answers and no hint of the two missing.
+#
+# Their floor cannot be a `VERIFIER_MIN_` integer, because both files contain tests that
+# are RED ON PURPOSE and a pass-count alone lets a new failure hide behind a fixed one. It
+# is a pass count PLUS a named red set, and it lives in
+# `scripts/check-publication-suite-floors.sh` — which is the only copy, exactly as
+# scripts/test.sh is the only copy of the six above. This call PRINTS it; that script
+# ENFORCES it, and running it here would put a 90-second suite run inside a printer.
+#
+# THIS CANNOT MASK A FAILURE ABOVE. `_floors_rc` is captured before this line and the only
+# assignment after it raises the status to 1. A guard that swallowed its own earlier
+# failure to report a later success would be the defect this repository keeps catching.
+"$SENTINEL_ROOT/scripts/check-publication-suite-floors.sh" --print-floors || _floors_rc=1
+
+exit "$_floors_rc"
