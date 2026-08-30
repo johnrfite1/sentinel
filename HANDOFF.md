@@ -5,6 +5,24 @@ Prepared by: Claude (Fable), from the facilitated intake session with John
 For: Opus 5 (architect and build director) and its subagents
 Status: Rulings ratified by John 2026-07-27 (canonical record: `docs/decisions.md`). Build authorized through Gate S2. Anything in this brief marked "agent note" is elaboration, not ratified text.
 
+**2026-08-30 — CYCLE 2 IS HALTED; A PROPOSED REMEDIATION SET IS DRAFTED AT
+`docs/a018-remediation-register.md`.** All four Cycle 2 Criticals were Adversary-SUSTAINED
+(`A-018` / `MSG-022`) and remain OPEN AT ANVIL. A build-team response and reply were drafted and
+the chairs consulted informally; **the consultation made no ledger entry and no ruling, and
+nothing in the register is "agreed" or "accepted" in any ratified sense.** It is a proposal
+pending Smith registration and authorization. Builders: read it before touching anything under
+`release/`, `verifier/`, or `ts/src/tools/cold-demo.ts`. It carries thirteen proposed work items
+valid **only if the v0.3 enforcement/verifier architecture is retained** (§3 — a fresh casting
+could delete them, and **none is authorised: they still need an instruction from John**), the
+items blocked on John's rulings (§4), and four corrections to the build team's own claims (§0).
+
+**The defect to know about before reading anything else: `verifier/verify_publication.py` prints
+`PASS` and exits 0 for a receipt whose verdict is `BLOCK`. IT IS NOT PUSHED AND NEVER WAS.**
+`a38cff9` exists only in the local working tree — `origin/step-3/isolated-signer` is at
+`70f4b4d`, and no remote ref contains it. This is prevention work, not incident response; an
+earlier version of the register said "pushed branch" and that was false. Every fix still produces
+a new candidate SHA, so `a38cff9` cannot be repaired and remain the reviewed exact candidate.
+
 **2026-08-29 — CRUCIBLE CYCLE 2 IMPLEMENTATION CHECKPOINT AUTHORISED (D-081); PUBLICATION IS
 NOT AUTHORISED.** John authorised implementation of the three recorded Adversary withdrawal
 conditions, one local Sentinel commit, and recording that immutable SHA in the Crucible session

@@ -49,6 +49,29 @@ no push is authorised. `.serena/` remains gitignored.
 > mandate/domain schema, remain fixed-key private fixtures, and are excluded from `release/`.
 > D-080's Gate 8 result belongs to their predecessor v0.2 packet; no Gate 8 rerun is claimed.
 >
+> **2026-08-30 — THE CRUCIBLE LINE IS HALTED; A REMEDIATION SET IS PROPOSED, NOT AGREED AND NOT
+> STARTED.** All four Cycle 2 Criticals were Adversary-SUSTAINED at `A-018` / `MSG-022` and remain
+> **OPEN AT ANVIL**. A build-team response and reply were drafted and the chairs consulted
+> informally. **That consultation made no ledger entry, no repository change, and no ruling.
+> Nothing is "agreed" or "accepted" in any ratified sense**, and an earlier version of this block
+> said otherwise. The proposal lives at **`docs/a018-remediation-register.md`** — read it before
+> touching the publication surface. It authorises nothing; its §3 items are valid **only if the
+> v0.3 enforcement/verifier architecture is retained** and still need an instruction, and its §4
+> items are blocked on John.
+>
+> **THE DEFECT: the shipped `verify_publication.py` prints PASS and exits 0 for a receipt whose
+> verdict is BLOCK** (register §1.1, reproduced 2026-08-30). **IT IS NOT PUSHED.** `a38cff9`
+> exists only in the local working tree; `origin/step-3/isolated-signer` is at `70f4b4d` and no
+> remote ref contains it. An earlier version of this block inherited a "pushed branch" claim that
+> was false — prevention work, not incident response. **Four build-team claims were wrong and are
+> corrected in the register's §0** (the push status, the Conscience attribution, "valid under
+> every branch", and the licence wording), plus the two earlier self-corrections now at §1.2–§1.3.
+>
+> **The publication scope fork is unresolved, and its constitutional precondition has not been
+> ruled:** the chairs' informal reading is that an Override-in-Writing can authorise proceeding
+> despite unresolved Criticals but **does not rewrite the Ingot's acceptance or kill conditions**,
+> so the clean lab path is a fresh casting. **No branch can be costed until John rules it.**
+>
 > **THE `GIT_INDEX_FILE` FAIL-OPEN IS FIXED — the warning that stood here is withdrawn.**
 > It was real: clearing the variable made the pre-commit guard read `.git/index` while git was
 > committing from a temporary index, so `git commit -am` and `git commit -- <path>` landed a
