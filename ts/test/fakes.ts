@@ -118,6 +118,7 @@ export function buildFixture(o: FixtureOverrides = {}): Fixture {
         schemaVersion: 1n,
         mandateId: keccak256(stringToBytes("mandate:fixture")),
         principal: OWNER,
+        signer: SIGNER_ADDRESS,
         vault: VAULT,
         chainId: CHAIN_ID,
         target: TARGET,

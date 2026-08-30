@@ -2,15 +2,15 @@
   "note": "§5.5 OverrideAuthorizationPayload, signed by the OWNER (not the Sentinel signer). Verifies against the same EIP-712 domain as the receipt; its chain and vault binding is transitive, through the mandateHash and policyHash it references.",
   "override": {
     "schemaVersion": "1",
-    "reviewReceiptHash": "0x79a67637d5996203570e1540811b786e13110a05685411acee9b70d10544cebd",
-    "actionHash": "0x10be15bbf9181a16b3e99a205bc122f8a94211b2c0b57721a1b3f0422fd0e1c5",
-    "mandateHash": "0x00ff21a5b52e5a9d1c646aebf636eb69acbb893681c119a0ab8ccc3886d0c113",
+    "reviewReceiptHash": "0x10415af8e31a2cd300f216f1b4fb768c0a4f40bb37c07a81815c562ab40389f5",
+    "actionHash": "0xeb26a7854778862300e6ed08bb3a1c0c3ac17ee2a2aef31563fdda7ac604bf87",
+    "mandateHash": "0x3f3ac6d5d66d947fe9603e077f6dbc258faffa6861372db14bf08d765e991faf",
     "policyHash": "0x8abd037dc7df8d7fa4dce928139c9c1306555aa6853d82b58daa8891a13b0bff",
     "actionNonce": "0",
     "reasonHash": "0x7a9ab1ebcee0036e59c9e29d224d9abf76a41098b1a20f1cc410161588781cf4",
     "issuedAt": "0",
     "expiresAt": "4000000000"
   },
-  "ownerSignature": "0x58bf68cb958f03b726aa8b14e4111d66c4542178cae46b01c09cce3e6ecc8fa71d842d5f660be07d219c935c49afba290c4ab5f43a8cfc159e41607cccc5b7fa1b",
+  "ownerSignature": "0x6966605e649e2cc08668e991a3129cb7b4faee54b3caa93da99ab31ef9a027104098cdf566ec2833057bbc8023e9a83229d861d6ca367d1dbd4f507813a5b9471b",
   "ownerAddress": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
 }

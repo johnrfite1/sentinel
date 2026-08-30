@@ -18,6 +18,7 @@ import {evaluate, type Verdict} from "../src/evaluate/index.ts";
 import {hashMandate, hashPolicy} from "../src/evaluate/hashes.ts";
 import {simulateAction} from "../src/simulate/index.ts";
 import {connectSigner, type SignerClient} from "../src/signer/client.ts";
+import {digest, domainSeparator} from "../src/signer/eip712.ts";
 import {createChainReader} from "../src/signer/vault.ts";
 import type {
     ActionPayload,
@@ -176,6 +177,7 @@ async function buildMandateAndPolicy(overrides: {mandate?: Partial<MandatePayloa
         schemaVersion: 1n,
         mandateId: keccak256(stringToBytes("mandate:case-1")),
         principal: OWNER.address.toLowerCase() as Hex,
+        signer: SIGNER.address.toLowerCase() as Hex,
         vault,
         chainId,
         target: demoPay,
@@ -195,21 +197,20 @@ async function buildMandateAndPolicy(overrides: {mandate?: Partial<MandatePayloa
     return {mandate, policy, mandateHash: hashMandate(mandate), policyHash: hashPolicy(policy)};
 }
 
-async function activate(mandateHash: Hex, policyHash: Hex): Promise<void> {
-    for (const [fn, arg] of [
-        ["activateMandate", mandateHash],
-        ["activatePolicy", policyHash],
-    ] as const) {
-        const hash = await walletClient.writeContract({
-            address: vault,
-            abi: vaultAbi,
-            functionName: fn,
-            args: [arg],
-            account: OWNER,
-            chain: anvil,
-        });
-        await publicClient.waitForTransactionReceipt({hash});
-    }
+async function activate(mandate: MandatePayload, policyHash: Hex): Promise<void> {
+    const policyTx = await walletClient.writeContract({
+        address: vault, abi: vaultAbi, functionName: "activatePolicy", args: [policyHash],
+        account: OWNER, chain: anvil,
+    });
+    await publicClient.waitForTransactionReceipt({hash: policyTx});
+    const signature = await OWNER.sign({
+        hash: digest(domainSeparator(chainId, vault), hashMandate(mandate)),
+    });
+    const mandateTx = await walletClient.writeContract({
+        address: vault, abi: vaultAbi, functionName: "activateMandate", args: [mandate, signature],
+        account: OWNER, chain: anvil,
+    });
+    await publicClient.waitForTransactionReceipt({hash: mandateTx});
 }
 
 /** decode → simulate → evaluate, exactly as §3.2 steps 6–10 sequence it. */
@@ -276,7 +277,7 @@ function codes(evaluation: {checks: {code: string; outcome: string}[]}, outcome:
 describe("Case 1 — exact mandate, allow", () => {
     it("evaluates ALLOW, the signer attests, and the vault executes the purchase", async () => {
         const {mandate, policy, mandateHash, policyHash} = await buildMandateAndPolicy();
-        await activate(mandateHash, policyHash);
+        await activate(mandate, policyHash);
 
         const callData = purchaseCalldata(RESOURCE, OWNER.address.toLowerCase() as Hex);
         const {action, evaluation, simulation} = await runPipeline({
@@ -340,7 +341,7 @@ describe("Case 2 — real prompt injection, block", () => {
         // max uint256 as the amount. Sentinel derives that from calldata, not from the
         // agent's description of it.
         const {mandate, policy, mandateHash, policyHash} = await buildMandateAndPolicy();
-        await activate(mandateHash, policyHash);
+        await activate(mandate, policyHash);
 
         const callData = encodeFunctionData({
             abi: demoErc20Abi,
@@ -412,7 +413,7 @@ describe("Case 3 — mechanically valid, wrong purpose, block", () => {
         // mandate conformance. The assertions below name that shape explicitly rather than
         // just checking the verdict.
         const {mandate, policy, mandateHash, policyHash} = await buildMandateAndPolicy();
-        await activate(mandateHash, policyHash);
+        await activate(mandate, policyHash);
 
         const callData = purchaseCalldata(WRONG_RESOURCE, OWNER.address.toLowerCase() as Hex);
         const {evaluation, simulation} = await runPipeline({
@@ -453,7 +454,7 @@ describe("Case 3 — mechanically valid, wrong purpose, block", () => {
 
     it("also blocks recurrence the mandate forbids", async () => {
         const {mandate, policy, mandateHash, policyHash} = await buildMandateAndPolicy();
-        await activate(mandateHash, policyHash);
+        await activate(mandate, policyHash);
 
         const callData = purchaseCalldata(RESOURCE, OWNER.address.toLowerCase() as Hex, DURATION, true);
         const {evaluation} = await runPipeline({
@@ -481,7 +482,7 @@ describe("Case 4 — evidence uncertainty, review", () => {
         const {mandate, policy, mandateHash, policyHash} = await buildMandateAndPolicy({
             mandate: {targetCodeHash: keccak256(stringToBytes("yesterday's bytecode"))},
         });
-        await activate(mandateHash, policyHash);
+        await activate(mandate, policyHash);
 
         const callData = purchaseCalldata(RESOURCE, OWNER.address.toLowerCase() as Hex);
         const {evaluation} = await runPipeline({
@@ -510,7 +511,7 @@ describe("Case 4 — evidence uncertainty, review", () => {
         });
         const strict = {...policy, failureMode: 0n};
         const relinked = {...mandate, policyHash: hashPolicy(strict)};
-        await activate(hashMandate(relinked), hashPolicy(strict));
+        await activate(relinked, hashPolicy(strict));
 
         const callData = purchaseCalldata(RESOURCE, OWNER.address.toLowerCase() as Hex);
         const {evaluation} = await runPipeline({
@@ -530,7 +531,7 @@ describe("Case 4 — evidence uncertainty, review", () => {
 describe("the evidence bundle", () => {
     it("carries all thirteen §5.6 fields and hashes deterministically", async () => {
         const {mandate, policy, mandateHash, policyHash} = await buildMandateAndPolicy();
-        await activate(mandateHash, policyHash);
+        await activate(mandate, policyHash);
 
         const callData = purchaseCalldata(RESOURCE, OWNER.address.toLowerCase() as Hex);
         const {evaluation} = await runPipeline({

@@ -111,6 +111,10 @@ const CASES: {code: ReasonCode; overrides: FixtureOverrides}[] = [
         overrides: {state: {activeMandateHash: keccak256(stringToBytes("another mandate"))}},
     },
     {
+        code: "SIGNER_MANDATE_SIGNER_MISMATCH",
+        overrides: {mandate: {signer: OTHER_ADDRESS}},
+    },
+    {
         code: "SIGNER_POLICY_NOT_ACTIVE",
         overrides: {state: {activePolicyHash: keccak256(stringToBytes("another policy"))}},
     },

@@ -5,6 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {SentinelVault} from "../src/SentinelVault.sol";
 import {SentinelTypes as T} from "../src/types/SentinelTypes.sol";
 import {DemoPay} from "../src/demo/DemoPay.sol";
+import {MandateTestHelper} from "./MandateTestHelper.sol";
 
 /// @title SentinelVault — the halves nothing asserted (R3-F5, R3-F6, R3-F7)
 ///
@@ -34,7 +35,7 @@ import {DemoPay} from "../src/demo/DemoPay.sol";
 ///      COVERAGE BOUNDARY. Every test here asserts an INSTRUMENT, not a behaviour change. The
 ///      vault was correct before this file and is correct after it; what changes is that a
 ///      regression now fails. Nothing here is evidence that a verdict is right.
-contract SentinelVaultBindingTest is Test {
+contract SentinelVaultBindingTest is MandateTestHelper {
     SentinelVault internal vault;
     DemoPay internal demoPay;
 
@@ -46,7 +47,7 @@ contract SentinelVaultBindingTest is Test {
 
     uint256 internal constant MAX_VALUE = 0.01 ether;
     bytes32 internal constant RESOURCE = keccak256("weather-basic-24h");
-    bytes32 internal constant MANDATE_HASH = keccak256("mandate-1");
+    bytes32 internal MANDATE_HASH;
     bytes32 internal constant POLICY_HASH = keccak256("policy-1");
     bytes4 internal constant PURCHASE_SEL = DemoPay.purchase.selector;
 
@@ -63,10 +64,10 @@ contract SentinelVaultBindingTest is Test {
         vault = new SentinelVault(owner, signerAddr, MAX_VALUE, targets, selectors);
         vm.deal(address(vault), 10 ether);
 
-        vm.startPrank(owner);
-        vault.activateMandate(MANDATE_HASH);
-        vault.activatePolicy(POLICY_HASH);
-        vm.stopPrank();
+        MANDATE_HASH = _activateTestMandate(
+            vault, OWNER_PK, owner, signerAddr, address(demoPay), PURCHASE_SEL, MAX_VALUE,
+            POLICY_HASH, keccak256("mandate-1")
+        );
 
         vm.warp(1_000_000);
     }
@@ -234,14 +235,15 @@ contract SentinelVaultBindingTest is Test {
         vault.executeWithReceipt(a, data, r, sig);
     }
 
-    function test_receiptExpiry_atTheBoundaryIsStillValid() public {
+    function test_receiptExpiry_atTheBoundaryIsRejected() public {
         bytes memory data = _callData();
         T.ActionPayload memory a = _action(data);
         (T.DecisionReceiptPayload memory r, bytes memory sig) = _signedReceipt(a);
 
         vm.warp(r.expiresAt); // exactly AT expiry
+        vm.expectRevert(SentinelVault.ReceiptExpired.selector);
         vault.executeWithReceipt(a, data, r, sig);
-        assertEq(vault.actionNonce(), 1);
+        assertEq(vault.actionNonce(), 0);
     }
 
     function test_receiptExpiry_oneSecondPastIsRejected() public {
@@ -265,7 +267,7 @@ contract SentinelVaultBindingTest is Test {
     ///
     ///      That is the same defect this file exists to close, committed inside the closing of
     ///      it: the repair generalised the demonstration and not the argument.
-    function test_overrideExpiry_atTheBoundaryIsStillValid() public {
+    function test_overrideExpiry_atTheBoundaryIsRejected() public {
         bytes memory data = _callData();
         T.ActionPayload memory a = _action(data);
         T.DecisionReceiptPayload memory r = _receipt(a, T.Verdict.REVIEW);
@@ -275,8 +277,9 @@ contract SentinelVaultBindingTest is Test {
         bytes memory ownerSig = _sign(OWNER_PK, T.hashOverride(auth));
 
         vm.warp(auth.expiresAt); // exactly AT the override's expiry
+        vm.expectRevert(SentinelVault.OverrideExpired.selector);
         vault.executeWithOverride(a, data, r, sig, auth, ownerSig);
-        assertEq(vault.actionNonce(), 1);
+        assertEq(vault.actionNonce(), 0);
     }
 
     function test_overrideExpiry_oneSecondPastIsRejected() public {
@@ -355,11 +358,15 @@ contract SentinelVaultBindingTest is Test {
     }
 
     function test_MandateActivated_statesTheActivatedHash() public {
-        bytes32 h = keccak256("mandate-2");
+        (T.MandatePayload memory mandate, bytes memory signature) = _mandateEnvelope(
+            vault, OWNER_PK, owner, signerAddr, address(demoPay), DemoPay.purchase.selector,
+            MAX_VALUE, POLICY_HASH, keccak256("mandate-2")
+        );
+        bytes32 h = T.hashMandate(mandate);
         vm.expectEmit(true, false, false, false, address(vault));
         emit SentinelVault.MandateActivated(h);
         vm.prank(owner);
-        vault.activateMandate(h);
+        vault.activateMandate(mandate, signature);
         assertEq(vault.activeMandateHash(), h);
     }
 

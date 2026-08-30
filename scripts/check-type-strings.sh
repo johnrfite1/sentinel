@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
-# D-023: §5.8 of the proposal publishes the EIP-712 type strings verbatim. This checks that
-# what the spec publishes is byte-identical to what the signer actually hashes.
+# D-023: §5.8 of the v0.2 proposal publishes the EIP-712 type strings verbatim. The additive
+# v0.3 enforcement profile publishes the one changed type, MandatePayload. This checks that
+# the currently implemented publication is byte-identical to what the signer actually hashes
+# without rewriting the historical v0.2 proposal.
 #
 # WHY THIS GUARD AND NOT A ONE-OFF CHECK. §5.8 exists because an independent reimplementation
 # established that §5 was not buildable without these strings. A PUBLISHED type string that
@@ -34,7 +36,8 @@ cd "$ROOT" || { echo "  FAIL  cannot enter the Sentinel repository root; refusin
 # install-hooks write into a victim repository. GIT_PREFIX is included although inert on
 # git 2.50.1 — an inert variable today is not a guarantee tomorrow.
 unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_PREFIX
-SPEC="$ROOT/Sentinel_Lab_Proposal_v0_2.md"
+SPEC_V02="$ROOT/Sentinel_Lab_Proposal_v0_2.md"
+SPEC_V03="$ROOT/docs/enforcement-release-v0.3.md"
 
 # SCOPED TO §5.8, THE SECTION THIS GUARD NAMES (R4-F3, D-055(e), CONFIRMED).
 #
@@ -49,10 +52,15 @@ SPEC="$ROOT/Sentinel_Lab_Proposal_v0_2.md"
 # been reading the right lines. It took two edits — the transposition plus a decoy earlier in
 # the file — to produce the defeat. This is an instrument defect, not a live false claim, and
 # the distinction is recorded rather than blurred.
-SPEC_SECTION="$(mktemp)"
-trap 'rm -f "$SPEC_SECTION"' EXIT
-if ! python3 "$ROOT/scripts/extract-markdown-section.py" "$SPEC" \
-        '### 5.8 EIP-712 Type Strings (normative)' > "$SPEC_SECTION"; then
+SPEC_V02_SECTION="$(mktemp)"
+SPEC_V03_SECTION="$(mktemp)"
+trap 'rm -f "$SPEC_V02_SECTION" "$SPEC_V03_SECTION"' EXIT
+if ! python3 "$ROOT/scripts/extract-markdown-section.py" "$SPEC_V02" \
+        '### 5.8 EIP-712 Type Strings (normative)' > "$SPEC_V02_SECTION"; then
+    exit 1
+fi
+if ! python3 "$ROOT/scripts/extract-markdown-section.py" "$SPEC_V03" \
+        '## EIP-712 type strings (normative)' > "$SPEC_V03_SECTION"; then
     exit 1
 fi
 SRC="$ROOT/ts/src/signer/eip712.ts"
@@ -62,6 +70,12 @@ checked=0
 
 for name in EIP712Domain MandatePayload PolicyPayload ActionPayload \
             DecisionReceiptPayload OverrideAuthorizationPayload; do
+    spec_section="$SPEC_V02_SECTION"
+    spec_label="v0.2 §5.8"
+    if [ "$name" = "MandatePayload" ]; then
+        spec_section="$SPEC_V03_SECTION"
+        spec_label="v0.3 enforcement profile"
+    fi
     # The spec publishes each as an indented literal line; the source as a quoted string.
     # EXACTLY ONE PUBLICATION PER TYPE, not the first of several (R4-F3 residual, D-057(5)).
     #
@@ -69,19 +83,19 @@ for name in EIP712Domain MandatePayload PolicyPayload ActionPayload \
     # §5.8 above the real line, because `head -1` still silently picks a winner. A section that
     # publishes two different strings for one type is itself the defect — there is no correct
     # way to choose between them — so this refuses rather than choosing.
-    spec_hits="$(grep -cE "^ {4}${name}\([^)]*\)$" "$SPEC_SECTION")"
+    spec_hits="$(grep -cE "^ {4}${name}\([^)]*\)$" "$spec_section")"
     if [ "$spec_hits" -gt 1 ]; then
-        echo "type strings: §5.8 publishes ${spec_hits} different lines for ${name}."
+        echo "type strings: ${spec_label} publishes ${spec_hits} different lines for ${name}."
         echo "  A section cannot publish a type string twice and have both be normative."
         echo "  Refusing to pick one. Remove the duplicate."
         fail=1
         continue
     fi
-    spec_line="$(grep -oE "^ {4}${name}\([^)]*\)$" "$SPEC_SECTION" | head -1 | sed 's/^ *//')"
+    spec_line="$(grep -oE "^ {4}${name}\([^)]*\)$" "$spec_section" | head -1 | sed 's/^ *//')"
     src_hits="$(grep -oE "\"${name}\([^\"]*\)\"" "$SRC" | wc -l | tr -d ' ')"
 
     if [ -z "$spec_line" ]; then
-        echo "type strings: §5.8 does not publish ${name}"
+        echo "type strings: ${spec_label} does not publish ${name}"
         fail=1
         continue
     fi
@@ -113,4 +127,4 @@ if [ "$fail" -ne 0 ]; then
     exit 1
 fi
 
-echo "type strings: ${checked}/6 published in §5.8 match eip712.ts exactly (D-023)"
+echo "type strings: ${checked}/6 current publications match eip712.ts exactly (v0.2 §5.8 + v0.3 mandate)"

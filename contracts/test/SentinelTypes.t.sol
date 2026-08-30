@@ -30,7 +30,7 @@ contract SentinelTypesTest is Test {
     //
     // If one of these fails, do NOT update the constant to make it green. A changed
     // typehash invalidates every previously signed payload and every pinned fixture.
-    bytes32 constant GOLD_MANDATE = 0xc4b5766f52cd5eee3830dfe849c18b2cdc58d3d698d5c59e3a90c6dbe9d86799;
+    bytes32 constant GOLD_MANDATE = 0xa0a2ea347da5b2525e9d492e6a8033ac6581be254471882fc126b0e95fa2b961;
     bytes32 constant GOLD_POLICY = 0xaa588a03b15fff97a72f063b7627ed7a61f2d76c4ca795da0607375d06a7f2a8;
     bytes32 constant GOLD_ACTION = 0x47787d5c4effb836c1e32339e527f5d91ae6e221e945eaf5c549614b02a60cff;
     bytes32 constant GOLD_RECEIPT = 0xbbdf70ecc28b4e3c3e229f3b2bfdebbd4a9960d1302f588d52b09717ef5db797;
@@ -67,7 +67,7 @@ contract SentinelTypesTest is Test {
     function test_typehashes_matchIndependentTranscription() public pure {
         assertEq(
             keccak256(
-                "MandatePayload(uint16 schemaVersion,bytes32 mandateId,address principal,address vault,uint256 chainId,address target,bytes32 targetCodeHash,bytes4 selector,uint256 maxNativeValueWei,bytes32 purposeKind,bytes32 resourceId,address beneficiary,uint64 durationSeconds,bool recurringAllowed,uint64 validAfter,uint64 validUntil,bytes32 policyHash)"
+                "MandatePayload(uint16 schemaVersion,bytes32 mandateId,address principal,address signer,address vault,uint256 chainId,address target,bytes32 targetCodeHash,bytes4 selector,uint256 maxNativeValueWei,bytes32 purposeKind,bytes32 resourceId,address beneficiary,uint64 durationSeconds,bool recurringAllowed,uint64 validAfter,uint64 validUntil,bytes32 policyHash)"
             ),
             T.MANDATE_TYPEHASH
         );
@@ -284,6 +284,7 @@ contract SentinelTypesTest is Test {
             schemaVersion: 1,
             mandateId: keccak256("mandate-1"),
             principal: OWNER,
+            signer: address(0x3333),
             vault: VAULT,
             chainId: 31337,
             target: DEMOPAY,

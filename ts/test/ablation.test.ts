@@ -83,6 +83,7 @@ const mandate: MandatePayload = {
     schemaVersion: 1n,
     mandateId: keccak256(stringToBytes("m")),
     principal: OWNER,
+    signer: OWNER,
     vault: VAULT,
     chainId: CHAIN,
     target: DEMOPAY,
@@ -360,6 +361,7 @@ describe("the §7.3 layer partition", () => {
             "EVAL_MANDATE_ACTIVE",
             "EVAL_MANDATE_WINDOW",
             "EVAL_MANDATE_PRINCIPAL_IS_OWNER",
+            "EVAL_MANDATE_SIGNER_ACTIVE",
         ]) {
             assert.equal(
                 MANDATE_CONFORMANCE_CODES.has(code),

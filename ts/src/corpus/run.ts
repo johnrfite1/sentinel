@@ -22,6 +22,7 @@ import {hashMandate, hashPolicy} from "../evaluate/hashes.ts";
 import {createChainReader} from "../signer/vault.ts";
 import {signerSocketPath} from "../signer/socket-path.ts";
 import {connectSigner} from "../signer/client.ts";
+import {digest, domainSeparator} from "../signer/eip712.ts";
 import {evaluate} from "../evaluate/index.ts";
 import type {ActionPayload, Hex, MandatePayload, PolicyPayload} from "../signer/protocol.ts";
 import {LAYERS, runLayer, type LayerResult} from "../ablation/layers.ts";
@@ -257,6 +258,7 @@ const conformingMandate: MandatePayload = {
     schemaVersion: 1n,
     mandateId: keccak256(stringToBytes("mandate:corpus-nonce-consumer")),
     principal: OWNER.address.toLowerCase() as Hex,
+    signer: SIGNER.address.toLowerCase() as Hex,
     vault,
     chainId,
     target: demoPay,
@@ -363,20 +365,50 @@ function proposalFor(spec: FixtureSpec, target: Hex, valueWei: bigint): AgentPro
 }
 
 async function activate(mandate: MandatePayload, policy: PolicyPayload): Promise<void> {
-    for (const [fn, arg] of [
-        ["activateMandate", hashMandate(mandate)],
-        ["activatePolicy", hashPolicy(policy)],
-    ] as const) {
-        const h = await walletClient.writeContract({
-            address: vault,
-            abi: vaultArt.abi,
-            functionName: fn,
-            args: [arg],
-            account: OWNER,
-            chain: anvil,
-        });
-        await publicClient.waitForTransactionReceipt({hash: h});
-    }
+    const policyTx = await walletClient.writeContract({
+        address: vault,
+        abi: vaultArt.abi,
+        functionName: "activatePolicy",
+        args: [hashPolicy(policy)],
+        account: OWNER,
+        chain: anvil,
+    });
+    await publicClient.waitForTransactionReceipt({hash: policyTx});
+
+    const ownerSignature = await OWNER.sign({
+        hash: digest(domainSeparator(chainId, vault), hashMandate(mandate)),
+    });
+    const mandateTx = await walletClient.writeContract({
+        address: vault,
+        abi: vaultArt.abi,
+        functionName: "activateMandate",
+        args: [mandate, ownerSignature],
+        account: OWNER,
+        chain: anvil,
+    });
+    await publicClient.waitForTransactionReceipt({hash: mandateTx});
+}
+
+/**
+ * Exhibit a mandate the v0.3 Vault can authenticate while leaving the fixture's mandate
+ * untouched for evaluator input. Some historical corpus cases deliberately carry an invalid
+ * principal, policy link, or window. The old hash-only activation could install those values;
+ * the owner-signed activation correctly refuses them. Activating this nearest valid envelope
+ * preserves the adversarial input and gives the evaluator the fail-closed onchain state it
+ * would actually observe: the invalid mandate is not the active authorisation.
+ */
+function authenticatableMandate(mandate: MandatePayload, policy: PolicyPayload): MandatePayload {
+    const windowIsOrdered = mandate.validAfter < mandate.validUntil;
+    return {
+        ...mandate,
+        principal: OWNER.address.toLowerCase() as Hex,
+        signer: SIGNER.address.toLowerCase() as Hex,
+        vault,
+        chainId,
+        validAfter: windowIsOrdered ? mandate.validAfter : 0n,
+        validUntil: windowIsOrdered ? mandate.validUntil : FAR_FUTURE,
+        policyHash: hashPolicy(policy),
+    };
 }
 
 async function ownerCall(fn: string, args: unknown[]): Promise<void> {
@@ -465,6 +497,15 @@ async function executeConforming(): Promise<void> {
         },
     });
     if (signed.refused) throw new Error(`signer refused the nonce-consuming action`);
+
+    // The v0.3 Vault rejects a receipt from the future. Anvil's latest block can trail the
+    // signer's wall-clock second, so advance chain time to the signed lower bound before the
+    // execution transaction instead of depending on whether this run crosses a second edge.
+    const beforeExecution = await publicClient.getBlock();
+    if (beforeExecution.timestamp < signed.receipt.issuedAt) {
+        await rpc("evm_setNextBlockTimestamp", [Number(signed.receipt.issuedAt)]);
+        await rpc("evm_mine", []);
+    }
 
     const h = await walletClient.writeContract({
         address: vault,
@@ -572,6 +613,7 @@ for (const spec of CORPUS) {
             schemaVersion: 1n,
             mandateId: keccak256(stringToBytes(`mandate:${spec.id}`)),
             principal: OWNER.address.toLowerCase() as Hex,
+            signer: SIGNER.address.toLowerCase() as Hex,
             vault,
             chainId,
             target: demoPay,
@@ -599,7 +641,7 @@ for (const spec of CORPUS) {
         // action re-presented at the consumed value is a real replay.
         if (env.consumeNonceFirst) await executeConforming();
 
-        await activate(mandate, policy);
+        await activate(authenticatableMandate(mandate, policy), policy);
         const target = targetAddress(spec.target);
         let callData = buildCallData(spec);
         const valueWei = spec.valueWei ?? CONFORMING_VALUE;
@@ -652,7 +694,11 @@ for (const spec of CORPUS) {
         // independent labeller caught the contradiction by comparing the two. Ordering is
         // the entire content of this scenario.
         if (env.supersedeMandate) {
-            await ownerCall("activateMandate", [keccak256(stringToBytes("a replacement mandate"))]);
+            const replacement = {
+                ...authenticatableMandate(mandate, policy),
+                mandateId: keccak256(stringToBytes("a replacement mandate")),
+            };
+            await activate(replacement, policy);
         }
         if (env.supersedePolicy) {
             await ownerCall("activatePolicy", [keccak256(stringToBytes("a replacement policy"))]);

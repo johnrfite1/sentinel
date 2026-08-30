@@ -683,7 +683,7 @@ class TestDerivedConstants(unittest.TestCase):
             eip712.MANDATE_STRUCT_NAME + "(" + ",".join(
                 f"{t} {n}" for t, n in eip712.MANDATE_FIELDS) + ")",
             "MandatePayload(uint16 schemaVersion,bytes32 mandateId,"
-            "address principal,address vault,uint256 chainId,address target,"
+            "address principal,address signer,address vault,uint256 chainId,address target,"
             "bytes32 targetCodeHash,bytes4 selector,uint256 maxNativeValueWei,"
             "bytes32 purposeKind,bytes32 resourceId,address beneficiary,"
             "uint64 durationSeconds,bool recurringAllowed,uint64 validAfter,"
@@ -703,7 +703,7 @@ class TestDerivedConstants(unittest.TestCase):
         domain = read_json(SAMPLES, "domain.json")
         self.assertEqual(
             "0x" + eip712.domain_separator(domain).hex(),
-            "0x6fdefb2adc6b65ee8595f3abb969a21492cdd583459829b295b84ed45bd7e02c",
+            "0x97f2389190b7b01c7bf3d315356436d6c1a02caa9d9890de99e31f100ff3238e",
         )
 
     def test_field_order_follows_section_5_4(self):
@@ -1043,7 +1043,16 @@ class TestPublishedTypeStrings(unittest.TestCase):
         }
         for name, mine in cases.items():
             with self.subTest(struct=name):
-                self.assertEqual(pub[name], mine)
+                if name == "MandatePayload":
+                    # The ratified v0.2 proposal is immutable historical evidence. The
+                    # publication release is additive v0.3 and inserts `address signer`;
+                    # it must therefore differ here rather than silently rewriting v0.2.
+                    self.assertNotEqual(pub[name], mine)
+                    release_doc = os.path.join(REPO, "docs", "enforcement-release-v0.3.md")
+                    with open(release_doc, encoding="utf-8") as handle:
+                        self.assertIn(mine, handle.read())
+                else:
+                    self.assertEqual(pub[name], mine)
 
 
 

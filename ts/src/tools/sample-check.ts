@@ -20,6 +20,7 @@ import {simulateAction} from "../simulate/index.ts";
 import {signerSocketPath} from "../signer/socket-path.ts";
 import {createChainReader} from "../signer/vault.ts";
 import {connectSigner} from "../signer/client.ts";
+import {digest, domainSeparator} from "../signer/eip712.ts";
 import type {ActionPayload, Hex, MandatePayload, PolicyPayload} from "../signer/protocol.ts";
 
 /**
@@ -126,6 +127,7 @@ const mandate: MandatePayload = {
     schemaVersion: 1n,
     mandateId: keccak256(stringToBytes("mandate:case-1")),
     principal: OWNER.address.toLowerCase() as Hex,
+    signer: SIGNER.address.toLowerCase() as Hex,
     vault,
     chainId,
     target: demoPay,
@@ -142,20 +144,28 @@ const mandate: MandatePayload = {
     policyHash: hashPolicy(policy),
 };
 
-for (const [fn, arg] of [
-    ["activateMandate", hashMandate(mandate)],
-    ["activatePolicy", hashPolicy(policy)],
-] as const) {
-    const h = await walletClient.writeContract({
-        address: vault,
-        abi: vaultArt.abi,
-        functionName: fn,
-        args: [arg],
-        account: OWNER,
-        chain: anvil,
-    });
-    await publicClient.waitForTransactionReceipt({hash: h});
-}
+const policyTx = await walletClient.writeContract({
+    address: vault,
+    abi: vaultArt.abi,
+    functionName: "activatePolicy",
+    args: [hashPolicy(policy)],
+    account: OWNER,
+    chain: anvil,
+});
+await publicClient.waitForTransactionReceipt({hash: policyTx});
+
+const ownerSignature = await OWNER.sign({
+    hash: digest(domainSeparator(chainId, vault), hashMandate(mandate)),
+});
+const mandateTx = await walletClient.writeContract({
+    address: vault,
+    abi: vaultArt.abi,
+    functionName: "activateMandate",
+    args: [mandate, ownerSignature],
+    account: OWNER,
+    chain: anvil,
+});
+await publicClient.waitForTransactionReceipt({hash: mandateTx});
 
 const socketPath = signerSocketPath(REPO, `sample-${port}`, process.env.SENTINEL_SAMPLE_SOCKET_DIR);
 const signerProc = spawn(process.execPath, [join(REPO, "ts", "src", "signer", "main.ts")], {

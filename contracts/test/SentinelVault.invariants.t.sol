@@ -5,6 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {SentinelVault} from "../src/SentinelVault.sol";
 import {SentinelTypes as T} from "../src/types/SentinelTypes.sol";
 import {DemoPay} from "../src/demo/DemoPay.sol";
+import {MandateTestHelper} from "./MandateTestHelper.sol";
 
 /// @notice A target that calls straight back into the vault with a *second, independently
 ///         valid* receipt for the next nonce.
@@ -40,7 +41,7 @@ contract Reenterer {
     receive() external payable {}
 }
 
-contract SentinelVaultReentrancyTest is Test {
+contract SentinelVaultReentrancyTest is MandateTestHelper {
     SentinelVault internal vault;
     Reenterer internal reenterer;
 
@@ -49,7 +50,7 @@ contract SentinelVaultReentrancyTest is Test {
     address internal owner;
     address internal signerAddr;
 
-    bytes32 internal constant MANDATE_HASH = keccak256("mandate-1");
+    bytes32 internal MANDATE_HASH;
     bytes32 internal constant POLICY_HASH = keccak256("policy-1");
     bytes4 internal constant SEL = bytes4(keccak256("anything()"));
 
@@ -70,10 +71,10 @@ contract SentinelVaultReentrancyTest is Test {
         assertEq(address(reenterer), predicted, "address prediction failed; test is not exercising reentrancy");
 
         vm.deal(address(vault), 10 ether);
-        vm.startPrank(owner);
-        vault.activateMandate(MANDATE_HASH);
-        vault.activatePolicy(POLICY_HASH);
-        vm.stopPrank();
+        MANDATE_HASH = _activateTestMandate(
+            vault, OWNER_PK, owner, signerAddr, address(reenterer), SEL, 1 ether,
+            POLICY_HASH, keccak256("mandate-1")
+        );
         vm.warp(1_000_000);
     }
 
@@ -255,7 +256,7 @@ contract SentinelVaultReentrancyTest is Test {
 ///
 ///      Signer rotation cycles between two keys the handler holds, so rotation stays
 ///      exercised without starving the campaign of signable receipts.
-contract VaultHandler is Test {
+contract VaultHandler is MandateTestHelper {
     SentinelVault public immutable vault;
     DemoPay public immutable demoPay;
     uint256 internal immutable signerPkA;
@@ -267,7 +268,7 @@ contract VaultHandler is Test {
     ///      payload; a handler that could only prank would be unable to reach the path at all.
     uint256 internal immutable ownerPk;
 
-    bytes32 public constant MANDATE_HASH = keccak256("mandate-1");
+    bytes32 public MANDATE_HASH;
     bytes32 public constant POLICY_HASH = keccak256("policy-1");
 
     // --- Ghost state ---
@@ -324,7 +325,8 @@ contract VaultHandler is Test {
         uint256 _signerPkA,
         uint256 _signerPkB,
         address _owner,
-        uint256 _ownerPk
+        uint256 _ownerPk,
+        bytes32 _mandateHash
     ) {
         vault = _vault;
         demoPay = _demoPay;
@@ -333,6 +335,7 @@ contract VaultHandler is Test {
         currentSignerPk = _signerPkA;
         owner = _owner;
         ownerPk = _ownerPk;
+        MANDATE_HASH = _mandateHash;
     }
 
     function executedCount() external view returns (uint256) {
@@ -636,6 +639,10 @@ contract VaultHandler is Test {
         vm.prank(owner);
         vault.rotateSigner(vm.addr(next));
         currentSignerPk = next;
+        MANDATE_HASH = _activateTestMandate(
+            vault, ownerPk, owner, vm.addr(next), address(demoPay), DemoPay.purchase.selector,
+            0.01 ether, POLICY_HASH, keccak256("mandate-1")
+        );
     }
 
     function warp(uint256 seconds_) external {
@@ -645,7 +652,7 @@ contract VaultHandler is Test {
 
 /// @title SentinelVault stateful invariants
 /// @notice The §7.5 gate: "Foundry fuzz and invariant tests cannot bypass SentinelVault."
-contract SentinelVaultInvariantTest is Test {
+contract SentinelVaultInvariantTest is MandateTestHelper {
     SentinelVault internal vault;
     DemoPay internal demoPay;
     VaultHandler internal handler;
@@ -666,13 +673,15 @@ contract SentinelVaultInvariantTest is Test {
         vault = new SentinelVault(owner, vm.addr(SIGNER_PK), 0.01 ether, targets, selectors);
         vm.deal(address(vault), 100 ether);
 
-        vm.startPrank(owner);
-        vault.activateMandate(handlerMandate());
-        vault.activatePolicy(handlerPolicy());
-        vm.stopPrank();
+        bytes32 activeMandateHash = _activateTestMandate(
+            vault, OWNER_PK, owner, vm.addr(SIGNER_PK), address(demoPay),
+            DemoPay.purchase.selector, 0.01 ether, handlerPolicy(), keccak256("mandate-1")
+        );
         vm.warp(1_000_000);
 
-        handler = new VaultHandler(vault, demoPay, SIGNER_PK, SIGNER_PK_B, owner, OWNER_PK);
+        handler = new VaultHandler(
+            vault, demoPay, SIGNER_PK, SIGNER_PK_B, owner, OWNER_PK, activeMandateHash
+        );
         targetContract(address(handler));
         // Explicit selector list. Without it the runner also fuzzes inherited
         // forge-std helpers on the handler, which crowd out the actions we care about.
@@ -761,10 +770,6 @@ contract SentinelVaultInvariantTest is Test {
             }
             assertTrue(found, "a handler action is not registered with the fuzzer");
         }
-    }
-
-    function handlerMandate() internal pure returns (bytes32) {
-        return keccak256("mandate-1");
     }
 
     function handlerPolicy() internal pure returns (bytes32) {

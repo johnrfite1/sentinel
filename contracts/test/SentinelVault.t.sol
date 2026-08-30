@@ -5,6 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {SentinelVault} from "../src/SentinelVault.sol";
 import {SentinelTypes as T} from "../src/types/SentinelTypes.sol";
 import {DemoPay} from "../src/demo/DemoPay.sol";
+import {MandateTestHelper} from "./MandateTestHelper.sol";
 
 /// @title SentinelVault — enforcement and binding suite
 /// @notice Covers §9 step 2 and the replay/tamper half of Gate S1 (D-002).
@@ -22,7 +23,7 @@ import {DemoPay} from "../src/demo/DemoPay.sol";
 ///      faithfully executes a wrong verdict passes every test here — that is by design,
 ///      and it is exactly why §7 makes the evaluation harness the primary artifact rather
 ///      than these tests.
-contract SentinelVaultTest is Test {
+contract SentinelVaultTest is MandateTestHelper {
     SentinelVault internal vault;
     DemoPay internal demoPay;
 
@@ -36,7 +37,7 @@ contract SentinelVaultTest is Test {
 
     uint256 internal constant MAX_VALUE = 0.01 ether;
     bytes32 internal constant RESOURCE = keccak256("weather-basic-24h");
-    bytes32 internal constant MANDATE_HASH = keccak256("mandate-1");
+    bytes32 internal MANDATE_HASH;
     bytes32 internal constant POLICY_HASH = keccak256("policy-1");
 
     bytes4 internal constant PURCHASE_SEL = DemoPay.purchase.selector;
@@ -56,10 +57,10 @@ contract SentinelVaultTest is Test {
         vault = new SentinelVault(owner, signerAddr, MAX_VALUE, targets, selectors);
         vm.deal(address(vault), 10 ether);
 
-        vm.startPrank(owner);
-        vault.activateMandate(MANDATE_HASH);
-        vault.activatePolicy(POLICY_HASH);
-        vm.stopPrank();
+        MANDATE_HASH = _activateTestMandate(
+            vault, OWNER_PK, owner, signerAddr, address(demoPay), PURCHASE_SEL, MAX_VALUE,
+            POLICY_HASH, keccak256("mandate-1")
+        );
 
         // Timestamps in fixtures are absolute, so start the clock somewhere sane.
         vm.warp(1_000_000);
@@ -412,7 +413,7 @@ contract SentinelVaultTest is Test {
         vm.prank(owner);
         vault.rotateSigner(attacker);
 
-        vm.expectRevert(SentinelVault.WrongSigner.selector);
+        vm.expectRevert(SentinelVault.MandateNotActive.selector);
         vault.executeWithReceipt(a, data, r, sig);
     }
 
@@ -517,7 +518,8 @@ contract SentinelVaultTest is Test {
         vm.startPrank(caller);
 
         vm.expectRevert(SentinelVault.NotOwner.selector);
-        vault.activateMandate(keccak256("x"));
+        T.MandatePayload memory mandate;
+        vault.activateMandate(mandate, bytes(""));
         vm.expectRevert(SentinelVault.NotOwner.selector);
         vault.revokeMandate();
         vm.expectRevert(SentinelVault.NotOwner.selector);

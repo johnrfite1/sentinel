@@ -154,6 +154,7 @@ function buildMandate(policy: PolicyPayload, overrides: Partial<MandatePayload> 
         schemaVersion: 1n,
         mandateId: keccak256(stringToBytes("mandate:samples")),
         principal: OWNER.address.toLowerCase() as Hex,
+        signer: SIGNER.address.toLowerCase() as Hex,
         vault,
         chainId,
         target: demoPay,
@@ -186,20 +187,19 @@ async function setPaused(next: boolean): Promise<void> {
 }
 
 async function activate(mandate: MandatePayload, policy: PolicyPayload): Promise<void> {
-    for (const [fn, arg] of [
-        ["activateMandate", hashMandate(mandate)],
-        ["activatePolicy", hashPolicy(policy)],
-    ] as const) {
-        const h = await walletClient.writeContract({
-            address: vault,
-            abi: vaultArt.abi,
-            functionName: fn,
-            args: [arg],
-            account: OWNER,
-            chain: anvil,
-        });
-        await publicClient.waitForTransactionReceipt({hash: h});
-    }
+    const policyTx = await walletClient.writeContract({
+        address: vault, abi: vaultArt.abi, functionName: "activatePolicy",
+        args: [hashPolicy(policy)], account: OWNER, chain: anvil,
+    });
+    await publicClient.waitForTransactionReceipt({hash: policyTx});
+    const signature = await OWNER.sign({
+        hash: digest(domainSeparator(chainId, vault), hashMandate(mandate)),
+    });
+    const mandateTx = await walletClient.writeContract({
+        address: vault, abi: vaultArt.abi, functionName: "activateMandate",
+        args: [mandate, signature], account: OWNER, chain: anvil,
+    });
+    await publicClient.waitForTransactionReceipt({hash: mandateTx});
 }
 
 const socketPath = signerSocketPath(REPO, `emit-${port}`, process.env.SENTINEL_EMIT_SOCKET_DIR);
@@ -504,6 +504,15 @@ for (const spec of SELECTED) {
     mkdirSync(dir, {recursive: true});
 
     writeFileSync(join(dir, "mandate.json"), j(mandate));
+    writeFileSync(
+        join(dir, "mandate-signature.json"),
+        j({
+            ownerAddress: OWNER.address,
+            ownerSignature: await OWNER.sign({
+                hash: digest(domainSeparator(chainId, vault), hashMandate(mandate)),
+            }),
+        }),
+    );
     writeFileSync(join(dir, "policy.json"), j(policy));
     writeFileSync(join(dir, "action.json"), j({...action, callData: spec.callData}));
     writeFileSync(join(dir, "evidence.json"), j(evaluation.bundle));
@@ -616,7 +625,7 @@ writeFileSync(
             "EIP-712 domain FIELD VALUES only. The domain type string, its typehash, and the " +
             "separator construction are §5's to derive — deriving them is the point of D-010.",
         name: "Sentinel",
-        version: "0.2",
+        version: "0.3",
         chainId,
         verifyingContract: vault,
         signerAddress: SIGNER.address,

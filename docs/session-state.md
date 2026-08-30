@@ -3,8 +3,9 @@
 Rewritten at the end of each working session. **This file, not the conversation, is the
 memory.** If it disagrees with anything an agent remembers, this file wins.
 
-Last updated: **2026-08-29 (Session Eleven recorded: Gate 8 passed with its limits / D-080;
-four ruled findings fixed; publication is not authorised).**
+Last updated: **2026-08-29 (Crucible Cycle 2 implementation checkpoint authorised / D-081;
+candidate implementation verified and awaiting its authorised local commit; publication is not
+authorised).**
 D-055 is MET (D-073). It unlocks nothing. **"Sentinel" is the project name (D-074).**
 The EIP-712 domain string is also `"Sentinel"` (D-075, recorded late). There is no
 name/domain split. Branch `step-3/isolated-signer`.
@@ -32,6 +33,21 @@ no push is authorised. `.serena/` remains gitignored.
 > F61ECCA card freeze. The D-058 confirmed batches independently HOLD.
 > **The Icon line in `README.md` is kept.** Report the state
 > below and wait.
+>
+> **CURRENT NARROW INSTRUCTION (D-081):** implement the three Crucible withdrawal conditions,
+> create one local Sentinel commit, and record its immutable SHA in the Crucible session ledger.
+> This instruction does not ratify Cycle 2, withdraw any Critical, authorize publication, change
+> repository visibility, or authorize a push. The candidate adds SentinelVault enforcement,
+> owner-signed signer authorization, exclusive clock checks, an out-of-band authenticated signed
+> deployment manifest, a key-free generated release, and a cold exact-call/mismatch/replay demo.
+> The fast canonical gate passes. The v0.3 corpus runner executes all 50 fixtures, but the deep
+> provenance comparison correctly refuses the historical v0.2 corpus: adding the signed `signer`
+> field changes all 50 labeller views and F035 moves from evaluator ALLOW to BLOCK. Those frozen
+> labels were not silently regenerated or repinned; any v0.3 relabelling/ruling remains outside
+> this implementation instruction and belongs to the Cycle 2 decision process (A-111).
+> The private comprehension samples and generated reviewer packet were regenerated on the v0.3
+> mandate/domain schema, remain fixed-key private fixtures, and are excluded from `release/`.
+> D-080's Gate 8 result belongs to their predecessor v0.2 packet; no Gate 8 rerun is claimed.
 >
 > **THE `GIT_INDEX_FILE` FAIL-OPEN IS FIXED — the warning that stood here is withdrawn.**
 > It was real: clearing the variable made the pre-commit guard read `.git/index` while git was
@@ -79,7 +95,7 @@ agent pushes only on John's explicit direction for a specific state.**
    now needs new, exact approval after every stated precondition holds.**
 7. **`docs/decisions.md`: D-066, D-067, D-068, D-069, D-070, D-071, D-072, D-073, then A-089, A-091, A-093, A-094, A-095, A-096,
    A-097, A-098, A-099, A-100, A-101, A-102, A-103, A-104, D-074, D-075, A-105, D-076, A-106,
-   D-077, A-107, D-078, A-108, D-079, A-109, D-080, A-110.** D-073 records that D-055 is MET
+   D-077, A-107, D-078, A-108, D-079, A-109, D-080, A-110, D-081, A-111.** D-073 records that D-055 is MET
    and that it unlocks nothing. D-067's D-008(2)/(4) completeness limits are HISTORICAL as of
    D-073; the §7.2 admissibility sentence is untouched. Gate 5 is not recertified. A-104
    froze the exit record. D-076 re-scopes the visibility gate and amends D-071's citation

@@ -186,6 +186,18 @@ describe("the view's declared shape is enforced (A-028 F-3)", () => {
             ),
         );
     });
+
+    it("allows the owner-authored signer identity in the mandate envelope", () => {
+        assert.doesNotThrow(() =>
+            assertViewShape(
+                {
+                    fixtureId: "F001",
+                    mandate: {signer: "0x1111111111111111111111111111111111111111"},
+                },
+                "F001",
+            ),
+        );
+    });
 });
 
 describe("no fixture carries a verdict", () => {

@@ -139,7 +139,14 @@ VENDORS_EXACTCASE='Safe|SAFE'
 # table naming three vendors plus both banned §10.1 labels, defeating conditions (2) and (4) at
 # once. Found by an independent adversarial review, 2026-08-16, with that exact file. Directory
 # entries keep the prefix form deliberately; file entries now end at `$`.
-EXCLUDED='^(Sentinel_Lab_Proposal_v0_2\.md|HANDOFF\.md|docs/decisions\.md|docs/session-state\.md|docs/gate-5-vendor-audit\.md|docs/v1-1-register\.md|scripts/check-vendor-honesty\.sh)$|^docs/review-2026-08-15/artifacts/'
+#
+# The generated enforcement release also carries two exact third-party dependency prefixes.
+# They are excluded because vendored compiler inputs are source dependencies, not Sentinel
+# measurement or claims artifacts; their upstream comments naturally contain vendor names and
+# words that collide with the §10.1 labels. The release README, manifest, Sentinel source, tests,
+# verifier, and runtime remain in scope. Keeping the exclusion at the two dependency roots avoids
+# creating a general `release/` blind spot.
+EXCLUDED='^(Sentinel_Lab_Proposal_v0_2\.md|HANDOFF\.md|docs/decisions\.md|docs/session-state\.md|docs/gate-5-vendor-audit\.md|docs/v1-1-register\.md|scripts/check-vendor-honesty\.sh)$|^docs/review-2026-08-15/artifacts/|^release/contracts/lib/(forge-std|openzeppelin-contracts)/'
 
 # CONDITION (2) HAS A DIFFERENT, MUCH NARROWER EXCLUSION LIST, and the split is the point.
 #
@@ -165,7 +172,7 @@ EXCLUDED='^(Sentinel_Lab_Proposal_v0_2\.md|HANDOFF\.md|docs/decisions\.md|docs/s
 # every vendor above" to `docs/gate-5-vendor-audit.md` passes this gate. Of the twelve exploits
 # an adversarial review built against these two guards, this is the ONE that survives the fix.
 # Reading that file is the only control, which is the honest description of an honour system.
-EXCLUDED_LABELS='^(Sentinel_Lab_Proposal_v0_2\.md|docs/decisions\.md|docs/gate-5-vendor-audit\.md|scripts/check-vendor-honesty\.sh)$'
+EXCLUDED_LABELS='^(Sentinel_Lab_Proposal_v0_2\.md|docs/decisions\.md|docs/gate-5-vendor-audit\.md|scripts/check-vendor-honesty\.sh)$|^release/contracts/lib/(forge-std|openzeppelin-contracts)/'
 
 # TRACKED **AND** UNTRACKED-BUT-NOT-IGNORED, and the second half is not belt-and-braces.
 #

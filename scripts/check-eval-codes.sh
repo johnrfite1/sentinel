@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# D-031: every check the conformance engine declares must appear in §5.7.1 of the proposal.
+# D-031: every check the conformance engine declares must appear in v0.2 §5.7.1 or an additive
+# release-profile check inventory. The v0.3 addendum extends rather than rewrites the historical
+# v0.2 proposal.
 #
 # WHY. An independent labeller working only from the specification noticed that §5.7's prose
 # never names the mandate-to-active-policy binding, and drew the consequence itself: an
@@ -37,17 +39,23 @@ cd "$ROOT" || { echo "  FAIL  cannot enter the Sentinel repository root; refusin
 # install-hooks write into a victim repository. GIT_PREFIX is included although inert on
 # git 2.50.1 — an inert variable today is not a guarantee tomorrow.
 unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_PREFIX
-SPEC="$ROOT/Sentinel_Lab_Proposal_v0_2.md"
+SPEC_V02="$ROOT/Sentinel_Lab_Proposal_v0_2.md"
+SPEC_V03="$ROOT/docs/enforcement-release-v0.3.md"
 
 # SCOPED TO §5.7.1, THE SECTION THIS GUARD NAMES (R4-F3, D-055(e), CONFIRMED).
 #
 # Same defect as check-type-strings.sh: this grepped the WHOLE 84 KB document while printing
 # "documented in §5.7.1", so a check documented only in §6 — or anywhere else — was certified
 # as documented in a section that never mentioned it. Demonstrated by a reviewer.
-SPEC_SECTION="$(mktemp)"
-trap 'rm -f "$SPEC_SECTION"' EXIT
-if ! python3 "$ROOT/scripts/extract-markdown-section.py" "$SPEC" \
-        '#### 5.7.1 Check coverage (auditable; the identifiers are not normative)' > "$SPEC_SECTION"; then
+SPEC_V02_SECTION="$(mktemp)"
+SPEC_V03_SECTION="$(mktemp)"
+trap 'rm -f "$SPEC_V02_SECTION" "$SPEC_V03_SECTION"' EXIT
+if ! python3 "$ROOT/scripts/extract-markdown-section.py" "$SPEC_V02" \
+        '#### 5.7.1 Check coverage (auditable; the identifiers are not normative)' > "$SPEC_V02_SECTION"; then
+    exit 1
+fi
+if ! python3 "$ROOT/scripts/extract-markdown-section.py" "$SPEC_V03" \
+        '## Evaluator check coverage (additive)' > "$SPEC_V03_SECTION"; then
     exit 1
 fi
 CHECKS="$ROOT/ts/src/evaluate/checks.ts"
@@ -65,16 +73,17 @@ missing=""
 total=0
 for code in $codes; do
     total=$((total + 1))
-    grep -qE "(^|[^A-Za-z0-9_])${code}([^A-Za-z0-9_]|$)" "$SPEC_SECTION" \
+    grep -qE "(^|[^A-Za-z0-9_])${code}([^A-Za-z0-9_]|$)" \
+        "$SPEC_V02_SECTION" "$SPEC_V03_SECTION" \
         || missing="$missing $code"
 done
 
 if [ -n "$missing" ]; then
     n=$(echo $missing | wc -w | tr -d ' ')
-    echo "eval codes: ${n} check(s) declared by the engine and absent from §5.7.1:"
+    echo "eval codes: ${n} check(s) declared by the engine and absent from v0.2 §5.7.1 plus the v0.3 addendum:"
     for c in $missing; do echo "    $c"; done
-    echo "  Add them to §5.7.1 with a description. Do NOT remove them from the engine to pass."
+    echo "  Add them to the current additive check inventory with a description. Do NOT remove them from the engine to pass."
     exit 1
 fi
 
-echo "eval codes: ${total}/${total} engine checks documented in §5.7.1 (D-031)"
+echo "eval codes: ${total}/${total} engine checks documented in v0.2 §5.7.1 + v0.3 addendum"

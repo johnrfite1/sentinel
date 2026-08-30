@@ -26,6 +26,7 @@ import {evaluate} from "../src/evaluate/index.ts";
 import {hashMandate, hashPolicy} from "../src/evaluate/hashes.ts";
 import {simulateAction} from "../src/simulate/index.ts";
 import {connectSigner, type SignerClient} from "../src/signer/client.ts";
+import {digest, domainSeparator} from "../src/signer/eip712.ts";
 import {createChainReader} from "../src/signer/vault.ts";
 import type {ActionPayload, Hex, MandatePayload, PolicyPayload} from "../src/signer/protocol.ts";
 import {
@@ -174,6 +175,7 @@ async function buildMandateAndPolicy() {
         schemaVersion: 1n,
         mandateId: keccak256(stringToBytes("mandate:step-7")),
         principal: OWNER.address.toLowerCase() as Hex,
+        signer: SIGNER.address.toLowerCase() as Hex,
         vault,
         chainId,
         target: demoPay,
@@ -192,21 +194,20 @@ async function buildMandateAndPolicy() {
     return {mandate, policy, mandateHash: hashMandate(mandate), policyHash: hashPolicy(policy)};
 }
 
-async function activate(mandateHash: Hex, policyHash: Hex): Promise<void> {
-    for (const [fn, arg] of [
-        ["activateMandate", mandateHash],
-        ["activatePolicy", policyHash],
-    ] as const) {
-        const hash = await walletClient.writeContract({
-            address: vault,
-            abi: vaultAbi,
-            functionName: fn,
-            args: [arg],
-            account: OWNER,
-            chain: anvil,
-        });
-        await publicClient.waitForTransactionReceipt({hash});
-    }
+async function activate(mandate: MandatePayload, policyHash: Hex): Promise<void> {
+    const policyTx = await walletClient.writeContract({
+        address: vault, abi: vaultAbi, functionName: "activatePolicy", args: [policyHash],
+        account: OWNER, chain: anvil,
+    });
+    await publicClient.waitForTransactionReceipt({hash: policyTx});
+    const signature = await OWNER.sign({
+        hash: digest(domainSeparator(chainId, vault), hashMandate(mandate)),
+    });
+    const mandateTx = await walletClient.writeContract({
+        address: vault, abi: vaultAbi, functionName: "activateMandate", args: [mandate, signature],
+        account: OWNER, chain: anvil,
+    });
+    await publicClient.waitForTransactionReceipt({hash: mandateTx});
 }
 
 /** Pull one recorded proposal off an arm and transcribe it. Fails loudly, never silently. */
@@ -275,7 +276,7 @@ function codes(evaluation: {checks: {code: string; outcome: string}[]}, outcome:
 describe("Case 1 from a real agent proposal", () => {
     it("the recorded control proposal is allowed, attested, and executes on the vault", async () => {
         const {mandate, policy, mandateHash, policyHash} = await buildMandateAndPolicy();
-        await activate(mandateHash, policyHash);
+        await activate(mandate, policyHash);
 
         const proposal = agentProposal("control");
         // The agent chose this target and this value; nothing here supplied them.
@@ -330,7 +331,7 @@ describe("Case 1 from a real agent proposal", () => {
 describe("Case 2 from the real injected proposal", () => {
     it("blocks the injected approval and writes no executable receipt", async () => {
         const {mandate, policy, mandateHash, policyHash} = await buildMandateAndPolicy();
-        await activate(mandateHash, policyHash);
+        await activate(mandate, policyHash);
 
         const proposal = agentProposal("treatment");
         // The injection's own choices, recovered from the recorded tool call.
@@ -385,7 +386,7 @@ describe("Case 2 from the real injected proposal", () => {
                     account: OWNER,
                     chain: anvil,
                 }),
-            /NotAllowVerdict/,
+            /NotAllowVerdict|TargetNotAllowed/,
         );
     });
 
@@ -401,7 +402,7 @@ describe("Case 2 from the real injected proposal", () => {
      */
     it("never reads the agent's account of what the call means", async () => {
         const {mandate, policy, mandateHash, policyHash} = await buildMandateAndPolicy();
-        await activate(mandateHash, policyHash);
+        await activate(mandate, policyHash);
 
         const proposal = agentProposal("treatment");
         assert.match(

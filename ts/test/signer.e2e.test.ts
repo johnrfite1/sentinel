@@ -178,7 +178,7 @@ describe("Case 1 — exact mandate, allow", () => {
     it("signs a receipt the real vault accepts, and the purchase actually lands", async () => {
         await withRig(async ({stack, client}) => {
             const scenario = await buildCase1(stack);
-            await activate(stack, scenario.mandateHash, scenario.policyHash);
+            await activate(stack, scenario.mandate, scenario.policyHash);
 
             const result = await client.evaluateAndSign(await request(stack, scenario, "ALLOW"));
             assertSigned(result);
@@ -217,7 +217,7 @@ describe("Case 1 — exact mandate, allow", () => {
         // two hashes diverged rather than only that execution reverted.
         await withRig(async ({stack, client}) => {
             const scenario = await buildCase1(stack);
-            await activate(stack, scenario.mandateHash, scenario.policyHash);
+            await activate(stack, scenario.mandate, scenario.policyHash);
 
             const result = await client.evaluateAndSign(await request(stack, scenario, "ALLOW"));
             assertSigned(result);
@@ -244,7 +244,7 @@ describe("receipt binding", () => {
     it("cannot be replayed once the nonce is consumed", async () => {
         await withRig(async ({stack, client}) => {
             const scenario = await buildCase1(stack);
-            await activate(stack, scenario.mandateHash, scenario.policyHash);
+            await activate(stack, scenario.mandate, scenario.policyHash);
 
             const result = await client.evaluateAndSign(await request(stack, scenario, "ALLOW"));
             assertSigned(result);
@@ -260,7 +260,7 @@ describe("receipt binding", () => {
     it("is rejected when the calldata is swapped after signing", async () => {
         await withRig(async ({stack, client}) => {
             const scenario = await buildCase1(stack);
-            await activate(stack, scenario.mandateHash, scenario.policyHash);
+            await activate(stack, scenario.mandate, scenario.policyHash);
 
             const result = await client.evaluateAndSign(await request(stack, scenario, "ALLOW"));
             assertSigned(result);
@@ -281,7 +281,7 @@ describe("receipt binding", () => {
     it("refuses to attest at all when the payload contradicts its own calldata", async () => {
         await withRig(async ({stack, client}) => {
             const scenario = await buildCase1(stack);
-            await activate(stack, scenario.mandateHash, scenario.policyHash);
+            await activate(stack, scenario.mandate, scenario.policyHash);
 
             const lying = {
                 ...scenario,
@@ -309,7 +309,7 @@ describe("independent checks", () => {
             const scenario = await buildCase1(stack, {
                 mandate: {maxNativeValueWei: PURCHASE_VALUE_WEI - 1n},
             });
-            await activate(stack, scenario.mandateHash, scenario.policyHash);
+            await activate(stack, scenario.mandate, scenario.policyHash);
 
             const result = await client.evaluateAndSign(await request(stack, scenario, "ALLOW"));
             assertRefused(result, "SIGNER_MANDATE_VALUE_EXCEEDED");
@@ -323,7 +323,7 @@ describe("independent checks", () => {
                 mandate: {mandateId: keccak256(stringToBytes("some other mandate"))},
             });
             // The vault activates a DIFFERENT mandate than the one presented.
-            await activate(stack, other.mandateHash, scenario.policyHash);
+            await activate(stack, other.mandate, scenario.policyHash);
 
             const result = await client.evaluateAndSign(await request(stack, scenario, "ALLOW"));
             assertRefused(result, "SIGNER_MANDATE_NOT_ACTIVE");
@@ -334,7 +334,7 @@ describe("independent checks", () => {
         await withRig(
             async ({stack, client}) => {
                 const scenario = await buildCase1(stack);
-                await activate(stack, scenario.mandateHash, scenario.policyHash);
+                await activate(stack, scenario.mandate, scenario.policyHash);
 
                 const result = await client.evaluateAndSign(await request(stack, scenario, "ALLOW"));
                 assertRefused(result, "SIGNER_NOT_ACTIVE_SIGNER");
@@ -350,7 +350,7 @@ describe("independent checks", () => {
     it("refuses ALLOW while the vault is paused", async () => {
         await withRig(async ({stack, client}) => {
             const scenario = await buildCase1(stack);
-            await activate(stack, scenario.mandateHash, scenario.policyHash);
+            await activate(stack, scenario.mandate, scenario.policyHash);
 
             const hash = await stack.walletClient.writeContract({
                 address: stack.vault,
@@ -370,7 +370,7 @@ describe("independent checks", () => {
     it("refuses ALLOW when the recorded simulation block is not the chain's", async () => {
         await withRig(async ({stack, client}) => {
             const scenario = await buildCase1(stack);
-            await activate(stack, scenario.mandateHash, scenario.policyHash);
+            await activate(stack, scenario.mandate, scenario.policyHash);
 
             // §5.4 records which block a verdict was computed against. Without this check
             // that field is an unverified assertion by the evaluator.
@@ -399,7 +399,7 @@ describe("independent checks", () => {
     it("refuses ALLOW anchored to a real but SUPERSEDED block (E3)", async () => {
         await withRig(async ({stack, client}) => {
             const scenario = await buildCase1(stack);
-            await activate(stack, scenario.mandateHash, scenario.policyHash);
+            await activate(stack, scenario.mandate, scenario.policyHash);
 
             const stale = await currentBlock(stack);
 
@@ -453,7 +453,7 @@ describe("independent checks", () => {
         // whose consequence is visible only against the real signer process.
         await withRig(async ({stack, client}) => {
             const scenario = await buildCase1(stack);
-            await activate(stack, scenario.mandateHash, scenario.policyHash);
+            await activate(stack, scenario.mandate, scenario.policyHash);
 
             const stale = await currentBlock(stack);
             const hash = await stack.walletClient.writeContract({
@@ -481,7 +481,7 @@ describe("independent checks", () => {
     it("refuses ALLOW on a stale nonce but still signs a BLOCK receipt", async () => {
         await withRig(async ({stack, client}) => {
             const scenario = await buildCase1(stack, {action: {actionNonce: 99n}});
-            await activate(stack, scenario.mandateHash, scenario.policyHash);
+            await activate(stack, scenario.mandate, scenario.policyHash);
 
             assertRefused(
                 await client.evaluateAndSign(await request(stack, scenario, "ALLOW")),
@@ -512,7 +512,7 @@ describe("Case 4 — evidence uncertainty", () => {
             const scenario = await buildCase1(stack, {
                 mandate: {targetCodeHash: keccak256(stringToBytes("yesterday's bytecode"))},
             });
-            await activate(stack, scenario.mandateHash, scenario.policyHash);
+            await activate(stack, scenario.mandate, scenario.policyHash);
 
             assertRefused(
                 await client.evaluateAndSign(await request(stack, scenario, "ALLOW")),
@@ -602,7 +602,7 @@ describe("Case 3 — mechanically valid, wrong purpose", () => {
             });
             // The mandate still names weather-basic-24h; only the calldata differs.
             assert.equal(scenario.mandate.resourceId, RESOURCE_ID);
-            await activate(stack, scenario.mandateHash, scenario.policyHash);
+            await activate(stack, scenario.mandate, scenario.policyHash);
 
             const result = await client.evaluateAndSign(await request(stack, scenario, "ALLOW"));
             assertSigned(result);
@@ -634,7 +634,7 @@ describe("one live executable attestation per nonce", () => {
     it("refuses a second, different ALLOW at the same nonce but re-signs the same action", async () => {
         await withRig(async ({stack, client}) => {
             const first = await buildCase1(stack);
-            await activate(stack, first.mandateHash, first.policyHash);
+            await activate(stack, first.mandate, first.policyHash);
 
             const a = await client.evaluateAndSign(await request(stack, first, "ALLOW"));
             assertSigned(a);
@@ -651,7 +651,7 @@ describe("one live executable attestation per nonce", () => {
                 callDataArgs: {duration: 3600n},
             });
             // Re-activate so only the action differs, not the mandate binding.
-            await activate(stack, second.mandateHash, second.policyHash);
+            await activate(stack, second.mandate, second.policyHash);
             const b = await client.evaluateAndSign(await request(stack, second, "ALLOW"));
             assertRefused(b, "SIGNER_NONCE_ALREADY_ATTESTED");
         });
@@ -661,7 +661,7 @@ describe("one live executable attestation per nonce", () => {
         await withRig(async ({stack, client}) => {
             const a = await buildCase1(stack, {callDataArgs: {duration: 3600n}});
             const b = await buildCase1(stack, {callDataArgs: {duration: 7200n}});
-            await activate(stack, a.mandateHash, a.policyHash);
+            await activate(stack, a.mandate, a.policyHash);
 
             assert.equal(a.action.actionNonce, b.action.actionNonce, "both must target one nonce");
             assert.notEqual(a.callData, b.callData, "and must be genuinely different actions");
@@ -705,13 +705,13 @@ describe("one live executable attestation per nonce", () => {
     it("does not let a BLOCK receipt hold the nonce", async () => {
         await withRig(async ({stack, client}) => {
             const scenario = await buildCase1(stack);
-            await activate(stack, scenario.mandateHash, scenario.policyHash);
+            await activate(stack, scenario.mandate, scenario.policyHash);
 
             const blocked = await client.evaluateAndSign(await request(stack, scenario, "BLOCK"));
             assertSigned(blocked);
 
             const other = await buildCase1(stack, {callDataArgs: {duration: 7200n}});
-            await activate(stack, other.mandateHash, other.policyHash);
+            await activate(stack, other.mandate, other.policyHash);
             const allowed = await client.evaluateAndSign(await request(stack, other, "ALLOW"));
             assertSigned(allowed);
         });
@@ -780,7 +780,7 @@ describe("RPC surface", () => {
     it("rejects a malformed request rather than partially applying it", async () => {
         await withRig(async ({stack, client, signer}) => {
             const scenario = await buildCase1(stack);
-            await activate(stack, scenario.mandateHash, scenario.policyHash);
+            await activate(stack, scenario.mandate, scenario.policyHash);
 
             const {connect} = await import("node:net");
             const socket = connect(signer.socketPath);

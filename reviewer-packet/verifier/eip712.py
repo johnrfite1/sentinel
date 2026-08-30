@@ -56,6 +56,7 @@ MANDATE_FIELDS: List[Tuple[str, str]] = [
     ("uint16", "schemaVersion"),
     ("bytes32", "mandateId"),
     ("address", "principal"),
+    ("address", "signer"),
     ("address", "vault"),
     ("uint256", "chainId"),
     ("address", "target"),
@@ -277,6 +278,13 @@ def receipt_struct_hash(receipt: Dict) -> bytes:
 
 def mandate_hash(mandate: Dict) -> bytes:
     return struct_hash(MANDATE_STRUCT_NAME, MANDATE_FIELDS, mandate)
+
+
+def mandate_digest(domain: Dict, mandate: Dict) -> bytes:
+    """The EIP-712 digest the vault owner signs to authorise one signer."""
+    return keccak256(
+        b"\x19\x01" + domain_separator(domain) + mandate_hash(mandate)
+    )
 
 
 def policy_hash(policy: Dict) -> bytes:

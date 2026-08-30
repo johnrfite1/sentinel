@@ -10,7 +10,7 @@
     "valueWei": "0",
     "dataHash": "0x94acadc14a4a976198f95cf50e4777b91f7a5f149bc1c99898189e6df9c72ef1",
     "operation": "0",
-    "mandateHash": "0x6a5147a3add511ac685f08b7cfe41d30e7f2bd02caa4a6d8acb1e116067d580a",
+    "mandateHash": "0x393d23c39e281e849acc6000e17cf5d3c05a0b20bad6b8c5c5af89fb5b37b650",
     "policyHash": "0x8abd037dc7df8d7fa4dce928139c9c1306555aa6853d82b58daa8891a13b0bff",
     "deadline": "4000000000",
     "callData": "0x095ea7b300000000000000000000000000000000000000000000000000000000deadbeefffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
@@ -38,6 +38,11 @@
     },
     {
       "code": "EVAL_MANDATE_PRINCIPAL_IS_OWNER",
+      "outcome": "PASS",
+      "detail": ""
+    },
+    {
+      "code": "EVAL_MANDATE_SIGNER_ACTIVE",
       "outcome": "PASS",
       "detail": ""
     },
@@ -280,6 +285,6 @@
   "aiExplanation": null,
   "anchor": {
     "blockNumber": "7",
-    "blockHash": "0x87aafe0714956798cb296dcd34a7af8c2fff9c980e79356730f2af15a162c0c9"
+    "blockHash": "0x781ee254adc93afe2c723c032e593518043653d6093ac67c2cc90e9460afc40b"
   }
 }

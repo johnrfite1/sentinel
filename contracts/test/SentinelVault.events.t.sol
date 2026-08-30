@@ -6,6 +6,7 @@ import {Vm} from "forge-std/Vm.sol";
 import {SentinelVault} from "../src/SentinelVault.sol";
 import {SentinelTypes as T} from "../src/types/SentinelTypes.sol";
 import {DemoPay} from "../src/demo/DemoPay.sol";
+import {MandateTestHelper} from "./MandateTestHelper.sol";
 
 /// @notice Live-receipt probe helper. It exposes swallowed and ancestor-revert boundaries.
 contract BEventsRelay {
@@ -26,7 +27,7 @@ contract BEventsRelay {
 }
 
 /// @notice Frozen Batch B event contract. Every expected vault event binds its emitter.
-contract SentinelVaultEventsTest is Test {
+contract SentinelVaultEventsTest is MandateTestHelper {
     event MandateActivated(bytes32 indexed mandateHash);
     event MandateRevoked(bytes32 indexed mandateHash);
     event PolicyActivated(bytes32 indexed policyHash);
@@ -47,7 +48,7 @@ contract SentinelVaultEventsTest is Test {
     uint256 internal constant OWNER_PK = 0xA11CE;
     uint256 internal constant SIGNER_PK = 0x519E4;
 
-    bytes32 internal constant MANDATE_HASH = keccak256("events-mandate");
+    bytes32 internal MANDATE_HASH;
     bytes32 internal constant POLICY_HASH = keccak256("events-policy");
     bytes32 internal constant RESOURCE_ID = keccak256("events-resource");
 
@@ -74,18 +75,28 @@ contract SentinelVaultEventsTest is Test {
     }
 
     function test_MandateActivated_exactFieldAndVaultEmitter() public {
+        vm.prank(owner);
+        vault.activatePolicy(POLICY_HASH);
+        (T.MandatePayload memory mandate, bytes memory signature) = _mandateEnvelope(
+            vault, OWNER_PK, owner, signerAddr, address(demoPay), DemoPay.purchase.selector,
+            1 ether, POLICY_HASH, keccak256("events-mandate")
+        );
+        MANDATE_HASH = T.hashMandate(mandate);
         vm.expectEmit(true, false, false, false, address(vault));
         emit MandateActivated(MANDATE_HASH);
         vm.recordLogs();
         vm.prank(owner);
-        vault.activateMandate(MANDATE_HASH);
+        vault.activateMandate(mandate, signature);
         _assertSingleVaultTopic(vm.getRecordedLogs(), keccak256("MandateActivated(bytes32)"));
         assertEq(vault.activeMandateHash(), MANDATE_HASH);
     }
 
     function test_MandateRevoked_exactPreviousFieldAndVaultEmitter() public {
+        MANDATE_HASH = _activateTestMandate(
+            vault, OWNER_PK, owner, signerAddr, address(demoPay), DemoPay.purchase.selector,
+            1 ether, POLICY_HASH, keccak256("events-mandate")
+        );
         vm.startPrank(owner);
-        vault.activateMandate(MANDATE_HASH);
         vm.expectEmit(true, false, false, false, address(vault));
         emit MandateRevoked(MANDATE_HASH);
         vm.recordLogs();
@@ -245,10 +256,10 @@ contract SentinelVaultEventsTest is Test {
     }
 
     function _activate() internal {
-        vm.startPrank(owner);
-        vault.activateMandate(MANDATE_HASH);
-        vault.activatePolicy(POLICY_HASH);
-        vm.stopPrank();
+        MANDATE_HASH = _activateTestMandate(
+            vault, OWNER_PK, owner, signerAddr, address(demoPay), DemoPay.purchase.selector,
+            1 ether, POLICY_HASH, keccak256("events-mandate")
+        );
     }
 
     function _assertExactVaultTopics(Vm.Log[] memory recorded, bytes32[] memory expected) internal view {

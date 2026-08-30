@@ -107,15 +107,13 @@ const ABOUT = {
   'wrong-chain-vault-target-mandate-policy': [
     'EVAL_CHAIN_BOUND', 'EVAL_VAULT_BOUND', 'EVAL_TARGET_BOUND', 'EVAL_MANDATE_ACTIVE',
     'EVAL_POLICY_ACTIVE', 'EVAL_ACTION_BINDS_MANDATE_AND_POLICY', 'EVAL_MANDATE_BINDS_POLICY',
-    'EVAL_MANDATE_PRINCIPAL_IS_OWNER'],
+    'EVAL_MANDATE_PRINCIPAL_IS_OWNER', 'EVAL_MANDATE_SIGNER_ACTIVE'],
   'stale-or-reused-action-nonce': ['EVAL_NONCE_CURRENT'],
   'expired-mandate-receipt-or-override': [
     'EVAL_MANDATE_WINDOW', 'EVAL_POLICY_WINDOW', 'EVAL_ACTION_DEADLINE'],
-  // §7.1 "Invalid or rotated signer". The evaluator has NO code for signer identity — receipt
-  // authentication is the isolated signer's, per §5.7's "active ... signer" and D-010. So this
-  // class cannot be exercised at the corpus layer by construction, which is why it is baselined
-  // rather than mapped to a code that does not exist.
-  'invalid-or-rotated-signer': [],
+  // Owner-signed v0.3 mandates name the only signer they authorise. Receipt signature recovery
+  // remains the verifier's job; this check covers the mandate-to-active-signer binding.
+  'invalid-or-rotated-signer': ['EVAL_MANDATE_SIGNER_ACTIVE'],
   'malformed-calldata-or-unknown-selector': [
     'EVAL_CALLDATA_UNDECODABLE', 'EVAL_SELECTOR_BOUND', 'EVAL_OPERATION_SUPPORTED'],
   'runtime-code-change-or-proxy-target': ['EVAL_TARGET_CODE_IDENTITY'],

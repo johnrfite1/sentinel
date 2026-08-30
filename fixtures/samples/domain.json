@@ -1,7 +1,7 @@
 {
   "note": "EIP-712 domain FIELD VALUES only. The domain type string, its typehash, and the separator construction are §5's to derive — deriving them is the point of D-010.",
   "name": "Sentinel",
-  "version": "0.2",
+  "version": "0.3",
   "chainId": "31337",
   "verifyingContract": "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512",
   "signerAddress": "0x70997970C51812dc3A010C7d01b50e0d17dc79C8"

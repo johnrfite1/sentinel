@@ -17,7 +17,7 @@ import {
 } from "viem";
 import {privateKeyToAccount} from "viem/accounts";
 import {anvil} from "viem/chains";
-import {hashMandate, hashPolicy} from "../src/signer/eip712.ts";
+import {digest, domainSeparator, hashMandate, hashPolicy} from "../src/signer/eip712.ts";
 import {decodeBySelector} from "../src/decode/index.ts";
 import type {
     ActionPayload,
@@ -385,6 +385,7 @@ export async function buildCase1(
         schemaVersion: 1n,
         mandateId: keccak256(stringToBytes("mandate:case-1")),
         principal: OWNER.address.toLowerCase() as Hex,
+        signer: SIGNER.address.toLowerCase() as Hex,
         vault: stack.vault,
         chainId: stack.chainId,
         target: stack.demoPay,
@@ -427,22 +428,30 @@ export async function buildCase1(
     return {mandate, policy, action, callData, mandateHash, policyHash};
 }
 
-/** Activates the mandate and policy hashes in the vault, as the owner would (§3.2 steps 3–4). */
-export async function activate(stack: Stack, mandateHash: Hex, policyHash: Hex): Promise<void> {
-    for (const [functionName, arg] of [
-        ["activateMandate", mandateHash],
-        ["activatePolicy", policyHash],
-    ] as const) {
-        const hash = await stack.walletClient.writeContract({
-            address: stack.vault,
-            abi: stack.vaultAbi,
-            functionName,
-            args: [arg],
-            account: OWNER,
-            chain: anvil,
-        });
-        await stack.publicClient.waitForTransactionReceipt({hash});
-    }
+/** Exhibits the full owner-signed mandate envelope after activating its linked policy. */
+export async function activate(stack: Stack, mandate: MandatePayload, policyHash: Hex): Promise<void> {
+    const policyTx = await stack.walletClient.writeContract({
+        address: stack.vault,
+        abi: stack.vaultAbi,
+        functionName: "activatePolicy",
+        args: [policyHash],
+        account: OWNER,
+        chain: anvil,
+    });
+    await stack.publicClient.waitForTransactionReceipt({hash: policyTx});
+
+    const ownerSignature = await OWNER.sign({
+        hash: digest(domainSeparator(stack.chainId, stack.vault), hashMandate(mandate)),
+    });
+    const mandateTx = await stack.walletClient.writeContract({
+        address: stack.vault,
+        abi: stack.vaultAbi,
+        functionName: "activateMandate",
+        args: [mandate, ownerSignature],
+        account: OWNER,
+        chain: anvil,
+    });
+    await stack.publicClient.waitForTransactionReceipt({hash: mandateTx});
 }
 
 /**

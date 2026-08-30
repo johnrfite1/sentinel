@@ -5,6 +5,7 @@ import {Test} from "forge-std/Test.sol";
 import {SentinelVault} from "../src/SentinelVault.sol";
 import {SentinelTypes as T} from "../src/types/SentinelTypes.sol";
 import {DemoPay} from "../src/demo/DemoPay.sol";
+import {MandateTestHelper} from "./MandateTestHelper.sol";
 
 /// @notice Observes the vault's `actionNonce` DURING the external call.
 ///
@@ -43,7 +44,7 @@ contract NonceObserver {
 ///
 /// @dev COVERAGE BOUNDARY. Same as the sibling suite: this proves the vault ENFORCES a
 ///      receipt, never that the receipt carried a correct verdict.
-contract SentinelVaultBackstopsTest is Test {
+contract SentinelVaultBackstopsTest is MandateTestHelper {
     SentinelVault internal vault;
     DemoPay internal demoPay;
 
@@ -55,7 +56,7 @@ contract SentinelVaultBackstopsTest is Test {
 
     uint256 internal constant MAX_VALUE = 0.01 ether;
     bytes32 internal constant RESOURCE = keccak256("weather-basic-24h");
-    bytes32 internal constant MANDATE_HASH = keccak256("mandate-1");
+    bytes32 internal MANDATE_HASH;
     bytes32 internal constant POLICY_HASH = keccak256("policy-1");
 
     bytes4 internal constant PURCHASE_SEL = DemoPay.purchase.selector;
@@ -73,10 +74,10 @@ contract SentinelVaultBackstopsTest is Test {
         vault = new SentinelVault(owner, signerAddr, MAX_VALUE, targets, selectors);
         vm.deal(address(vault), 10 ether);
 
-        vm.startPrank(owner);
-        vault.activateMandate(MANDATE_HASH);
-        vault.activatePolicy(POLICY_HASH);
-        vm.stopPrank();
+        MANDATE_HASH = _activateTestMandate(
+            vault, OWNER_PK, owner, signerAddr, address(demoPay), PURCHASE_SEL, MAX_VALUE,
+            POLICY_HASH, keccak256("mandate-1")
+        );
 
         vm.warp(1_000_000);
     }
@@ -181,10 +182,10 @@ contract SentinelVaultBackstopsTest is Test {
         require(address(obs) == predicted, "address prediction failed");
 
         vm.deal(address(probeVault), 10 ether);
-        vm.startPrank(owner);
-        probeVault.activateMandate(MANDATE_HASH);
-        probeVault.activatePolicy(POLICY_HASH);
-        vm.stopPrank();
+        bytes32 probeMandateHash = _activateTestMandate(
+            probeVault, OWNER_PK, owner, signerAddr, address(obs), sel, 1 ether,
+            POLICY_HASH, keccak256("probe-mandate")
+        );
 
         bytes memory data = abi.encodePacked(sel);
         T.ActionPayload memory a = T.ActionPayload({
@@ -196,7 +197,7 @@ contract SentinelVaultBackstopsTest is Test {
             valueWei: 0.1 ether,
             dataHash: keccak256(data),
             operation: uint8(T.Operation.CALL),
-            mandateHash: MANDATE_HASH,
+            mandateHash: probeMandateHash,
             policyHash: POLICY_HASH,
             deadline: uint64(block.timestamp + 1 hours)
         });
@@ -332,12 +333,17 @@ contract SentinelVaultBackstopsTest is Test {
         SentinelVault fresh = new SentinelVault(owner, signerAddr, MAX_VALUE, targets, selectors);
         vm.deal(address(fresh), 1 ether);
 
+        bytes32 freshMandateHash = _activateTestMandate(
+            fresh, OWNER_PK, owner, signerAddr, address(demoPay), PURCHASE_SEL, MAX_VALUE,
+            POLICY_HASH, keccak256("fresh-mandate")
+        );
         vm.prank(owner);
-        fresh.activateMandate(MANDATE_HASH);
+        fresh.activatePolicy(bytes32(0));
 
         bytes memory data = _callData();
         T.ActionPayload memory a = _action(data);
         a.vault = address(fresh);
+        a.mandateHash = freshMandateHash;
         a.policyHash = bytes32(0);
 
         T.DecisionReceiptPayload memory r = _receipt(a, T.Verdict.ALLOW);
@@ -576,10 +582,10 @@ contract SentinelVaultBackstopsTest is Test {
         selectors[0] = TokenStub.approve.selector;
 
         SentinelVault v = new SentinelVault(owner, signerAddr, MAX_VALUE, targets, selectors);
-        vm.startPrank(owner);
-        v.activateMandate(MANDATE_HASH);
-        v.activatePolicy(POLICY_HASH);
-        vm.stopPrank();
+        bytes32 tokenMandateHash = _activateTestMandate(
+            v, OWNER_PK, owner, signerAddr, address(token), TokenStub.approve.selector,
+            MAX_VALUE, POLICY_HASH, keccak256("token-mandate")
+        );
 
         address attacker = address(0xBAD);
         bytes memory data = abi.encodeCall(TokenStub.approve, (attacker, type(uint256).max));
@@ -593,7 +599,7 @@ contract SentinelVaultBackstopsTest is Test {
             valueWei: 0, // the wei ceiling is never consulted
             dataHash: keccak256(data),
             operation: uint8(T.Operation.CALL),
-            mandateHash: MANDATE_HASH,
+            mandateHash: tokenMandateHash,
             policyHash: POLICY_HASH,
             deadline: uint64(block.timestamp + 1 hours)
         });
@@ -639,10 +645,10 @@ contract SentinelVaultBackstopsTest is Test {
         selectors[0] = PURCHASE_SEL;
 
         SentinelVault v = new SentinelVault(owner, signerAddr, cap, targets, selectors);
-        vm.startPrank(owner);
-        v.activateMandate(MANDATE_HASH);
-        v.activatePolicy(POLICY_HASH);
-        vm.stopPrank();
+        bytes32 aggregateMandateHash = _activateTestMandate(
+            v, OWNER_PK, owner, signerAddr, address(demoPay), PURCHASE_SEL, cap,
+            POLICY_HASH, keccak256("aggregate-mandate")
+        );
         vm.deal(address(v), 100 * cap);
 
         // CONTROL FIRST. One action ABOVE the cap is still refused. Without it the drain below
@@ -652,6 +658,7 @@ contract SentinelVaultBackstopsTest is Test {
         {
             bytes memory data = _purchaseFor(0);
             T.ActionPayload memory a = _actionOn(v, cap + 1, data);
+            a.mandateHash = aggregateMandateHash;
             T.DecisionReceiptPayload memory r = _receipt(a, T.Verdict.ALLOW);
             bytes memory sig = _signFor(v, SIGNER_PK, T.hashReceipt(r));
             vm.prank(address(0xDEAD));
@@ -676,6 +683,7 @@ contract SentinelVaultBackstopsTest is Test {
         for (uint256 i = 0; i < 100; i++) {
             bytes memory data = _purchaseFor(i + 1);
             T.ActionPayload memory a = _actionOn(v, cap, data);
+            a.mandateHash = aggregateMandateHash;
             T.DecisionReceiptPayload memory r = _receipt(a, T.Verdict.ALLOW);
             bytes memory sig = _signFor(v, SIGNER_PK, T.hashReceipt(r));
             vm.prank(address(0xDEAD)); // no key needed: execution is permissionless
@@ -767,17 +775,9 @@ contract SentinelVaultBackstopsTest is Test {
         assertEq(vault.actionNonce(), 1, "the override did not execute");
     }
 
-    /// @notice ROTATION IS NOT REVOCATION. Asserts the limit, not a protection.
-    ///
-    /// @dev A-040. The comment at the signer check used to claim the named-signer half stops
-    ///      "a stale receipt naming a rotated-out signer if that key were later reinstated".
-    ///      It does not. Nothing binds a receipt to the EPOCH in which its signer was active,
-    ///      so both checks are point-in-time comparisons against whoever `signer` is now.
-    ///
-    ///      Currency comes from `expiresAt` and the action nonce instead. If epoch binding is
-    ///      ever added this test fails, and that failure is the signal to update the comment
-    ///      and the v1.1 register — not to delete the test.
-    function test_LIMIT_reinstatingARotatedOutSignerRevivesItsOldReceipts() public {
+    /// @notice Rotation revokes the signer-bound mandate, so reinstating an old signer does
+    ///         not revive receipts issued under the prior mandate epoch.
+    function test_reinstatingARotatedOutSignerDoesNotReviveOldReceipts() public {
         address signerB = vm.addr(0xB0B);
         bytes memory data = _callData();
         T.ActionPayload memory a = _action(data);
@@ -787,20 +787,21 @@ contract SentinelVaultBackstopsTest is Test {
         // Rotate away: the receipt correctly dies.
         vm.prank(owner);
         vault.rotateSigner(signerB);
-        vm.expectRevert(SentinelVault.WrongSigner.selector);
+        vm.expectRevert(SentinelVault.MandateNotActive.selector);
         vault.executeWithReceipt(a, data, r, sig);
 
-        // Rotate back: the same receipt, unchanged, executes.
+        // Rotate back: the old mandate is still revoked and the receipt remains dead.
         vm.prank(owner);
         vault.rotateSigner(signerAddr);
+        vm.expectRevert(SentinelVault.MandateNotActive.selector);
         vault.executeWithReceipt(a, data, r, sig);
 
-        assertEq(vault.actionNonce(), 1, "REPAIR or REGRESSION: receipts are now epoch-bound - see A-040");
+        assertEq(vault.actionNonce(), 0, "a prior mandate epoch was revived by signer rotation");
     }
 
-    /// @notice The mirror: a receipt pre-minted by a standby key goes live the instant the
-    ///         owner rotates to that key. Same missing property, other direction.
-    function test_LIMIT_receiptFromAFutureSignerGoesLiveOnRotation() public {
+    /// @notice A receipt pre-minted by a standby key cannot go live through rotation because
+    ///         the owner must sign and activate a new mandate naming that signer.
+    function test_receiptFromAFutureSignerDoesNotGoLiveOnRotation() public {
         uint256 pkB = 0xB0B;
         address signerB = vm.addr(pkB);
         bytes memory data = _callData();
@@ -815,9 +816,10 @@ contract SentinelVaultBackstopsTest is Test {
 
         vm.prank(owner);
         vault.rotateSigner(signerB);
+        vm.expectRevert(SentinelVault.MandateNotActive.selector);
         vault.executeWithReceipt(a, data, r, sig);
 
-        assertEq(vault.actionNonce(), 1, "REPAIR or REGRESSION: pre-minted receipts no longer activate on rotation");
+        assertEq(vault.actionNonce(), 0, "a pre-minted receipt activated without a new mandate");
     }
 
     /// @dev `_sign` is bound to the suite's own vault; this variant signs for another.

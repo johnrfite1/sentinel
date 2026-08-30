@@ -5,6 +5,16 @@ Prepared by: Claude (Fable), from the facilitated intake session with John
 For: Opus 5 (architect and build director) and its subagents
 Status: Rulings ratified by John 2026-07-27 (canonical record: `docs/decisions.md`). Build authorized through Gate S2. Anything in this brief marked "agent note" is elaboration, not ratified text.
 
+**2026-08-29 — CRUCIBLE CYCLE 2 IMPLEMENTATION CHECKPOINT AUTHORISED (D-081); PUBLICATION IS
+NOT AUTHORISED.** John authorised implementation of the three recorded Adversary withdrawal
+conditions, one local Sentinel commit, and recording that immutable SHA in the Crucible session
+ledger. The candidate adds a v0.3 owner-signed mandate that authorises one signer, fail-closed
+exclusive time windows, authenticated chain/vault identity through an out-of-band signed
+deployment manifest, nonce and exact-calldata enforcement, a key-free generated release, and a
+cold Anvil exact-call/mismatch/replay demonstration. This is evidence for the next Crucible cycle,
+not a withdrawal ruling: no chair has re-struck the candidate, Cycle 2 is not ratified, no
+Critical is withdrawn, and no publication, visibility change, or push is authorised.
+
 **2026-08-16 (end of session) — GATE S2 IS SIGNED (PASS, John, D-041), so "authorized through Gate S2" has been spent.** Start at `docs/session-state.md` — §1 says what to do, and the answer is probably nothing without an instruction from John. After S2 was signed, the §9 steps 1–3 adversarial review it was signed WITHOUT was run at John's direction and found **A-043, a CRITICAL exploitable bypass** — a signed ALLOW obtainable for calldata nobody decoded, reproduced twice onchain — plus six further findings (A-044). All fixed or recorded; the S2 signature stands, annotated. Both of D-002's mid-build gates are behind the project and there is no next gate until pre-publication. **What comes after S2 is the §14.8 ladder "as John directs" — it is not an agent's call to start climbing it**, and D-003's scope-expansion stop condition applies with more force now, not less, because the obvious next move after a signed gate is to invent the next milestone. Remaining known work is v1.1 and is bounded by the re-label decision (`docs/v1-1-register.md`).
 
 **2026-08-19 — THE POST-S2 REVIEW ARC IS COMPLETE, ITS REMEDIATION IS ONLY PARTLY REVERIFIED, AND

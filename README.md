@@ -8,6 +8,30 @@ This project is distinct from Uppsala Security's Sentinel Protocol and from sent
 
 Sentinel is not a detector. It does not infer danger from bytecode, from a story an agent told, or from how a call “looks.” It checks whether one exact EVM call matches a human-signed mandate, against simulated effects at a recorded block, and it permits execution only of that exact attested call.
 
+## Enforcement publication profile v0.3
+
+The repository now contains a separate enforcement release candidate under `release/`. It is
+not a publication decision or a production deployment. It adds the onchain and trust-root
+evidence that the private comprehension packet below deliberately lacks:
+
+- SentinelVault source, ABI, bytecode, compiler metadata, focused adversarial tests, and a
+  reproducible release manifest;
+- an owner-signed mandate that names the only signer the vault and isolated signer may accept;
+- exclusive validity windows (`issuedAt <= evaluationTime < expiresAt`), authenticated
+  chain/vault identity, exact calldata binding, and nonce consumption;
+- a signed deployment manifest whose authority is supplied out of band rather than nominated by
+  `domain.json`; and
+- a cold Anvil demonstration that creates fresh fixture authority for each run, writes no private
+  keys, executes the exact authorized call, and rejects wrong authority, altered calldata, and
+  replay.
+
+See `docs/enforcement-release-v0.3.md` for the v0.3 boundary and reproduction commands. The
+remainder of this README describes a private comprehension packet regenerated on the v0.3
+mandate/domain schema while retaining the `sentinel.evidence.v0.2` evidence-envelope tag. It is
+not the key-free enforcement release. D-080's Gate 8 result applies to the predecessor v0.2
+packet and has not been rerun against this candidate; its recorded qualitative limits remain
+historical evidence, not the v0.3 release trust model.
+
 ## What this packet does not contain
 
 This packet is the off-chain half. SentinelVault is not in it — no source, no ABI, no tests — so “the vault will execute that exact call, or nothing” is a **design claim here, not a demonstrated one**. The fixtures were produced on chain 31337, a local devnet, using the standard local development accounts. Nothing here is a deployment.
@@ -20,9 +44,9 @@ The packet also cannot demonstrate its own headline trust-root property. See the
 
 Binding is to an **exact action**, not to a class of similar calls. These are the fields. A signature over them is not a signature over a similar call.
 
-The **EIP-712 domain** binds `name` (`Sentinel`), `version` (`0.2`), `chainId`, and `verifyingContract` (the vault). A payload signed for a different chain or vault does not verify.
+The **EIP-712 domain** binds `name` (`Sentinel`), `version` (`0.3`), `chainId`, and `verifyingContract` (the vault). A payload signed for a different chain or vault does not verify.
 
-The **mandate** (owner-signed) binds `schemaVersion`, `mandateId`, `principal`, `vault`, `chainId`, `target`, `targetCodeHash`, `selector`, `maxNativeValueWei`, `purposeKind`, `resourceId`, `beneficiary`, `durationSeconds`, `recurringAllowed`, `validAfter`, `validUntil`, and `policyHash`.
+The **mandate** (owner-signed) binds `schemaVersion`, `mandateId`, `principal`, `signer`, `vault`, `chainId`, `target`, `targetCodeHash`, `selector`, `maxNativeValueWei`, `purposeKind`, `resourceId`, `beneficiary`, `durationSeconds`, `recurringAllowed`, `validAfter`, `validUntil`, and `policyHash`.
 
 The **policy** (hashed into the mandate and the action) binds `schemaVersion`, `policyVersion`, `vault`, `chainId`, `allowedOperation`, `allowedTargetsHash`, `allowedSelectorsHash`, `maxNativeValueWei`, `maxAllowanceIncreaseBaseUnits`, `allowedCallGraphHash`, `validAfter`, `validUntil`, and `failureMode`. `failureMode` decides what an UNRESOLVED check becomes: `0` = FAIL_CLOSED (BLOCK), `1` = REVIEW. It is pre-declared in the policy, not the evaluator’s discretion at decision time.
 
@@ -32,7 +56,7 @@ The **receipt** (signer-attested) binds `schemaVersion`, `decisionId`, `actionHa
 
 An optional **owner override** of a REVIEW receipt binds `schemaVersion`, `reviewReceiptHash`, `actionHash`, `mandateHash`, `policyHash`, `actionNonce`, `reasonHash`, `issuedAt`, and `expiresAt`. A BLOCK cannot be overridden.
 
-Mandate, policy and evidence travel as plain JSON and are committed by hash; the receipt binds those hashes. The owner’s signature over the mandate is **not exhibited in this packet** — only the signer’s receipt signature and the owner’s override signature are present and re-checked.
+Mandate, policy and evidence travel as plain JSON and are committed by hash; the receipt binds those hashes. Each decision bundle now exhibits the owner’s signature over its signer-bound mandate as `mandate-signature.json`, alongside the signer’s receipt signature and, for REVIEW, the owner’s override signature. These are fixed-key private fixtures for format inspection, not production identity evidence; the key-free release uses fresh per-run lab authority and an independently authenticated deployment manifest.
 
 The agent’s rationale is not among those fields. It never enters the signature.
 

@@ -68,6 +68,7 @@ const mandate: MandatePayload = {
     schemaVersion: 1n,
     mandateId: keccak256(stringToBytes("mandate")),
     principal: OWNER,
+    signer: SIGNER_ADDRESS,
     vault: VAULT,
     chainId: CHAIN_ID,
     target: TARGET,

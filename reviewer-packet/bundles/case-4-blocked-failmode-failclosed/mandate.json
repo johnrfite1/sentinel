@@ -2,6 +2,7 @@
   "schemaVersion": "1",
   "mandateId": "0x9cd295e3042542f0111170c983836686c07751b65b1eac778e0b626c439c9ec5",
   "principal": "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266",
+  "signer": "0x70997970c51812dc3a010c7d01b50e0d17dc79c8",
   "vault": "0xe7f1725e7734ce288f8367e1bb143e90bb3f0512",
   "chainId": "31337",
   "target": "0x5fbdb2315678afecb367f032d93f642f64180aa3",

@@ -162,7 +162,9 @@ function isDeclaredAt(key: string, depth: number, inEnvironment: boolean): boole
  */
 export const ALLOWED_PAYLOAD_KEYS: Readonly<Record<string, readonly string[]>> = {
     mandate: [
-        "schemaVersion", "mandateId", "principal", "vault", "chainId", "target",
+        // `signer` is owner-authored mandate input, not evaluator output. Labellers need the
+        // complete signed authorisation envelope to judge signer-identity substitutions.
+        "schemaVersion", "mandateId", "principal", "signer", "vault", "chainId", "target",
         "targetCodeHash", "selector", "maxNativeValueWei", "purposeKind", "resourceId",
         "beneficiary", "durationSeconds", "recurringAllowed", "validAfter", "validUntil",
         "policyHash",
