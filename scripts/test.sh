@@ -267,6 +267,43 @@ step "vendor honesty (§7.5 Gate 5, D-008)"
 step "suite floors (R4-F4, D-058)"
 ./scripts/check-suite-floors.sh || fail=1
 
+# THE PUBLICATION SUITES, AND WHETHER THEIR TESTS ASSERT ANYTHING (R-A018-23/24, D-083(j)).
+#
+# WHY A SECOND FLOOR GUARD. The one above prints six floors and not one of them covers
+# `verifier/test_publication_verifier.py` or `verifier/test_publication_override.py`. Those
+# two files ARE the closure evidence for R-A018-06 and R-A018-16, and until this line they
+# could be deleted, weakened, or turned red with no mechanical signal whatsoever — the same
+# defect the Foundry and TypeScript floors below close for those two suites. It asserts
+# "N pass AND exactly these named tests fail", because with 77 of 81 required to pass a NEW
+# failure hides perfectly behind a red somebody fixed.
+#
+# AND A PASS COUNT CANNOT SEE A VACUOUS TEST, WHICH IS WHY THE SECOND LINE EXISTS. During the
+# F7 repair three tests in `test_publication_verifier.py` were GREEN and asserting NOTHING for
+# hours — and the floor guard was RIGHT the whole time: pass count and declared red set both
+# matched throughout. The vacuity guard traces a real run and reports a PASSING test whose
+# assertion never executed. **Read its output rather than its exit status**: it prints the six
+# classes it catches and the ones it does not, and the list of things it cannot see is not
+# short. An assertion that executes and is merely WEAK is invisible to it — only
+# `scripts/mutate.sh` finds those.
+#
+# DEEP PROFILE ONLY, and that is a COST decision, not a confidence one. Between them they run
+# three unittest suites for real, one of them under a `sys.settrace` line tracer. **Measured
+# here on 2026-08-30 at 41s + 135s = about three minutes on an idle machine, and at nine
+# minutes with other work running alongside** — each guard prints its own per-module seconds,
+# which is the number to trust rather than this sentence. The fast profile is what gets run
+# every few minutes while working. **State the consequence plainly: a defect either guard
+# would catch survives a fast run.** `scripts/check-suite-floors.sh` therefore PRINTS both
+# declarations in the fast profile, so a fast run says what it did not check instead of being
+# silent about it. If that trade ever reads wrong, move these two up into both profiles — do
+# not thin out what they check to afford it.
+if [ "$PROFILE" = "gate" ]; then
+    step "publication-suite floors (F6 — R-A018-06/16 closure evidence)"
+    ./scripts/check-publication-suite-floors.sh || fail=1
+
+    step "test vacuity (R-A018-24)"
+    ./scripts/check-test-vacuity.sh || fail=1
+fi
+
 # COUNT FLOORS FOR THE OTHER TWO SUITES (round six L8-14; authorised by John at D-055(d)).
 #
 # WHY THESE EXIST AT ALL. Until now only the verifier had a floor. The Foundry and TypeScript
@@ -409,6 +446,32 @@ else
     echo "forge not found. Install with: curl -L https://foundry.paradigm.xyz | bash && foundryup"
     fail=1
 fi
+
+# RELEASE FRESHNESS (R-A018-22/23, authorised at D-083(j)).
+#
+# WHY IT IS WIRED AT ALL. `release/verifier/` shipped the PRE-REPAIR verifier while
+# `release/MANIFEST.sha256` matched it perfectly — internally consistent, self-verifying and
+# wrong. The cause was mundane: the assembler was re-run mid-batch, before the verifier
+# repairs landed, and nothing re-ran it afterwards. Nothing anywhere would have noticed,
+# because `grep -n "release\|assemble" scripts/test.sh .githooks/pre-commit` returned NOTHING.
+# The guard was written first and ran in no gate; this line is the other half of the finding,
+# and without it the guard closes exactly the part of R-A018-22 that was never the problem.
+#
+# ORDERED AFTER THE SOLIDITY STAGE ON PURPOSE, for the same reason the TypeScript stage below
+# is: the assembler reads `contracts/out/SentinelVault.sol/SentinelVault.json`, which is
+# untracked and produced by `forge`. Run before that stage, on a tree that has never been
+# built, the guard REFUSES with exit 2 — which is honest, but a refusal is not a check, and a
+# guard that cannot run is this repository's most-repeated defect. It is NOT beside the other
+# `check-*.sh` steps for that reason alone.
+#
+# BOTH PROFILES, deliberately. It costs about eight seconds, and a stale `release/` is a
+# defect that has ALREADY SHIPPED here once. That is not gate-evidence-only work.
+#
+# EXPECT IT TO GO RED WHILE SOURCE IS BEING EDITED, and do not read that as noise: `release/`
+# is a BUILD ARTIFACT. Re-run `scripts/assemble-enforcement-release.py`. Never hand-edit the
+# tree to make this line pass.
+step "release/ freshness (R-A018-22)"
+./scripts/check-release-sync.sh || fail=1
 
 # Ordered after the Solidity stage on purpose: the TypeScript suite deploys the compiled
 # artifacts from contracts/out and runs the signer against the real vault, so it needs the

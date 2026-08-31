@@ -212,4 +212,15 @@ _floors_rc=$?
 # failure to report a later success would be the defect this repository keeps catching.
 "$SENTINEL_ROOT/scripts/check-publication-suite-floors.sh" --print-floors || _floors_rc=1
 
+# AND THE ONE THING NO FLOOR ABOVE CAN SEE (R-A018-24, D-083(j)). Every number printed on
+# this page is a COUNT, and a count cannot tell a test that asserts from a test that does
+# not. Three tests in `test_publication_verifier.py` were green and asserting NOTHING for
+# hours while the pass count and the declared red set were both correct throughout.
+# `scripts/check-test-vacuity.sh` is the instrument for that, it runs in the DEEP profile
+# only, and this call PRINTS its declaration for the same reason the line above prints the
+# publication floors: a fast run should say what it did not check rather than be silent
+# about it. **Reading this block is not evidence that any of it holds** — run
+# `./scripts/test.sh --gate`, or that script on its own.
+"$SENTINEL_ROOT/scripts/check-test-vacuity.sh" --print-declaration || _floors_rc=1
+
 exit "$_floors_rc"

@@ -238,7 +238,56 @@ bootstrap from it — and supplied the two lines instead, to sit beside
 ./scripts/check-publication-suite-floors.sh || fail=1
 ```
 
-The second adds ~90s, so it may belong under `--gate` only. **Closes when** both run in a gate.
+**CLOSED 2026-08-30.** Both wired at `scripts/test.sh` — `check-release-sync.sh` in **both**
+profiles (8.3s; placed after the Solidity stage, because the assembler reads an untracked Foundry
+artifact and would otherwise `exit 2` "refused" on an unbuilt tree, and a refusal is not a check),
+`check-publication-suite-floors.sh` under `--gate` only. A fast run now **prints both declarations
+and any carried findings**, so it discloses what it did not check rather than being silent about a
+deep-only guard. The register's own literal test — `grep -n "release\|assemble" scripts/test.sh
+.githooks/pre-commit` — now returns 10 lines where it returned none.
+
+**A premise in this entry was wrong and is corrected.** It said `scripts/test.sh` is digest-pinned
+by `check-gate-immutability.sh`. **It is not.** That guard extracts the 171-line region between
+`# >>> GATE BOOTSTRAP` and `# <<< GATE BOOTSTRAP` **fresh on every run** and exercises it against
+synthetic subjects; no digest of `test.sh` is stored anywhere. What is protected is that region,
+not the file, and the supervisor's `_gate_before`/`_gate_now` comparison is a within-run check
+against mid-execution edits with no persisted baseline. The wiring went outside the protected
+region, where every other guard step already lives; the bootstrap digest was identical before and
+after, and `check-gate-immutability.sh` passes 10/10.
+
+### R-A018-25 — THE GATE ABORTS SILENTLY ON ITS OWN FAILURE PATH — NEW, and it is the worst of these
+
+Found 2026-08-30 by the guard-wiring agent, verified independently. **A failure branch of
+`scripts/test.sh` kills the gate before it can record the failure, and skips every stage after it.**
+
+`scripts/test.sh:12` sets `set -euo pipefail`. Line 735, inside the corpus `DIGEST MISMATCH`
+branch, is:
+
+```sh
+diff "$CORPUS_TMP/.../_digests.json" fixtures/corpus/.../_digests.json | head -20
+fail=1
+```
+
+When the digests differ — which is the only way to reach this line — `diff` exits 1, `pipefail`
+propagates it, `set -e` aborts, and **`fail=1` on the next line never runs.** The §7.3 ablation and
+the D-010 verifier stages that follow never execute. The same shape is at line 831 for the
+ablation-report diff.
+
+**Why this is the worst finding of the batch.** Every other defect here was a check that did not
+exist or a claim stronger than its evidence. This one is a check that *fires correctly*, prints its
+diagnosis, and then destroys the run's ability to report it. It is this project's own recorded
+failure mode — *a probe that is dead and whose silence reads like a pass* — **on the gate's own
+failure path**, where it is hardest to notice, because you only reach it when something is already
+wrong.
+
+**The only reason it surfaced as `exit 5` rather than a silent stop is the supervisor's
+completion-token check** (`scripts/test.sh:1332`, "Anything that stops the body before here … a
+`set -e` abort …"). That defence was written for exactly this and it worked. It is the last line,
+not the first.
+
+**NOT FIXED, and deliberately.** The one-line repair is `|| true` on each `diff`, but changing the
+gate's failure semantics is not an agent's call — it is the instrument every other claim in this
+project is measured against. **Put to John.**
 
 ### R-A018-24 — A pass-count floor cannot see a vacuous test — NEW
 
@@ -258,13 +307,40 @@ argparse reprints the module docstring, which mentions the flag in prose — so 
 flag fully suppressed. The test author's own first draft had the identical hole. **The mutation
 pass caught it; reading did not.**
 
+**CLOSED 2026-08-30** by `scripts/check-test-vacuity.sh`, wired under `--gate`. It catches six
+decidable classes — a `test_*` never invoked; a passing test whose body executed no statement; a
+passing test in which no assertion executed; an assertion in a block never entered (**the exact
+shape of the F7 defect**); a test with no assertion at all; a `def` shadowed by a later `def`; and
+an assertion whose compared arguments are all literal constants.
+
+**Its limits are printed on every run, which is the point.** An assertion that executes and is
+merely *weak* is invisible to it — the `assertIn("evaluation-time", …)` case above is named in the
+guard's own output as a class it does **not** catch, reachable only by `scripts/mutate.sh`. Also
+excluded: vacuity inside a red, errored or skipped test (a failing test legitimately stops early —
+the exclusion count is printed), and "cannot fail" in general, which is undecidable. **A guard
+that overstates its reach is the defect this project keeps finding; this one states what it
+misses.**
+
+**Two real dead assertions found on its first run**, both in `verifier/test_verifier.py`, both
+carried on a per-check ratchet rather than fixed, because the guard's author may not edit a test
+file: `TestUnassertedValidation.test_pair_aligned_whitespace_cannot_collide_an_encoded_word` (a
+`continue` fires and the trailing `assertNotEqual` is unreachable — **the test's own comment
+records that its first version had the same defect**), and
+`TestJCSStructure.test_key_sorting_is_utf16_code_units` (`assertGreater` over two literals — a
+comment written as an assertion). **Owed to someone permitted to edit tests.**
+
 ### Two smaller items left by the F7 repair
 
 - **`verify_publication.py`'s `KNOWN RED TESTS` block is stale, and its staleness was
   load-bearing.** It records that one test "now passes, but incidentally". That parenthesis *is*
   the declaration that let a vacuous test stand. The test now passes for a real reason. The
   "77/81 expected" line above it remains accurate. A test author cannot edit that file; someone
-  permitted to should.
+  permitted to should. **DONE 2026-08-30 under D-083(j).** The block was rewritten: 77/81 was
+  re-derived by running the suite rather than assumed; the fourth `TestDeploymentIdentityIsNotBound`
+  test is now recorded as green *for a reason*, with the incidental-pass parenthesis and what it
+  cost kept as the lesson rather than deleted; R-A018-17's entry is re-labelled ruled-disclosed-only
+  per D-083(b); and the override suite's expected state (61/61, no deliberate reds, per D-083(c))
+  is declared there too, since that file previously carried no record of its own.
 - **`test_a_superseded_manifest_cannot_certify_after_signer_rotation` passes for a weaker reason
   than its name claims.** Its rotated manifest is built, self-asserted, and never presented to the
   predicate; what is actually exercised is the 90-day lifetime bound. Left alone deliberately — a
@@ -388,7 +464,7 @@ accumulated, which the surface `a38cff9` added does not have.**
 |---|---|---|---|
 | 1 | Adversarial test coverage | every verifier module predating `a38cff9` | `verify_publication.py`, `deployment.py` — §1.2 |
 | 2 | EIP-2 low-s canonical signatures | `verify.py`, receipt + refusal record | all three new signature checks — R-A018-16(a) |
-| 3 | Examine an override credential whenever one is present | `verify.py::_override_checks`, called unconditionally at its check list | `check_owner_override`, gated behind the override path — R-A018-18 |
+| 3 | Examine an override credential whenever one is present | `verify.py::_override_checks`, called unconditionally at its check list | `check_owner_override`, gated behind the override path — R-A018-18, **CLOSED** |
 | 4 | Name the artifact a refusal is about | `deployment.py` after R-A018-16(c) | the override arm, twenty lines away — R-A018-20 |
 
 **This is not four bugs. It is one omission with four faces:** `a38cff9` rebuilt the verification
@@ -426,6 +502,28 @@ fixed once, and lost in the rewrite.
 **Closes when** an override credential is either examined on every path or refused as a shape that
 cannot be certified. **Which of the two is a scope decision and is John's** — the test author
 correctly declined to pick.
+
+**RULED AND CLOSED 2026-08-30. John took the first option at D-083(c): an override credential is
+EXAMINED ON EVERY PATH**, matching `verify.py::_override_checks`. Implemented in
+`verifier/verify_publication.py`: `verify()` now calls `check_owner_override` when the caller
+declares the override path **or** the bundle carries an `override.json`, and that function opens
+with the §5.5 pairing check — the receipt a credential authorises must be REVIEW. An ALLOW bundle
+carrying an override is refused with *"override.json is present, but the receipt it authorises is
+ALLOW, not REVIEW"*, naming §5.5, both Vault entry points and R-A018-18.
+
+**Where the implementation deliberately departs from the house pattern, and why.** `_override_checks`
+accumulates every check and reports them together, so its ordering carries no information; this
+module refuses at the first failure, so ordering *is* the diagnosis. The §5.5 pairing check is
+therefore FIRST here and last there. Authenticating first would answer an outsider-signed
+credential on an ALLOW bundle with an `ownerAddress` mismatch — true, and the wrong repair to send
+a recipient after, because a correct owner would not make that bundle certifiable either. That is
+R-A018-16(c)'s discipline applied to a pairing rather than to a field.
+
+**Measured after the repair:** `verifier/test_publication_override.py` 61/61, with no deliberate
+reds left in that file; `verifier/test_publication_verifier.py` unchanged at 77/81;
+`verifier/test_verifier.py` 221/221. `scripts/check-publication-suite-floors.sh` now FAILS until
+its declaration is moved to floor 61 with both R-A018-18 RED lines removed — the guard behaving
+exactly as designed, since it cannot tell an authorised closure from unauthorised work.
 
 ### R-A018-19 — A certifying override run does not say it was an override — NEW
 
@@ -468,7 +566,7 @@ check inventory against the new modules systematically.
 **CLOSED 2026-08-30.** Fixed by deriving the closed nine-field set from `eip712.OVERRIDE_FIELDS`
 rather than restating it, so it cannot drift from what is actually hashed. Both
 `TestOverrideRefusalsAreDiagnosed` tests green; the override suite went 4 failures → 2, and the 2
-remaining are R-A018-18, reserved to John.
+remaining were R-A018-18 — **since ruled at D-083(c) and closed, taking that file to 61/61.**
 
 **One stale docstring left for a test author, deliberately not edited by the implementer.** In
 `verifier/test_publication_override.py`, `test_an_under_or_over_determined_override_payload_is_refused`
@@ -502,7 +600,7 @@ tool whose value is unaided comprehension that is an inherited-Critical-2 concer
 **Closes when** all three are corrected and the corresponding tests in
 `verifier/test_publication_verifier.py` pass.
 
-### R-A018-17 — Calldata can redirect the mandated beneficiary — NEW, NEEDS A SCOPE RULING
+### R-A018-17 — Calldata can redirect the mandated beneficiary — RULED DISCLOSED-ONLY (D-083(b))
 
 Found 2026-08-30 by the independent test author. With target, selector, value and operation left
 exactly as mandated, swapping only the beneficiary word inside `callData` produces a fully
@@ -519,6 +617,19 @@ Vault exists to avoid having to make.
 mandated selector inside the verifier, which is new capability and a scope decision. It may also be
 the correct reading that this is by design — the signer decodes semantics, the Vault binds bytes.
 **Recorded for John. The build team must not resolve it.**
+
+**RULED 2026-08-30 — DISCLOSED-ONLY, NO ENFORCEMENT (D-083(b)).** The signer's evaluator decodes
+semantics; the Vault binds bytes; the verifier now says plainly that it decodes nothing. This is a
+RULING, not a deferral: there is no pending decision behind it and no queued v1.1 item.
+`TestExactActionIsEnforced.test_calldata_redirecting_the_mandated_beneficiary_is_refused` is
+therefore **permanently red by ruling**, and every place that declares or explains that red now
+says "ruled disclosed-only at D-083(b)" rather than "reserved to John".
+
+**THE COST, RECORDED WITH THE RULING RATHER THAN ARGUED AWAY:** beneficiary binding rests entirely
+on the isolated signer behaving correctly, with **no independent downstream check** — which is the
+assumption the Vault exists so as not to have to make. The disclosure that carries it is the fourth
+`NOT_ESTABLISHED` entry in `verifier/verify_publication.py`, printed beside every certifying
+result, plus the same statement in the module docstring and in `check_exact_action`.
 
 ### R-A018-14 — The policy commits to a token-allowance ceiling the Vault never enforces — NEW
 

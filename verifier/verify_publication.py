@@ -34,8 +34,11 @@ previously claimed the opposite of the third item.
   beneficiary, recipient or amount encoded inside the calldata is compared to no
   mandated value.  A bundle in which only the beneficiary word was rewritten is
   internally consistent and authenticates here.  Only the isolated signer's
-  evaluator decodes those arguments; the Vault, like this tool, binds the bytes
-  (R-A018-17, open).
+  evaluator decodes those arguments; the Vault, like this tool, binds the bytes.
+  RULED DISCLOSED-ONLY, not deferred: D-083(b) settled that this tool decodes
+  nothing, and recorded the cost with the ruling -- beneficiary binding rests
+  entirely on the isolated signer behaving correctly, with no independent
+  downstream check (R-A018-17).
 
 So a successful run is a statement about STATIC AUTHENTICITY, and about
 conformance of the fields it actually compares -- target, native value, selector
@@ -51,6 +54,12 @@ and additionally requires a separate owner-signed override naming that exact
 receipt, action and nonce.  This verifier mirrors that split: the caller declares
 which entry point the bundle is presented for with --execution-path, and a BLOCK
 receipt is executable through neither.
+
+A BUNDLE'S §5.5 CREDENTIAL IS EXAMINED ON WHICHEVER PATH IT IS PRESENTED FOR, not
+only on the one that could use it (R-A018-18, ruled at D-083(c)).  An `override.json`
+sitting beside an ALLOW receipt is refused rather than passed over: a credential no
+Vault entry point will accept must not ride inside a PASS unopened, because a run
+that never reads it certifies it by omission.
 
 EXIT CODES
 ----------
@@ -88,12 +97,18 @@ from secp256k1 import RecoveryError, is_low_s, parse_signature, recover_address
 # -----------------------------------------------------------------------------
 # `verifier/test_publication_verifier.py` was written by an independent author who
 # was forbidden to edit this module (D-058(1), A-028), and it is not editable from
-# this side either -- so a deferred item cannot be marked `expectedFailure` in the
-# suite and has to be declared here instead. Four of its 81 tests are RED ON
-# PURPOSE after this batch. A green count of 77/81 is the expected state; 81/81
-# would mean somebody implemented work that is not authorised.
+# this side either -- so work this module deliberately does not do cannot be marked
+# `expectedFailure` in the suite and has to be declared here instead. FOUR of its 81
+# tests are RED ON PURPOSE. A green count of 77/81 is the expected state; 81/81 would
+# mean somebody implemented work that is not authorised.
 #
-#   R-A018-04 (deferred: needs live chain state, and no chain is named yet)
+# `verifier/test_publication_override.py` HAS NO DELIBERATE REDS. 61/61 green is its
+# expected state, as of the R-A018-18 repair ruled at D-083(c); the two reds this block
+# used to be read alongside -- the unexamined-credential pair -- are CLOSED, not
+# reserved. See `check_owner_override`, which now runs on every path a bundle carrying
+# a §5.5 credential is presented for. A red in that file is now a regression.
+#
+#   R-A018-04 (DEFERRED: needs live chain state, and no chain is named yet)
 #     TestDeploymentIdentityIsNotBound
 #       .test_a_fabricated_runtime_code_hash_is_echoed_as_authenticated
 #       .test_two_contradictory_manifests_cannot_both_certify
@@ -103,14 +118,30 @@ from secp256k1 import RecoveryError, is_low_s, parse_signature, recover_address
 #     mitigation actually shipped here is narrower and is stated rather than
 #     implied: NOT_ESTABLISHED below, printed beside every result, says the field
 #     is an authority assertion and nothing more.
-#     (The class's fourth test now passes, but incidentally -- a run under
-#     --evaluation-time no longer certifies at all, so it cannot print the banner
-#     that test forbids. No chain binding exists.)
 #
-#   R-A018-17 (needs a scope ruling from John; the build team must not resolve it)
+#     THE CLASS'S FOURTH TEST IS GREEN, AND HOW THIS BLOCK SAYS SO IS ITSELF THE
+#     LESSON. `.test_an_offline_run_does_not_certify_an_authenticated_deployment`
+#     was recorded here as passing "incidentally" -- no banner is printed under
+#     --evaluation-time at all, so the string it forbade was unreachable. That
+#     parenthesis was an honest label on a test that asserted nothing, and being
+#     declared is what made the hole easy to stop looking at: it stood for hours.
+#     The test now stages a LIVE-CLOCK CERTIFYING run and asserts that the banner
+#     which really is printed claims no authenticated deployment. It passes for a
+#     reason. No chain binding exists either way, which is why the three above stay
+#     red and this one is not evidence for them.
+#
+#   R-A018-17 (RULED disclosed-only by John at D-083(b). PERMANENTLY RED BY RULING --
+#              not pending, not deferred, and not a scope question still open.)
 #     TestExactActionIsEnforced.test_calldata_redirecting_the_mandated_beneficiary_is_refused
-#     Closing it means decoding calldata against the mandated selector inside the
-#     verifier, which is new capability. See check_exact_action().
+#     Turning it green would mean decoding calldata against the mandated selector
+#     inside this verifier, and D-083(b) ruled that this verifier decodes nothing:
+#     the isolated signer's evaluator decodes semantics, the Vault binds bytes, and
+#     this tool says plainly that it binds bytes too.
+#     THE COST WAS RECORDED WITH THE RULING, and is repeated where an implementer
+#     meets it: beneficiary binding now rests ENTIRELY on the isolated signer
+#     behaving correctly, with no independent downstream check -- which is the
+#     assumption the Vault exists so as not to have to make. See check_exact_action()
+#     and the fourth NOT_ESTABLISHED entry, which is how a recipient is told.
 
 
 class VerificationError(ValueError):
@@ -144,13 +175,20 @@ NOT_ESTABLISHED = (
     # bytes presented and to nothing else.  A bundle in which only the beneficiary
     # word inside `callData` was rewritten is internally perfect, and every
     # downstream consumer is likewise byte-binding: the Vault hashes `callData`
-    # and never decodes it either.  Whether the verifier should decode is a scope
-    # decision that is open; that it currently does not is a fact a recipient is
-    # owed either way.
+    # and never decodes it either.
+    #
+    # WHETHER THE VERIFIER SHOULD DECODE IS NO LONGER OPEN.  D-083(b) ruled it
+    # DISCLOSED-ONLY: the signer's evaluator decodes semantics, the Vault binds
+    # bytes, and this tool binds bytes and says so.  The cost was recorded with the
+    # ruling rather than argued away -- beneficiary binding rests entirely on the
+    # isolated signer behaving correctly, with no independent downstream check --
+    # which makes this entry the whole of what a recipient gets, and the reason it
+    # is printed beside every certifying result rather than filed in a register.
     "conformance of the CALLDATA ARGUMENTS: the bytes are bound by dataHash and their "
     "leading selector is compared to the mandate, but nothing here decodes them, so a "
     "beneficiary, recipient or amount encoded inside callData is compared to no mandated "
-    "value. Only the isolated signer's evaluator decodes them (R-A018-17)",
+    "value. Only the isolated signer's evaluator decodes them, and by ruling nothing "
+    "downstream re-checks it (R-A018-17, disclosed-only)",
 )
 
 
@@ -264,8 +302,8 @@ def check_verdict(receipt, execution_path):
     )
 
 
-def check_owner_override(sample, receipt, action, domain, manifest, now):
-    """The REVIEW arm, modelled on `SentinelVault.executeWithOverride`.
+def check_owner_override(sample, receipt, action, domain, manifest, now, verdict_name):
+    """Examine a §5.5 credential, modelled on `SentinelVault.executeWithOverride`.
 
     Every binding that function requires is required here: the override must name
     this exact review receipt, this exact action, this exact mandate, policy and
@@ -282,7 +320,45 @@ def check_owner_override(sample, receipt, action, domain, manifest, now):
     signature verification failed"*, which is R-A018-16(c)'s field-error-as-
     signature-error in this arm.  The sibling artifact `mandate-signature.json`
     had an explicit shape check and this one had none.
+
+    R-A018-18, ruled at D-083(c).  THIS FUNCTION IS NO LONGER THE OVERRIDE PATH'S
+    PRIVATE BUSINESS: `verify()` calls it whenever a bundle carries an
+    `override.json`, on either path.  Before that it ran only when the caller typed
+    `--execution-path owner-override`, so an ALLOW bundle could carry a genuine,
+    correctly-bound, outsider-signed §5.5 authorization and certify with the file
+    never opened -- a signed credential riding inside a PASS, unexamined.
+    `verify.py::_override_checks` has been in its UNCONDITIONAL check list since
+    D-023 and refuses exactly that bundle.  The discipline was lost when `a38cff9`
+    rebuilt this surface fresh instead of deriving it from the reviewed one, which
+    makes this D-052(b)/A-059 reintroduced -- a finding this project made once,
+    fixed once, and lost.
     """
+    # THE PAIRING, BEFORE THE CREDENTIAL. §5.5: an override targets a REVIEW
+    # receipt, and `executeWithOverride` reverts `NotReviewVerdict` on anything
+    # else -- so against an ALLOW or a BLOCK receipt there is no such thing as a
+    # good override, and nothing about the credential itself can change that.
+    #
+    # It is checked FIRST, where `_override_checks` checks it last, because that
+    # function accumulates every check and reports them together while this module
+    # refuses at the first failure. Authenticating first would answer an ALLOW
+    # bundle carrying an outsider's credential with "override ownerAddress ... !=
+    # ..." -- true, and the wrong thing to send a recipient to fix, because
+    # correcting the owner would not make the bundle certifiable either. That is
+    # R-A018-16(c)'s discipline -- do not report as at fault the one thing that was
+    # fine -- applied to a pairing rather than to a field. On the override path
+    # `check_verdict` has already established REVIEW, so this can only fire on a
+    # path that could not have used the credential anyway.
+    if verdict_name != "REVIEW":
+        raise VerificationError(
+            f"override.json is present, but the receipt it authorises is {verdict_name}, "
+            f"not REVIEW: §5.5 says an override targets a review receipt, and the Vault "
+            f"agrees at both entry points -- executeWithReceipt takes no override "
+            f"parameter and executeWithOverride reverts NotReviewVerdict. This credential "
+            f"is executable nowhere, and it is examined on every path rather than only on "
+            f"the one that could use it, because a §5.5 authorization a run never opens is "
+            f"one that run certifies unread (R-A018-18)"
+        )
+
     doc = read_json(required(sample, "override.json"))
     override = doc.get("override") if isinstance(doc, dict) else None
     signature = doc.get("ownerSignature") if isinstance(doc, dict) else None
@@ -374,9 +450,15 @@ def check_exact_action(mandate, policy, action, calldata, now):
 
     NOT covered here, and named so a green run is not read as more than it is:
     the calldata's *arguments* are never decoded, so the mandated beneficiary
-    inside `callData` is not compared to `mandate.beneficiary` (R-A018-17, which
-    is a scope decision and is open).  `mandate.targetCodeHash` is likewise not
-    checked, because that needs the live chain (R-A018-04).
+    inside `callData` is not compared to `mandate.beneficiary`.  That is R-A018-17,
+    and it is SETTLED rather than pending -- D-083(b) ruled the binding
+    disclosed-only, so this function will not grow a decoder and the frozen
+    contract's `test_calldata_redirecting_the_mandated_beneficiary_is_refused` is
+    permanently red by ruling.  The cost recorded with that ruling is that the
+    beneficiary now rests on the isolated signer alone, with nothing downstream
+    re-checking it; NOT_ESTABLISHED is where a recipient is told.
+    `mandate.targetCodeHash` is likewise not checked, because that needs the live
+    chain (R-A018-04).
     """
     if str(action["target"]).lower() != str(mandate["target"]).lower():
         raise VerificationError(
@@ -562,10 +644,19 @@ def verify(sample, manifest_path, authority, evaluation_time=None,
     # the Vault consumes the nonce atomically at execution. See NOT_ESTABLISHED.
     eip712.parse_uint("uint256", action["actionNonce"])
 
+    # R-A018-18, ruled at D-083(c): THE CREDENTIAL IS EXAMINED ON EVERY PATH.
+    # The condition is "the caller declared the override path, OR the bundle carries
+    # the file" -- not "the caller declared the override path". The first disjunct
+    # keeps the existing refusal for a REVIEW bundle presented on that path with no
+    # credential at all (`required` names the missing artifact); the second is the
+    # repair, and it is what stops an `override.json` beside an ALLOW receipt from
+    # being passed over in silence. Matching `verify.py::_override_checks`, which
+    # returns early only when the file is absent.
     override_hash = None
-    if execution_path == OVERRIDE_PATH:
+    if execution_path == OVERRIDE_PATH or os.path.isfile(
+            os.path.join(sample, "override.json")):
         override_hash = check_owner_override(
-            sample, receipt, action, domain, manifest, now)
+            sample, receipt, action, domain, manifest, now, verdict_name)
 
     result = {
         "mode": mode,

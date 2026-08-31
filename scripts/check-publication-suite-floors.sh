@@ -13,10 +13,11 @@
 # Both files contain tests that are RED ON PURPOSE. They were written by an independent
 # author who is forbidden to edit the module under test (D-058(1), A-028), so a deferred item
 # cannot be marked `expectedFailure` from either side — the reds are the record of work that
-# is deliberately not done, and two of them are reserved to John. Demanding green would demand
-# unauthorised work. But a bare count is no better: with 77 of 81 required to pass, a NEW
-# failure hides perfectly behind a red that somebody fixed, and the guard reports the same
-# number for a healthy suite and a regressed one.
+# is deliberately not done. Three are deferred for want of a chain (R-A018-04) and one is
+# PERMANENTLY red by John's ruling at D-083(b). Demanding green would demand either
+# unauthorised work or work John has ruled out. But a bare count is no better: with 77 of 81
+# required to pass, a NEW failure hides perfectly behind a red that somebody fixed, and the
+# guard reports the same number for a healthy suite and a regressed one.
 #
 # So the assertion is **N pass AND exactly these named tests fail**. Every direction moves it:
 #
@@ -30,10 +31,18 @@
 #
 # HOW TO UPDATE IT. The declaration below is the only thing to edit, and it is the only copy.
 # Adding a passing test needs no edit at all — the floor is a floor. Changing a RED line means
-# asserting that a deliberate red has been closed, so say which register item authorised it.
-# **R-A018-17 and R-A018-18 are reserved to John (register §3).** An agent that finds one of
-# those green has found either its own unauthorised work or somebody else's, and must report
-# it rather than update this block to match.
+# asserting that a deliberate red has been closed, so **name the decision-log entry or register
+# item that authorised it, in the declaration, in the same edit.**
+#
+# THE TWO ITEMS THIS PARAGRAPH USED TO RESERVE HAVE BOTH BEEN RULED, and the rule that
+# reserved them is unchanged, so it is restated rather than deleted. **R-A018-18 is CLOSED by
+# John at D-083(c)** — an override credential is examined on every path — and its two reds are
+# green; the floor moved 59 -> 61 in the same edit that deleted them. **R-A018-17 is RULED
+# DISCLOSED-ONLY at D-083(b)**, so its test is permanently red and must NOT be turned green.
+# The standing rule: an agent that finds a red marked RESERVED TO JOHN, or RULED, gone green
+# has found either its own unauthorised work or somebody else, and must REPORT it rather than
+# update this block to match. A ruling in `docs/decisions.md` is what moves a line here; a
+# green test is not.
 #
 # Usage:
 #   ./scripts/check-publication-suite-floors.sh                 run the suites and enforce
@@ -41,9 +50,12 @@
 #
 # EXIT STATUS. 0 clean · 1 findings · 2 refused / could not check. Exit 2 is never a pass.
 #
-# COST. It runs both suites for real — roughly 90 seconds — because a floor asserted from
-# anything other than a run is the defect one layer up (see check-suite-floors.sh's header:
-# "THIS PRINTS THE FLOORS, NOT THE COUNTS").
+# COST. It runs both suites for real, because a floor asserted from anything other than a run
+# is the defect one layer up (see check-suite-floors.sh's header: "THIS PRINTS THE FLOORS, NOT
+# THE COUNTS"). **Measured between 30s and 150s on the same machine on 2026-08-30**, the
+# spread being entirely other work running alongside it. The "roughly 90 seconds" this line
+# used to quote was one observation presented as a property; the per-module seconds printed
+# by every run are the number to trust. It is wired into the DEEP profile only.
 
 set -uo pipefail
 
@@ -64,22 +76,29 @@ FLOOR test_publication_verifier 77
 RED   test_publication_verifier TestDeploymentIdentityIsNotBound.test_a_fabricated_runtime_code_hash_is_echoed_as_authenticated   R-A018-04 deferred: needs live chain state, no chain is named yet
 RED   test_publication_verifier TestDeploymentIdentityIsNotBound.test_two_contradictory_manifests_cannot_both_certify             R-A018-04 deferred: needs live chain state, no chain is named yet
 RED   test_publication_verifier TestDeploymentIdentityIsNotBound.test_the_result_names_the_block_its_claims_are_true_at           R-A018-04 deferred: needs live chain state, no chain is named yet
-RED   test_publication_verifier TestExactActionIsEnforced.test_calldata_redirecting_the_mandated_beneficiary_is_refused           R-A018-17 RESERVED TO JOHN: decoding calldata is new capability and a scope ruling
+RED   test_publication_verifier TestExactActionIsEnforced.test_calldata_redirecting_the_mandated_beneficiary_is_refused           R-A018-17 RULED DISCLOSED-ONLY at D-083(b): PERMANENTLY red by ruling, not pending. Do NOT turn it green
 
-# --- verifier/test_publication_override.py — 61 tests, 59 green, 2 red on purpose. ----
-#     R-A018-18 asks whether an override credential should be examined on every path or
-#     refused as an uncertifiable shape. The register says in terms: "Which of the two is a
-#     scope decision and is John's." Neither test may be turned green by an agent.
+# --- verifier/test_publication_override.py — 61 tests, 61 green, NO reds. -------------
+#     A RED IN THIS FILE IS NOW A REGRESSION, not an expected state, and the guard will name
+#     it as an undeclared red.
 #
-#     THIS FILE HAD FOUR REDS EARLIER ON 2026-08-30. The other two were
-#     TestOverrideRefusalsAreDiagnosed.test_a_structurally_incomplete_override_names_the_override
-#     and .test_a_non_canonical_override_time_field_names_the_override (R-A018-20), and they
-#     are green as of the shape-check and named-window repairs in check_owner_override().
-#     Recorded here rather than deleted: if either goes red again, the repair regressed, and
-#     the guard will name it as an undeclared red rather than leave you guessing.
-FLOOR test_publication_override 59
-RED   test_publication_override TestAnUnexaminedOverrideCredentialIsNotCertifiable.test_an_allow_bundle_carrying_an_outsider_override_is_refused   R-A018-18 RESERVED TO JOHN: scope decision
-RED   test_publication_override TestAnUnexaminedOverrideCredentialIsNotCertifiable.test_the_owner_signed_case_is_refused_too_or_examined           R-A018-18 RESERVED TO JOHN: scope decision
+#     THIS FILE HAD FOUR REDS EARLIER ON 2026-08-30 and now has none. Both pairs are recorded
+#     rather than deleted, because if either pair goes red again the guard should say which
+#     repair regressed instead of leaving you to work it out:
+#
+#       * TestOverrideRefusalsAreDiagnosed.test_a_structurally_incomplete_override_names_the_override
+#         and .test_a_non_canonical_override_time_field_names_the_override (R-A018-20) — green
+#         as of the shape-check and named-window repairs in check_owner_override().
+#       * TestAnUnexaminedOverrideCredentialIsNotCertifiable.test_an_allow_bundle_carrying_an_outsider_override_is_refused
+#         and .test_the_owner_signed_case_is_refused_too_or_examined (R-A018-18) — these two
+#         were declared red and RESERVED TO JOHN until D-083(c), where **John ruled that an
+#         override credential is examined on EVERY path**, matching verify.py::_override_checks
+#         and closing D-052(b)/A-059. The implementer closed it in check_owner_override(). The
+#         floor moved 59 -> 61 in the same edit that removed these two RED lines. **The
+#         authority for this change is the decision-log entry, not the green tests** — the
+#         guard had already reported both as "declared red now PASSES", which is exactly the
+#         signal it exists to raise, and the ruling is what discharges it.
+FLOOR test_publication_override 61
 FLOORS
 )
 # =====================================================================================
