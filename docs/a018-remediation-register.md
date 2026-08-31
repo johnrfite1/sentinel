@@ -285,9 +285,34 @@ completion-token check** (`scripts/test.sh:1332`, "Anything that stops the body 
 `set -e` abort …"). That defence was written for exactly this and it worked. It is the last line,
 not the first.
 
-**NOT FIXED, and deliberately.** The one-line repair is `|| true` on each `diff`, but changing the
-gate's failure semantics is not an agent's call — it is the instrument every other claim in this
-project is measured against. **Put to John.**
+**FIXED 2026-08-30 at John's ruling, D-084(a)** — `|| true` on both `diff` lines. **Verified by
+evidence, not by reading:** two full deep-gate runs differing only in whether the `|| true` at
+`:735` was present gave 20 stages vs 18, with `§7.3 ablation` and `D-010 receipt verifier` present
+in one and **absent** in the other, `GATE FAILED` printed in one and not the other — and **the
+supervisor exit status identical at 5 in both.** A caller reading exit codes alone cannot
+distinguish "the gate failed and said so" from "the gate died mid-run and skipped two stages".
+That row is R-A018-25 stated once.
+
+**A THIRD INSTANCE EXISTS, IS NOT FIXED, AND IS RESERVED TO JOHN.** `scripts/test.sh:945`:
+`v_modes="$(… | grep -oE 'the mutated [a-z-]+' | … )"`. `grep -oE` is a non-final pipeline segment
+with `pipefail` on, so if the verifier ever stops printing those lines — **precisely the regression
+the tamper-mode floor eight lines below exists to catch** — the substitution fails, `set -e`
+aborts, and `FLOOR BREACHED — tamper modes` never prints. **Line `:944` directly above already ends
+in `|| true`**, so the class was known and this one was missed. Carried on
+`scripts/check-gate-abort-safety.sh`'s ratchet and printed every run, so it cannot go quiet.
+
+**AND THE "EXACTLY TWO INSTANCES" FIGURE IN D-084(a) WAS WRONG — the agent's error, corrected in
+`docs/decisions.md`.** `grep -cE '^\s+(diff|grep|cmp|comm)\b'` is anchored to statement start and
+**structurally cannot see** a command inside `$( )` or mid-pipeline; unanchored the same file has 8
+candidates. A number true only of the probe, reported as a property of the tree, inside a ruling
+about a probe whose silence read like a pass.
+
+**GUARDED 2026-08-30** by `scripts/check-gate-abort-safety.sh`, wired in both profiles. It builds
+18 synthetic subjects and **runs each under this machine's bash on every invocation**, requiring
+its classifier to agree shape-for-shape, so a changed shell or a regressed lexer makes it *refuse*
+rather than print green. It refuses on backticks and `set +e` regions rather than analysing what it
+did not establish, and records two measured widenings it rejected — with the numbers — so nobody
+redoes them.
 
 ### R-A018-24 — A pass-count floor cannot see a vacuous test — NEW
 

@@ -357,3 +357,39 @@ Delegation covers design forks only. **Gate signing authority is unchanged and n
 **(j) WORK AUTHORISED:** R-A018-18 (§c above), R-A018-23 (wire `check-release-sync.sh` and `check-publication-suite-floors.sh` into a gate — `scripts/test.sh` is digest-pinned by `check-gate-immutability.sh`, so this is a deliberate edit), R-A018-24 (promote the `sys.settrace` vacuity probe to a guard — a pass-count floor was blind to three vacuous tests for hours, which is this project's own recorded failure mode reappearing inside the instrument built to prevent it), and the housekeeping fixes (the stale `KNOWN RED TESTS` block, and re-labelling the R-A018-17 red test per §b).
 
 **WHAT THIS ENTRY DOES NOT DO.** It withdraws no Crucible Critical. It signs no gate, ratifies no register, and authorises no publication, deployment, push, or repository-visibility change. **The licence remains DEFERRED under D-082(c)** pending John's proprietary-versus-open-source choice, and rights mode stays `UNDECIDED`. `crucible.config.yaml` still holds TEST-001's acceptance criteria and must be repopulated by John before any new casting fires. The Crucible What-Must-Be-True ratification is recorded in the Crucible session, not here.
+
+- **D-084 (2026-08-30) — THE GATE'S SILENT-ABORT DEFECT IS FIXED AND GUARDED, AND `crucible.config.yaml` IS CLEARED TO EMPTY. Ruled by John, 2026-08-30, in a facilitated walkthrough. The agent RECORDS these and makes none of them.**
+
+**(a) R-A018-25 IS FIXED WITH `|| true` ON BOTH DIFFS.** `scripts/test.sh:735` and `:831` were `diff … | head -20` immediately followed by `fail=1`, under the `set -euo pipefail` at line 12. **Reaching either line means the comparison failed**, so `diff` exits 1, `pipefail` propagates it, `set -e` aborts, and **`fail=1` never ran** — the §7.3 ablation and D-010 verifier stages after it were silently skipped. Measured before ruling: exactly **two** instances repo-wide (`grep -cE '^\s+(diff|grep|cmp|comm)\b' scripts/test.sh` → 2), so this is a bounded defect and not a systemic `set -e` problem. **Rejected: moving `fail=1` above the diff** — it records the flag but the abort still kills the stages after it, fixing the symptom you can see and leaving the one you cannot. **Why this mattered more than its size:** every other defect in the A-018 batch was a check that did not exist or a claim stronger than its evidence; this was a check that fires correctly, prints its diagnosis, and then destroys the run's ability to report it, **on the gate's own failure path** — reachable only when something is already wrong. It surfaced as a non-zero exit rather than a silent stop **only** because of the supervisor's completion-token check at `scripts/test.sh:1332`, which was written for exactly this class and is the last defence, not the first.
+
+**(b) A RECURRENCE GUARD IS AUTHORISED.** Nothing would catch a third instance being added. The guard must state in its own output which shapes it catches and which it does not — the reach of this class is decidable for the shape that bit us and undecidable in general, and **a guard that overstates its reach is the failure mode this project keeps finding.** `scripts/check-test-vacuity.sh` (R-A018-24) is the house example of stating limits honestly and is the pattern to follow. Rejected as the primary instrument: adopting shellcheck wholesale, which would surface a pre-existing backlog across every script needing triage or baselining before it could gate anything.
+
+**(c) `crucible.config.yaml` IS CLEARED TO EMPTY, NOT REPOPULATED.** `criteria_artifact`, `acceptance_criteria`, `kill_criteria_session_local` and `temper_trigger` all held **TEST-001's** values (S-20260809-test-wargames) and the DARC paper's temper trigger. They survived both 2026-08-29 Sentinel sessions, which sourced criteria session-locally from the session header instead — **the second time that field has carried a dead artifact's criteria into a later session**, and the config's own comment already warned that this is how S-20260708 went wrong. Empty is the honest state between sessions: runbook §2.1.5 **blocks** on an empty list, and blocking is the intended safety, because stale criteria pass a gate that empty ones would have caught. **The lab Ingot's proposed criteria are deliberately NOT staged in the config.** They live in the Ingot draft, which is the source of truth until the Smith casts and whose What-Must-Be-True register is still open in the Crucible session; they are pasted at Step 0.
+
+**WHAT THIS ENTRY DOES NOT DO.** It withdraws no Crucible Critical, casts no Ingot, signs no gate, and authorises no publication, deployment, push, or visibility change. **The licence remains DEFERRED under D-082(c)** — John has explicitly held it for later. The deep profile remains red on the §7.1 corpus digest comparison: that is the pre-existing deliberate hold at A-111, was not touched here, and is the fixture the (a) fix is verified against.
+
+- **CORRECTION TO D-084(a), recorded 2026-08-30, same day, before the ruling was relied on further. THE "EXACTLY TWO INSTANCES" FIGURE IS WRONG. It was the agent's measurement, not John's ruling; his ruling — fix the two named lines with `|| true` — stands unchanged and is verified. A THIRD INSTANCE EXISTS AND IS NOT FIXED.**
+
+**The figure was a property of the instrument, not of the tree.** D-084(a) cites `grep -cE '^\s+(diff|grep|cmp|comm)\b' scripts/test.sh` → 2. That regex is anchored to statement start, so it **structurally cannot see** a command inside `$( )` or in a non-final pipeline segment. Unanchored, the same file has 8 candidate lines. **This is the project's own recorded failure mode — a number that was true once, or in this case true only of the probe — committed inside a ruling about a probe whose silence read like a pass.**
+
+**THE THIRD INSTANCE**, found by the independent guard author: `scripts/test.sh:945`, in the D-010 stage —
+
+```sh
+v_modes="$(printf '%s\n' "$t_out" | grep -oE 'the mutated [a-z-]+' | sed … | wc -l | tr -d ' ')"
+```
+
+`grep -oE` is a **non-final pipeline segment** and `pipefail` is on. If the verifier ever stops printing its `the mutated <mode>` lines — **precisely the regression the tamper-mode floor eight lines below exists to catch** — the substitution fails, `set -e` aborts, and `FLOOR BREACHED — tamper modes` never prints. Same shape, same failure path, same silence. **The line directly above it, `:944`, already ends in `|| true` on its own `grep -c`, so the author knew about the class and this one was missed.**
+
+**NOT FIXED. Reserved to John**, because D-084(a) reserves gate failure semantics to him and his ruling named two other lines. It is carried on the new guard's ratchet and printed on every run, so it cannot go quiet. The one-line repair is `|| true` on the substitution, after which `${v_modes:-0}` becomes `0` and the existing floor reports the breach properly.
+
+**D-084(a)'s FIX IS VERIFIED, and the evidence is worth recording because it is the sharpest available statement of why this class matters.** Two full deep-gate runs, differing only in whether the `|| true` at `:735` was present:
+
+| | with the fix | reverted |
+|---|---|---|
+| stages executed | **20** | **18** |
+| `§7.3 ablation` stage | ran | **absent** |
+| `D-010 receipt verifier` stage | ran | **absent** |
+| `GATE FAILED` printed | yes | **no** |
+| supervisor exit status | **5** | **5** |
+
+**The exit status is identical in both columns.** A caller reading exit codes alone cannot distinguish "the gate failed and said so" from "the gate died in the middle and skipped two stages". That is R-A018-25 stated in one row.

@@ -215,6 +215,37 @@ step "gate immutability (D-056(b))"
 # run, so there is no recursion and it costs about eight seconds.
 ./scripts/check-gate-immutability.sh || fail=1
 
+# THE GATE'S OWN FAILURE PATHS, CHECKED FOR REACHABILITY (R-A018-25, D-084(b)).
+#
+# THIS STEP SITS OUTSIDE THE GATE BOOTSTRAP REGION ON PURPOSE, beside every other guard step.
+# `check-gate-immutability.sh` extracts the region between the two GATE BOOTSTRAP marker
+# comments above fresh on every run and exercises it against synthetic subjects; no digest of
+# this file is stored anywhere. What is protected is that region, not the file. (The marker
+# strings themselves are deliberately not repeated here: the extractor matches them at the
+# start of a line, and a copy sitting in a comment is a trap for the next person who widens
+# that pattern.)
+#
+# WHAT IT IS FOR. A `diff` whose difference is the entire point of the line exits non-zero,
+# `pipefail` promotes it, and the `set -e` at line 12 kills the body BEFORE the `fail=1`
+# beneath it. Two branches of THIS FILE did exactly that: the run died at the moment it was
+# supposed to record a failure, and the §7.3 ablation and D-010 verifier stages below never
+# executed. It surfaced as a non-zero exit only through the supervisor's completion-token
+# check at the bottom of this file — the last defence, not the first. Nothing would have
+# caught a third one.
+#
+# READ ITS OUTPUT, NOT ITS EXIT STATUS. It names the six commands it checks and states, on
+# every run, the shapes it does NOT catch — including that it does not decide whether a site
+# is on a failure path, which is not decidable. It also carries ONE LIVE SITE IN THIS FILE on
+# a ratchet: the `v_modes` assignment in the D-010 stage has the identical shape and was not
+# among the two lines D-084(a) fixed. A green line here does NOT mean this file has no
+# unguarded abort site; it means no NEW one appeared.
+#
+# It proves its own classification rules against this machine's bash before applying them, so
+# a lexer or a shell that has stopped agreeing REFUSES rather than printing a green line.
+# BOTH PROFILES: measured under two seconds.
+step "gate abort safety (R-A018-25)"
+./scripts/check-gate-abort-safety.sh || fail=1
+
 step "secret guard (A-007)"
 ./scripts/check-secrets.sh || fail=1
 
@@ -732,7 +763,7 @@ VERDICTCHECK
                 echo "  code now produces. Either re-run 'npm --prefix ts run corpus' and commit"
                 echo "  the result, or find out what changed. The labels of record were drawn"
                 echo "  against the COMMITTED views."
-                diff "$CORPUS_TMP/for-labelling/_digests.json"                      fixtures/corpus/for-labelling/_digests.json | head -20
+                diff "$CORPUS_TMP/for-labelling/_digests.json"                      fixtures/corpus/for-labelling/_digests.json | head -20 || true
                 fail=1
             fi
         else
@@ -828,7 +859,7 @@ if command -v node >/dev/null 2>&1; then
             echo "  report was hand-edited. Re-run 'npm --prefix ts run ablation' and commit,"
             echo "  or find out what changed — a published figure with no provenance is worth"
             echo "  less than no figure."
-            diff "$ab_tmp" docs/ablation-report.md | head -20
+            diff "$ab_tmp" docs/ablation-report.md | head -20 || true
             fail=1
         fi
     else
