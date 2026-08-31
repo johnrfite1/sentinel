@@ -180,7 +180,6 @@ COMMAND fgrep
 # lines and this third site was not among them. The one-line repair is a `|| true` on the
 # substitution, after which `${v_modes:-0}` becomes 0 and the existing tamper-modes floor
 # reports the breach properly instead of the run dying. **That is a ruling, not a cleanup.**
-ACCEPT scripts/test.sh grep the mutated [a-z-]+ :: third R-A018-25 instance, found by this guard on its first run; grep -oE is a non-final pipefail segment inside the v_modes assignment, so a verifier that stops printing its tamper-mode lines aborts the gate instead of tripping the tamper-modes floor below it. NOT fixed here: R-A018-25 reserves gate failure semantics to John and his ruling named two other lines. Owed to him as a decision.
 ABORTSAFETY
 )
 # =====================================================================================

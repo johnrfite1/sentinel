@@ -235,10 +235,15 @@ step "gate immutability (D-056(b))"
 #
 # READ ITS OUTPUT, NOT ITS EXIT STATUS. It names the six commands it checks and states, on
 # every run, the shapes it does NOT catch — including that it does not decide whether a site
-# is on a failure path, which is not decidable. It also carries ONE LIVE SITE IN THIS FILE on
-# a ratchet: the `v_modes` assignment in the D-010 stage has the identical shape and was not
-# among the two lines D-084(a) fixed. A green line here does NOT mean this file has no
-# unguarded abort site; it means no NEW one appeared.
+# is on a failure path, which is not decidable. A green line here does NOT mean this file has
+# no unguarded abort site; it means none of the shapes this guard can see is unguarded.
+#
+# It carried one live site here until 2026-08-30: the `v_modes` assignment in the D-010 stage,
+# a THIRD instance of R-A018-25 that this guard found on its own first run, and that D-084(a)'s
+# "exactly two instances" figure had missed because the measuring grep was anchored to statement
+# start and could not see inside `$( )`. John ruled it fixed; the ratchet then reported the
+# carried entry STALE rather than passing quietly, which is the behaviour that entry existed to
+# prove.
 #
 # It proves its own classification rules against this machine's bash before applying them, so
 # a lexer or a shell that has stopped agreeing REFUSES rather than printing a green line.
@@ -942,7 +947,7 @@ VERIFIERRUN
 
     t_out="$(python3 verifier/verify.py --domain fixtures/samples/domain.json --all fixtures/samples --tamper all 2>&1)" || v_fail=1
     v_tamper="$(printf '%s\n' "$t_out" | grep -c 'tamper self-test PASS' || true)"
-    v_modes="$(printf '%s\n' "$t_out" | grep -oE 'the mutated [a-z-]+' | sed 's/the mutated //' | sort -u | wc -l | tr -d ' ')"
+    v_modes="$(printf '%s\n' "$t_out" | grep -oE 'the mutated [a-z-]+' | sed 's/the mutated //' | sort -u | wc -l | tr -d ' ' || true)"
 
     # The verdict is printed even on success, deliberately. Making this stage quiet was itself a
     # finding: at fac9140 the suite ran unredirected, so `OK (skipped=N)` would have reached the
