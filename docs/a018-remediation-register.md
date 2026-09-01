@@ -479,6 +479,18 @@ quarantined and reproducible, and lab and production authority domains are struc
 distributed. The least destructive answer is a **history-free publication export**. **Do not
 rewrite history** — that depends on the venue ruling in §4.
 
+### THE PATTERN IS NOT WHAT THIS SECTION SAID — SUPERSEDED 2026-08-31 by the inventory diff
+
+**Read `docs/check-inventory-diff-2026-08-31.md` instead of this section.** The "four faces" (and
+later "six faces") framing below was a sample, not the class. Measured mechanically under D-085(e):
+**54 of `verify.py`'s 95 checks are absent from the publication verifier with no recorded reason —
+zero deliberate — plus 4 Vault conditions neither offline verifier enforces, plus the inverse
+direction nobody had looked at: `verify.py` has no clock and certifies a receipt that expired
+2026-08-28.** The class is a **scope truncation** — `a38cff9` rebuilt the surface around "would the
+Vault execute this?" and dropped every check answering "does this bundle describe what it says?"
+— not a list of dropped disciplines. The honest count is **54 + 4 + 4, not 6.** The section below is
+kept as the record of how the shape was first seen and why one-at-a-time could never have found it.
+
 ### THE PATTERN — four faces of one omission, and it is the most useful thing this batch found
 
 Recorded above the individual items because reading them as four separate defects loses the
