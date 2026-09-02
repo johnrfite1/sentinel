@@ -21,6 +21,11 @@ dropped are enforced here (R-A018-16):
   recipient told their out-of-band authority's signature failed would go and
   re-check the authority -- the one thing that was fine.
 
+THE CERTIFYING INSTANT IS NOT OMISSIBLE (D-086(e)).  `verify()` refuses a call
+that supplies no `evaluation_time`, with `DeploymentManifestError` naming the
+omission.  The `None` default that used to mean "skip the lifetime bound" was
+Crucible Cycle 1 Binding Critical 2, and it is fixed rather than marked.
+
 WHAT THIS MODULE STILL DOES NOT DO, so a caller does not assume otherwise:
 it reaches no chain.  `runtimeCodeHash`, `deploymentBlockHash` and
 `compilerMetadataHash` are authenticated as things the deployment authority
@@ -196,13 +201,38 @@ def verify(document: Dict, expected_authority: str,
            evaluation_time: Optional[int] = None) -> Dict:
     """Authenticate a signed deployment manifest against an out-of-band authority.
 
-    `evaluation_time` is the instant the manifest's lifetime is judged at.  When
-    it is `None` no lifetime comparison is made, because there is nothing to
-    compare against: this module has no clock it trusts, and inventing one from
-    `time.time()` would make a *fixed* manifest start failing purely with the
-    passage of wall-clock time in the caller's process.  `verify_publication.py`
-    -- the only caller in this repository -- always supplies one.
+    `evaluation_time` is the instant the manifest's lifetime is judged at, and
+    IT IS NOT OMISSIBLE (D-086(e), Crucible Cycle 1 Binding Critical 2).  A call
+    that leaves it out, or passes `None`, is REFUSED with
+    `DeploymentManifestError` -- a `ValueError`, so every caller's refusal path
+    catches it -- rather than allowed to skip `check_lifetime`.
+
+    WHAT STOOD HERE, so the shape of the defect is on record: "when it is `None`
+    no lifetime comparison is made ... `verify_publication.py` -- the only caller
+    in this repository -- always supplies one."  Both halves were true and the
+    default was still fail-open: a manifest two decades stale, refused at any
+    named instant, authenticated the moment the argument was omitted, and the
+    only thing standing between that and a certifying result was one caller's
+    discipline.  D-083(d) marked it pending the frozen contract unfreezing; the
+    Crucible bound the exact code as a withdrawal condition; D-086 discharged
+    the hold.  The parameter keeps its `None` default deliberately: a Python-
+    level required argument would raise `TypeError` past every `except
+    ValueError` in the callers and report a programming error where a
+    recipient needs a refusal (D-086(b)).
+
+    This module still has no clock it trusts and invents none: the instant is
+    the caller's to pin, once, and `verify_publication.py` reports the one it
+    passed here beside its result.
     """
+    if evaluation_time is None:
+        raise DeploymentManifestError(
+            "evaluation_time was omitted: the certifying instant at which this "
+            "manifest's lifetime is judged is not omissible (D-086(e)). This call used "
+            "to skip the lifetime bound when no instant was supplied, so a stale or "
+            "post-dated manifest authenticated the moment a caller left the argument "
+            "out. Supply the one instant the run is pinned to; there is no mode in "
+            "which the manifest's age goes unjudged"
+        )
     if not isinstance(document, dict) or set(document) != {"schema", "payload", "authoritySignature"}:
         raise DeploymentManifestError(
             "manifest must contain exactly schema, payload, and authoritySignature"
@@ -226,6 +256,5 @@ def verify(document: Dict, expected_authority: str,
         raise DeploymentManifestError(
             f"deployment manifest recovered {recovered}, expected out-of-band authority {authority}"
         )
-    if evaluation_time is not None:
-        check_lifetime(payload, evaluation_time)
+    check_lifetime(payload, evaluation_time)
     return payload

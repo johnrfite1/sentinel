@@ -3,16 +3,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "spike": "tsx src/spike/run.ts",
     "signer": "node src/signer/main.ts",
-    "test": "node --test --test-concurrency=1 $SENTINEL_TEST_REPORTERS \"test/**/*.test.ts\"",
     "typecheck": "tsc --noEmit",
-    "sample-check": "node src/tools/sample-check.ts",
-    "emit-samples": "node src/tools/emit-samples.ts",
     "cold-demo": "node src/tools/cold-demo.ts",
-    "corpus": "node src/corpus/run.ts",
-    "ablation": "node src/ablation/report.ts",
-    "canary": "node src/spike/canary.ts"
+    "test": "node -e \"console.error('REFUSED: no test suite ships in this release tree, so there is nothing for node --test to run. The repository suites are excluded on purpose (README.md, section Tests). Exiting 1 rather than reporting zero tests as a pass. Runnable evidence here: forge test --root contracts; npm --prefix ts run cold-demo.'); process.exit(1)\""
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.70.0",

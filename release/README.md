@@ -131,21 +131,48 @@ From this directory:
 ```sh
 npm --prefix ts ci
 forge build --root contracts
-npm --prefix ts run cold-demo
+npm --prefix ts run cold-demo -- --output "$PWD/demo-out"
 ```
+
+`--output` is optional; without it the demo writes under the system temporary
+directory and prints the path. Name it, as above, if you intend to re-run the
+verifier by hand afterwards ("Independent verification", below). Give an
+absolute path: `npm --prefix` runs the script from `ts/`, so a relative one
+lands there.
 
 The demo creates fresh owner, isolated-signer, and deployment-authority keys in
 memory for that run. It deploys to a fresh Anvil, owner-signs and activates a
 signer-bound mandate, evaluates and signs in the separate signer process,
 verifies the signed deployment manifest and the receipt, executes the exact
-call, and runs three typed negative controls: an unauthenticated deployment
-authority, altered calldata, and receipt replay. Each negative asserts the
-specific refusal it expects — a locally computed custom-error selector for the
-Vault (`CalldataMismatch()`, `BadNonce()`), and a matched `FAIL:` line plus exit
-status for the verifier. A negative that fails for any other reason — a
-transport error, a crash, a missing file — now fails the demo instead of scoring
-as a pass. The demo prints the temporary evidence path. Private keys are never
-written.
+call, and runs typed negative controls. Each negative asserts the specific
+refusal it expects — a locally computed custom-error selector for the Vault
+(`NotAllowVerdict()`, `NotReviewVerdict()`, `CalldataMismatch()`, `BadNonce()`),
+and a matched `FAIL:` line plus exit status for the verifier. A negative that
+fails for any other reason — a transport error, a crash, a missing file — fails
+the demo instead of scoring as a pass. Private keys are never written.
+
+**The BLOCK case is generated at runtime, with that run's keys.** Before the
+ALLOW receipt is signed, the demo asks the same isolated signer to evaluate a
+second action: target, selector and value exactly as mandated, and the
+beneficiary word inside the calldata rewritten to an address the mandate does
+not authorise. That is the one shape this tree's verifier says, in its own
+`NOT ESTABLISHED` line, that it cannot see for itself — it never decodes
+calldata — so it is caught where it can be caught: the evaluator decodes the
+arguments, returns BLOCK, and the signer signs a genuine BLOCK receipt over
+that evidence. The demo then presents that receipt four times and requires four
+refusals: to the Vault at `executeWithReceipt` (`NotAllowVerdict()`) and at
+`executeWithOverride` (`NotReviewVerdict()`), and to the verifier on
+`--execution-path automatic` and on `--execution-path owner-override`, each
+with the `FAIL:` line naming the verdict. That is the runnable form of the
+sentence under "Independent verification" that a BLOCK receipt certifies on
+neither entry point. The BLOCK bundle is written beside the ALLOW one as
+`sample-block/`. No fixed-key BLOCK fixture is shipped, deliberately: a fixture
+signed by a key that also appears in a repository is exactly the trust-root
+confusion this tree exists to avoid, and a per-run key cannot be confused with
+anything.
+
+The remaining negatives are an unauthenticated deployment authority, altered
+calldata, and receipt replay.
 
 **The demo generates its own deployment authority.** It signs its own manifest
 with that key and then hands the verifier the same address, so that run is a
@@ -156,11 +183,65 @@ nothing this tree prints can be that channel.
 
 ## Independent verification
 
+The demo above leaves everything this needs under its `--output` directory:
+`sample/` (the ALLOW bundle), `sample-block/` (the BLOCK bundle),
+`deployment-manifest.json`, and — printed at the end of the run under the
+heading `LAB-GENERATED DEPLOYMENT AUTHORITY` — the address to pass as the
+authority. Substitute that address below. An earlier version of this section
+named a `SAMPLE_DIR` and a `DEPLOYMENT_MANIFEST.json` that the tree does not
+contain; it was written by someone who still had the repository open.
+
 ```sh
-python3 verifier/verify_publication.py SAMPLE_DIR \
-  --deployment-manifest DEPLOYMENT_MANIFEST.json \
-  --deployment-authority 0xADDRESS_OBTAINED_OUT_OF_BAND
+python3 verifier/verify_publication.py demo-out/sample \
+  --deployment-manifest demo-out/deployment-manifest.json \
+  --deployment-authority 0xADDRESS_THE_DEMO_PRINTED
 ```
+
+**The ALLOW bundle expires 300 seconds after the demo signed it.** The isolated
+signer issues receipts with a five-minute lifetime, and the verifier evaluates
+that window against the host clock. Run within five minutes: exit `0`, `PASS
+(static, offline)`. Run later: exit `1`, `FAIL: receipt requires issuedAt <=
+evaluationTime < expiresAt; got …`. The second is expiry, not rejection — the
+bytes are the same, and a verifier with a window is doing what it should.
+Re-run the demo for a fresh bundle.
+
+The BLOCK bundle does not go stale the same way. The verdict is checked before
+the windows, so `sample-block/` is refused for its verdict however long you
+wait, on either path:
+
+```sh
+python3 verifier/verify_publication.py demo-out/sample-block \
+  --deployment-manifest demo-out/deployment-manifest.json \
+  --deployment-authority 0xADDRESS_THE_DEMO_PRINTED
+# exit 1 — FAIL: receipt.verdict is BLOCK (0), not ALLOW: …
+python3 verifier/verify_publication.py demo-out/sample-block \
+  --deployment-manifest demo-out/deployment-manifest.json \
+  --deployment-authority 0xADDRESS_THE_DEMO_PRINTED \
+  --execution-path owner-override
+# exit 1 — FAIL: receipt.verdict is BLOCK (0), not REVIEW: …
+```
+
+A recipient with real material substitutes their own bundle, the publisher's
+signed manifest, and an authority address that reached them over a channel the
+publisher does not control.
+
+### Two verifiers, two claims
+
+This tree ships ONE verifier, `verifier/verify_publication.py`, and its claim
+is **executability**: would `SentinelVault` execute this bundle at the entry
+point it is presented for. It refuses a BLOCK receipt, and a REVIEW receipt
+without an authenticated owner override, because the Vault would refuse them.
+
+The repository this tree was assembled from carries a second, older verifier,
+`verifier/verify.py`, which is **not in this tree**. Its claim is
+**authenticity**: is this bundle genuinely what the signer produced. It passes
+a BLOCK receipt and an override-less REVIEW receipt, correctly, because both
+are authentic; and it evaluates no validity window at all, so an expired
+receipt is still an authentic one there. Its `=> PASS` and this tool's `PASS
+(static, offline)` are two different claims that once shared one word. The
+split is deliberate, was ruled at D-087(c), and each tool now says in its own
+output which claim it makes. It is stated here so a reader who meets both does
+not take one's PASS for the other's.
 
 The verifier enforces one fail-closed predicate:
 
@@ -206,8 +287,14 @@ middle of a sentence.
 
 ### Exit codes
 
-* **`0`** — certifying. Static, offline authenticity, with everything in the
-  run's own `NOT ESTABLISHED` line still outstanding.
+* **`0`** — certifying. Static, offline EXECUTABILITY — the manifest
+  authenticates under the out-of-band authority, the bundle is bound and signed
+  by the parties it names, the verdict is the one the presented entry point
+  accepts, and the compared action fields conform to the mandate and policy at
+  the evaluation instant — with everything in the run's own `NOT ESTABLISHED`
+  line still outstanding, which is where executability *on chain* is
+  disclaimed. An earlier version of this line said "authenticity", which is the
+  other verifier's word ("Two verifiers, two claims", above).
 * **`1`** — refused. The reason is printed to stderr as a `FAIL:` line.
 * **`3`** — **not certified, and not a refusal either.** Emitted only under
   `--evaluation-time`, which moves the evaluation instant from the machine
@@ -215,10 +302,12 @@ middle of a sentence.
   findings as diagnostics and certifies nothing. A script that treats any
   non-zero status as a failure, or any non-`1` status as a pass, misreads it.
 
-### Three limits of that predicate
+### Limits of that predicate
 
 Stated because an earlier version of this file claimed "exact action, calldata,
-policy, and nonce commitments", and no part of that last clause held.
+policy, and nonce commitments", and no part of that last clause held. There
+were three of these; a 2026-08-30 claim-honesty review found two more that the
+tool's own output does not carry, and they are added rather than folded in.
 
 * **The policy is partly enforced and partly hash-bound.** Enforced against the
   action: `maxNativeValueWei`, `allowedOperation`, and the policy's own
@@ -233,26 +322,77 @@ policy, and nonce commitments", and no part of that last clause held.
   selector, value, or call-graph constraints" — became false for value and for
   operation when those checks were added, and is corrected rather than quietly
   dropped.
-* **The calldata's arguments are never decoded.** `dataHash` binds `callData` to
-  the bytes presented, and the leading four bytes are compared to the mandated
-  selector — but nothing after that selector is decoded. A beneficiary,
-  recipient or amount encoded inside the calldata is therefore compared to no
-  mandated value, and a bundle in which only that word was rewritten is
-  internally consistent and authenticates. The Vault binds the same bytes and
-  likewise never decodes them; only the isolated signer's evaluator reads the
-  decoded arguments. Whether the verifier should decode them is an open scope
-  question rather than a settled no, and it is disclosed here either way.
+* **The calldata's arguments are never decoded, by ruling.** `dataHash` binds
+  `callData` to the bytes presented, and the leading four bytes are compared to
+  the mandated selector — but nothing after that selector is decoded. A
+  beneficiary, recipient or amount encoded inside the calldata is therefore
+  compared to no mandated value by this verifier, and a bundle in which only
+  that word was rewritten is internally consistent and authenticates. The Vault
+  binds the same bytes and likewise never decodes them; only the isolated
+  signer's evaluator reads the decoded arguments. An earlier version of this
+  file called that "an open scope question rather than a settled no". It is
+  settled: John ruled on 2026-08-30 (D-083(b)) that this verifier stays
+  disclosed-only and does not decode calldata, permanently, and the ruling
+  recorded its own cost rather than arguing it away. What a verifier can do
+  without decoding is compare the signer's ATTESTED decoded record against the
+  mandate, which catches a misconfigured-but-honest evaluator and not a lying
+  signer; the tool's own output is the authority on whether this tree's copy
+  carries that check. The cold demo's BLOCK case is this exact shape, caught
+  where it can be caught — by the evaluator, before anything is signed.
 * **There is no nonce check, and an offline verifier cannot have one.** Nonce
   freshness is not observable offline at all: the Vault consumes the action
   nonce atomically at execution, and nothing here reads chain state. What this
   verifier does with `actionNonce` is confirm it is a canonical `uint256`, and —
   on the override path — that the owner's override names the same one.
 
-Two of these three — the undecoded calldata arguments and nonce freshness — are
-printed by the tool itself, in a `NOT ESTABLISHED` line beside every result,
-together with the absence of any chain read and the absence of any authenticated
-clock. A recipient who reads only the tool's output still meets them. The
-policy's hash-bound fields are the one limit stated only here.
+* **There is no authenticated revocation source, so the manifest lifetime is a
+  bound and not a revocation check.** `deployment.py` refuses a manifest older
+  than ninety days (`MAX_MANIFEST_AGE_SECONDS`, ratified at D-083(e)) and one
+  post-dated past the evaluation instant. That is the whole of what stands in
+  for revocation: no list, no on-chain registry, no state proof. A manifest the
+  publisher has since repudiated, or one naming a signer rotated away
+  yesterday, keeps authenticating until it ages out. `check_lifetime` is named
+  for what it is; nothing in this tree can be named "revocation".
+* **The `NOT ESTABLISHED` line is printed beside every CERTIFYING result, not
+  every result.** A refused run prints its `FAIL:` line and nothing else; a
+  non-certifying `--evaluation-time` run carries the list only inside its JSON.
+  So a reader who sees the line is reading a PASS, and a reader of a refusal
+  never sees it — which is fine for a refusal, and is stated so that "beside
+  every result", which this file used to say, is not read as a property of the
+  refusals too.
+
+Two of the first three — the undecoded calldata arguments and nonce freshness —
+are printed by the tool itself in that `NOT ESTABLISHED` line, together with
+the absence of any chain read and the absence of any authenticated clock. A
+recipient who reads only the tool's certifying output still meets them. The
+policy's hash-bound fields and the two limits added above are stated only here.
+
+## Tests: what runs in this tree and what does not
+
+`npm --prefix ts test` in this tree REFUSES, with exit 1 and a message, on
+purpose. The repository's TypeScript suite (`ts/test/**`) does not ship: it
+depends on the corpus, the fixture generators and fixed-key test harnesses that
+this tree deliberately excludes, and shipping those would reintroduce the fixed
+development keys the assembler refuses to place here. Before this was fixed the
+shipped script was the repository's own `node --test "test/**/*.test.ts"`,
+which against an empty glob exits 0 having run zero tests — a green light on an
+empty suite, which is this project's own named failure mode. The repository's
+Python suite for its authenticity verifier does not ship either, and neither
+does that verifier (see "Two verifiers, two claims").
+
+What does run: `forge test --root contracts` (one adversarial test file,
+`contracts/test/PublicationWithdrawal.t.sol`), the cold demo with its typed
+negative controls, the verifier invocations above, and `npm --prefix ts run
+typecheck` against the shipped sources. The npm scripts for tools that are not
+in this tree are removed from the shipped `package.json` rather than left to
+fail on a missing file. A green result from any of these is evidence for what
+it exercised and nothing wider.
+
+Vendored dependencies ship with their notices: `contracts/lib/forge-std/`
+carries `LICENSE-APACHE` and `LICENSE-MIT`, and
+`contracts/lib/openzeppelin-contracts/` carries `LICENSE` (MIT). Those notices
+are the vendors' terms for their code. This tree's own code carries no licence
+grant; that choice is deliberately held and is not made here.
 
 `MANIFEST.sha256` covers every released file other than itself. Publication or
 deployment is a separate user decision; assembling this tree does not push,

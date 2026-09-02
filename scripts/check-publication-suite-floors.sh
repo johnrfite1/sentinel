@@ -13,9 +13,9 @@
 # Both files contain tests that are RED ON PURPOSE. They were written by an independent
 # author who is forbidden to edit the module under test (D-058(1), A-028), so a deferred item
 # cannot be marked `expectedFailure` from either side — the reds are the record of work that
-# is deliberately not done. Three are deferred for want of a chain (R-A018-04) and one is
+# is deliberately not done. One is
 # PERMANENTLY red by John's ruling at D-083(b). Demanding green would demand either
-# unauthorised work or work John has ruled out. But a bare count is no better: with 77 of 81
+# unauthorised work or work John has ruled out. But a bare count is no better: with 104 of 105
 # required to pass, a NEW failure hides perfectly behind a red that somebody fixed, and the
 # guard reports the same number for a healthy suite and a regressed one.
 #
@@ -68,14 +68,20 @@ set -uo pipefail
 #  Measured 2026-08-30 by running both files.
 # =====================================================================================
 DECLARATION=$(cat <<'FLOORS'
-# --- verifier/test_publication_verifier.py — 81 tests, 77 green, 4 red on purpose. ----
-#     The four are recorded in the `KNOWN RED TESTS IN THE FROZEN CONTRACT` block at the
+# --- verifier/test_publication_verifier.py — 105 tests, 104 green, 1 red on purpose. ---
+#     (Was 81/77/4 until 2026-09-01: three R-A018-04 reds were REDEFINED under D-086(e) and
+#     now pass; 24 tests were added for the Cycle 2 candidate. See the note in the declaration.)
+#     The one is recorded in the `KNOWN RED TESTS IN THE FROZEN CONTRACT` block at the
 #     top of verifier/verify_publication.py; this is that record made executable.
-#     81/81 would mean somebody implemented work that is not authorised.
-FLOOR test_publication_verifier 77
-RED   test_publication_verifier TestDeploymentIdentityIsNotBound.test_a_fabricated_runtime_code_hash_is_echoed_as_authenticated   R-A018-04 deferred: needs live chain state, no chain is named yet
-RED   test_publication_verifier TestDeploymentIdentityIsNotBound.test_two_contradictory_manifests_cannot_both_certify             R-A018-04 deferred: needs live chain state, no chain is named yet
-RED   test_publication_verifier TestDeploymentIdentityIsNotBound.test_the_result_names_the_block_its_claims_are_true_at           R-A018-04 deferred: needs live chain state, no chain is named yet
+#     105/105 would mean somebody implemented work that is not authorised (calldata decoding, D-083(b)).
+FLOOR test_publication_verifier 104
+#     THREE R-A018-04 RED LINES WERE REMOVED HERE ON 2026-09-01, not turned green by an agent.
+#     The three TestDeploymentIdentityIsNotBound tests were REDEFINED under D-086(e) — the
+#     council bound the CLAIM (a fabricated runtimeCodeHash must never be reported as
+#     authenticated), not the absence of RPC — and they now pass against the landed port.
+#     NO CHAIN BINDING EXISTS; runtimeCodeHash travels under unverifiedAuthorityAssertions and
+#     is compared to nothing. A future chain binding needs NEW tests; these three no longer
+#     test for one. The authority for this change is D-086(e), not the green tests.
 RED   test_publication_verifier TestExactActionIsEnforced.test_calldata_redirecting_the_mandated_beneficiary_is_refused           R-A018-17 RULED DISCLOSED-ONLY at D-083(b): PERMANENTLY red by ruling, not pending. Do NOT turn it green
 
 # --- verifier/test_publication_override.py — 61 tests, 61 green, NO reds. -------------
@@ -99,6 +105,13 @@ RED   test_publication_verifier TestExactActionIsEnforced.test_calldata_redirect
 #         guard had already reported both as "declared red now PASSES", which is exactly the
 #         signal it exists to raise, and the ruling is what discharges it.
 FLOOR test_publication_override 61
+
+# --- verifier/test_publication_conformance.py — 53 tests, 53 green, NO reds. ----------
+#     Added 2026-09-01 under D-087(a)/(b): the §5.6 evidence-projection arm, the reason-code
+#     arm, and §5.7.1 conformance named precisely. Written by an independent author against
+#     the untouched implementation (38 red on baseline), then closed by the port. A RED IN
+#     THIS FILE IS A REGRESSION.
+FLOOR test_publication_conformance 53
 FLOORS
 )
 # =====================================================================================

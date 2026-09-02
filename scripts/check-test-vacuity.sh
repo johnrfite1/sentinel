@@ -112,6 +112,7 @@ set -uo pipefail
 DECLARATION=$(cat <<'VACUITY'
 MODULE test_publication_verifier
 MODULE test_publication_override
+MODULE test_publication_conformance
 MODULE test_verifier
 
 # --- carried findings ----------------------------------------------------------------

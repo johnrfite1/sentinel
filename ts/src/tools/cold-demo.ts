@@ -327,6 +327,33 @@ function mustRefuseVerification(
     );
 }
 
+const ZERO32 = `0x${"00".repeat(32)}` as Hex;
+
+/** Write one publication bundle in the exact shape `verify_publication.py` reads. */
+function writeBundle(
+    dir: string,
+    bundle: {
+        action: ActionPayload; callData: Hex; mandate: MandatePayload; policy: PolicyPayload;
+        ownerSignature: Hex;
+        evaluation: {bundle: unknown; evidenceCanonical: string; evidenceHash: Hex};
+        signed: {receipt: unknown; signature: Hex; reasonCodes: string[]; signerFindings: string[]};
+    },
+): void {
+    mkdirSync(dir, {recursive: true});
+    writeFileSync(join(dir, "mandate.json"), json(bundle.mandate));
+    writeFileSync(join(dir, "mandate-signature.json"),
+        json({ownerAddress: owner.address, ownerSignature: bundle.ownerSignature}));
+    writeFileSync(join(dir, "policy.json"), json(bundle.policy));
+    writeFileSync(join(dir, "action.json"), json({...bundle.action, callData: bundle.callData}));
+    writeFileSync(join(dir, "evidence.json"), json(bundle.evaluation.bundle));
+    writeFileSync(join(dir, "evidence.canonical.json"), bundle.evaluation.evidenceCanonical);
+    writeFileSync(join(dir, "evidence.hash"), bundle.evaluation.evidenceHash);
+    writeFileSync(join(dir, "receipt.json"), json({
+        refused: false, receipt: bundle.signed.receipt, signature: bundle.signed.signature,
+        reasonCodes: bundle.signed.reasonCodes, signerFindings: bundle.signed.signerFindings,
+    }));
+}
+
 try {
     const publicClient = createPublicClient({chain: anvil, transport: http(rpcUrl)});
     await waitForNode(publicClient);
@@ -423,6 +450,77 @@ try {
     });
     const evaluation = evaluate({mandate, policy, action, callData, decode: decoded, simulation, vaultState, now});
     if (evaluation.verdict !== "ALLOW") throw new Error(`cold demo did not evaluate ALLOW: ${evaluation.reasonCodes}`);
+
+    // -----------------------------------------------------------------------------------
+    // THE BLOCK CASE, GENERATED HERE WITH THIS RUN'S KEYS (D-085(f), 2026-09-01).
+    //
+    // "A BLOCK receipt certifies on neither entry point" is the flagship property, and until
+    // this block it had no runnable evidence in the release: no BLOCK fixture ships, and none
+    // should -- a fixture signed by a fixed key that also appears in a repository is the
+    // trust-root confusion A-018 Critical 2 was about. So the BLOCK receipt is minted at
+    // runtime by the same isolated signer, over an action that differs from the ALLOW one in
+    // exactly one word: the beneficiary inside `callData`. Target, selector, value,
+    // operation, nonce, mandate and policy are all as mandated. That matters twice over:
+    //
+    //   * it is the one shape the publication verifier says, in its own NOT ESTABLISHED
+    //     line, that it cannot see for itself (it never decodes calldata; D-083(b)), so the
+    //     demo shows it caught where it can be caught -- the evaluator decodes the
+    //     arguments and returns BLOCK (`EVAL_PURCHASE_BENEFICIARY`);
+    //   * and because every field `_checkAction` / `_checkReceipt` compare is conforming,
+    //     the ONLY check that can refuse it on-chain is the verdict check. So
+    //     `NotAllowVerdict()` / `NotReviewVerdict()` below assert that the refusal happened
+    //     on the verdict and not on some incidental mismatch.
+    //
+    // Signed BEFORE the ALLOW receipt, deliberately. A BLOCK receipt reserves no nonce in
+    // the signer, so the ALLOW signing after it is unaffected; and its `issuedAt` is then
+    // never later than the ALLOW receipt's, so the single chain-clock alignment below
+    // covers both and the Vault cannot refuse it `ReceiptNotYetValid()` for a harness
+    // reason (R-A018-15). The alignment target is the later of the two anyway.
+    // -----------------------------------------------------------------------------------
+    const redirected = privateKeyToAccount(generatePrivateKey()).address;
+    const blockCallData = encodeFunctionData({
+        abi: payArtifact.abi, functionName: "purchase", args: [resource, redirected, 3600n, false],
+    }) as Hex;
+    const blockAction: ActionPayload = {...action, dataHash: keccak256(toBytes(blockCallData))};
+    const blockDecoded = decodeCall({target: demoPay, callData: blockCallData, registry});
+    const blockSimulation = await simulateAction({
+        client: publicClient, vault, target: demoPay, valueWei: blockAction.valueWei,
+        callData: blockCallData, decoded: blockDecoded.ok ? blockDecoded.decoded : null,
+    });
+    const blockEvaluation = evaluate({
+        mandate, policy, action: blockAction, callData: blockCallData, decode: blockDecoded,
+        simulation: blockSimulation, vaultState, now,
+    });
+    if (blockEvaluation.verdict !== "BLOCK") {
+        throw new Error(
+            `the redirected-beneficiary action did not evaluate BLOCK (got ` +
+            `${blockEvaluation.verdict}: ${blockEvaluation.reasonCodes.join(",")}); the BLOCK ` +
+            `case cannot be demonstrated, so the demo stops rather than skipping it`,
+        );
+    }
+    const signedBlock = await client.evaluateAndSign({
+        action: blockAction, callData: blockCallData, mandate, policy,
+        evaluation: {verdict: blockEvaluation.verdict, reasonCodes: blockEvaluation.reasonCodes,
+            evidenceCanonical: blockEvaluation.evidenceCanonical,
+            simulationBlockNumber: blockSimulation.anchor.blockNumber,
+            simulationBlockHash: blockSimulation.anchor.blockHash},
+    });
+    if (signedBlock.refused) {
+        throw new Error(
+            "the isolated signer REFUSED to attest the BLOCK verdict. A signed BLOCK receipt is " +
+            "what this demo has to present, and a refusal record is a different artifact; the " +
+            `demo stops. blocking=${signedBlock.blocking.map((b) => `${b.code}:${b.severity}`).join(",")}`,
+        );
+    }
+    if (signedBlock.receipt.verdict !== 0n) {
+        throw new Error(`signed receipt verdict is ${signedBlock.receipt.verdict}, expected 0 (BLOCK)`);
+    }
+    console.log(
+        `BLOCK receipt signed by the isolated signer over the redirected-beneficiary action ` +
+        `(reasonCodes=${blockEvaluation.reasonCodes.join(",")}). It is presented four times below ` +
+        `and must be refused four times.`,
+    );
+
     const signed = await client.evaluateAndSign({
         action, callData, mandate, policy,
         evaluation: {verdict: evaluation.verdict, reasonCodes: evaluation.reasonCodes,
@@ -436,26 +534,26 @@ try {
     // chain to cover it before ANY vault call reads it. Placed here rather than immediately before
     // the positive execution so that the `altered calldata` negative in between is also judged
     // inside the receipt window and can only refuse on the binding it was written to exercise.
-    const clock = await alignChainClockTo(publicClient, signed.receipt.issuedAt);
+    const latestIssuedAt = signed.receipt.issuedAt > signedBlock.receipt.issuedAt
+        ? signed.receipt.issuedAt : signedBlock.receipt.issuedAt;
+    const clock = await alignChainClockTo(publicClient, latestIssuedAt);
     console.log(
-        `Chain clock aligned to the receipt: latest block was ${clock.before}, receipt issuedAt ` +
-        `${signed.receipt.issuedAt}, drift ${clock.drift}s, latest block now ${clock.after} ` +
-        `(receipt expiresAt ${signed.receipt.expiresAt}).`,
+        `Chain clock aligned to the receipts: latest block was ${clock.before}, ALLOW receipt ` +
+        `issuedAt ${signed.receipt.issuedAt}, BLOCK receipt issuedAt ` +
+        `${signedBlock.receipt.issuedAt}, drift ${clock.drift}s, latest block now ${clock.after} ` +
+        `(ALLOW receipt expiresAt ${signed.receipt.expiresAt}).`,
     );
 
     const sample = join(output, "sample");
-    mkdirSync(sample, {recursive: true});
-    writeFileSync(join(sample, "mandate.json"), json(mandate));
-    writeFileSync(join(sample, "mandate-signature.json"), json({ownerAddress: owner.address, ownerSignature}));
-    writeFileSync(join(sample, "policy.json"), json(policy));
-    writeFileSync(join(sample, "action.json"), json({...action, callData}));
-    writeFileSync(join(sample, "evidence.json"), json(evaluation.bundle));
-    writeFileSync(join(sample, "evidence.canonical.json"), evaluation.evidenceCanonical);
-    writeFileSync(join(sample, "evidence.hash"), evaluation.evidenceHash);
-    writeFileSync(join(sample, "receipt.json"), json({
-        refused: false, receipt: signed.receipt, signature: signed.signature,
-        reasonCodes: signed.reasonCodes, signerFindings: signed.signerFindings,
-    }));
+    writeBundle(sample, {action, callData, mandate, policy, ownerSignature, evaluation, signed});
+    // The BLOCK bundle is written beside the ALLOW one so a reader can re-run the verifier
+    // against it by hand (release README, "Independent verification"). Its refusal does not
+    // go stale: the verifier checks the verdict before any validity window.
+    const sampleBlock = join(output, "sample-block");
+    writeBundle(sampleBlock, {
+        action: blockAction, callData: blockCallData, mandate, policy, ownerSignature,
+        evaluation: blockEvaluation, signed: signedBlock,
+    });
 
     const manifestPayload = {
         schemaVersion: "1", chainId: chainId.toString(), vault,
@@ -502,6 +600,55 @@ try {
         "--deployment-manifest", manifestPath, "--deployment-authority", wrongAuthority],
         {encoding: "utf8"}));
 
+    // --- BLOCK x both verifier paths. The FAIL line must name the verdict AND the Vault
+    // entry point that refuses it; anything else (a window, a binding, a crash) is not the
+    // control this claims to be. The verifier checks the verdict before the windows, which
+    // is why these two refusals are the ones a reader can reproduce after the demo's
+    // 300-second receipt window has closed.
+    const verifierPath = join(REPO, "verifier", "verify_publication.py");
+    mustRefuseVerification("BLOCK receipt presented on the automatic path (verifier)", {
+        classification: "verdict-refusal",
+        exitStatus: 1,
+        failure: /^FAIL: receipt\.verdict is BLOCK \(0\), not ALLOW: the Vault's automatic path executeWithReceipt reverts NotAllowVerdict on this receipt\./m,
+    }, () => spawnSync("python3", [verifierPath, sampleBlock,
+        "--deployment-manifest", manifestPath, "--deployment-authority", labAuthority.address],
+        {encoding: "utf8"}));
+    mustRefuseVerification("BLOCK receipt presented on the owner-override path (verifier)", {
+        classification: "verdict-refusal",
+        exitStatus: 1,
+        failure: /^FAIL: receipt\.verdict is BLOCK \(0\), not REVIEW: the Vault's override path executeWithOverride reverts NotReviewVerdict, so no owner override can make this receipt executable/m,
+    }, () => spawnSync("python3", [verifierPath, sampleBlock,
+        "--deployment-manifest", manifestPath, "--deployment-authority", labAuthority.address,
+        "--execution-path", "owner-override"],
+        {encoding: "utf8"}));
+
+    // --- BLOCK x both Vault entry points, while the nonce is still current. Every field
+    // `_checkAction` and `_checkReceipt` compare is as mandated and the receipt is genuinely
+    // signed by the active signer, so the verdict check is the first thing that CAN refuse
+    // this receipt -- and the selector assertion proves it is the thing that did.
+    await mustRevertWith("BLOCK receipt at executeWithReceipt", "NotAllowVerdict()", () =>
+        wallet.writeContract({
+            address: vault, abi: vaultArtifact.abi, functionName: "executeWithReceipt",
+            args: [blockAction, blockCallData, signedBlock.receipt, signedBlock.signature],
+            account: owner,
+        }));
+    // The override struct is all zeros and the owner signature is empty ON PURPOSE. The
+    // Vault's verdict check precedes every override check, so `NotReviewVerdict()` asserts
+    // that a BLOCK receipt is refused before the Vault so much as reads the credential. If
+    // this ever reverted OverrideMismatch or NotOwnerOverride instead, the typed control
+    // fails, and rightly: it would mean the Vault examined an override on a BLOCK receipt.
+    const zeroOverride = {
+        schemaVersion: 0, reviewReceiptHash: ZERO32, actionHash: ZERO32, mandateHash: ZERO32,
+        policyHash: ZERO32, actionNonce: 0n, reasonHash: ZERO32, issuedAt: 0n, expiresAt: 0n,
+    };
+    await mustRevertWith("BLOCK receipt at executeWithOverride", "NotReviewVerdict()", () =>
+        wallet.writeContract({
+            address: vault, abi: vaultArtifact.abi, functionName: "executeWithOverride",
+            args: [blockAction, blockCallData, signedBlock.receipt, signedBlock.signature,
+                zeroOverride, "0x"],
+            account: owner,
+        }));
+
     const altered = `${callData.slice(0, -2)}${callData.endsWith("00") ? "01" : "00"}` as Hex;
     // The vault recomputes keccak256(callData) and compares it to the signed action's dataHash.
     // Nothing earlier in `_checkAction` can fire here: same nonce, same active mandate and
@@ -527,6 +674,8 @@ try {
     }));
     await client.close();
     console.log(`Cold demo artifacts: ${output}`);
+    console.log(`  sample/        ALLOW bundle -- certifies for 300s after signing, then expires`);
+    console.log(`  sample-block/  BLOCK bundle -- refused on both --execution-path values, indefinitely`);
     // R-A018-10. This address was `Deployment authority (obtain out of band)`, which presented a
     // key the demo had generated 20 seconds earlier as the recipient's independent trust root --
     // the exact confusion the out-of-band requirement exists to prevent.

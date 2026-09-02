@@ -173,9 +173,47 @@ neither.
 
 | Exit | Meaning |
 | --- | --- |
-| `0` | **Certifying.** Static offline authenticity, with the run's own `NOT ESTABLISHED` line still outstanding. |
+| `0` | **Certifying.** ~~Static offline authenticity~~ — corrected 2026-09-01: that is `verify.py`'s claim wearing this tool's name (the D-087(c) defect, twenty lines above the section that names it). **Static, offline EXECUTABILITY:** the manifest authenticates under the out-of-band authority, the bundle is internally bound and signed by the parties the manifest names, the verdict is the one the presented entry point accepts, and the action's compared fields conform to the mandate and policy at the evaluation instant — with the run's own `NOT ESTABLISHED` line still outstanding, which is where executability *on chain* is disclaimed. |
 | `1` | **Refused.** The reason is printed to stderr as a `FAIL:` line. |
 | `3` | **Not certified, and not a refusal.** Emitted only under `--evaluation-time`, which moves the evaluation instant from the machine running the check to whoever wrote the command line (R-A018-03). The run prints diagnostics and certifies nothing. |
+
+## Two verifiers, two claims: authenticity versus executability
+
+**Added 2026-09-01 (D-087(c)).** The repository carries two offline verifiers, and until this
+section nothing written down said that they certify different things. The 2026-08-31 inventory
+diff (`docs/check-inventory-diff-2026-08-31.md` §4, cells D-II, D-III, D-IV) found `=> PASS` from
+one and `PASS (static, offline)` from the other to be two different claims wearing one word. John
+ruled at D-087(c) that the split is intended and must be stated on both surfaces. This is the
+statement; each tool's own docstring and output now carry it too.
+
+- **`verifier/verify.py` (D-010) certifies AUTHENTICITY.** Is this bundle genuinely what the
+  signer produced: every hash recomputes, every signature recovers to the trust root the
+  verifying party names under `--domain`, every internal binding holds, and the evidence
+  describes what it says it describes. It makes no claim about what the Vault would do with the
+  receipt. **It has no clock and evaluates no validity window** — `issuedAt`, `expiresAt`, the
+  mandate, policy and override windows and the action deadline are checked for shape and
+  binding, never against the present instant.
+- **`verifier/verify_publication.py` (the one the release tree ships) certifies
+  EXECUTABILITY**, statically and offline: would `SentinelVault` execute this bundle at the entry
+  point it is presented for. It reads the verdict, evaluates every window at a stated instant,
+  compares the action's target, value, selector and operation to the mandate and policy, and
+  prints what it did not establish beside every certifying result.
+
+The consequences, stated so they are not later reported as defects of either tool:
+
+| Bundle | `verify.py` | `verify_publication.py` |
+| --- | --- | --- |
+| REVIEW receipt, no override | `=> PASS` (authentic) | `FAIL` (not executable without an authenticated override) |
+| BLOCK receipt | `=> PASS` (authentic) | `FAIL` on both `--execution-path` values |
+| Receipt whose window has closed | `=> PASS` (authentic; no clock) | `FAIL` (not current at the evaluation instant) |
+
+So *"a BLOCK receipt certifies on neither entry point"* is a statement about the publication
+verifier and the Vault, and is true of them; it was never a statement about `verify.py`, whose
+PASS over a BLOCK receipt is correct for the claim it makes. D-087(c) closes D-II, D-III and D-IV
+as **claim** defects. Unification into one versioned predicate — the Cycle 2 handoff's acceptance
+criterion 2 as written — is recorded as the goal for a later batch, not this one: both verifiers
+currently carry checks the other lacks, so neither is the obvious survivor, and `verify.py` is the
+inventory the current batch is porting *from*.
 
 ## Evaluator check coverage (additive)
 

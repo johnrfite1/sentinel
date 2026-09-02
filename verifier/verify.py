@@ -17,6 +17,29 @@ established one."
     python3 verifier/verify.py --tamper --domain <deployment-domain.json> fixtures/samples/case-1-allow
     python3 verifier/verify.py --all --domain <deployment-domain.json> fixtures/samples
 
+WHAT A PASS FROM THIS TOOL MEANS, AND WHAT IT DOES NOT (D-087(c), 2026-09-01)
+----------------------------------------------------------------------------
+This verifier certifies AUTHENTICITY: that the bundle is genuinely what the
+named signer produced -- every hash recomputes, every signature recovers to the
+trust root the verifying party names under --domain, every internal binding
+holds, and the evidence describes what it says it describes.  It does NOT
+certify EXECUTABILITY -- whether the Vault would execute the action -- and it
+makes no claim about the verdict's consequence.  So a REVIEW receipt with no
+override and a BLOCK receipt both `=> PASS` here, correctly: both are
+authentic, and neither is executable.  The verifier that answers the other
+question is `verifier/verify_publication.py`, which refuses both.  `=> PASS`
+from this tool and `PASS (static, offline)` from that one are two different
+claims that previously shared one word; the split is deliberate, was ruled at
+D-087(c), and is stated on both surfaces so that neither is read as the other.
+
+THIS TOOL EVALUATES NO VALIDITY WINDOW.  It has no clock.  `issuedAt`,
+`expiresAt`, the mandate's and policy's validity windows, the action deadline
+and the override window are checked for shape and for binding, never against
+the present instant.  An expired receipt is therefore still an authentic one
+and still passes here.  Currency -- like nonce freshness and executability at
+a block -- is the publication verifier's question, not this tool's, and a
+reader who needs it must run that tool.
+
 Exit status is 0 only if every check passes.
 """
 
@@ -2248,7 +2271,17 @@ def run(sample_dir, domain_path=None, tamper=None, quiet=False, verbose=True):
         return as_expected, checks
 
     if not quiet:
-        print(f"  => {_color('PASS', GREEN) if ok else _color('FAIL', RED)}\n")
+        if ok:
+            # D-087(c): say which claim this is. `=> PASS` here and `PASS (static,
+            # offline)` from verify_publication.py were two different claims wearing
+            # one word. This tool has no clock and evaluates no validity window.
+            print(f"  => {_color('PASS', GREEN)}: AUTHENTIC -- hashes, signatures and bindings "
+                  "hold against the named trust root.\n"
+                  "     NOT evaluated by this tool: executability at the Vault, and every "
+                  "validity window (no clock; an expired receipt is still an authentic one). "
+                  "For those, run verifier/verify_publication.py.\n")
+        else:
+            print(f"  => {_color('FAIL', RED)}\n")
     return ok, checks
 
 
@@ -2353,8 +2386,13 @@ def main(argv=None):
         oks = [run(t, root, args.tamper)[0] for t, root in targets]
     failed = [t for (t, _root), ok in zip(targets, oks) if not ok]
     passed = len(oks) - len(failed)
+    # "verified" means AUTHENTIC and nothing more (D-087(c)). The phrase
+    # `N/N sample(s) verified` is kept intact because the test suite asserts on it;
+    # the qualifier follows it on the same line so a reader cannot take the count
+    # without the claim's limit.
     print(f"{passed}/{len(oks)} sample(s) "
-          f"{'behaved as expected under every tamper mode' if args.tamper else 'verified'}")
+          f"{'behaved as expected under every tamper mode' if args.tamper else 'verified'}"
+          f"{'' if args.tamper else ' as AUTHENTIC. Executability and validity windows are not evaluated by this tool (no clock); an expired receipt is still an authentic one -- see verifier/verify_publication.py.'}")
     for target in failed:
         print(f"  {_color('FAILED', RED)}: {target}")
     return 1 if failed else 0

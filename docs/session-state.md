@@ -3,9 +3,13 @@
 Rewritten at the end of each working session. **This file, not the conversation, is the
 memory.** If it disagrees with anything an agent remembers, this file wins.
 
-Last updated: **2026-08-29 (Crucible Cycle 2 implementation checkpoint authorised / D-081;
-candidate implementation verified and awaiting its authorised local commit; publication is not
+Last updated: **2026-09-01 (the Cycle 2 candidate is IN BUILD under D-087; D-085 and D-086
+recorded; the BLOCK→PASS defect named below is FIXED at `8d47a0b`; publication is not
 authorised).**
+~~Last updated: 2026-08-29 (Crucible Cycle 2 implementation checkpoint authorised / D-081;
+candidate implementation verified and awaiting its authorised local commit; publication is not
+authorised).~~ — superseded; left visible because four commits and three rulings landed under
+that date line before it was corrected.
 D-055 is MET (D-073). It unlocks nothing. **"Sentinel" is the project name (D-074).**
 The EIP-712 domain string is also `"Sentinel"` (D-075, recorded late). There is no
 name/domain split. Branch `step-3/isolated-signer`.
@@ -34,7 +38,18 @@ no push is authorised. `.serena/` remains gitignored.
 > **The Icon line in `README.md` is kept.** Report the state
 > below and wait.
 >
-> **CURRENT NARROW INSTRUCTION (D-081):** implement the three Crucible withdrawal conditions,
+> **CURRENT NARROW INSTRUCTION (2026-09-01, D-087 and the Smith's build instruction that
+> followed it):** build ONE Cycle 2 candidate of ~35 items — the §5.6 evidence-projection arm,
+> the reason-code arm, the four Vault-axis items, §5.7.1 conformance named "signer-attested
+> record conforms to mandate", the A/B semantic split stated on both verifiers, the §5.5.1
+> refusal arm recognised and refused, release packaging per D-085(f), and the 2026-08-30
+> round's confirmed findings — for the chairs to review as one SHA. Test authors and
+> implementers work in separate lanes; `release/` is assembled ONCE at the end by the
+> coordinator, never mid-batch (that is how a pre-repair verifier shipped last time). No
+> commit, push, gate signature, Critical withdrawal or publication is authorised by it.
+>
+> ~~**CURRENT NARROW INSTRUCTION (D-081):**~~ **spent at `a38cff9` (2026-08-29); kept for the
+> record of what that candidate was.** Implement the three Crucible withdrawal conditions,
 > create one local Sentinel commit, and record its immutable SHA in the Crucible session ledger.
 > This instruction does not ratify Cycle 2, withdraw any Critical, authorize publication, change
 > repository visibility, or authorize a push. The candidate adds SentinelVault enforcement,
@@ -49,8 +64,28 @@ no push is authorised. `.serena/` remains gitignored.
 > mandate/domain schema, remain fixed-key private fixtures, and are excluded from `release/`.
 > D-080's Gate 8 result belongs to their predecessor v0.2 packet; no Gate 8 rerun is claimed.
 >
-> **2026-08-30 — THE CRUCIBLE LINE IS HALTED; A REMEDIATION SET IS PROPOSED, NOT AGREED AND NOT
-> STARTED.** All four Cycle 2 Criticals were Adversary-SUSTAINED at `A-018` / `MSG-022` and remain
+> **2026-09-01 — THE REPAIR BATCH LANDED, D-085/D-086/D-087 ARE RECORDED, AND THE CYCLE 2
+> CANDIDATE IS IN BUILD.** Four commits since the block below was written: `8d47a0b` (the
+> publication-surface repairs and the state-aware publication gate — the BLOCK→PASS defect is
+> fixed there), `5d93850` (R-A018-18/23/24 closed under D-083; guards wired), `5c8c090` and
+> `2318ae3` (the gate's silent-abort defect, D-084). Then three rulings: **D-085** reversed
+> D-083(h) — D-047 is retired, D-055(a) governs, the agent's error is recorded — and replaced
+> one-at-a-time finding with a systematic inventory diff, which measured the class at
+> **54 + 4 + 4 missing checks, not 6** (`docs/check-inventory-diff-2026-08-31.md`); **D-086**
+> fired D-083(d)'s release condition, so the fail-open `deployment.verify(evaluation_time=None)`
+> default is FIXED-not-marked and the lab casting's Binding Critical 2 closes by the
+> non-certifying-static route, with Binding Critical 1 already closed at `5d93850` and needing
+> demonstration; **D-087** scoped the next candidate to ~35 items and ruled §5.7.1 (port the
+> attested-record comparison, named precisely), the A/B split (stated on both verifiers;
+> `verify.py` discloses it has no clock), and the §5.5.1 arm (recognise and refuse). **Two
+> Crucible lines, do not conflate them:** the enforcement-publication line's four A-018
+> Criticals are still OPEN AT ANVIL (D-083(i)); the lab casting is HALTED pending the new SHA.
+> The block below is struck where it is now false and otherwise stands.
+>
+> **2026-08-30 — THE CRUCIBLE LINE IS HALTED; A REMEDIATION SET IS PROPOSED, ~~NOT AGREED AND NOT
+> STARTED~~.** **Corrected 2026-09-01: it was not agreed as a register, but its §3 items were
+> authorised one by one (D-082(a), D-083(j), D-085(f), D-086, D-087) and most are now CLOSED
+> with dated markers; §4 is still John's.** All four Cycle 2 Criticals were Adversary-SUSTAINED at `A-018` / `MSG-022` and remain
 > **OPEN AT ANVIL**. A build-team response and reply were drafted and the chairs consulted
 > informally. **That consultation made no ledger entry, no repository change, and no ruling.
 > Nothing is "agreed" or "accepted" in any ratified sense**, and an earlier version of this block
@@ -59,18 +94,23 @@ no push is authorised. `.serena/` remains gitignored.
 > v0.3 enforcement/verifier architecture is retained** and still need an instruction, and its §4
 > items are blocked on John.
 >
-> **THE DEFECT: the shipped `verify_publication.py` prints PASS and exits 0 for a receipt whose
-> verdict is BLOCK** (register §1.1, reproduced 2026-08-30). **IT IS NOT PUSHED.** `a38cff9`
+> ~~**THE DEFECT: the shipped `verify_publication.py` prints PASS and exits 0 for a receipt whose
+> verdict is BLOCK**~~ (register §1.1, reproduced 2026-08-30) — **FIXED at `8d47a0b` the same
+> day; struck, not deleted, because the push-status record that follows is still true.** **IT IS NOT PUSHED.** `a38cff9`
 > exists only in the local working tree; `origin/step-3/isolated-signer` is at `70f4b4d` and no
 > remote ref contains it. An earlier version of this block inherited a "pushed branch" claim that
 > was false — prevention work, not incident response. **Four build-team claims were wrong and are
 > corrected in the register's §0** (the push status, the Conscience attribution, "valid under
 > every branch", and the licence wording), plus the two earlier self-corrections now at §1.2–§1.3.
 >
-> **The publication scope fork is unresolved, and its constitutional precondition has not been
-> ruled:** the chairs' informal reading is that an Override-in-Writing can authorise proceeding
+> ~~**The publication scope fork is unresolved, and its constitutional precondition has not been
+> ruled:**~~ **RULED 2026-08-30 at D-083(a) and D-083(g):** the candidate is the `a38cff9`
+> lineage repaired, custody RETAINED with the drain disclosed, audience = technical evaluators,
+> venue = GitHub public (visibility unchanged, HELD_PRIVATE), and the lab branch REQUIRES A FRESH
+> CASTING — the chairs' informal reading is that an Override-in-Writing can authorise proceeding
 > despite unresolved Criticals but **does not rewrite the Ingot's acceptance or kill conditions**,
-> so the clean lab path is a fresh casting. **No branch can be costed until John rules it.**
+> and John ruled that reading rather than merely leaning on it. That casting is
+> `S-20260830-sentinel-conformance-lab-r1`.
 >
 > **THE `GIT_INDEX_FILE` FAIL-OPEN IS FIXED — the warning that stood here is withdrawn.**
 > It was real: clearing the variable made the pre-commit guard read `.git/index` while git was
@@ -288,6 +328,20 @@ The D-058 confirmed batches HOLD inside their declared boundaries. **D-055 is ME
 and unlocks nothing.** The name is "Sentinel" (D-074). The private packet at
 `reviewer-packet/` is not name-agnostic. If you arrived with no instruction, report the
 state below and wait.
+
+### ADDENDUM 2026-09-01 — what has moved since the table below was written
+
+The table below is the 2026-08-29 record and is left as written. Since then:
+
+| | |
+|---|---|
+| Repair batch | **LANDED** — `8d47a0b`, `5d93850`, `5c8c090`, `2318ae3` (2026-08-30). The BLOCK→PASS publication verifier is fixed; R-A018-18/23/24 closed under D-083; the release-sync, suite-floor, vacuity and gate-abort guards are wired; the register's §3 carries dated CLOSED markers |
+| Lab casting, Cycle 1 | **REPORTED on `8d47a0b`**, two Criticals bound. Critical 1 already closed at `5d93850` (D-086(f), needs demonstrating); Critical 2 ruled FIXED by the non-certifying-static route (D-086(e)). **HALTED pending the next SHA**; both Criticals remain the council's to withdraw at Cycle 2 |
+| Enforcement line | **Unchanged: HALTED, four A-018 Criticals OPEN AT ANVIL** (D-083(i)) |
+| Review method | **Inventory diff replaces one-at-a-time finding** (D-085(e)). Measured class: 54 + 4 + 4 missing checks, not 6. D-047 is retired; D-055(a) governs (D-085(a)) |
+| Cycle 2 candidate | **IN BUILD under D-087**, ~35 items, one SHA. Test authors and implementers in separate lanes; `release/` assembled once at the end by the coordinator |
+| Next | The candidate lands as one local commit when the coordinator assembles and the gate is green; then the chairs. **No push, no gate signature, no Critical withdrawal, no publication** |
+| Publication | **NOT AUTHORISED.** Unchanged. Licence DEFERRED (D-082(c)); `docs/publication-policy.state` is HELD_PRIVATE / UNDECIDED / NONE |
 
 ### WHERE THE PROJECT IS, 2026-08-29
 

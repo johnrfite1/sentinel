@@ -48,6 +48,25 @@ argument in §6. The error came from carrying a stale "branch pushed" fact forwa
 workspace rule *"verify before you rely on a documented status"* exists to prevent, committed
 in a document whose §1 is a list of unverified claims.
 
+### 0.3 A claim was written before its work existed, and an outage left it standing — 2026-09-01
+
+Recorded in §0 because it is the same failure as §0.1 arriving by a different mechanism.
+
+During the D-087 build, the documentation lane wrote into `HANDOFF.md`'s 2026-09-01 block that
+*"the release's cold demo now mints a BLOCK receipt per run and requires four refusals"* — and was
+then killed by a rate limit before the cold-demo change existed. For the length of the outage the
+entry-point document a builder reads first asserted a control that `grep -c BLOCK
+ts/src/tools/cold-demo.ts` measured at **0**. The coordinator caught it on resume by measuring
+rather than reading the agent's report; the lane made the claim true by implementing the work
+(six serial runs, four typed refusals) rather than striking it, and reported the error itself.
+
+**Why it is recorded rather than simply fixed:** the lane's brief was claim honesty. The defect
+this project keeps finding — a statement standing in the record with no control behind it — was
+produced here by *sequencing under interruption*, with no misjudgement by anyone. A process that
+writes the claim in the same pass as the work has this failure available to it whenever the pass
+can be cut short. **The mitigation is the one already in force for everything else: measure the
+tree, never the report.**
+
 ### 0.2 Three further corrections
 
 - **Conscience attribution.** The first version said the council's restatement "named only the
@@ -176,10 +195,24 @@ candidate**. There is no external exposure and no incident to respond to. See §
 
 ### R-A018-01 — Enforce the verdict `[CRITICAL 3, clause 4]`
 
-`verify_publication.py` never reads `receipt["verdict"]`. **Closes when** a non-`ALLOW` verdict
+~~`verify_publication.py` never reads `receipt["verdict"]`.~~ **Struck 2026-09-01: false of the tree since `8d47a0b`; see CLOSED below.** **Closes when** a non-`ALLOW` verdict
 fails closed; a `REVIEW` receipt passes only through an explicitly modelled and authenticated
 owner override, matching the Vault's `NotAllowVerdict` / `NotReviewVerdict`; and both arms have
 negative tests.
+
+**CLOSED 2026-08-30 at `8d47a0b`; closure marker added 2026-09-01** (the entry had described the
+repaired defect in the present tense for two days). `check_verdict` reads the verdict, holds it to
+the closed enum `{0=BLOCK, 1=REVIEW, 2=ALLOW}` and fails closed outside it rather than falling
+through to an ALLOW comparison; the automatic path certifies ALLOW only; the override path
+certifies REVIEW only and only alongside an authenticated `override.json`
+(`check_owner_override`, examined on every path since D-083(c)); and a BLOCK receipt is refused
+on both with a `FAIL:` naming `NotAllowVerdict` / `NotReviewVerdict`, matching the Vault. Observed
+by `TestVerdictIsEnforced` in `verifier/test_publication_verifier.py`
+(`test_a_signed_block_receipt_does_not_certify`, `test_the_shipped_block_fixture_does_not_certify`,
+`test_an_out_of_range_verdict_does_not_certify`) and by the override suite. **Runnable in the
+release since 2026-09-01 (D-085(f)):** the cold demo mints a BLOCK receipt per run with that run's
+keys and requires four refusals — `executeWithReceipt` (`NotAllowVerdict()`), `executeWithOverride`
+(`NotReviewVerdict()`), and the verifier on both `--execution-path` values.
 
 ### R-A018-02 — Remove the dead nonce check; add an authenticated-block nonce check `[CRITICAL 3, clause 4]`
 
@@ -380,26 +413,68 @@ must not print "current receipt."
 
 ### R-A018-03 — Bind executability to a trusted time source `[CRITICAL 3, clause 2]`
 
-`--evaluation-time` is registered with `help=argparse.SUPPRESS`. **"Non-overridable clock" is
+~~`--evaluation-time` is registered with `help=argparse.SUPPRESS`.~~ **Struck 2026-09-01: false of the tree since `8d47a0b`; see CLOSED below.** **"Non-overridable clock" is
 underspecified** — the operating-system clock is also caller-controlled. **Closes when**
 executability uses an **authenticated block timestamp or another explicitly trusted time
 source**; injected time survives only in a non-certifying test mode that cannot produce a
 certifying result; and a "refused clock override" negative test exists.
 
+**CLOSED 2026-08-30 at `8d47a0b` on the condition as re-scoped by D-086(e); marker added
+2026-09-01.** What landed: `--evaluation-time` is documented in `--help` and the module docstring
+as NON-CERTIFYING TEST MODE; a run under it reports its findings and exits 3, which the module
+docstring, `docs/enforcement-release-v0.3.md` and the release README all name; without the flag
+the instant is the host clock, the result says so in `evaluationTimeSource`, and "a trusted time
+source" is listed under `NOT ESTABLISHED` beside every certifying result. Observed by
+`TestClockIsNotTheCallers` (`test_an_injected_clock_cannot_produce_a_certifying_result`,
+`test_an_injected_clock_cannot_revive_an_expired_receipt`,
+`test_the_clock_control_is_not_concealed_from_the_help_text`). **What did NOT land, and is not
+claimed by this marker:** an authenticated block timestamp. The first clause of the closure
+condition was re-scoped by John at D-086(e) — Binding Critical 2 closes by the
+non-certifying-static route, *"the result stop claiming properties it did not authenticate"*, and
+live RPC is NOT AUTHORISED. The module-level `deployment.verify(evaluation_time=None)` default,
+held at D-083(d) and released by D-086, is the verifier implementer's item in the D-087 batch and
+is not closed here.
+
 ### R-A018-04 — Bind deployment identity to live chain state `[CRITICAL 3, clause 3; CRITICAL 1]`
 
-Neither module performs any RPC. A fabricated `runtimeCodeHash` is reported as authenticated
-(§1.1). **Closes when** the recorded runtime code hash is compared against live deployed bytecode
-or an authenticated state proof at a named block, and results distinguish static authenticity
-from executability at a named block.
+Neither module performs any RPC. ~~A fabricated `runtimeCodeHash` is reported as authenticated
+(§1.1).~~ **Struck 2026-09-01 — false of the tree since the D-087 batch, under D-086(e).** The
+value now travels inside `unverifiedAuthorityAssertions` in the result payload and appears in no
+headline; the certifying line and `NOT ESTABLISHED` disclaim deployment identity, currentness and
+executability on chain by name. **That is the claim corrected, not the binding built:** D-086(e)
+ruled Binding Critical 2 closed by the non-certifying-static route — *"what is mandatory is that
+the result stop claiming properties it did not authenticate"* — with live RPC NOT AUTHORISED.
+**The three deliberate reds of `TestDeploymentIdentityIsNotBound` were REDEFINED, not closed by
+chain binding:** each had asserted a chain binding, i.e. the route that is now ruled out, so each
+was rewritten to observe the *claim* instead (the fabricated hash is never presented as an
+authenticated fact; two contradictory manifests both authenticate statically and neither claims
+deployment identity; no claim is anchored to a block and executability is stated as not
+established). All three fail on `2115c4f` and are green-able under the ruling; none is a
+chain-binding test any more. **Closes when** the recorded runtime code hash is compared against
+live deployed bytecode or an authenticated state proof at a named block, and results distinguish
+static authenticity from executability at a named block — **which remains OPEN and is not
+authorised**; this item is the first `NOT ESTABLISHED` entry and stays there.
 
 ### R-A018-05 — Implement the missing predicate checks `[CRITICAL 3, clause 5]` — NEW
 
 The first version listed negative *tests* for target, value, selector, operation, policy expiry
 and code identity but **no item required implementing those checks** in the shipped predicate.
-The verifier currently compares none of them against mandate or policy. **Closes when** the
+~~The verifier currently compares none of them against mandate or policy.~~ **Struck 2026-09-01: false of the tree since `8d47a0b`; see CLOSED below.** **Closes when** the
 shipped predicate enforces exact target, value, selector, operation, policy validity, and code
 identity where relevant.
+
+**CLOSED 2026-08-30 at `8d47a0b` for the fields that can be compared offline; marker added
+2026-09-01.** `check_exact_action` compares the action's target and selector to the mandate, its
+`valueWei` to both the mandate's and the policy's ceilings, its `operation` to the policy's
+`allowedOperation`, and the policy's `validAfter`/`validUntil` at the evaluation instant;
+`TestExactActionIsEnforced` observes each. **Carved out, not closed here:** code identity —
+authenticated as an authority assertion and compared to no chain (R-A018-04, open, first
+`NOT ESTABLISHED` entry); the calldata's arguments — ruled disclosed-only (D-083(b), R-A018-17);
+and the policy's hash-bound lists (`allowedTargetsHash`, `allowedSelectorsHash`,
+`allowedCallGraphHash`), whose contents do not ship and are disclosed in the release README. The
+four Vault-axis items the 2026-08-31 inventory diff added — `operation == CALL` enforced
+unconditionally on both offline verifiers, and the three §4 hard backstops disclosed in
+`NOT ESTABLISHED` — are in the D-087(a) batch and are not claimed by this marker.
 
 ### R-A018-06 — Test the two uncovered modules `[CRITICAL 3, clause 5]`
 
@@ -447,16 +522,36 @@ because a stale instruction that an agent obeys is worse than one it questions.
 
 ### R-A018-09 — Type the cold demo's negative controls `[CRITICAL 1]`
 
-`mustReject` in `ts/src/tools/cold-demo.ts` uses a bare `catch` and scores **any** exception as
-`PASS negative`. **Closes when** each negative asserts its expected error selector, exit
+~~`mustReject` in `ts/src/tools/cold-demo.ts` uses a bare `catch` and scores **any** exception as
+`PASS negative`.~~ **Struck 2026-09-01: false of the tree since `8d47a0b`; see CLOSED below.** **Closes when** each negative asserts its expected error selector, exit
 classification and failure stage.
+
+**CLOSED 2026-08-30 at `8d47a0b`; marker added 2026-09-01.** `mustReject` is gone.
+`mustRevertWith` asserts stage = vault-execution, class = evm-revert and identity = a custom-error
+selector computed locally from the signature (not read back from the ABI, so one wrong build cannot
+satisfy both sides); `mustRefuseVerification` asserts stage = publication-verifier, the exit
+status, no traceback, no `PASS:` on stdout, and a matched `FAIL:` line. Anything else is a
+`NegativeControlFailure` and the demo fails. R-A018-15's chain-clock alignment closed the drift
+that made the bare catch dangerous. **Extended 2026-09-01 under D-085(f):** four BLOCK-receipt
+negatives on the same machinery — both Vault entry points, both verifier paths — with the
+`NotReviewVerdict()` control deliberately presenting a zeroed override so that the selector proves
+the verdict check fired before the Vault read the credential.
 
 ### R-A018-10 — Stop the demo presenting its own key as out-of-band `[CRITICAL 2]` — NEW
 
-`cold-demo.ts` generates `authorityKey`, signs the manifest with it, and prints that same address
-as `Deployment authority (obtain out of band)`. **Closes when** lab-generated authority is
+~~`cold-demo.ts` generates `authorityKey`, signs the manifest with it, and prints that same address
+as `Deployment authority (obtain out of band)`.~~ **Struck 2026-09-01: false of the tree since `8d47a0b`; see CLOSED below.** **Closes when** lab-generated authority is
 labelled unmistakably non-production and the demo does not present a self-generated address as an
 out-of-band trust root.
+
+**CLOSED 2026-08-30 at `8d47a0b`; marker added 2026-09-01.** The key is `labAuthorityKey`, named
+for the caveat; the demo prints a `NOTE` before the verifier runs that the verification is a
+self-consistency loop and not an independent authentication, and closes with a
+`LAB-GENERATED DEPLOYMENT AUTHORITY -- NOT PRODUCTION, NOT A TRUST ROOT` block. The generated
+`release/README.md` carries the same statement under "The demo generates its own deployment
+authority", and `docs/enforcement-release-v0.3.md` says it once more. Git history is untouched,
+per §2 and R-A018-12. The 2026-09-01 BLOCK case reuses the same per-run keys and ships no fixture,
+for the reason this item records.
 
 ### R-A018-11 — Resolve the v0.2 envelope tag on v0.3 material `[CRITICAL 2]` — NEW
 
@@ -564,7 +659,7 @@ exactly as designed, since it cannot tell an authorised closure from unauthorise
 
 ### R-A018-19 — A certifying override run does not say it was an override — NEW
 
-The override arm prints the automatic arm's PASS headline verbatim. Nothing in it is false; it
+~~The override arm prints the automatic arm's PASS headline verbatim.~~ **Struck 2026-09-01: false of the tree since `8d47a0b`; see CLOSED below.** Nothing in it was false; it
 omits the entire reason the run passed, so *"the machine approved this"* and *"a human was asked
 and signed"* are indistinguishable outside the JSON. The result object does carry `executionPath`
 and `ownerOverrideHash`.
@@ -576,6 +671,20 @@ insufficient for an auditor. §3.3(2) singles out override as the thing that mus
 
 An R-A018-08-shaped claim defect: the headline is weaker than the evidence in the one direction
 that matters for comprehension.
+
+**CLOSED 2026-08-30 at `8d47a0b`; marker added 2026-09-01.** The override arm's headline is
+`PASS (static, offline) BY AUTHENTICATED OWNER OVERRIDE, NOT AUTOMATICALLY: …`, and it says that
+the signer's decision was REVIEW, that the Vault refuses that receipt at `executeWithReceipt`, and
+that a separate owner-signed override naming this exact receipt, action and nonce was
+authenticated and recovers to the owner rather than the signer. Both reader-facing surfaces —
+the generated `release/README.md` and `docs/enforcement-release-v0.3.md` — state that a certifying
+override run says so in its headline. Verified by reading `verify_publication.main` at HEAD; the
+JSON's `executionPath` and `ownerOverrideHash` were already present and are unchanged. ~~No test is
+cited because the implementer found none that asserts on the headline text; recorded as a blind
+spot rather than claimed.~~ **Corrected 2026-09-01 by independent verification: one exists and
+asserts on it —
+`verifier/test_publication_override.py::TestTheCertifyingRunSaysWhichPathItCertified.test_the_certifying_headline_names_the_owner_override`.
+The implementer grepped the wrong file.**
 
 ### R-A018-20 — R-A018-16(c)'s diagnosis discipline was not carried into the override arm — NEW
 
@@ -617,18 +726,18 @@ implementer flagged it rather than editing a frozen contract — correct under D
 Found 2026-08-30 by the independent test author, verified. **The same structural story as §1.2: a
 rule every pre-`a38cff9` surface follows, that everything `a38cff9` added skipped.**
 
-**(a) EIP-2 low-s is enforced on none of the three signatures.** `is_low_s` ships in the shared
+**(a) ~~EIP-2 low-s is enforced on none of the three signatures.~~** **Struck 2026-09-01: false of the tree since `8d47a0b`; see CLOSED below.** `is_low_s` ships in the shared
 `verifier/secp256k1.py` and `verify.py` applies it to the receipt *and* the refusal record — grep
 `signature is EIP-2 canonical` there. `grep -n low_s verifier/verify_publication.py
 verifier/deployment.py` returns **nothing**. Demonstrated: `(r, N−s, v^1)` on a manifest signature
 is accepted, so one authority decision has two byte-distinct valid documents and any later
 revoke-or-pin-by-digest scheme is evadable.
 
-**(b) `issuedAt` is unbounded above.** §1.5 records that it is never compared to now; `_uint` also
+**(b) ~~`issuedAt` is unbounded above.~~** **Struck 2026-09-01: false of the tree since `8d47a0b`; see CLOSED below.** §1.5 records that it is never compared to now; `_uint` also
 imposes no ceiling, so `"1" + "0"*40` is accepted. A lifetime bound that only looks backwards is
 survived by post-dating, so both directions need asserting.
 
-**(c) Field errors are reported as signature errors.** `deployment.verify()` calls `digest()`,
+**(c) ~~Field errors are reported as signature errors.~~** **Struck 2026-09-01: false of the tree since `8d47a0b`; see CLOSED below.** `deployment.verify()` calls `digest()`,
 which validates, *inside* the `try` that catches `ValueError` — so a leading zero surfaces as
 `deployment authority signature is invalid: issuedAt has a leading zero`. The refusal is correct
 and the diagnosis is wrong, and it sends a recipient to re-check the one thing that was fine. In a
@@ -636,6 +745,19 @@ tool whose value is unaided comprehension that is an inherited-Critical-2 concer
 
 **Closes when** all three are corrected and the corresponding tests in
 `verifier/test_publication_verifier.py` pass.
+
+**CLOSED 2026-08-30 at `8d47a0b`; marker added 2026-09-01.** (a) `is_low_s` with `v in {27, 28}`
+is held on the deployment authority signature (`deployment._check_signature_form`) and on the
+mandate owner and receipt signer signatures (`verify_publication.check_signature_form`);
+`TestDeploymentSignatureCanonicalForm`. (b) `UINT_CEILINGS` caps `issuedAt` at uint64 and
+`check_lifetime` compares it in both directions, refusing a post-dated manifest and one older than
+`MAX_MANIFEST_AGE_SECONDS` (90 days, ratified D-083(e), whose unguarded drift is recorded there);
+`TestDeploymentManifestLifetime`. (c) `validate_payload` runs outside the `try` that catches
+signature failures; `TestDeploymentDiagnostics.test_a_field_error_is_not_reported_as_a_signature_error`.
+The override arm's third face of (c) is R-A018-20, closed separately. The absence of an
+authenticated revocation source — so that `check_lifetime` is a lifetime bound and not a
+revocation check — is disclosed in `deployment.py`'s docstring and, since 2026-09-01, in the
+release README's limits.
 
 ### R-A018-17 — Calldata can redirect the mandated beneficiary — RULED DISCLOSED-ONLY (D-083(b))
 
@@ -662,11 +784,24 @@ RULING, not a deferral: there is no pending decision behind it and no queued v1.
 therefore **permanently red by ruling**, and every place that declares or explains that red now
 says "ruled disclosed-only at D-083(b)" rather than "reserved to John".
 
-**THE COST, RECORDED WITH THE RULING RATHER THAN ARGUED AWAY:** beneficiary binding rests entirely
+**THE COST, RECORDED WITH THE RULING RATHER THAN ARGUED AWAY:** ~~beneficiary binding rests entirely
 on the isolated signer behaving correctly, with **no independent downstream check** — which is the
-assumption the Vault exists so as not to have to make. The disclosure that carries it is the fourth
-`NOT_ESTABLISHED` entry in `verifier/verify_publication.py`, printed beside every certifying
-result, plus the same statement in the module docstring and in `check_exact_action`.
+assumption the Vault exists so as not to have to make.~~ **Corrected 2026-09-01, twice over.** First,
+the 2026-08-31 CORRECTION TO D-083(b) in `docs/decisions.md` measured that `verify.py` DOES re-check
+the beneficiary — `_allow_conforms_to_the_mandate` compares the signer's *attested decoded record*
+against the mandate for `resourceId`, `beneficiary`, `durationSeconds`, `recurringAllowed`,
+`spender` and the allowance ceiling, without decoding calldata — so "no independent downstream
+check" was the fourth measured claim the agent supplied at a moment of decision that did not hold.
+Second, the D-087 batch ported that check into the publication verifier under the name
+**"signer-attested record conforms to mandate"** (`CONFORMANCE_CHECK_NAME`,
+`verifier/verify_publication.py`, D-087(b)). The honest statement of the cost is therefore: the
+verifier checks the signer's *record* against the mandate, not the *bytes*, so it catches a
+misconfigured-but-honest evaluator and not a lying signer; no downstream consumer decodes
+calldata, and by ruling none will. The ruling itself is unchanged. ~~The disclosure that carries it
+is the fourth `NOT_ESTABLISHED` entry~~ **It is the seventh `NOT_ESTABLISHED` entry at HEAD (the
+list grew to eight in this batch; the eighth is the attested-record check's own limit)** in
+`verifier/verify_publication.py`, printed beside every certifying result, plus the same statement
+in the module docstring and in `check_exact_action`.
 
 ### R-A018-14 — The policy commits to a token-allowance ceiling the Vault never enforces — NEW
 
@@ -762,6 +897,27 @@ the same clock mechanism. **Both were its own concurrency artefacts** — it had
 foreground `npm test` running at once — and it withdrew them after re-measuring serially on an idle
 machine: `signer.e2e.test.ts` 6/6, and every completed full run 557/557. **The TypeScript suite is
 not implicated. Do not go looking.**
+
+### R-A018-26 — R-A018-15's mechanism also lives in the e2e suite, and the demo fix did not reach it — NEW
+
+Found 2026-09-01 when a fast-gate run failed on ONE TypeScript test — `ts/test/cases.e2e.test.ts:278`
+*"Case 1 — exact mandate, allow › evaluates ALLOW, the signer attests, and the vault executes the
+purchase"* — with `Error: ReceiptNotYetValid()`. **Same mechanism as R-A018-15:** line 260 stamps
+`now: BigInt(Math.floor(Date.now() / 1000))` from the wall clock, while anvil stamps `latest` once
+per block and it stands still, so a one-second boundary crossing between activation and signing
+leaves `latest.timestamp < issuedAt` and the Vault reverts. R-A018-15 closed this in
+`ts/src/tools/cold-demo.ts` by deriving windows from the chain and mining an alignment block. **The
+e2e suite was not touched by that fix and is not in the D-087(a) batch scope.**
+
+**Measured:** the failing file 3/3 clean serially; the full suite 557/557 on re-run; the batch's
+diff touches neither `ts/test/` nor `ts/src/signer/` (`git diff --stat 2115c4f -- ts/src/signer/
+ts/test/` is empty). Pre-existing and intermittent. The 2026-08-30 adversarial reviewer saw this
+exact test flake at `8d47a0b` and withdrew it as its own concurrency artifact; **it was not an
+artifact.**
+
+**Closes when** `cases.e2e.test.ts` (and any sibling e2e test stamping `now` from `Date.now()`)
+aligns the chain clock the way the demo does. **Not fixed in this batch, deliberately** — it is
+a test-file change outside the ruled scope, and the candidate is at its declared state.
 
 ### R-A018-21 — The TypeScript suite can hang indefinitely rather than fail — NEW, low confidence
 

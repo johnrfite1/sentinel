@@ -9,41 +9,80 @@ identity: `deployment.py` enforces a closed field set, so a manifest naming its
 own trust root is refused, and authority reaches this tool only through the
 caller's argument.
 
+WHAT A PASS FROM THIS TOOL MEANS, AND WHAT IT DOES NOT (D-087(c), 2026-09-01)
+----------------------------------------------------------------------------
+This verifier certifies EXECUTABILITY, statically and offline: whether
+SentinelVault's offline-checkable action predicate accepts this bundle at the
+entry point it is presented for -- the verdict, a §5.5 owner override wherever
+one is required or present, every validity window, and the action's target,
+value, selector and operation against the signed mandate and policy -- plus the
+content arms ported under D-087 (§5.6 projections, §5.4 reason codes, §5.7.1
+signer-attested conformance).  A REVIEW receipt with no override and a BLOCK
+receipt are both refused here, because the Vault executes neither.
+
+It is NOT the authenticity verifier.  verifier/verify.py certifies AUTHENTICITY
+-- that the bundle is genuinely what the named signer produced -- and correctly
+passes both of those bundles, because both are authentic.  `=> PASS` from
+verify.py and `PASS (static, offline)` from this tool are two different claims
+that used to share one word; the split is deliberate, was ruled at D-087(c),
+and is stated on both surfaces so that neither is read as the other.
+
+"Executability" here is the Vault's OFFLINE-CHECKABLE predicate and nothing
+more.  Whether the Vault would execute this bundle at any actual block also
+turns on state this tool cannot read -- the nonce, pause, mandate and policy
+activation, deployed code, and the three §4 backstops -- so executability ON
+CHAIN is among the things listed as NOT ESTABLISHED beside every result.
+
 WHAT A RUN OF THIS TOOL DOES NOT ESTABLISH
 ------------------------------------------
 Recorded here, in the text argparse reprints under --help, because this docstring
 previously claimed the opposite of the third item.
 
-* NO CHAIN IS READ.  `runtimeCodeHash`, `deploymentBlockHash` and
-  `compilerMetadataHash` are authenticated as things the deployment authority
-  SAID.  They are compared against no deployed bytecode and no state proof, so
-  this tool cannot tell you the described code is what is deployed, nor that the
-  action would execute (R-A018-04).
+* NO CHAIN IS READ, SO DEPLOYMENT IDENTITY IS NOT ESTABLISHED.  `runtimeCodeHash`,
+  `deploymentBlockHash` and `compilerMetadataHash` are authenticated as things the
+  deployment authority SAID.  They are compared against no deployed bytecode and
+  no state proof, so this tool cannot tell you the described code is what is
+  deployed (R-A018-04).  D-086(e) ruled the non-certifying-static route: the
+  result carries those values only under a key that says they are unverified
+  authority assertions, never as bare facts beside the verdict, and the headline
+  never claims an authenticated deployment.  Live RPC is NOT AUTHORISED.
 * NONCE FRESHNESS CANNOT BE ESTABLISHED OFFLINE.  Only the Vault consumes an
   action nonce, atomically, at execution.  An offline verifier can at best
   observe nonce state at an authenticated block, and this one observes none
   (R-A018-02).
-* THERE IS NO TRUSTED CLOCK.  Validity windows are evaluated against the host
-  clock, which is not an authenticated block timestamp.  `--evaluation-time`
-  moves that choice from the machine running the check to whoever writes the
-  command line, so a run under that flag reports its findings and then refuses
-  to certify anything at all (R-A018-03).
+* THERE IS NO TRUSTED CLOCK, SO CURRENTNESS AT A BLOCK IS NOT ESTABLISHED.
+  Validity windows are evaluated against the host clock, which is not an
+  authenticated block timestamp.  `--evaluation-time` moves that choice from the
+  machine running the check to whoever writes the command line, so a run under
+  that flag reports its findings and then refuses to certify anything at all
+  (R-A018-03).
+* THE VAULT'S THREE §4 HARD BACKSTOPS ARE NOT READ.  After the mandate's and
+  policy's copies have passed, SentinelVault still refuses `ValueOverCap`
+  against its own immutable `maxNativeValueWei`, `TargetNotAllowed` against the
+  owner-set `allowedTarget` allowlist and `SelectorNotAllowed` against
+  `allowedSelector`.  All three are Vault state this tool cannot reach, and a
+  bundle the mandate admits may still revert on them (D-087(a)).
 * THE CALLDATA ARGUMENTS ARE NEVER DECODED.  `action.callData` is bound by
   `dataHash` to the bytes presented, and its leading four bytes are compared to
   the mandated selector -- but nothing after that selector is decoded, so a
   beneficiary, recipient or amount encoded inside the calldata is compared to no
-  mandated value.  A bundle in which only the beneficiary word was rewritten is
-  internally consistent and authenticates here.  Only the isolated signer's
-  evaluator decodes those arguments; the Vault, like this tool, binds the bytes.
-  RULED DISCLOSED-ONLY, not deferred: D-083(b) settled that this tool decodes
-  nothing, and recorded the cost with the ruling -- beneficiary binding rests
-  entirely on the isolated signer behaving correctly, with no independent
-  downstream check (R-A018-17).
-
-So a successful run is a statement about STATIC AUTHENTICITY, and about
-conformance of the fields it actually compares -- target, native value, selector
-and operation -- to the signed mandate and policy.  It is not a statement about
-executability at a named block, nor about what the calldata's arguments say.
+  mandated value BY THIS TOOL'S OWN DECODING.  A bundle in which only the
+  beneficiary word was rewritten is internally consistent and authenticates
+  here.  Only the isolated signer's evaluator decodes those arguments; the
+  Vault, like this tool, binds the bytes.  RULED DISCLOSED-ONLY, not deferred:
+  D-083(b) settled that this tool decodes nothing (R-A018-17).  The cost
+  recorded with that ruling -- "no independent downstream check" -- was
+  CORRECTED on 2026-08-31: the check below compares the signer's ATTESTED
+  record, so there is a downstream check, and it is weaker than decoding.
+* THE SIGNER-ATTESTED RECORD IS THE SIGNER'S OWN WORD.  The §5.7.1 check named
+  "signer-attested record conforms to mandate" (D-087(b)) compares the decoded
+  record the signer attested inside `evidence.json` -- `resourceId`,
+  `beneficiary`, `durationSeconds`, `recurringAllowed`, `spender`, the
+  allowance ceiling -- against the mandate, without decoding calldata.  It
+  catches a misconfigured-but-honest evaluator that reported what it decoded
+  and said ALLOW anyway.  It honestly does not catch a lying signer, because
+  the record it reads is the signer's.  It is never named as a verification of
+  the beneficiary, because that would be true only of an honest signer.
 
 EXECUTION PATHS
 ---------------
@@ -55,11 +94,41 @@ receipt, action and nonce.  This verifier mirrors that split: the caller declare
 which entry point the bundle is presented for with --execution-path, and a BLOCK
 receipt is executable through neither.
 
+`SentinelVault.sol:357` also reverts `UnsupportedOperation` on any
+`action.operation` other than CALL, UNCONDITIONALLY -- no policy field can
+enable DELEGATECALL or CREATE -- and this verifier refuses the same way, before
+and regardless of `policy.allowedOperation` (D-087(a)).
+
 A BUNDLE'S §5.5 CREDENTIAL IS EXAMINED ON WHICHEVER PATH IT IS PRESENTED FOR, not
 only on the one that could use it (R-A018-18, ruled at D-083(c)).  An `override.json`
 sitting beside an ALLOW receipt is refused rather than passed over: a credential no
 Vault entry point will accept must not ride inside a PASS unopened, because a run
 that never reads it certifies it by omission.
+
+A §5.5.1 SIGNED REFUSAL RECORD IS RECOGNISED AND REFUSED, NOT VERIFIED (D-087(d)).
+A refusal is executable at neither entry point, so there is nothing here to
+certify about it; verify.py is the tool that authenticates a refusal record.
+This tool detects the §5.5.1 shape -- in `refusal.json`, or in `receipt.json`
+under `refusalRecord` / `refusal` / `record`, or as `refused: true` -- and
+refuses naming what it found, rather than reporting "missing required artifact
+receipt.json", which named the wrong artifact.
+
+THE CONTENT ARMS (D-087(a)/(b), ported from verify.py on 2026-09-01)
+--------------------------------------------------------------------
+Until this batch the tool authenticated that `evidence.json` was THE bundle the
+signer signed over and never that it DESCRIBED THIS ACTION: the artifact a
+recipient actually reads could be replaced wholesale with `{"note": ...}`,
+re-hashed and re-signed, and still certify.  Now, on every certifying path:
+`evidence.normalizedAction` must restate the §5.3 action field by field and its
+`callData` must hash to `action.dataHash`; `evidence.verdict` must agree with the
+signed receipt; `evidence.anchor` must name the receipt's simulation block;
+`evidence.expectedEffects` must project the signed mandate and policy with the
+native ceiling INTERSECTED (§5.2); the published `reasonCodes` list must hash to
+the receipt's `reasonCodesHash` under §5.4's own construction and contain every
+`signerFindings` entry; and, under ALLOW only, the signer-attested record must
+conform to the mandate (§5.7.1).  BLOCK and REVIEW bundles are legitimately
+nonconforming -- that is what they are for -- so the last check binds to ALLOW,
+as verify.py's does.
 
 EXIT CODES
 ----------
@@ -68,7 +137,7 @@ into a script reads the module or the release documentation rather than running
 `--help` -- and a third code that only one of those three surfaces mentions is a
 code somebody's `if status != 0` will silently mistreat as a refusal.
 
-* **0** -- CERTIFYING.  Static offline authenticity established, with the
+* **0** -- CERTIFYING.  Static offline executability established, with the
   `NOT ESTABLISHED` list above still outstanding.
 * **1** -- REFUSED.  A check failed; the reason is printed to stderr as `FAIL:`.
 * **3** -- NOT CERTIFIED, and not a refusal either.  Emitted only under
@@ -88,6 +157,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import deployment
 import eip712
 import jcs
+import reasoncodes
+import refusal
 from keccak import keccak256
 from secp256k1 import RecoveryError, is_low_s, parse_signature, recover_address
 
@@ -98,37 +169,17 @@ from secp256k1 import RecoveryError, is_low_s, parse_signature, recover_address
 # `verifier/test_publication_verifier.py` was written by an independent author who
 # was forbidden to edit this module (D-058(1), A-028), and it is not editable from
 # this side either -- so work this module deliberately does not do cannot be marked
-# `expectedFailure` in the suite and has to be declared here instead. FOUR of its 81
-# tests are RED ON PURPOSE. A green count of 77/81 is the expected state; 81/81 would
-# mean somebody implemented work that is not authorised.
+# `expectedFailure` in the suite and has to be declared here instead. EXACTLY ONE
+# of its 105 tests is RED ON PURPOSE. A green count of 104/105 is the expected
+# state; 105/105 would mean somebody implemented work that John has ruled out.
 #
 # `verifier/test_publication_override.py` HAS NO DELIBERATE REDS. 61/61 green is its
-# expected state, as of the R-A018-18 repair ruled at D-083(c); the two reds this block
-# used to be read alongside -- the unexamined-credential pair -- are CLOSED, not
-# reserved. See `check_owner_override`, which now runs on every path a bundle carrying
-# a §5.5 credential is presented for. A red in that file is now a regression.
+# expected state, as of the R-A018-18 repair ruled at D-083(c). A red in that file
+# is a regression.
 #
-#   R-A018-04 (DEFERRED: needs live chain state, and no chain is named yet)
-#     TestDeploymentIdentityIsNotBound
-#       .test_a_fabricated_runtime_code_hash_is_echoed_as_authenticated
-#       .test_two_contradictory_manifests_cannot_both_certify
-#       .test_the_result_names_the_block_its_claims_are_true_at
-#     Closing these means comparing the manifest's runtimeCodeHash against live
-#     deployed bytecode or an authenticated state proof at a named block. The
-#     mitigation actually shipped here is narrower and is stated rather than
-#     implied: NOT_ESTABLISHED below, printed beside every result, says the field
-#     is an authority assertion and nothing more.
-#
-#     THE CLASS'S FOURTH TEST IS GREEN, AND HOW THIS BLOCK SAYS SO IS ITSELF THE
-#     LESSON. `.test_an_offline_run_does_not_certify_an_authenticated_deployment`
-#     was recorded here as passing "incidentally" -- no banner is printed under
-#     --evaluation-time at all, so the string it forbade was unreachable. That
-#     parenthesis was an honest label on a test that asserted nothing, and being
-#     declared is what made the hole easy to stop looking at: it stood for hours.
-#     The test now stages a LIVE-CLOCK CERTIFYING run and asserts that the banner
-#     which really is printed claims no authenticated deployment. It passes for a
-#     reason. No chain binding exists either way, which is why the three above stay
-#     red and this one is not evidence for them.
+# `verifier/test_publication_conformance.py` HAS NO DELIBERATE REDS. 53/53 green is
+# its expected state, as of the D-087(a)/(b) content-arm port. A red there is a
+# regression of a ported check.
 #
 #   R-A018-17 (RULED disclosed-only by John at D-083(b). PERMANENTLY RED BY RULING --
 #              not pending, not deferred, and not a scope question still open.)
@@ -136,12 +187,29 @@ from secp256k1 import RecoveryError, is_low_s, parse_signature, recover_address
 #     Turning it green would mean decoding calldata against the mandated selector
 #     inside this verifier, and D-083(b) ruled that this verifier decodes nothing:
 #     the isolated signer's evaluator decodes semantics, the Vault binds bytes, and
-#     this tool says plainly that it binds bytes too.
-#     THE COST WAS RECORDED WITH THE RULING, and is repeated where an implementer
-#     meets it: beneficiary binding now rests ENTIRELY on the isolated signer
-#     behaving correctly, with no independent downstream check -- which is the
-#     assumption the Vault exists so as not to have to make. See check_exact_action()
-#     and the fourth NOT_ESTABLISHED entry, which is how a recipient is told.
+#     this tool says plainly that it binds bytes too. D-087(b) did NOT reverse this:
+#     the §5.7.1 check it added compares the signer's ATTESTED record, and the test
+#     above rewrites the calldata word while leaving the attested record honest --
+#     exactly the lying-signer case the attested-record check is documented not to
+#     catch. See check_attested_record_conforms_to_mandate() and the R-A018-17
+#     entry in NOT_ESTABLISHED, which is how a recipient is told.
+#
+#   R-A018-04 -- THE THREE FORMER REDS WERE REDEFINED UNDER D-086(e), NOT CLOSED BY
+#   CHAIN BINDING. This block used to declare three deferred reds in
+#   TestDeploymentIdentityIsNotBound, each asserting a chain binding: that a
+#   fabricated runtimeCodeHash is refused, that two contradictory manifests cannot
+#   both certify, and that the result names the block its claims are true at.
+#   Crucible Cycle 1 Binding Critical 2 bound the CLAIM, not the binding, and John
+#   ruled at D-086(e) that Critical 2 is closed by the non-certifying-static route
+#   with live RPC NOT AUTHORISED. The contract's author redefined each test to
+#   observe the ruled semantic -- the value is never presented as a fact, both
+#   contradictory manifests certify STATICALLY and neither claims identity, no
+#   block is anchored and executability is named as not established -- and they
+#   are green here for that reason. NO CHAIN BINDING EXISTS. `runtimeCodeHash` is
+#   still compared to nothing; it now travels under `unverifiedAuthorityAssertions`
+#   in the result instead of beside the verdict. When a chain binding is authorised
+#   it needs NEW tests -- these three no longer test for one, and a run that
+#   refused one of two contradictory manifests would fail the redefined contract.
 
 
 class VerificationError(ValueError):
@@ -152,22 +220,57 @@ class VerificationError(ValueError):
 BLOCK, REVIEW, ALLOW = 0, 1, 2
 VERDICT_NAMES = {BLOCK: "BLOCK", REVIEW: "REVIEW", ALLOW: "ALLOW"}
 
+# SentinelTypes.sol: enum Operation { CALL, DELEGATECALL, CREATE }. Only CALL
+# executes; `SentinelVault.sol:357` reverts UnsupportedOperation on the others
+# unconditionally, and so does check_exact_action().
+CALL_OPERATION = 0
+
 AUTOMATIC_PATH = "automatic"
 OVERRIDE_PATH = "owner-override"
 
+# D-087(b), verbatim. The one name the §5.7.1 check goes by on every surface.
+# Never "beneficiary verified": that would be true only of an honest signer.
+CONFORMANCE_CHECK_NAME = "signer-attested record conforms to mandate"
+
+# The §5.6 `expectedEffects` fields that are copies of the mandate.
+# `maxAllowanceIncreaseBaseUnits` is copied from the policy and
+# `maxNativeValueWei` is the §5.2 intersection; both are handled separately.
+EXPECTED_EFFECTS_FROM_MANDATE = (
+    "target", "selector", "resourceId", "beneficiary", "durationSeconds", "recurringAllowed",
+)
+
+# Where a §5.5.1 SignedRefusalRecord may travel inside receipt.json, matching
+# `verify.py::_REFUSAL_NESTED_KEYS`. Recognition is by SHAPE and nothing else.
+REFUSAL_ENVELOPE_KEYS = ("refusalRecord", "refusal", "record")
+
 # `verify()` reports which of these it produced; `main()` maps them to exit
-# codes.  There is no mode in which this tool certifies executability -- see the
-# module docstring.
-MODE_STATIC = "offline-static-authenticity"
+# codes.  Neither mode certifies executability ON CHAIN -- see the module
+# docstring; the static mode certifies the Vault's offline-checkable predicate.
+MODE_STATIC = "offline-static-executability"
 MODE_DIAGNOSTIC = "non-certifying-diagnostic"
 
 NOT_ESTABLISHED = (
-    "live code identity: no chain was read and no state proof was checked, so the "
-    "manifest's runtimeCodeHash is authenticated only as an authority assertion (R-A018-04)",
+    "deployment identity (live code identity): no chain was read and no state proof was "
+    "checked, so the manifest's runtimeCodeHash is authenticated only as an authority "
+    "assertion, never as what is deployed (R-A018-04; D-086(e) non-certifying-static route)",
     "nonce freshness: only the Vault consumes an action nonce, atomically, at execution; "
     "an offline run cannot establish that this nonce is unspent (R-A018-02)",
     "a trusted time source: the validity windows below were evaluated against a clock this "
     "tool does not authenticate, not an authenticated block timestamp (R-A018-03)",
+    "currentness at a block: because the clock is unauthenticated, the receipt's, mandate's, "
+    "policy's, deadline's and override's currency at any actual block is not established; "
+    "what is established is that each window contains the evaluation instant reported below",
+    "executability on chain: this run certifies only the Vault's offline-checkable action "
+    "predicate (verdict, override, windows, target, value, selector, operation). Whether "
+    "SentinelVault would execute this bundle at any actual block also depends on state it "
+    "did not read -- the nonce, pause, mandate and policy activation, deployed code -- so "
+    "executability at a live block is not established (D-086(e))",
+    "the Vault's three §4 hard backstops: SentinelVault refuses ValueOverCap against its own "
+    "immutable maxNativeValueWei, TargetNotAllowed against the owner-set allowedTarget "
+    "allowlist and SelectorNotAllowed against allowedSelector, AFTER the mandate's and "
+    "policy's copies of each have passed. All three are Vault state this tool cannot read; "
+    "the maxNativeValueWei compared above is the mandate's and the policy's, not the "
+    "Vault's (D-087(a))",
     # R-A018-17, and it is the reason the headline below enumerates the four
     # fields it compared instead of saying "the action matches the mandate".
     # `check_exact_action` compares target, valueWei, the leading selector and
@@ -179,16 +282,21 @@ NOT_ESTABLISHED = (
     #
     # WHETHER THE VERIFIER SHOULD DECODE IS NO LONGER OPEN.  D-083(b) ruled it
     # DISCLOSED-ONLY: the signer's evaluator decodes semantics, the Vault binds
-    # bytes, and this tool binds bytes and says so.  The cost was recorded with the
-    # ruling rather than argued away -- beneficiary binding rests entirely on the
-    # isolated signer behaving correctly, with no independent downstream check --
-    # which makes this entry the whole of what a recipient gets, and the reason it
-    # is printed beside every certifying result rather than filed in a register.
+    # bytes, and this tool binds bytes and says so.  The cost recorded with that
+    # ruling -- "no independent downstream check" -- was CORRECTED 2026-08-31 and
+    # D-087(b) then ported the check verify.py had all along: the signer's
+    # ATTESTED record is compared to the mandate (next entry). That is a
+    # downstream check, and it is weaker than decoding, and both facts are said.
     "conformance of the CALLDATA ARGUMENTS: the bytes are bound by dataHash and their "
     "leading selector is compared to the mandate, but nothing here decodes them, so a "
     "beneficiary, recipient or amount encoded inside callData is compared to no mandated "
-    "value. Only the isolated signer's evaluator decodes them, and by ruling nothing "
-    "downstream re-checks it (R-A018-17, disclosed-only)",
+    "value by this tool's own decoding. Only the isolated signer's evaluator decodes them "
+    "(R-A018-17, ruled disclosed-only at D-083(b)); what this tool re-checks is the "
+    "signer's attested record of that decoding, next",
+    "honesty of the signer-attested record: the §5.7.1 check \"" + CONFORMANCE_CHECK_NAME
+    + "\" compares the decoded record the signer itself attested in evidence.json to the "
+    "mandate, so it catches a misconfigured-but-honest evaluator and does not catch a lying "
+    "signer -- a signer that misreports what it decoded passes it (D-087(b))",
 )
 
 
@@ -217,6 +325,17 @@ def eq(label, actual, expected):
         raise VerificationError(f"{label}: {actual!r} != {expected!r}")
 
 
+def same(actual, expected):
+    """Case-insensitive on strings (hex and addresses), exact on everything else.
+
+    `verify.py::_norm_hex`, restated: a projection that spells an address in
+    checksum case is the same projection, and a boolean is compared as one.
+    """
+    if isinstance(actual, str) and isinstance(expected, str):
+        return actual.lower() == expected.lower()
+    return actual == expected
+
+
 def check_signature_form(label, signature):
     """Hold a bundle signature to EIP-2 low-s with v in {27, 28}.
 
@@ -242,6 +361,83 @@ def check_signature_form(label, signature):
             f"recovers the same address, so the authorization is malleable: two "
             f"byte-distinct documents, one decision, and no unique identity for either"
         )
+
+
+def refusal_presentation(sample, receipt_doc):
+    """How, if at all, this bundle presents a §5.5.1 SignedRefusalRecord.
+
+    Returns a phrase naming the presentation, or None for a decision bundle.
+    Recognition is by SHAPE ONLY -- the record's digest, signature, charset and
+    bindings are deliberately not examined (D-087(d): recognise and refuse, do
+    not verify), so a refusal record whose signature is garbage is still
+    recognised as a refusal record and refused as one.
+
+    The shapes are `verify.py::_locate_refusal`'s: the record in its own
+    `refusal.json`; or inside `receipt.json` under one of the envelope keys; or
+    the nine §5.5.1 fields flat where a `receipt` member would be; or the
+    harness's bare `refused: true` claim, which §5.5.1 says is an unsigned
+    claim of refusal and not a record -- but it is still a bundle presenting a
+    refusal, not a decision, and it is named as such rather than as a missing
+    receipt.  `refused: false` and an absent key are what a decision bundle
+    carries and are not a refusal (the corpus ALLOW bundle ships `refused:
+    false`), so presence of the key alone decides nothing.
+    """
+    if os.path.isfile(os.path.join(sample, "refusal.json")):
+        return "refusal.json is present"
+    if not isinstance(receipt_doc, dict):
+        return None
+    envelopes = [key for key in REFUSAL_ENVELOPE_KEYS
+                 if isinstance(receipt_doc.get(key), dict)]
+    if envelopes:
+        return f"receipt.json carries a refusal record under `{envelopes[0]}`"
+    if receipt_doc.get("refused") is True:
+        return "receipt.json claims `refused: true`"
+    if "receipt" not in receipt_doc and any(
+            name in receipt_doc for name in refusal.FIELD_NAMES):
+        return "receipt.json carries §5.5.1 RefusalRecord fields where a receipt would be"
+    return None
+
+
+def check_not_a_refusal_record(sample, receipt_doc):
+    """D-087(d).  A §5.5.1 SignedRefusalRecord is recognised and refused, honestly.
+
+    This tool certifies executability, and a refusal is executable at neither
+    Vault entry point, so there is nothing here to certify about one -- and the
+    32-check verification arm `verify.py` carries was ruled NOT ported.  What
+    was wrong before this function existed was the diagnosis: a refusal bundle
+    was refused with "missing required artifact receipt.json" or "receipt.json
+    must carry a signed decision receipt" -- both true, both naming the wrong
+    artifact, and neither telling the recipient that what they hold is a signed
+    refusal this tool does not judge.  R-A018-16(c)'s discipline applied to a
+    whole arm: name the thing that is actually there.
+
+    A refusal record travelling BESIDE a decision receipt is refused too, for
+    the R-A018-18 reason: a signed refusal riding inside a PASS unread is a
+    credential the run certified by omission, and `verify.py` refuses the same
+    bundle ("a decision OR a refusal, not both").
+    """
+    presentation = refusal_presentation(sample, receipt_doc)
+    if presentation is None:
+        return
+    beside = (isinstance(receipt_doc, dict)
+              and isinstance(receipt_doc.get("receipt"), dict))
+    if beside:
+        raise VerificationError(
+            f"{presentation}, beside a §5.4 decision receipt: this bundle presents a "
+            f"§5.5.1 SignedRefusalRecord (refusal record) AND a signed decision at once. "
+            f"§5.5.1 says a bundle presents one or the other, and this verifier does not "
+            f"certify refusals nor a decision that travels with one unread -- a signed "
+            f"refusal inside a PASS is a record the run certified by omission (D-087(d), "
+            f"R-A018-18). verify.py is the tool that authenticates a refusal record"
+        )
+    raise VerificationError(
+        f"{presentation}: this bundle presents a §5.5.1 SignedRefusalRecord (refusal "
+        f"record), not a §5.4 decision receipt. This verifier certifies executability and "
+        f"does not certify refusals: a refusal is executable at neither Vault entry point, "
+        f"and its digest, signature and bindings are not examined here (D-087(d): "
+        f"recognised and refused, not verified). verify.py is the tool that authenticates "
+        f"a refusal record"
+    )
 
 
 def check_verdict(receipt, execution_path):
@@ -450,13 +646,15 @@ def check_exact_action(mandate, policy, action, calldata, now):
 
     NOT covered here, and named so a green run is not read as more than it is:
     the calldata's *arguments* are never decoded, so the mandated beneficiary
-    inside `callData` is not compared to `mandate.beneficiary`.  That is R-A018-17,
-    and it is SETTLED rather than pending -- D-083(b) ruled the binding
-    disclosed-only, so this function will not grow a decoder and the frozen
-    contract's `test_calldata_redirecting_the_mandated_beneficiary_is_refused` is
-    permanently red by ruling.  The cost recorded with that ruling is that the
-    beneficiary now rests on the isolated signer alone, with nothing downstream
-    re-checking it; NOT_ESTABLISHED is where a recipient is told.
+    inside `callData` is not compared to `mandate.beneficiary` by any decoding of
+    this tool's own.  That is R-A018-17, and it is SETTLED rather than pending --
+    D-083(b) ruled the binding disclosed-only, so this function will not grow a
+    decoder and the frozen contract's
+    `test_calldata_redirecting_the_mandated_beneficiary_is_refused` is
+    permanently red by ruling.  What D-087(b) added instead lives in
+    `check_attested_record_conforms_to_mandate`: the signer's ATTESTED decoded
+    record is compared to the mandate, which catches an honest-but-misconfigured
+    evaluator and not a lying one; NOT_ESTABLISHED is where a recipient is told.
     `mandate.targetCodeHash` is likewise not checked, because that needs the live
     chain (R-A018-04).
     """
@@ -501,7 +699,25 @@ def check_exact_action(mandate, policy, action, calldata, now):
             f"selector 0x{mandated_selector.hex()}"
         )
 
+    # THE VAULT'S RULE FIRST, UNCONDITIONALLY (D-087(a); SentinelVault.sol:357).
+    # `if (action.operation != uint8(T.Operation.CALL)) revert UnsupportedOperation();`
+    # is not conditioned on the policy: DELEGATECALL (1) and CREATE (2) are
+    # commented "unsupported, never executes", and there is no policy field that
+    # can enable them. The comparison to `policy.allowedOperation` below used to
+    # be the ONLY check, so a policy saying 1 and an action saying 1 agreed with
+    # each other, certified here, and reverted on chain -- the A-and-B-versus-C
+    # axis no round had named. Refused here BEFORE the policy comparison, and
+    # without blaming the policy, because when the policy agreed with the action
+    # the policy was the one thing that was fine (R-A018-16(c)).
     operation = eip712.parse_uint("uint8", action["operation"])
+    if operation != CALL_OPERATION:
+        raise VerificationError(
+            f"action.operation is {operation}, not CALL ({CALL_OPERATION}): SentinelVault "
+            f"reverts UnsupportedOperation on any operation other than CALL, "
+            f"unconditionally -- SentinelTypes.Operation numbers DELEGATECALL 1 and CREATE "
+            f"2 and neither ever executes, and no policy field can enable them. This is "
+            f"refused regardless of what policy.allowedOperation says"
+        )
     allowed_operation = eip712.parse_uint("uint8", policy["allowedOperation"])
     if operation != allowed_operation:
         raise VerificationError(
@@ -518,6 +734,331 @@ def check_exact_action(mandate, policy, action, calldata, now):
         )
 
 
+def check_evidence_describes_the_bundle(evidence, action, mandate, policy, receipt,
+                                        verdict_name):
+    """§5.6.  The evidence bundle must DESCRIBE the documents it is signed over.
+
+    Ported from `verify.py::_evidence_describes_the_bundle` and the anchor /
+    verdict tail of `_chain_checks` (D-087(a), inventory diff O2 -- the
+    severity-1 cell).  Before this function existed, `receipt.evidenceHash` made
+    `evidence.json` tamper-EVIDENT and nothing made it TRUE: the artifact a
+    recipient actually reads could be replaced wholesale with `{"note": ...}`,
+    re-canonicalised, re-hashed, re-signed, and certify.  The run authenticated
+    that the evidence was THE bundle the signer signed over and never that it
+    described THIS action.
+
+    This does not make the verifier a second evaluator.  `normalizedAction` is
+    the §5.3 ActionPayload restated verbatim plus `callData`; `expectedEffects`
+    is six mandate fields, one policy field and the intersected native ceiling;
+    `anchor` is the receipt's simulation block; `verdict` is the receipt's enum
+    spelled out.  All four are pure projections, and the only question asked is
+    "does this bundle describe the documents it claims to describe".
+
+    ABSENCE IS NOT AGREEMENT (A-067, D-052(b)).  A bundle that does not carry a
+    required projection is refused, because omission is the cheapest evasion
+    and must cost more than a contradiction, not less.  What IS tolerated, as
+    `verify.py` tolerates it: an individual field absent from a present
+    `expectedEffects`, and a present `normalizedAction` without `callData` --
+    the bytes are bound by `dataHash` either way.
+
+    Every refusal names `evidence.json` and the projection at fault, so it is
+    never mistaken for a hash or signature failure (R-A018-16(c)).
+    """
+    if not isinstance(evidence, dict):
+        raise VerificationError(
+            f"evidence.json is a JSON {type(evidence).__name__}, not an object, so it "
+            f"carries none of the §5.6 projections (normalizedAction, expectedEffects, "
+            f"anchor, verdict) and describes nothing; it canonicalises and hashes "
+            f"perfectly well, which is why the hash chain did not refuse it"
+        )
+
+    def shape(name, value):
+        return ("absent from evidence.json" if value is None
+                else f"a JSON {type(value).__name__} in evidence.json, not an object")
+
+    normalized = evidence.get("normalizedAction")
+    if not isinstance(normalized, dict):
+        raise VerificationError(
+            f"evidence.normalizedAction is {shape('normalizedAction', normalized)}: §5.6 "
+            f"requires the action restated inside the evidence, and a bundle that omits "
+            f"the projection is not certified as describing the action it claims to "
+            f"(absence is not agreement)"
+        )
+    mismatched = []
+    for _type, name in eip712.ACTION_FIELDS:
+        if name not in normalized:
+            mismatched.append(f"{name} is absent from normalizedAction")
+        elif not same(normalized[name], action.get(name)):
+            mismatched.append(
+                f"{name}: evidence {normalized[name]!r} vs action {action.get(name)!r}")
+    if mismatched:
+        raise VerificationError(
+            "evidence.normalizedAction in evidence.json does not restate the §5.3 action "
+            "in action.json -- the dashboard describes a call this bundle does not carry: "
+            + "; ".join(mismatched)
+        )
+    declared = normalized.get("callData")
+    if declared is not None:
+        try:
+            digest = hx(keccak256(eip712.hex_to_bytes(
+                declared, "evidence.normalizedAction.callData")))
+        except (eip712.EncodingError, ValueError) as exc:
+            raise VerificationError(
+                f"evidence.normalizedAction.callData in evidence.json is not hex the "
+                f"dataHash could have been computed over: {exc}"
+            ) from exc
+        if digest != str(action.get("dataHash")).lower():
+            raise VerificationError(
+                f"keccak256(evidence.normalizedAction.callData) {digest} != action.dataHash "
+                f"{action.get('dataHash')}: the evidence agrees with the action field by "
+                f"field, but the bytes it says it was computed over are not the bytes the "
+                f"action binds"
+            )
+
+    if "verdict" not in evidence:
+        raise VerificationError(
+            "evidence.verdict is absent from evidence.json (§5.6): a bundle that omits its "
+            "own verdict cannot be compared against the signed receipt's, and absence is "
+            "not agreement"
+        )
+    if evidence["verdict"] != verdict_name:
+        raise VerificationError(
+            f"evidence.verdict {evidence['verdict']!r} in evidence.json disagrees with the "
+            f"signed receipt's verdict {verdict_name}: the dashboard and the receipt tell "
+            f"a recipient different stories, and only the receipt is signed"
+        )
+
+    anchor = evidence.get("anchor")
+    if not isinstance(anchor, dict):
+        raise VerificationError(
+            f"evidence.anchor is {shape('anchor', anchor)} (§5.6): the anchor is what a "
+            f"reader is shown as the simulation's block, and deleting it is the cheaper "
+            f"attack on the same binding as rewriting it"
+        )
+    if (str(anchor.get("blockNumber")) != str(receipt.get("simulationBlockNumber"))
+            or not same(anchor.get("blockHash"), receipt.get("simulationBlockHash"))):
+        raise VerificationError(
+            f"evidence.anchor {anchor} in evidence.json does not match the signed "
+            f"receipt's simulation block {receipt.get('simulationBlockNumber')} "
+            f"{receipt.get('simulationBlockHash')}"
+        )
+
+    expected = evidence.get("expectedEffects")
+    if not isinstance(expected, dict):
+        raise VerificationError(
+            f"evidence.expectedEffects is {shape('expectedEffects', expected)} (§5.6): "
+            f"the projection of the signed mandate and policy a recipient reads is "
+            f"missing, and absence is not agreement"
+        )
+    wrong = []
+    for name in EXPECTED_EFFECTS_FROM_MANDATE:
+        if name in expected and not same(expected[name], mandate.get(name)):
+            wrong.append(f"{name}: evidence {expected[name]!r} vs mandate {mandate.get(name)!r}")
+    if "maxAllowanceIncreaseBaseUnits" in expected and not same(
+            expected["maxAllowanceIncreaseBaseUnits"],
+            policy.get("maxAllowanceIncreaseBaseUnits")):
+        wrong.append(
+            f"maxAllowanceIncreaseBaseUnits: evidence "
+            f"{expected['maxAllowanceIncreaseBaseUnits']!r} vs policy "
+            f"{policy.get('maxAllowanceIncreaseBaseUnits')!r}")
+    # §5.2, published: "Mandate and policy constraints are intersected." The
+    # binding native ceiling is the LOWER of the two, not the mandate's; compared
+    # against the mandate alone this would be wrong the first time they diverge.
+    if "maxNativeValueWei" in expected:
+        bound = min(eip712.parse_uint("uint256", mandate["maxNativeValueWei"]),
+                    eip712.parse_uint("uint256", policy["maxNativeValueWei"]))
+        try:
+            projected = eip712.parse_uint("uint256", expected["maxNativeValueWei"])
+        except (eip712.EncodingError, ValueError, TypeError):
+            projected = None
+        if projected != bound:
+            wrong.append(
+                f"maxNativeValueWei: evidence {expected['maxNativeValueWei']!r} vs the §5.2 "
+                f"intersection {bound} of the mandate's and the policy's ceilings")
+    if wrong:
+        raise VerificationError(
+            "evidence.expectedEffects in evidence.json does not project the signed mandate "
+            "and policy: " + "; ".join(wrong)
+        )
+
+
+def check_attested_record_conforms_to_mandate(evidence, mandate, policy):
+    """§5.7.1, from the verifier's side: "signer-attested record conforms to mandate".
+
+    Ported from `verify.py::_allow_conforms_to_the_mandate` under D-087(b), and
+    NAMED BY RULING.  The record compared is the signer's own
+    `decodedSelectorAndParameters` -- what the isolated signer's evaluator says
+    it decoded -- and it is compared against the mandate's purpose fields
+    (`resourceId`, `beneficiary`, `durationSeconds`, `recurringAllowed`, the
+    approve arm's `spender` and the policy's allowance ceiling) WITHOUT decoding
+    `callData`.  D-083(b) ruled this tool decodes nothing and D-087(b) does not
+    reverse it.
+
+    WHAT IT CATCHES, AND WHAT IT DOES NOT.  A misconfigured-but-honest evaluator
+    that reported a beneficiary the mandate does not name and said ALLOW anyway
+    is caught here.  A signer that LIES about what it decoded is not: the record
+    it reads is the signer's.  The check is therefore never called "beneficiary
+    verified", and the certifying output says in words that it does not catch a
+    lying signer -- the standing pattern D-087 records, carry the honest
+    version and never let the name claim more than the check establishes.
+
+    BOUND TO ALLOW ONLY, by the caller.  A BLOCK or REVIEW bundle is
+    legitimately nonconforming -- that is what it is FOR; the corpus is full of
+    them and `case-3-wrong-purpose-block` is the flagship -- and a REVIEW
+    receipt executed by an authenticated owner override is the owner's decision
+    to proceed.  The verdict is established BEFORE this runs, so a BLOCK bundle
+    is refused for its verdict and never for its conformance (R-A018-16(c): the
+    recipient is told the signer said BLOCK, not that a resourceId disagrees).
+
+    ABSENCE IS NOT AGREEMENT.  Under ALLOW, a missing or non-object record, a
+    record without parameters, a record attesting the call was NOT decoded, or
+    a schema this verifier cannot evaluate all refuse: an ALLOW nobody can
+    check is not an ALLOW anybody should certify.
+    """
+    prefix = CONFORMANCE_CHECK_NAME + " (§5.7.1, compared from the signer's own attested " \
+             "decodedSelectorAndParameters in evidence.json, without decoding callData)"
+    dsp = evidence.get("decodedSelectorAndParameters")
+    if not isinstance(dsp, dict):
+        raise VerificationError(
+            f"{prefix}: the ALLOW carries no decodedSelectorAndParameters record to compare "
+            f"({'absent' if dsp is None else 'got a JSON ' + type(dsp).__name__}); absence "
+            f"is not agreement, and an ALLOW nobody can check is not one to certify"
+        )
+    params = dsp.get("parameters")
+    if not isinstance(params, dict):
+        raise VerificationError(
+            f"{prefix}: the attested record carries no parameters object "
+            f"({'absent' if params is None else 'got a JSON ' + type(params).__name__}), "
+            f"so it attests nothing comparable"
+        )
+    if str(dsp.get("decoded")).lower() not in ("true", "1"):
+        raise VerificationError(
+            f"{prefix}: the record attests decoded={dsp.get('decoded')!r}; an undecoded "
+            f"call cannot be ALLOWed, and an ALLOW nobody can check is not one to certify"
+        )
+    if not same(dsp.get("selector"), mandate.get("selector")):
+        raise VerificationError(
+            f"{prefix}: the attested selector {dsp.get('selector')!r} is not the mandated "
+            f"selector {mandate.get('selector')!r}; the signer attests to having decoded a "
+            f"different function than the mandate authorises"
+        )
+
+    schema, wrong = dsp.get("schema"), []
+    if schema == "DemoPay.purchase":
+        for name in ("resourceId", "beneficiary"):
+            if not same(params.get(name), mandate.get(name)):
+                wrong.append(f"{name}: attested {params.get(name)!r} vs mandate "
+                             f"{mandate.get(name)!r}")
+        try:
+            if int(params.get("durationSeconds")) != int(mandate.get("durationSeconds")):
+                wrong.append(f"durationSeconds: attested {params.get('durationSeconds')!r} "
+                             f"vs mandate {mandate.get('durationSeconds')!r}")
+        except (TypeError, ValueError) as exc:
+            wrong.append(f"durationSeconds: unreadable ({exc})")
+        if params.get("recurring") and not mandate.get("recurringAllowed"):
+            wrong.append("recurring: the attested record requests recurrence and "
+                         "mandate.recurringAllowed forbids it")
+    elif schema == "DemoERC20.approve":
+        if not same(params.get("spender"), mandate.get("beneficiary")):
+            wrong.append(f"spender: attested {params.get('spender')!r} is not the mandate's "
+                         f"beneficiary {mandate.get('beneficiary')!r}")
+        ceiling = policy.get("maxAllowanceIncreaseBaseUnits")
+        try:
+            if ceiling is None:
+                wrong.append("amount: the policy carries no maxAllowanceIncreaseBaseUnits "
+                             "ceiling to compare the approval against")
+            elif int(params.get("amount")) > int(ceiling):
+                wrong.append(f"amount: attested {params.get('amount')!r} exceeds the "
+                             f"policy's allowance ceiling maxAllowanceIncreaseBaseUnits "
+                             f"{ceiling!r}")
+        except (TypeError, ValueError) as exc:
+            wrong.append(f"amount: unreadable ({exc})")
+    else:
+        wrong.append(f"schema {schema!r} is not one this verifier can check conformance "
+                     f"for, and an ALLOW it cannot check is an ALLOW it cannot certify")
+
+    if wrong:
+        raise VerificationError(f"{prefix}: " + "; ".join(wrong))
+
+
+def check_reason_codes(receipt_doc, receipt):
+    """§5.4 as amended by D-022.  The published list must be the committed one.
+
+    Ported from `verify.py::_reason_code_checks` (D-087(a), inventory diff O4).
+    `receipt.reasonCodesHash` is signed; the `reasonCodes` array beside the
+    receipt is what a recipient is shown, and until this function existed the
+    two were never compared, so the codes shown could be swapped freely.  It
+    bites hardest on the override path, where an owner deciding whether to
+    override reads the explanation.
+
+    THE HASH IS §5.4's OWN CONSTRUCTION, via `reasoncodes.py`: de-duplicated,
+    sorted in ascending byte order, joined with U+000A, keccak256 -- and the
+    identifier grammar is applied with absolute anchors BEFORE anything is
+    hashed.  A naive join would let `{"EVIL\\nINJECTED"}` commit, byte for byte,
+    to the same preimage as `{"EVIL", "INJECTED"}`; only the grammar refuses it.
+    The grammar check is therefore a refusal in its own right and runs first,
+    so a bad identifier is reported as a bad identifier and never as a hash
+    mismatch (R-A018-16(c)).
+
+    `signerFindings` must be inside the committed set: §5.4 defines that set as
+    the UNION of the evaluator's codes and the signer's findings, so a finding
+    outside `reasonCodes` means the receipt commits to the evaluator's half
+    only.  An absent `signerFindings` array is tolerated, as `verify.py`
+    tolerates it; an absent `reasonCodes` array is not.  Order and duplicates
+    in the published list are NOT refused: the hash is order- and
+    duplicate-insensitive by construction, and `verify.py` carries that as an
+    advisory that cannot fail.
+    """
+    published = receipt_doc.get("reasonCodes")
+    findings = receipt_doc.get("signerFindings")
+    if published is None:
+        raise VerificationError(
+            "receipt.json carries no reasonCodes array: §5.4 requires the full list to "
+            "travel alongside the receipt and a verifier must be given it. Without it the "
+            "signed reasonCodesHash commitment cannot be checked, and not being given the "
+            "list is a refusal for a signed receipt, not a clean slate"
+        )
+    if not isinstance(published, list):
+        raise VerificationError(
+            f"reasonCodes in receipt.json is a JSON {type(published).__name__}, not the "
+            f"list §5.4 defines"
+        )
+    if findings is not None and not isinstance(findings, list):
+        raise VerificationError(
+            f"signerFindings in receipt.json is a JSON {type(findings).__name__}, not a list"
+        )
+    try:
+        reasoncodes.validate_all(published)
+        if findings is not None:
+            reasoncodes.validate_all(findings)
+    except reasoncodes.ReasonCodeError as exc:
+        raise VerificationError(
+            f"a reason-code identifier in receipt.json fails the §5.4 grammar "
+            f"^[A-Za-z0-9_.:-]{{1,64}}$ (matched with absolute anchors), so the "
+            f"commitment is not recomputed over it: {exc}"
+        ) from exc
+
+    computed = reasoncodes.reason_codes_hash_hex(published)
+    declared = str(receipt.get("reasonCodesHash")).lower()
+    if computed != declared:
+        committed = reasoncodes.committed_set(published)
+        raise VerificationError(
+            f"receipt.reasonCodesHash {declared} is not the §5.4 hash of the published "
+            f"reasonCodes list in receipt.json ({computed} over the de-duplicated, "
+            f"byte-sorted, newline-joined set of {len(committed)} code(s)): the reason "
+            f"codes a recipient is shown are not the ones the signer committed to"
+        )
+    if findings is not None:
+        missing = sorted(set(findings) - set(published))
+        if missing:
+            raise VerificationError(
+                f"signerFindings {missing} in receipt.json are absent from the committed "
+                f"reason-code set: §5.4 defines that set as the union of the evaluator's "
+                f"codes and the signer's findings, so this receipt commits to the "
+                f"evaluator's half only"
+            )
+
+
 def verify(sample, manifest_path, authority, evaluation_time=None,
            execution_path=AUTOMATIC_PATH):
     sample = os.path.abspath(sample)
@@ -531,6 +1072,11 @@ def verify(sample, manifest_path, authority, evaluation_time=None,
     # With the flag it comes from whoever composed the command line, which is
     # exactly the presenter's position, so that run is a diagnostic and certifies
     # nothing.
+    #
+    # D-086(e): the instant is pinned ONCE, here, and every window below -- the
+    # manifest's lifetime included -- is judged at this one value. There is no
+    # path on which `deployment.verify` is reached without it; `deployment.py`
+    # now refuses such a call rather than skipping the bound.
     if evaluation_time is None:
         now = int(time.time())
         time_source = (
@@ -548,16 +1094,24 @@ def verify(sample, manifest_path, authority, evaluation_time=None,
 
     manifest = deployment.verify(read_json(manifest_path), authority, evaluation_time=now)
 
+    # THE SHAPE OF WHAT WAS PRESENTED, BEFORE ANY ARTIFACT IS REQUIRED (D-087(d)).
+    # A §5.5.1 refusal bundle carries a receipt.json with no `receipt` member, or
+    # a refusal.json and no receipt.json at all. `required()` would name the
+    # wrong artifact for both; this names the one that is there.
+    receipt_path = os.path.join(sample, "receipt.json")
+    receipt_doc = read_json(receipt_path) if os.path.isfile(receipt_path) else None
+    check_not_a_refusal_record(sample, receipt_doc)
+
     mandate = read_json(required(sample, "mandate.json"))
     policy = read_json(required(sample, "policy.json"))
     action = read_json(required(sample, "action.json"))
-    receipt_doc = read_json(required(sample, "receipt.json"))
+    required(sample, "receipt.json")
     mandate_sig = read_json(required(sample, "mandate-signature.json"))
     evidence_raw = read_bytes(required(sample, "evidence.json"))
     canonical_file = read_bytes(required(sample, "evidence.canonical.json"))
     evidence_hash_file = read_bytes(required(sample, "evidence.hash")).decode().strip().lower()
-    receipt = receipt_doc.get("receipt")
-    receipt_signature = receipt_doc.get("signature")
+    receipt = receipt_doc.get("receipt") if isinstance(receipt_doc, dict) else None
+    receipt_signature = receipt_doc.get("signature") if isinstance(receipt_doc, dict) else None
     if not isinstance(receipt, dict) or not isinstance(receipt_signature, str):
         raise VerificationError("receipt.json must carry a signed decision receipt")
 
@@ -568,7 +1122,8 @@ def verify(sample, manifest_path, authority, evaluation_time=None,
         "verifyingContract": manifest["vault"],
     }
 
-    canonical = jcs.canonicalize(jcs.parse_bytes(evidence_raw))
+    evidence = jcs.parse_bytes(evidence_raw)
+    canonical = jcs.canonicalize(evidence)
     if canonical != canonical_file:
         raise VerificationError("evidence canonicalization mismatch")
     evidence_hash = hx(keccak256(canonical))
@@ -614,10 +1169,14 @@ def verify(sample, manifest_path, authority, evaluation_time=None,
     eq("recovered mandate owner", mandate_owner, manifest["owner"])
     eq("recovered receipt signer", receipt_signer, manifest["signer"])
 
-    # THE VERDICT, BEFORE THE ACTION PREDICATE. Deliberate ordering: the corpus's
-    # BLOCK bundles are blocked precisely BECAUSE their action does not match the
-    # mandate, and a recipient handed `case-2-injection-block` should be told the
-    # signer said BLOCK, not merely that a target field disagrees.
+    # THE VERDICT, BEFORE THE ACTION PREDICATE AND BEFORE THE CONTENT ARMS.
+    # Deliberate ordering: the corpus's BLOCK bundles are blocked precisely
+    # BECAUSE their action does not match the mandate, and a recipient handed
+    # `case-2-injection-block` should be told the signer said BLOCK, not merely
+    # that a target field disagrees -- nor, since D-087(b), that the signer's
+    # attested beneficiary disagrees, which is exactly WHY the cold demo's BLOCK
+    # receipt is BLOCK. The verdict is the gate; everything after it is about a
+    # receipt the Vault could execute.
     verdict_name = check_verdict(receipt, execution_path)
 
     check_exact_action(mandate, policy, action, calldata, now)
@@ -658,14 +1217,36 @@ def verify(sample, manifest_path, authority, evaluation_time=None,
         override_hash = check_owner_override(
             sample, receipt, action, domain, manifest, now, verdict_name)
 
+    # THE CONTENT ARMS (D-087(a)/(b)), after the executability predicate has been
+    # established for this receipt on this path. Their order among themselves:
+    # the §5.6 projections first, because they establish that evidence.json
+    # describes THESE documents at all; the §5.7.1 conformance of the signer's
+    # attested record next, under ALLOW only; the §5.4 reason-code commitment
+    # last. A bundle refused here is an authentic, executable-looking bundle whose
+    # evidence does not describe it, and the refusal says which projection.
+    check_evidence_describes_the_bundle(evidence, action, mandate, policy, receipt,
+                                        verdict_name)
+    if verdict_name == "ALLOW":
+        check_attested_record_conforms_to_mandate(evidence, mandate, policy)
+    check_reason_codes(receipt_doc, receipt)
+
     result = {
         "mode": mode,
+        "claim": (
+            "static, offline executability under the Vault's offline-checkable action "
+            "predicate; AUTHENTICITY is verify.py's claim, not this tool's (D-087(c))"
+        ),
         "deploymentAuthority": authority.lower(),
-        # Authenticated as an authority ASSERTION, not as a fact about a live
-        # deployment: nothing here read a chain. R-A018-04 is open; see
-        # NOT_ESTABLISHED, which is printed alongside this payload.
-        "deploymentBlockNumber": manifest["deploymentBlockNumber"],
-        "runtimeCodeHash": manifest["runtimeCodeHash"],
+        # Authenticated as authority ASSERTIONS, not as facts about a live
+        # deployment: nothing here read a chain (R-A018-04). D-086(e) rules that
+        # the value is never presented as authenticated, so these travel under a
+        # key that says what they are rather than at the top level beside the
+        # verdict, where a reader could not tell a verified finding from an
+        # unchecked assertion. See NOT_ESTABLISHED, printed alongside.
+        "unverifiedAuthorityAssertions": {
+            "deploymentBlockNumber": manifest["deploymentBlockNumber"],
+            "runtimeCodeHash": manifest["runtimeCodeHash"],
+        },
         "mandateHash": mandate_hash,
         "actionHash": action_hash,
         "actionNonce": action["actionNonce"],
@@ -739,8 +1320,18 @@ def main(argv=None):
     # value, selector and operation, so that is what the sentence now says; the
     # arguments inside callData are named in NOT ESTABLISHED rather than covered
     # by a word like "matches".
+    #
+    # D-087(a)/(b): the three content arms are enumerated the same way, and the
+    # §5.7.1 check is named by its ruled name with what it does not catch said in
+    # the same breath. The word "block" is kept out of this line on purpose: the
+    # anchor is compared to the RECEIPT's simulation block, not to a chain, and a
+    # headline that named a block would anchor a claim to one (D-086(e)).
     compared = ("the action's target, value, selector and operation match the mandate and "
-                "policy")
+                "policy; the evidence's §5.6 projections (normalizedAction, expectedEffects, "
+                "anchor, verdict) describe these documents; the published reason codes are "
+                f"the ones the receipt commits to; and the {CONFORMANCE_CHECK_NAME} (§5.7.1, "
+                "compared from the signer's own attested record without decoding callData, "
+                "so this does not catch a lying signer)")
     if result["executionPath"] == OVERRIDE_PATH:
         print("PASS (static, offline) BY AUTHENTICATED OWNER OVERRIDE, NOT AUTOMATICALLY: the "
               "deployment manifest authenticates under the out-of-band authority; the mandate "
@@ -752,6 +1343,13 @@ def main(argv=None):
         print("PASS (static, offline): the deployment manifest authenticates under the "
               "out-of-band authority; the mandate is the owner's; the signer's decision is "
               f"{result['verdict']}; and {compared}.")
+    # D-087(c): WHICH CLAIM THIS IS, on the surface a recipient reads.
+    print("CLAIM: this tool certifies EXECUTABILITY, statically and offline -- that "
+          "SentinelVault's offline-checkable action predicate accepts this bundle at the "
+          "entry point named above. It is not the authenticity verifier: verify.py "
+          "certifies AUTHENTICITY, that the bundle is genuinely what the signer produced, "
+          "and passes a REVIEW receipt with no override and a BLOCK receipt, both of which "
+          "this tool refuses.")
     print("NOT ESTABLISHED by this run: " + "; ".join(NOT_ESTABLISHED) + ".")
     print(json.dumps(result, sort_keys=True))
     return 0

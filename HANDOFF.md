@@ -5,19 +5,51 @@ Prepared by: Claude (Fable), from the facilitated intake session with John
 For: Opus 5 (architect and build director) and its subagents
 Status: Rulings ratified by John 2026-07-27 (canonical record: `docs/decisions.md`). Build authorized through Gate S2. Anything in this brief marked "agent note" is elaboration, not ratified text.
 
+**2026-09-01 — THE PUBLICATION-SURFACE REPAIR BATCH LANDED (`8d47a0b`, `5d93850`, `5c8c090`,
+`2318ae3`), THE LAB CASTING'S CYCLE 1 REPORTED, AND THE CYCLE 2 CANDIDATE IS IN BUILD UNDER
+D-087.** The 2026-08-30 block below stands as the record of that morning; the present-tense
+statements in it that are now false are struck in place rather than deleted. **The BLOCK→PASS
+defect it names was FIXED at `8d47a0b` (2026-08-30):** `verify_publication.py` refuses a BLOCK
+receipt on both execution paths, `verifier/test_publication_verifier.py` observes it, and the
+release's cold demo now mints a BLOCK receipt per run and requires four refusals. The three
+commits after it wired the release-sync, suite-floor, vacuity and gate-abort guards and closed
+R-A018-18/23/24 under D-083. Two Crucible lines exist and must not be conflated: the
+**enforcement-publication line** (`S-20260829-…`) is HALTED with its four A-018 Criticals still
+**OPEN AT ANVIL** (D-083(i)); the **lab casting** (`S-20260830-sentinel-conformance-lab-r1`, the
+fresh casting D-083(g) required) reviewed candidate `8d47a0b` and bound two Criticals — Binding
+Critical 1 (an unexamined override inside a PASS) was already closed at `5d93850` under D-083(c)
+and needs demonstrating, not fixing (D-086(f)); Binding Critical 2 (the fail-open
+`evaluation_time=None` default) is ruled FIXED by the non-certifying-static route (D-086(e)), and
+its code fix is in the current batch. **D-085 reversed D-083(h)** — D-047 is retired, D-055(a)
+governs, there is no open-ended clean-round loop, and the agent's error that produced D-083(h) is
+recorded with the reversal — and changed the review method to a systematic inventory diff
+(`docs/check-inventory-diff-2026-08-31.md`: the class is 54 + 4 + 4 missing checks, not 6).
+**D-087 scoped the next candidate to ~35 items** — the §5.6 evidence-projection arm, the
+reason-code arm, four Vault-axis items, §5.7.1 conformance named precisely, the A/B semantic split
+stated on both verifiers, the §5.5.1 refusal arm recognised and refused, release packaging per
+D-085(f), and the 2026-08-30 round's confirmed findings — and that build is what is in flight.
+**Still true and unchanged:** nothing is pushed (`git log --oneline
+origin/step-3/isolated-signer..HEAD` — count it, never quote it), no Critical is withdrawn, no
+gate is signed, publication is not authorised, and the licence is DEFERRED under D-082(c). Start
+at `docs/session-state.md` §1.
+
 **2026-08-30 — CYCLE 2 IS HALTED; A PROPOSED REMEDIATION SET IS DRAFTED AT
 `docs/a018-remediation-register.md`.** All four Cycle 2 Criticals were Adversary-SUSTAINED
 (`A-018` / `MSG-022`) and remain OPEN AT ANVIL. A build-team response and reply were drafted and
 the chairs consulted informally; **the consultation made no ledger entry and no ruling, and
-nothing in the register is "agreed" or "accepted" in any ratified sense.** It is a proposal
-pending Smith registration and authorization. Builders: read it before touching anything under
+nothing in the register is "agreed" or "accepted" in any ratified sense.** ~~It is a proposal
+pending Smith registration and authorization.~~ **Corrected 2026-09-01: its §3 items were then
+authorised piecemeal (D-082(a), D-083(j), D-085(f), D-086, D-087) and most are CLOSED with dated
+markers in the register; §4 remains John's.** Builders: read it before touching anything under
 `release/`, `verifier/`, or `ts/src/tools/cold-demo.ts`. It carries thirteen proposed work items
 valid **only if the v0.3 enforcement/verifier architecture is retained** (§3 — a fresh casting
 could delete them, and **none is authorised: they still need an instruction from John**), the
 items blocked on John's rulings (§4), and four corrections to the build team's own claims (§0).
 
-**The defect to know about before reading anything else: `verifier/verify_publication.py` prints
-`PASS` and exits 0 for a receipt whose verdict is `BLOCK`. IT IS NOT PUSHED AND NEVER WAS.**
+~~**The defect to know about before reading anything else: `verifier/verify_publication.py` prints
+`PASS` and exits 0 for a receipt whose verdict is `BLOCK`.**~~ **FIXED at `8d47a0b`, 2026-08-30 —
+see the 2026-09-01 block above; the sentence is struck, not deleted, because the rest of this
+paragraph is still the record of why it was never an incident.** **IT IS NOT PUSHED AND NEVER WAS.**
 `a38cff9` exists only in the local working tree — `origin/step-3/isolated-signer` is at
 `70f4b4d`, and no remote ref contains it. This is prevention work, not incident response; an
 earlier version of the register said "pushed branch" and that was false. Every fix still produces

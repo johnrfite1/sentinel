@@ -107,6 +107,40 @@ So each entry above now says which half of its item is asserted and which is
 not, and the repaired tests assert the observable half rather than resting on
 the label. Where a property really is unobservable offline it stays RED and
 named, never green-and-explained.
+
+THE D-086 / D-087 EXTENSION (2026-09-01, against frozen baseline `2115c4f`)
+--------------------------------------------------------------------------
+The contract was unfrozen by John at D-086 -- D-083(d)'s release condition
+fired when Crucible Cycle 1 bound the `deployment.verify(evaluation_time=None)`
+fail-open as a withdrawal condition (Binding Critical 2). This file was extended
+under D-058(1) by an author again forbidden to edit either module. Every new
+test says whether it FAILS on `2115c4f` (the implementer's contract) or PASSES
+(already correct, held so it cannot regress). The classes, in file order:
+
+* `TestTheCertifyingInstantIsNotOmissible` -- D-086(e): omitting the instant
+  REFUSES with `DeploymentManifestError`, never skips the lifetime bound.
+* `TestTheStaticResultDisclaimsWhatItDidNotAuthenticate` -- D-086(e): the
+  static result disclaims deployment identity, nonce freshness, currentness
+  and executability; injected time lives only in the non-certifying mode.
+* `TestDeploymentIdentityIsNotBound` -- the three R-A018-04 reds RE-EXAMINED
+  under the non-certifying-static route. What each became, and why, is in its
+  own docstring; the class docstring carries the decision.
+* `TestOperationIsCallUnconditionally` -- D-087(a): `SentinelVault.sol:357`
+  requires `operation == CALL` whatever the policy says.
+* `TestARefusalRecordIsRecognisedAndNotCertified` -- D-087(d): a §5.5.1 bundle
+  is refused AS a refusal record, not as a missing receipt, and the refusal
+  says this verifier does not certify refusals. The 32 refusal checks are
+  deliberately NOT tested: the ruling is recognition, not verification.
+* `TestTheVaultBackstopsAreDisclosed` -- D-087(a): `maxNativeValueWei`,
+  `allowedTarget`, `allowedSelector` are Vault state this tool cannot reach,
+  and NOT_ESTABLISHED must say so.
+* `TestTheExecutabilityClaimIsStated` -- D-087(c): the A/B split is on the
+  surface -- this tool certifies EXECUTABILITY, `verify.py` certifies
+  AUTHENTICITY -- in the certifying output and in `--help`.
+
+The twenty `deployment.verify(` call sites that passed no instant now go through
+`verify_manifest()`, which names one. Only the omission tests call the module
+directly. See that helper's docstring.
 """
 
 import json
@@ -118,12 +152,14 @@ import sys
 import tempfile
 import time
 import unittest
+from unittest import mock
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import deployment  # noqa: E402
 import eip712  # noqa: E402
 import jcs  # noqa: E402
+import reasoncodes  # noqa: E402
 import verify  # noqa: E402  (imported ONLY for its published test keys)
 import verify_publication  # noqa: E402
 from keccak import keccak256  # noqa: E402
@@ -171,6 +207,15 @@ NOW = 1788059600
 # Two decades, in seconds. Used as "unambiguously outside any sane manifest
 # lifetime" so the tests do not legislate a particular bound.
 TWO_DECADES = 20 * 365 * 24 * 3600
+
+# For `Bundle.sync_projections`. Restated from `test_publication_conformance.py`
+# rather than imported, because that file imports from this one and the import
+# would be circular. Its `test_the_projection_resync_is_a_no_op_on_every_shipped_
+# fixture` is what keeps the derivation honest; this copy must match it.
+VERDICT_NAMES = {0: "BLOCK", 1: "REVIEW", 2: "ALLOW"}
+EXPECTED_EFFECTS_FROM_MANDATE = (
+    "target", "selector", "resourceId", "beneficiary", "durationSeconds", "recurringAllowed",
+)
 
 
 def read_json(*parts):
@@ -231,6 +276,22 @@ def sign_manifest(payload, key=AUTHORITY_KEY):
     }
 
 
+def verify_manifest(document, authority=AUTHORITY, evaluation_time=NOW):
+    """`deployment.verify` at a NAMED instant.
+
+    D-086 makes the certifying instant non-omissible: a call that leaves
+    `evaluation_time` out is REFUSED rather than allowed to skip the lifetime
+    bound. Twenty call sites in this file used to omit it, none of them on
+    purpose -- they were written before the bound existed and were never
+    revisited when it did, which is exactly how the fail-open D-083(d) marked
+    stayed reachable. Every site whose subject is something OTHER than the
+    omission now goes through this helper; the tests whose subject IS the
+    omission (`TestTheCertifyingInstantIsNotOmissible`) call
+    `deployment.verify` directly, so the two cannot be confused.
+    """
+    return deployment.verify(document, authority, evaluation_time=evaluation_time)
+
+
 class Bundle(object):
     """A staged publication bundle that can be tampered with and RE-SEALED.
 
@@ -262,7 +323,12 @@ class Bundle(object):
         self.policy = read_json(self.dir, "policy.json")
         self.action = read_json(self.dir, "action.json")
         self.receipt_doc = read_json(self.dir, "receipt.json")
-        self.receipt = self.receipt_doc["receipt"]
+        # `.get`, not `[]`: a §5.5.1 refusal bundle carries no `receipt` member
+        # at all (`refusal-vault-paused`), and D-087(d)'s tests stage one
+        # unsealed. `seal()` still indexes it, so a refusal bundle cannot be
+        # re-sealed -- which is right, there is no receipt to re-sign.
+        self.receipt = self.receipt_doc.get("receipt")
+        self.evidence = read_json(self.dir, "evidence.json")
         self.owner_key = OWNER_KEY
         self.signer_key = SIGNER_KEY
 
@@ -270,6 +336,75 @@ class Bundle(object):
         return os.path.join(self.dir, name)
 
     def seal(self):
+        """Re-seal the hash chain. Does NOT touch `evidence.json`; see below."""
+        return self._seal_chain()
+
+    def seal_resynced(self):
+        """Re-seal with the §5.6 projections resynced to the documents first.
+
+        THE STAGING DEFECT THIS CLOSES, and why it is a SEPARATE method. `seal()`
+        rebuilds the chain and re-signs, and it never touched `evidence.json`.
+        That was invisible while the verifier hashed the evidence and never
+        opened it; the §5.6 projection arm (D-087(a), O2) opens it, and a
+        bundle whose windows `live_bundle()` moved then carries an
+        `evidence.normalizedAction` restating the OLD mandateHash, policyHash
+        and deadline -- refused, correctly, for describing a call the bundle
+        does not carry. The inventory diff's §3 warned of exactly this
+        ("`Bundle.seal` does not resync them, and the first run produced three
+        false positives from that").
+
+        NOT folded into `seal()`: `ConformanceBundle.seal(documents, evidence)`
+        stages its negatives as seal -> resync -> MUTATE -> write evidence ->
+        seal, calling the base `seal()` with no argument at both ends. A resync
+        inside the base seal would silently undo every mutation on the second
+        pass and turn all of them into false greens; a keyword on the base
+        seal collides with that subclass's own signature (measured: four
+        `TypeError`s). So this is its own method, which that subclass does not
+        override, and only the callers staging an internally-perfect live
+        bundle use it. A test that mutates a projection must not.
+        """
+        self._seal_chain()               # the chain, so the projections have final hashes
+        self.sync_projections()
+        self.write_evidence()
+        return self._seal_chain()        # re-signed over the final evidenceHash
+
+    def sync_projections(self):
+        """Derive every §5.6 projection and the reason-code commitment.
+
+        Mirrors `ConformanceBundle.sync_projections` verbatim (see the note at
+        `VERDICT_NAMES`): `normalizedAction` is the §5.3 ActionPayload plus
+        `callData`; `expectedEffects` is six mandate fields, one policy field
+        and the LOWER native ceiling (§5.2); `anchor` is the receipt's
+        simulation block; `verdict` is the receipt's enum spelled out.
+        """
+        normalized = {name: self.action[name] for _, name in eip712.ACTION_FIELDS}
+        normalized["callData"] = self.action["callData"]
+        self.evidence["normalizedAction"] = normalized
+
+        effects = {name: self.mandate[name] for name in EXPECTED_EFFECTS_FROM_MANDATE}
+        effects["maxAllowanceIncreaseBaseUnits"] = self.policy["maxAllowanceIncreaseBaseUnits"]
+        effects["maxNativeValueWei"] = str(min(int(self.mandate["maxNativeValueWei"]),
+                                               int(self.policy["maxNativeValueWei"])))
+        self.evidence["expectedEffects"] = effects
+
+        self.evidence["anchor"] = {
+            "blockNumber": self.receipt["simulationBlockNumber"],
+            "blockHash": self.receipt["simulationBlockHash"],
+        }
+        self.evidence["verdict"] = VERDICT_NAMES[int(self.receipt["verdict"])]
+        self.receipt["reasonCodesHash"] = reasoncodes.reason_codes_hash_hex(
+            self.receipt_doc["reasonCodes"])
+
+    def write_evidence(self):
+        canonical = jcs.canonicalize(self.evidence)
+        write_json(self.path("evidence.json"), self.evidence)
+        with open(self.path("evidence.canonical.json"), "wb") as handle:
+            handle.write(canonical)
+        with open(self.path("evidence.hash"), "w", encoding="ascii") as handle:
+            handle.write("0x" + keccak256(canonical).hex())
+        self.receipt["evidenceHash"] = "0x" + keccak256(canonical).hex()
+
+    def _seal_chain(self):
         domain = domain_of(self.payload)
         policy_hash = "0x" + eip712.policy_hash(self.policy).hex()
         self.mandate["policyHash"] = policy_hash
@@ -315,8 +450,13 @@ class PublicationTestCase(unittest.TestCase):
         b = Bundle(case, room, payload=payload)
         return b.seal() if seal else b
 
-    def live_bundle(self, case="case-1-allow"):
+    def live_bundle(self, case="case-1-allow", **manifest_overrides):
         """A bundle current at the REAL host clock, so a run can CERTIFY.
+
+        `manifest_overrides` are applied to the manifest payload on top of the
+        live `issuedAt`, so a certifying run can be staged under a manifest
+        that differs in one named field (D-086(e): two contradictory
+        `runtimeCodeHash` values, both authority-signed).
 
         THIS HELPER EXISTS BECAUSE THREE TESTS IN THIS FILE WENT VACUOUS.
 
@@ -352,8 +492,9 @@ class PublicationTestCase(unittest.TestCase):
         `verify()`'s default branch itself makes.
         """
         live = int(time.time())
-        b = self.bundle(case, payload=manifest_payload(issuedAt=str(live - 60)),
-                        seal=False)
+        overrides = dict(manifest_overrides)
+        overrides.setdefault("issuedAt", str(live - 60))
+        b = self.bundle(case, payload=manifest_payload(**overrides), seal=False)
         b.receipt["issuedAt"] = str(live - 60)
         b.receipt["expiresAt"] = str(live + 3600)
         b.mandate["validAfter"] = str(live - 3600)
@@ -361,9 +502,11 @@ class PublicationTestCase(unittest.TestCase):
         b.policy["validAfter"] = str(live - 3600)
         b.policy["validUntil"] = str(live + 7200)
         b.action["deadline"] = str(live + 7200)
-        return b.seal()
+        # The projections restate mandateHash, policyHash and deadline, all of
+        # which just moved. See `Bundle.seal`.
+        return b.seal_resynced()
 
-    def certifying_run(self, case="case-1-allow"):
+    def certifying_run(self, case="case-1-allow", **manifest_overrides):
         """Run the CLI on a live-clock bundle and insist that it certified.
 
         The positive control for every "the certifying banner must not say X"
@@ -371,7 +514,7 @@ class PublicationTestCase(unittest.TestCase):
         fails for an unrelated reason -- which is precisely how the three tests
         named above became vacuous. Returns (completed, headline, payload).
         """
-        completed = self.cli(self.live_bundle(case))
+        completed = self.cli(self.live_bundle(case, **manifest_overrides))
         self.assertEqual(
             completed.returncode, 0,
             "positive control broken: a live-clock bundle did not certify, so "
@@ -468,21 +611,21 @@ class TestDeploymentAuthority(PublicationTestCase):
         """Control. Without this, every refusal below could be a broken fixture."""
         payload = manifest_payload()
         self.assertEqual(
-            deployment.verify(sign_manifest(payload), AUTHORITY)["vault"], VAULT)
+            verify_manifest(sign_manifest(payload), AUTHORITY)["vault"], VAULT)
 
     def test_a_manifest_is_refused_under_any_other_authority(self):
         """PASSES on baseline. The recovered address is compared to the address
         the caller supplied, so a manifest signed by anyone else is refused even
         though its signature is perfectly valid."""
         with self.assertRaises(deployment.DeploymentManifestError) as caught:
-            deployment.verify(sign_manifest(manifest_payload()), OUTSIDER)
+            verify_manifest(sign_manifest(manifest_payload()), OUTSIDER)
         self.assertIn("expected out-of-band authority", str(caught.exception))
 
     def test_a_manifest_signed_by_an_outsider_is_refused(self):
         """PASSES on baseline. The mirror of the previous test: same expected
         authority, different signing key."""
         with self.assertRaises(deployment.DeploymentManifestError):
-            deployment.verify(
+            verify_manifest(
                 sign_manifest(manifest_payload(), OUTSIDER_KEY), AUTHORITY)
 
     def test_the_manifest_cannot_nominate_its_own_authority(self):
@@ -491,7 +634,7 @@ class TestDeploymentAuthority(PublicationTestCase):
         rejected by the closed field set, so authority can only ever come from
         the caller's argument."""
         with self.assertRaises(deployment.DeploymentManifestError) as caught:
-            deployment.verify(
+            verify_manifest(
                 sign_manifest(manifest_payload(authority=OUTSIDER)), AUTHORITY)
         self.assertIn("authority", str(caught.exception))
 
@@ -501,7 +644,7 @@ class TestDeploymentAuthority(PublicationTestCase):
         for bad in ("0x1234", "not-an-address", "0x" + "zz" * 20):
             with self.subTest(authority=bad):
                 with self.assertRaises(deployment.DeploymentManifestError):
-                    deployment.verify(sign_manifest(manifest_payload()), bad)
+                    verify_manifest(sign_manifest(manifest_payload()), bad)
 
 
 # ---------------------------------------------------------------------------
@@ -523,7 +666,7 @@ class TestDeploymentCanonicalization(PublicationTestCase):
         self.assertEqual(deployment.digest(payload), deployment.digest(reordered))
         document = sign_manifest(payload)
         document["payload"] = reordered
-        self.assertEqual(deployment.verify(document, AUTHORITY)["owner"], OWNER)
+        self.assertEqual(verify_manifest(document, AUTHORITY)["owner"], OWNER)
 
     def test_the_domain_tag_is_load_bearing(self):
         """PASSES on baseline. A signature over the bare canonical payload -- the
@@ -533,7 +676,7 @@ class TestDeploymentCanonicalization(PublicationTestCase):
         payload = manifest_payload()
         untagged = sign_digest(keccak256(jcs.canonicalize(payload)), AUTHORITY_KEY)
         with self.assertRaises(deployment.DeploymentManifestError):
-            deployment.verify(
+            verify_manifest(
                 {"schema": deployment.SCHEMA, "payload": payload,
                  "authoritySignature": untagged}, AUTHORITY)
 
@@ -564,13 +707,13 @@ class TestDeploymentShape(PublicationTestCase):
                 payload = manifest_payload()
                 del payload[name]
                 with self.assertRaises(deployment.DeploymentManifestError) as c:
-                    deployment.verify(sign_manifest(payload), AUTHORITY)
+                    verify_manifest(sign_manifest(payload), AUTHORITY)
                 self.assertIn(name, str(c.exception))
 
     def test_an_unknown_field_is_refused(self):
         """PASSES on baseline."""
         with self.assertRaises(deployment.DeploymentManifestError):
-            deployment.verify(
+            verify_manifest(
                 sign_manifest(manifest_payload(surprise="0x00")), AUTHORITY)
 
     def test_the_document_shape_is_exact(self):
@@ -584,7 +727,7 @@ class TestDeploymentShape(PublicationTestCase):
             with self.subTest(shape=mutate({"schema": 1, "payload": 1,
                                             "authoritySignature": 1}).keys()):
                 with self.assertRaises(deployment.DeploymentManifestError):
-                    deployment.verify(
+                    verify_manifest(
                         mutate(sign_manifest(manifest_payload())), AUTHORITY)
 
     def test_a_foreign_schema_string_is_refused(self):
@@ -592,12 +735,12 @@ class TestDeploymentShape(PublicationTestCase):
         document = sign_manifest(manifest_payload())
         document["schema"] = "sentinel.deployment-manifest.v2"
         with self.assertRaises(deployment.DeploymentManifestError):
-            deployment.verify(document, AUTHORITY)
+            verify_manifest(document, AUTHORITY)
 
     def test_a_foreign_schema_version_is_refused(self):
         """PASSES on baseline."""
         with self.assertRaises(deployment.DeploymentManifestError):
-            deployment.verify(
+            verify_manifest(
                 sign_manifest(manifest_payload(schemaVersion="2")), AUTHORITY)
 
     def test_uint_fields_reject_non_canonical_decimals(self):
@@ -608,7 +751,7 @@ class TestDeploymentShape(PublicationTestCase):
             for bad in ("0123", "0x10", "1٢", "１２", "-1", "1 ", " 1", ""):
                 with self.subTest(field=name, value=bad):
                     with self.assertRaises(deployment.DeploymentManifestError):
-                        deployment.verify(
+                        verify_manifest(
                             sign_manifest(manifest_payload(**{name: bad})), AUTHORITY)
 
     def test_address_fields_reject_wrong_widths_and_non_hex(self):
@@ -618,7 +761,7 @@ class TestDeploymentShape(PublicationTestCase):
                         "11" * 20, 42, None):
                 with self.subTest(field=name, value=bad):
                     with self.assertRaises(deployment.DeploymentManifestError):
-                        deployment.verify(
+                        verify_manifest(
                             sign_manifest(manifest_payload(**{name: bad})), AUTHORITY)
 
     def test_bytes32_fields_reject_wrong_widths_and_non_hex(self):
@@ -628,7 +771,7 @@ class TestDeploymentShape(PublicationTestCase):
             for bad in ("0x" + "aa" * 31, "0x" + "aa" * 33, "0x" + "gg" * 32, ""):
                 with self.subTest(field=name, value=bad):
                     with self.assertRaises(deployment.DeploymentManifestError):
-                        deployment.verify(
+                        verify_manifest(
                             sign_manifest(manifest_payload(**{name: bad})), AUTHORITY)
 
     def test_a_non_object_payload_is_refused(self):
@@ -636,7 +779,7 @@ class TestDeploymentShape(PublicationTestCase):
         for payload in ([], "payload", 7, None):
             with self.subTest(payload=payload):
                 with self.assertRaises(deployment.DeploymentManifestError):
-                    deployment.verify(
+                    verify_manifest(
                         {"schema": deployment.SCHEMA, "payload": payload,
                          "authoritySignature": "0x" + "11" * 65}, AUTHORITY)
 
@@ -649,7 +792,7 @@ class TestDeploymentShape(PublicationTestCase):
                 document = sign_manifest(manifest_payload())
                 document["authoritySignature"] = bad
                 with self.assertRaises(deployment.DeploymentManifestError):
-                    deployment.verify(document, AUTHORITY)
+                    verify_manifest(document, AUTHORITY)
 
 
 # ---------------------------------------------------------------------------
@@ -720,7 +863,7 @@ class TestDeploymentManifestLifetime(PublicationTestCase):
         manifest timestamp inherits an unbounded integer. A uint64 ceiling is the
         obvious bound; the test only requires that one exists."""
         with self.assertRaises(deployment.DeploymentManifestError):
-            deployment.verify(
+            verify_manifest(
                 sign_manifest(manifest_payload(issuedAt="1" + "0" * 40)), AUTHORITY)
 
 
@@ -768,7 +911,7 @@ class TestDeploymentSignatureCanonicalForm(PublicationTestCase):
         document = sign_manifest(manifest_payload())
         document["authoritySignature"] = self.malleate(document["authoritySignature"])
         with self.assertRaises(deployment.DeploymentManifestError) as caught:
-            deployment.verify(document, AUTHORITY)
+            verify_manifest(document, AUTHORITY)
         self.assertRegex(str(caught.exception), r"(?i)low-s|canonical|EIP-2|malleab")
 
     def test_the_bundle_signatures_are_held_to_the_same_rule(self):
@@ -805,7 +948,7 @@ class TestDeploymentDiagnostics(PublicationTestCase):
         authority -- the one thing that was fine -- and this is a verifier whose
         entire value is telling an unaided reader what went wrong (Critical 2)."""
         with self.assertRaises(deployment.DeploymentManifestError) as caught:
-            deployment.verify(
+            verify_manifest(
                 sign_manifest(manifest_payload(issuedAt="0123")), AUTHORITY)
         message = str(caught.exception)
         self.assertIn("leading zero", message)
@@ -1161,20 +1304,38 @@ class TestExactActionIsEnforced(PublicationTestCase):
         self.assert_refused(bundle, r"(?i)policy\.vault")
 
     def test_calldata_redirecting_the_mandated_beneficiary_is_refused(self):
-        """FAILS ON BASELINE -- EXTENSION (not in register §1, and not in
-        R-A018-05's enumerated list).
+        """PERMANENTLY RED BY RULING -- R-A018-17, D-083(b). Observes the defect
+        that ruling left open, and is built so nothing ELSE can move it.
 
         Target, selector, value and operation all left exactly as mandated. Only
         the beneficiary word inside the calldata is replaced with an attacker
-        address. `mandate.beneficiary` names the party the owner authorised; the
-        predicate hashes the calldata, never decodes it, and prints "exact
-        action".
+        address, the §5.6 projections are resynced so `evidence.normalizedAction`
+        restates the redirected bytes (an honest dashboard of a dishonest call),
+        and the signer's attested decoded record is left as shipped -- still
+        naming the MANDATED beneficiary. That is the lying-signer shape: every
+        hash binds, every signature recovers, the record conforms to the mandate
+        under D-087(b)'s check, and only the bytes disagree. D-083(b) ruled this
+        tool decodes nothing, so by ruling this bundle CERTIFIES, and
+        NOT_ESTABLISHED is where a recipient is told.
 
-        Recorded as an extension rather than folded in silently: enforcing it
-        means the verifier must decode calldata against the mandated selector,
-        which is a scope decision, not a test author's call. Whoever rules on
-        R-A018-05's scope should rule on this too -- it is the money-movement
-        vector the other four checks are protecting."""
+        F-3 (2026-09-01). The previous body called `seal()` and left the
+        projections stale, so the §5.6 arm refused the bundle on `dataHash`
+        before the exact-action predicate ever ran. It stayed red only because
+        that message happened not to match `beneficiar|callData|exact`; one
+        wording change elsewhere would have flipped it green and the floors
+        guard would have reported unauthorised work that never happened. The
+        test had stopped observing R-A018-17.
+
+        THREE OUTCOMES, THREE SIGNALS, so the floors guard can tell them apart:
+
+        * RED  -- the bundle certifies. The ruled state. The failing assertion
+                  names the register item and the ruling.
+        * GREEN -- the refusal names the beneficiary. Somebody decoded calldata
+                  against D-083(b); the guard reports "declared red now
+                  PASSES", which is the alarm it exists to raise.
+        * ERROR -- refused by any OTHER arm before the exact-action predicate.
+                  Staging intercepted, as in F-3; raised as `RuntimeError`,
+                  which the guard never accepts as a deliberate red."""
         bundle = self.bundle(seal=False)
         beneficiary = bundle.mandate["beneficiary"][2:]
         self.assertIn(beneficiary, bundle.action["callData"],
@@ -1184,8 +1345,30 @@ class TestExactActionIsEnforced(PublicationTestCase):
         self.assertEqual(len(bundle.action["callData"]),
                          len(read_json(SAMPLES, "case-1-allow",
                                        "action.json")["callData"]))
-        bundle.seal()
-        self.assert_refused(bundle, r"(?i)beneficiar|callData|exact")
+        attested = bundle.evidence["decodedSelectorAndParameters"]
+        self.assertIn(beneficiary, json.dumps(attested).lower(),
+                      "fixture changed: the attested record no longer names the "
+                      "mandated beneficiary, so this is not the lying-signer shape")
+        bundle.seal_resynced()
+
+        try:
+            result = self._predicate(bundle)
+        except (ValueError, KeyError) as exc:
+            if re.search(r"(?i)beneficiar", str(exc)):
+                return  # GREEN, deliberately: see the docstring.
+            raise RuntimeError(
+                "STAGING INTERCEPTED (F-3): the redirected bundle was refused by an "
+                "arm unrelated to R-A018-17 before the exact-action predicate ran, "
+                "so this test is not observing the ruled-open defect: " + str(exc))
+
+        self.assertNotEqual(
+            result["verdict"], "ALLOW",
+            "R-A018-17: a bundle whose calldata redirects the mandated beneficiary "
+            "certified as ALLOW with an internally perfect chain and an attested "
+            "record that still names the mandated party. This is the ruled-open "
+            "defect -- D-083(b) rules this tool decodes no calldata and discloses "
+            "it in NOT_ESTABLISHED -- and this test is PERMANENTLY RED BY RULING. "
+            "Do not turn it green; a green here means calldata was decoded.")
 
 
 # ---------------------------------------------------------------------------
@@ -1493,44 +1676,143 @@ class TestDeploymentIdentityIsNotBound(PublicationTestCase):
     inside the PASS payload, where they read as authenticated facts about a live
     deployment.
 
+    THE THREE DELIBERATE REDS OF THIS CLASS WERE RE-EXAMINED UNDER D-086(e).
+    Crucible Cycle 1 Binding Critical 2 is closed by the NON-CERTIFYING-STATIC
+    route: the council said *"Live RPC is not mandatory if the bounded lab
+    chooses the honest non-certifying path. What is mandatory is that the
+    result stop claiming properties it did not authenticate"*, and John ruled
+    that path taken, with live RPC NOT AUTHORISED. The three reds were written
+    for the OTHER route -- each asserted a chain binding -- and against the
+    ruled semantics each is now a test of work that is ruled out. Keeping them
+    red would record "RPC is not built", which NOT_ESTABLISHED already says;
+    it would not observe the defect the council actually bound, which is the
+    CLAIM. So each was redefined to observe the claim:
+
+    * `test_a_fabricated_runtime_code_hash_is_echoed_as_authenticated` keeps its
+      name (it is the test the council will look for) and now asserts the
+      ruled semantic directly: the value is never presented as an authenticated
+      fact. GREEN-ABLE under the ruling.
+    * `..._cannot_both_certify` became `..._both_authenticate_statically_and_
+      neither_claims_deployment_identity`: with no chain, two contradictory
+      manifests are two authentic authority assertions, and the honest result
+      certifies both STATICALLY while claiming neither identity. GREEN-ABLE.
+    * `..._names_the_block_its_claims_are_true_at` became `..._anchors_no_claim_
+      to_a_block_and_says_executability_is_not_established`: with no
+      executability claim there is no block to anchor one to, and a result that
+      names one anyway is the overclaim in a new place. GREEN-ABLE.
+
+    All three FAIL on `2115c4f`, because the baseline echoes `runtimeCodeHash`
+    and `deploymentBlockNumber` as bare top-level facts of a certifying result
+    and its NOT_ESTABLISHED list never uses the word "executability". None is
+    a chain-binding test any more, and the class docstring's old claim that the
+    three were "placeholders" for R-A018-04's binding is withdrawn: when a chain
+    binding is authorised it needs NEW tests, not these.
+
     An offline test cannot check bytecode. What it CAN assert is the property
     R-A018-04 names: results must distinguish static authenticity from
     executability at a named block, so a run with no chain access must not emit
     an unqualified certification."""
 
+    # A key under which an authority-asserted value may travel without reading
+    # as a verified fact. The label has to SAY the value is asserted, claimed,
+    # or unverified; a neutral container ("manifest", "deployment") does not,
+    # because the manifest IS authenticated and a reader will assume its
+    # contents are too -- which is the exact confusion R-A018-04 records.
+    LABELLED = r"(?i)assert|unverified|unauthenticated|claim|said|disclaim|not.?established"
+
+    @classmethod
+    def paths_to(cls, node, needle, trail=()):
+        """Every key path at which `needle` occurs as a string inside `node`."""
+        found = []
+        if isinstance(node, dict):
+            for key, value in node.items():
+                found.extend(cls.paths_to(value, needle, trail + (str(key),)))
+        elif isinstance(node, list):
+            for index, value in enumerate(node):
+                found.extend(cls.paths_to(value, needle, trail + (str(index),)))
+        elif isinstance(node, str) and needle.lower() in node.lower():
+            found.append(trail)
+        return found
+
+    def assert_not_presented_as_a_fact(self, result, value, what):
+        """`value` may be absent, or may appear only under a labelled key."""
+        self.assertNotIn(
+            what, result,
+            "a certifying result carries a bare top-level {!r}: a value nothing "
+            "verified, presented at the same level as the verdict, reads as an "
+            "authenticated fact about the deployment (D-086(e))".format(what))
+        # A plain loop, NOT `subTest`: this helper serves tests that are red on
+        # the baseline, and `scripts/check-publication-suite-floors.sh` keys a
+        # declared red on `test.id()`, which for a subTest failure carries a
+        # "(path=...)" suffix the declaration's parser cannot name.
+        unlabelled = ["/".join(trail) for trail in self.paths_to(result, value)
+                      if not any(re.search(self.LABELLED, key) for key in trail)]
+        self.assertEqual(
+            unlabelled, [],
+            "{!r} appears at {} under no label saying it is an authority "
+            "assertion rather than a verified fact".format(value, unlabelled))
+
     def test_a_fabricated_runtime_code_hash_is_echoed_as_authenticated(self):
-        """FAILS ON BASELINE -- R-A018-04 / CRITICAL 1, register §1.1.
+        """FAILS ON BASELINE -- R-A018-04 / Binding Critical 2, REDEFINED under
+        D-086(e). The name is kept so the council can find the test that
+        observes its finding; the body now asserts the ruled semantic.
 
-        `runtimeCodeHash` here is 0xb2b2...b2, a value this test invented. It
-        appears verbatim in the certifying payload under the headline
-        "authenticated deployment". Contract: a value nothing verified must not
-        be presented as authenticated -- either it is checked against live
-        bytecode or a state proof, or the result must not certify."""
+        `runtimeCodeHash` here is 0xb2b2...b2, a value this test invented. On
+        the baseline it appears verbatim as a top-level member of the certifying
+        payload, beside `verdict` and `actionHash`, which are verified -- so a
+        reader is handed one JSON object in which authenticated findings and an
+        unchecked assertion are indistinguishable. D-086(e): *"a fabricated
+        runtimeCodeHash is never reported as authenticated"*.
+
+        What is required, on BOTH paths because the ruling says "never": the
+        value is not a bare top-level member of the result, and wherever it does
+        appear the key path says it is an assertion. Dropping it altogether also
+        satisfies this. What is NOT required, by ruling: comparing it to a
+        chain."""
         invented = "0x" + "b2" * 32
-        result = self._predicate(self.bundle())
-        self.assertNotEqual(
-            result.get("runtimeCodeHash"), invented,
-            "an invented runtimeCodeHash was echoed back in a certifying result")
+        self.assertEqual(manifest_payload()["runtimeCodeHash"], invented,
+                         "fixture drift: the invented value moved")
 
-    def test_two_contradictory_manifests_cannot_both_certify(self):
-        """FAILS ON BASELINE -- R-A018-04.
+        completed, headline, payload = self.certifying_run()
+        self.assert_not_presented_as_a_fact(payload, invented, "runtimeCodeHash")
+        self.assertNotRegex(
+            headline, r"(?i)authenticated deployment|runtimeCodeHash",
+            "the certifying headline presents the deployment identity as "
+            "authenticated: " + repr(headline))
+
+        diagnostic = self._predicate(self.bundle())
+        self.assert_not_presented_as_a_fact(diagnostic, invented, "runtimeCodeHash")
+
+    def test_two_contradictory_manifests_both_authenticate_statically_and_neither_claims_deployment_identity(self):
+        """FAILS ON BASELINE -- R-A018-04, REDEFINED under D-086(e). Formerly
+        `test_two_contradictory_manifests_cannot_both_certify`.
 
         Two manifests from the same authority, differing only in
-        `runtimeCodeHash`, describe two different deployments. At most one can be
-        true of the chain. The baseline certifies the same bundle under both,
-        because it compares that field to nothing at all."""
-        first = self.bundle(payload=manifest_payload(runtimeCodeHash="0x" + "11" * 32))
-        second = self.bundle(payload=manifest_payload(runtimeCodeHash="0x" + "22" * 32))
-        outcomes = []
-        for bundle in (first, second):
-            try:
-                self._predicate(bundle)
-                outcomes.append(True)
-            except (ValueError, KeyError):
-                outcomes.append(False)
-        self.assertNotEqual(
-            outcomes, [True, True],
-            "both of two contradictory deployment identities certified")
+        `runtimeCodeHash`, describe two different deployments; at most one is
+        true of the chain. The old test demanded that at most one certify, which
+        can only be met by reading the chain -- and D-086(e) rules live RPC NOT
+        AUTHORISED. Under the ruled route both are authentic authority
+        assertions and both certify STATICALLY; what the ruling forbids is
+        either result CLAIMING the identity it did not check.
+
+        So this test asserts the ruled behaviour in full: both runs certify
+        (the positive control `certifying_run` insists on it -- a run that
+        refused one of them would mean somebody built the chain binding this
+        batch does not authorise); neither result presents its `runtimeCodeHash`
+        as a fact; and each names deployment identity as NOT established, in
+        the same payload, so a reader holding either one can see the
+        contradiction is undetectable offline."""
+        for invented in ("0x" + "11" * 32, "0x" + "22" * 32):
+            completed, headline, payload = self.certifying_run(
+                runtimeCodeHash=invented)
+            self.assert_not_presented_as_a_fact(payload, invented, "runtimeCodeHash")
+            self.assertTrue(
+                any(re.search(r"(?i)deployment identity|code identity|"
+                              r"deployed (byte)?code|what is deployed", item)
+                    for item in payload["notEstablished"]),
+                "the result certifies under manifest runtimeCodeHash {} whose "
+                "code identity was compared to nothing and does not say so: "
+                "{!r}".format(invented, payload["notEstablished"]))
 
     def test_an_offline_run_does_not_certify_an_authenticated_deployment(self):
         """R-A018-04 ("results distinguish static authenticity from
@@ -1570,8 +1852,13 @@ class TestDeploymentIdentityIsNotBound(PublicationTestCase):
             "an offline run announces an authenticated DEPLOYMENT: "
             + repr(headline))
 
+        # The NAME, anywhere in the payload -- not a top-level key. This used
+        # to be `assertIn("runtimeCodeHash", payload)`, which required the bare
+        # top-level echo that D-086(e) now forbids (see
+        # `test_a_fabricated_runtime_code_hash_is_echoed_as_authenticated`).
+        # What this test needs is only that the payload talks about the field.
         self.assertIn(
-            "runtimeCodeHash", payload,
+            "runtimeCodeHash", json.dumps(payload),
             "fixture drift: this test is about how runtimeCodeHash is presented")
         self.assertTrue(
             any(re.search(r"(?i)runtimeCodeHash", item)
@@ -1591,19 +1878,52 @@ class TestDeploymentIdentityIsNotBound(PublicationTestCase):
             "a run that read no chain must name its mode as static rather than "
             "leaving executability implied: " + repr(payload["mode"]))
 
-    def test_the_result_names_the_block_its_claims_are_true_at(self):
-        """FAILS ON BASELINE -- R-A018-04, CRITICAL 3 clause 3.
+    def test_the_result_anchors_no_claim_to_a_block_and_says_executability_is_not_established(self):
+        """FAILS ON BASELINE -- R-A018-04, REDEFINED under D-086(e). Formerly
+        `test_the_result_names_the_block_its_claims_are_true_at`.
 
-        `deploymentBlockNumber` in the result is the block copied out of the
-        manifest, not a block any state was observed at. A result that
-        distinguishes static authenticity from executability has to say which
-        block the executability claim is anchored to."""
-        result = self._predicate(self.bundle())
+        The old test demanded that a certifying result name the block its
+        executability claim is anchored to. Under the non-certifying-static
+        route there is no executability claim, so there is nothing for a block
+        to anchor: "names the block its claims are true at" has no meaning when
+        the result claims nothing is true at any block. The honest inverse is
+        what is asserted now.
+
+        Two clauses. (1) The result must not anchor a claim to a block: no
+        top-level key of the certifying payload may be a block field, because
+        `deploymentBlockNumber` at the top level -- copied from the manifest,
+        observed nowhere -- is the same overclaim as `runtimeCodeHash` beside
+        the verdict. It may travel under a label that says it is asserted, as
+        `assert_not_presented_as_a_fact` allows. (2) The result must SAY that
+        executability is not established, in `notEstablished`, in that word.
+        The baseline says it only inside `evaluationTimeSource`, a field about
+        the clock, which is not where a reader looking for the executability
+        claim will look."""
+        completed, headline, payload = self.certifying_run()
+
+        anchored = [key for key in payload if re.search(r"(?i)block", key)]
+        self.assertEqual(
+            anchored, [],
+            "the certifying result carries a top-level block field {} while "
+            "observing no block; a block a claim is 'true at' has no meaning "
+            "when no executability claim is made (D-086(e))".format(anchored))
+        block = manifest_payload()["deploymentBlockNumber"]
+        unlabelled = ["/".join(trail) for trail in self.paths_to(payload, block)
+                      if trail and re.search(r"(?i)block", trail[-1])
+                      and not any(re.search(self.LABELLED, key) for key in trail[:-1])]
+        self.assertEqual(
+            unlabelled, [],
+            "the manifest's block number appears at {} under no label saying "
+            "it is an authority assertion".format(unlabelled))
+        self.assertNotRegex(headline, r"(?i)\bblock\b",
+                            "the headline anchors its claim to a block: "
+                            + repr(headline))
+
         self.assertTrue(
-            any(key not in ("deploymentBlockNumber",) and "block" in key.lower()
-                for key in result),
-            "certifying result anchors executability to no observed block: "
-            + repr(sorted(result)))
+            any(re.search(r"(?i)executab", item) for item in payload["notEstablished"]),
+            "notEstablished never says EXECUTABILITY is not established; the "
+            "word occurs only in evaluationTimeSource, which is about the clock: "
+            + repr(payload["notEstablished"]))
 
 
 # ---------------------------------------------------------------------------
@@ -1763,6 +2083,501 @@ class TestClaimsMatchBehaviour(PublicationTestCase):
             "--help documents --evaluation-time without saying what it does to "
             "certification, which is the only thing that makes the flag safe to "
             "expose: " + repr(flag[:300]))
+
+
+# ---------------------------------------------------------------------------
+# D-086(e) -- Binding Critical 2: the certifying instant is not omissible
+# ---------------------------------------------------------------------------
+
+class TestTheCertifyingInstantIsNotOmissible(PublicationTestCase):
+    """Crucible Cycle 1 Binding Critical 2, closed by the non-certifying-static
+    route (D-086(e)).
+
+    `deployment.verify(document, authority)` with no `evaluation_time` skips
+    `check_lifetime` entirely and returns the payload -- the module docstring
+    calls it a default the only caller "always supplies", and D-083(d) marked
+    it rather than fixing it. The Crucible Adversary bound that exact code as
+    a withdrawal condition; D-086 discharged the hold.
+
+    THE RULED SEMANTICS, which these tests hold the module to: the certifying
+    instant is pinned ONCE at process start and is NOT omissible. A call that
+    omits it is REFUSED with `DeploymentManifestError` -- a `ValueError`
+    subclass (`deployment.py:74`), so every `assertRaises(ValueError)` site in
+    this file survives, and so the requirement is SEMANTIC rather than a
+    Python-level positional argument that would raise `TypeError` past every
+    caller's refusal path. It is never silently skipped.
+
+    D-086(b) records that both figures used to justify the hold were wrong in
+    the direction that made the fix look expensive: "17 call sites" measured
+    20, and `TypeError` would only have been the outcome of the wrong fix. The
+    twenty are now routed through `verify_manifest()`; the tests here call
+    `deployment.verify` directly because the omission IS their subject.
+    """
+
+    OMISSION = r"(?i)evaluation.?time|instant|lifetime|clock|omit"
+
+    def test_omitting_the_evaluation_time_is_refused_not_skipped(self):
+        """FAILS ON BASELINE -- D-086(e), Binding Critical 2 condition 1.
+
+        The fixture manifest is one hour old at NOW and would authenticate at
+        any named instant near it. Called with no instant, the baseline
+        returns the payload having judged nothing. It must instead refuse,
+        with the error class every caller already catches, naming the omission
+        as the reason -- not a `TypeError`, which no caller catches and which
+        would report a programming error where a recipient needs a refusal."""
+        with self.assertRaises(deployment.DeploymentManifestError) as caught:
+            deployment.verify(sign_manifest(manifest_payload()), AUTHORITY)
+        self.assertNotIsInstance(caught.exception, TypeError)
+        self.assertRegex(
+            str(caught.exception), self.OMISSION,
+            "refused, but not for the omitted instant: " + str(caught.exception))
+
+    def test_an_explicit_none_is_refused_the_same_way(self):
+        """FAILS ON BASELINE -- D-086(e). `evaluation_time=None` spelled out is
+        the same omission; a fix that makes the parameter required but keeps
+        `None` as a sentinel meaning "skip the bound" has moved the fail-open,
+        not closed it."""
+        with self.assertRaises(deployment.DeploymentManifestError) as caught:
+            deployment.verify(sign_manifest(manifest_payload()), AUTHORITY,
+                              evaluation_time=None)
+        self.assertRegex(str(caught.exception), self.OMISSION)
+
+    def test_omitting_the_instant_cannot_revive_a_stale_manifest(self):
+        """FAILS ON BASELINE -- D-086(e), the fail-open observed DIRECTLY, as
+        Cycle 2 requires ("tests directly observe the original defects").
+
+        A manifest two decades old is refused as stale at a named instant
+        (`TestDeploymentManifestLifetime`, green since R-A018-16(b)) -- and
+        authenticates on the baseline the moment the instant is left out.
+        Omission is the one input that turns a stale manifest into a fresh one.
+        Both halves are asserted so the test cannot pass on a fixture that was
+        never stale."""
+        stale = sign_manifest(manifest_payload(issuedAt=str(NOW - TWO_DECADES)))
+        with self.assertRaises(deployment.DeploymentManifestError) as control:
+            deployment.verify(stale, AUTHORITY, evaluation_time=NOW)
+        self.assertRegex(str(control.exception), r"(?i)stale|age",
+                         "control broken: the manifest was not stale at NOW")
+        with self.assertRaises(deployment.DeploymentManifestError):
+            deployment.verify(stale, AUTHORITY)
+
+    def test_omitting_the_instant_cannot_revive_a_post_dated_manifest(self):
+        """FAILS ON BASELINE -- D-086(e), the forward half. A manifest issued
+        two decades hence is "not yet valid" at NOW and valid at no instant; on
+        the baseline it authenticates with the instant omitted."""
+        future = sign_manifest(manifest_payload(issuedAt=str(NOW + TWO_DECADES)))
+        with self.assertRaises(deployment.DeploymentManifestError) as control:
+            deployment.verify(future, AUTHORITY, evaluation_time=NOW)
+        self.assertRegex(str(control.exception), r"(?i)future|not yet",
+                         "control broken: the manifest was not post-dated at NOW")
+        with self.assertRaises(deployment.DeploymentManifestError):
+            deployment.verify(future, AUTHORITY)
+
+    def test_the_refusal_class_is_a_value_error(self):
+        """PASSES on baseline -- a fact about `deployment.py:74`, recorded as
+        executable evidence because D-086(b)'s correction of D-083(d) rests on
+        it: every `assertRaises((ValueError, KeyError))` in this file survives
+        a semantic refusal precisely because of this subclassing."""
+        self.assertTrue(issubclass(deployment.DeploymentManifestError, ValueError))
+
+    def test_a_named_instant_still_authenticates(self):
+        """PASSES on baseline. The control: the fix must make the instant
+        non-omissible, not impossible to supply."""
+        self.assertEqual(
+            verify_manifest(sign_manifest(manifest_payload()))["vault"], VAULT)
+
+    def test_the_publication_verifier_supplies_one_instant_on_both_paths(self):
+        """PASSES on baseline, held so it cannot regress. `verify_publication`
+        passes `evaluation_time=now` to `deployment.verify` on the certifying
+        path and on the diagnostic path, and the instant it passes is the one
+        it reports -- ONE instant per run, which is the observable shadow of
+        "pinned once at process start". A refactor that let the only caller
+        omit the instant would reopen Binding Critical 2 through the front
+        door, so the caller is spied on rather than trusted."""
+        cases = (
+            ("certifying default clock", self.live_bundle(), None),
+            ("non-certifying injected clock", self.bundle(), NOW),
+        )
+        for label, bundle, injected in cases:
+            with self.subTest(path=label):
+                with mock.patch.object(deployment, "verify",
+                                       wraps=deployment.verify) as spy:
+                    result = verify_publication.verify(
+                        bundle.dir, bundle.manifest_file(), AUTHORITY,
+                        evaluation_time=injected)
+                self.assertEqual(spy.call_count, 1)
+                args, kwargs = spy.call_args
+                supplied = kwargs.get("evaluation_time",
+                                      args[2] if len(args) > 2 else None)
+                self.assertIsNotNone(
+                    supplied, "the publication verifier omitted the instant")
+                self.assertEqual(
+                    str(supplied), result["evaluationTime"],
+                    "the manifest was judged at one instant and the result "
+                    "reports another")
+
+
+# ---------------------------------------------------------------------------
+# D-086(e) -- what the static result must disclaim
+# ---------------------------------------------------------------------------
+
+class TestTheStaticResultDisclaimsWhatItDidNotAuthenticate(PublicationTestCase):
+    """D-086(e), the second sentence of the ruling: *"The static result
+    explicitly disclaims deployment identity, nonce freshness, currentness and
+    executability."* Four disclaimers, each asserted on the certifying path,
+    where the result is a claim capable of overstating.
+
+    Two of the four are already on the baseline's NOT_ESTABLISHED list (live
+    code identity, nonce freshness). Two are not: the word "current" occurs
+    nowhere on it, and "executability" occurs only inside `evaluationTimeSource`
+    -- a field about the clock -- so a reader scanning the list the tool prints
+    beside every result for what it did NOT establish is not told that the
+    action's executability is among those things.
+    """
+
+    DISCLAIMERS = (
+        ("deployment identity",
+         r"(?i)deployment identity|code identity|deployed (byte)?code|what is deployed"),
+        # Not a bare `nonce`: a mutation that blanked the entry's title left
+        # its body, which mentions the nonce, and the clause stayed satisfied.
+        ("nonce freshness", r"(?i)nonce.{0,80}(fresh|unspent|consumed)|fresh\w*.{0,40}nonce"),
+        ("currentness", r"(?i)\bcurren(t|cy|tness)\b"),
+        ("executability", r"(?i)executab"),
+    )
+
+    def test_the_certifying_result_disclaims_all_four(self):
+        """FAILS ON BASELINE -- D-086(e). Asserted on `notEstablished` in the
+        result payload, not on the whole of stdout, because stdout contains the
+        payload and a match anywhere would let one field carry another's
+        disclaimer. Two of the four subtests pass on the baseline; they are
+        kept here rather than split off so the ruling's sentence is one test."""
+        completed, headline, payload = self.certifying_run()
+        # Collected, not `subTest`: see `assert_not_presented_as_a_fact`.
+        missing = [name for name, pattern in self.DISCLAIMERS
+                   if not any(re.search(pattern, item)
+                              for item in payload["notEstablished"])]
+        self.assertEqual(
+            missing, [],
+            "the static result does not disclaim {}: {!r}".format(
+                missing, payload["notEstablished"]))
+
+    def test_the_disclaimer_is_printed_beside_the_result_not_only_inside_it(self):
+        """FAILS ON BASELINE -- D-086(e). The human-readable NOT ESTABLISHED
+        line -- the one a recipient reads without parsing JSON -- must carry
+        the same four. The baseline line carries two."""
+        completed, headline, payload = self.certifying_run()
+        printed = [line for line in completed.stdout.splitlines()
+                   if line.startswith("NOT ESTABLISHED")]
+        self.assertEqual(len(printed), 1, completed.stdout)
+        missing = [name for name, pattern in self.DISCLAIMERS
+                   if not re.search(pattern, printed[0])]
+        self.assertEqual(
+            missing, [],
+            "the printed NOT ESTABLISHED line does not disclaim {}: {!r}".format(
+                missing, printed[0]))
+
+    def test_injected_time_is_only_available_in_the_non_certifying_mode(self):
+        """PASSES on baseline, held so it cannot regress. D-086(e): injected
+        time is permitted only in an explicitly non-certifying mode. The
+        CLI-level witnesses are in `TestClockIsNotTheCallers`; this is the
+        module-level one, so the property does not depend on `main()`'s
+        exit-code mapping alone."""
+        result = self._predicate(self.bundle())
+        self.assertEqual(result["mode"], verify_publication.MODE_DIAGNOSTIC)
+        self.assertNotEqual(result["mode"], verify_publication.MODE_STATIC)
+        self.assertRegex(
+            result["evaluationTimeSource"], r"(?i)non-certifying|certif\w* nothing",
+            "an injected-clock result does not say it certifies nothing: "
+            + repr(result["evaluationTimeSource"]))
+
+
+# ---------------------------------------------------------------------------
+# D-087(a) -- operation == CALL, unconditionally
+# ---------------------------------------------------------------------------
+
+class TestOperationIsCallUnconditionally(PublicationTestCase):
+    """D-087(a); `docs/check-inventory-diff-2026-08-31.md` §2 row 1 and §3
+    scenario 8 -- the A-and-B-versus-C axis no round had named.
+
+    `SentinelVault.sol:357`:
+
+        if (action.operation != uint8(T.Operation.CALL)) revert UnsupportedOperation();
+
+    Unconditionally. `SentinelTypes.Operation` numbers DELEGATECALL 1 and
+    CREATE 2 and comments both "unsupported, never executes"; there is no
+    policy field that can enable them. The verifier compares `action.operation`
+    to `policy["allowedOperation"]` instead, so a policy that says 1 and an
+    action that says 1 agree with each other, certify, and revert on chain.
+    Every bundle here is internally perfect and the policy PERMITS the
+    operation; the only thing wrong is that the Vault does not.
+    """
+
+    def bundle_with_operation(self, value):
+        bundle = self.bundle(seal=False)
+        bundle.policy["allowedOperation"] = value
+        bundle.action["operation"] = value
+        return bundle.seal()
+
+    def assert_unsupported(self, value):
+        message = self.assert_refused(self.bundle_with_operation(value),
+                                      r"UnsupportedOperation")
+        self.assertRegex(
+            message, r"\bCALL\b",
+            "the refusal names the Vault error but not the one operation the "
+            "Vault supports: " + message)
+        self.assertNotRegex(
+            message, r"(?i)not the policy's allowedOperation",
+            "the policy AGREED with the action; a refusal that blames the "
+            "policy sends the reader to fix the one thing that was fine "
+            "(R-A018-16(c)): " + message)
+        return message
+
+    def test_delegatecall_is_refused_even_when_the_policy_allows_it(self):
+        """FAILS ON BASELINE -- D-087(a). Operation 1, policy 1: certifies."""
+        self.assert_unsupported("1")
+
+    def test_create_is_refused_even_when_the_policy_allows_it(self):
+        """FAILS ON BASELINE -- D-087(a). Operation 2, policy 2: certifies."""
+        self.assert_unsupported("2")
+
+    def test_an_operation_outside_the_enum_is_refused_even_when_the_policy_allows_it(self):
+        """FAILS ON BASELINE -- D-087(a). 200 is a valid uint8 and no
+        `Operation` member at all; the Vault's `!= CALL` refuses it without
+        needing to name it, and so must this."""
+        self.assert_unsupported("200")
+
+    def test_the_policy_mismatch_refusal_is_kept(self):
+        """PASSES on baseline. `TestExactActionIsEnforced.test_an_operation_
+        the_policy_does_not_allow_is_refused` (operation 1, policy 0) must go on
+        passing after the unconditional check lands, and it will, because its
+        regex is `operation`; this test pins the sharper fact that a policy
+        DISAGREEING is still refused when the operation is also not CALL, so
+        the new check cannot be implemented by deleting the old one."""
+        bundle = self.bundle(seal=False)
+        self.assertEqual(bundle.policy["allowedOperation"], "0")
+        bundle.action["operation"] = "1"
+        bundle.seal()
+        self.assert_refused(bundle, r"(?i)operation")
+
+    def test_call_still_certifies(self):
+        """PASSES on baseline. The control: a bundle staged through the same
+        helper with operation 0 certifies, so the three refusals above are
+        about the value and not about the helper."""
+        self.assert_certifies(self.bundle_with_operation("0"))
+
+
+# ---------------------------------------------------------------------------
+# D-087(d) -- a §5.5.1 refusal record is recognised, and refused honestly
+# ---------------------------------------------------------------------------
+
+class TestARefusalRecordIsRecognisedAndNotCertified(PublicationTestCase):
+    """D-087(d): *"detect a §5.5.1 bundle and refuse it with a message naming
+    what it is and that this verifier does not certify refusals."* Recognise
+    and refuse honestly; DO NOT VERIFY. The 32-check port was rejected by
+    ruling, so nothing here asserts a refusal record's digest, signature,
+    charset or bindings -- a test that did would be legislating the port.
+
+    The shape, from `fixtures/samples/refusal-vault-paused/receipt.json` and
+    `verify.py::_locate_refusal`: `receipt.json` carries `refused: true` and a
+    `refusalRecord` envelope with the nine §5.5.1 fields under `record` and a
+    `signature` beside them, and no `receipt` member; or the same envelope
+    travels in its own `refusal.json`. On the baseline the first is refused
+    with "receipt.json must carry a signed decision receipt" and the second
+    with "missing required artifact receipt.json" -- both true, both the wrong
+    artifact named, and neither telling the recipient that what they hold is a
+    signed refusal this tool does not judge.
+    """
+
+    WRONG_ARTIFACT = (r"(?i)missing required artifact receipt\.json"
+                      r"|must carry a signed decision receipt")
+    NAMED = r"(?i)refusal record|SignedRefusalRecord|5\.5\.1"
+    NOT_CERTIFIED = (r"(?i)(does not|cannot|will not|never|not) certif\w*"
+                     r"(\s+\S+){0,3}\s+refusal|refusals? (is|are) not certif")
+
+    def refusal_bundle(self, shape="embedded"):
+        bundle = self.bundle("refusal-vault-paused", seal=False)
+        self.assertIsNone(bundle.receipt, "fixture drift: the refusal bundle "
+                          "now carries a receipt")
+        if shape == "refusal.json":
+            write_json(bundle.path("refusal.json"), bundle.receipt_doc["refusalRecord"])
+            os.remove(bundle.path("receipt.json"))
+        return bundle
+
+    def assert_recognised(self, bundle):
+        message = self.assert_refused(bundle, self.NAMED)
+        self.assertNotRegex(
+            message, self.WRONG_ARTIFACT,
+            "a §5.5.1 bundle is refused for the wrong artifact: " + message)
+        self.assertRegex(
+            message, self.NOT_CERTIFIED,
+            "the refusal names the record but does not say this verifier does "
+            "not certify refusals: " + message)
+        return message
+
+    def test_the_shipped_refusal_fixture_is_refused_as_a_refusal_record(self):
+        """FAILS ON BASELINE -- D-087(d). The corpus's own refusal bundle,
+        untouched."""
+        self.assert_recognised(self.refusal_bundle())
+
+    def test_a_refusal_presented_in_its_own_file_is_recognised_too(self):
+        """FAILS ON BASELINE -- D-087(d). `refusal.json` beside the other
+        artifacts and no `receipt.json` at all: the shape the inventory diff
+        staged, and the one the "missing required artifact" misdirection is
+        about."""
+        self.assert_recognised(self.refusal_bundle("refusal.json"))
+
+    def test_recognition_does_not_depend_on_the_record_being_valid(self):
+        """FAILS ON BASELINE -- D-087(d). Recognition is by SHAPE. A refusal
+        record whose signature is garbage is still a refusal record, and the
+        honest answer is still "this is a refusal and I do not certify
+        refusals" -- not a signature diagnosis, which would be the first of
+        the 32 checks the ruling declined to port, and not the wrong-artifact
+        message either."""
+        bundle = self.refusal_bundle()
+        bundle.receipt_doc["refusalRecord"]["signature"] = "0x" + "00" * 65
+        write_json(bundle.path("receipt.json"), bundle.receipt_doc)
+        self.assert_recognised(bundle)
+
+    def test_a_refusal_record_travelling_beside_a_receipt_does_not_certify(self):
+        """FAILS ON BASELINE -- D-087(d), and the R-A018-18 shape in a new
+        arm. A perfectly good ALLOW bundle with the fixture's signed refusal
+        record dropped beside it in `refusal.json` certifies on the baseline
+        with the file never opened. `verify.py` refuses it ("a decision OR a
+        refusal, not both"). Whichever wording the refusal takes, it must name
+        the refusal record: a signed refusal riding inside a PASS unread is a
+        credential the run certified by omission."""
+        bundle = self.bundle()
+        record = read_json(SAMPLES, "refusal-vault-paused", "receipt.json")
+        write_json(bundle.path("refusal.json"), record["refusalRecord"])
+        self.assert_refused(bundle, self.NAMED)
+
+    def test_a_refusal_is_refused_at_the_cli_with_the_reason_on_stderr(self):
+        """FAILS ON BASELINE -- D-087(d) on the surface a recipient sees. Exit
+        1, `FAIL:` on stderr naming the record and the scope, nothing on
+        stdout -- the fail-closed plumbing `test_a_refusal_is_reported_on_
+        stderr_with_a_nonzero_exit` already pins, carrying the new message."""
+        completed = self.cli(self.refusal_bundle(),
+                             extra=["--evaluation-time", str(NOW)])
+        self.assertEqual(completed.returncode, 1, completed.stdout + completed.stderr)
+        self.assertIn("FAIL:", completed.stderr)
+        self.assertRegex(completed.stderr, self.NAMED)
+        self.assertRegex(completed.stderr, self.NOT_CERTIFIED)
+        self.assertNotRegex(completed.stderr, self.WRONG_ARTIFACT)
+        self.assertEqual(completed.stdout, "")
+
+    def test_a_decision_bundle_is_not_mistaken_for_a_refusal(self):
+        """PASSES on baseline. The control in the other direction: the corpus
+        ALLOW bundle carries `refused: false`-or-absent and no record, and
+        certifies. A recogniser keyed on the wrong feature -- the `refused`
+        key's presence, say -- would trip here."""
+        doc = read_json(SAMPLES, "case-1-allow", "receipt.json")
+        self.assertFalse(doc.get("refused"))
+        self.assertNotIn("refusalRecord", doc)
+        self.assert_certifies(self.bundle())
+
+
+# ---------------------------------------------------------------------------
+# D-087(a) -- the Vault's three §4 hard backstops are disclosed
+# ---------------------------------------------------------------------------
+
+class TestTheVaultBackstopsAreDisclosed(PublicationTestCase):
+    """D-087(a); inventory diff §2 rows 2-4. `SentinelVault.sol` refuses
+    `ValueOverCap` against its own immutable `maxNativeValueWei`,
+    `TargetNotAllowed` against the owner-set `allowedTarget` map and
+    `SelectorNotAllowed` against `allowedSelector`, AFTER the mandate's copies
+    of each have passed. All three are chain state this tool cannot reach, and
+    the diff classifies them OMISSION rather than N/A "because the honest
+    disposition is a disclosure B does not make": NOT_ESTABLISHED names four
+    things and none of them is these.
+
+    The disclosure has to attribute each to the VAULT, because the mandate and
+    policy carry a `maxNativeValueWei` of their own that IS compared, and the
+    headline says so; a bare field name would read as contradicting it.
+    """
+
+    BACKSTOPS = ("maxNativeValueWei", "allowedTarget", "allowedSelector")
+
+    def test_not_established_names_the_three_backstops_as_vault_state(self):
+        """FAILS ON BASELINE -- D-087(a). In the payload and on the printed
+        line, each field by name and each attributed to the Vault."""
+        completed, headline, payload = self.certifying_run()
+        printed = [line for line in completed.stdout.splitlines()
+                   if line.startswith("NOT ESTABLISHED")]
+        self.assertEqual(len(printed), 1, completed.stdout)
+        # Collected, not `subTest`: see `assert_not_presented_as_a_fact`.
+        unnamed, unattributed, unprinted = [], [], []
+        for field in self.BACKSTOPS:
+            hits = [item for item in payload["notEstablished"]
+                    if re.search(re.escape(field), item)]
+            if not hits:
+                unnamed.append(field)
+            elif not any(re.search(r"(?i)vault", item) for item in hits):
+                unattributed.append(field)
+            if field not in printed[0]:
+                unprinted.append(field)
+        self.assertEqual(
+            unnamed, [],
+            "notEstablished does not name the Vault's {}: {!r}".format(
+                unnamed, payload["notEstablished"]))
+        self.assertEqual(
+            unattributed, [],
+            "{} named but not attributed to the Vault, so it reads as "
+            "contradicting the headline's comparison of the mandate's field of "
+            "the same name: {!r}".format(unattributed, payload["notEstablished"]))
+        self.assertEqual(unprinted, [],
+                         "the printed NOT ESTABLISHED line omits " + repr(unprinted))
+
+
+# ---------------------------------------------------------------------------
+# D-087(c) -- the executability claim is stated on the surface
+# ---------------------------------------------------------------------------
+
+class TestTheExecutabilityClaimIsStated(PublicationTestCase):
+    """D-087(c): the A/B split is intended and must be STATED on both
+    surfaces. `verify.py` certifies AUTHENTICITY -- is this bundle genuinely
+    what the signer produced -- and this tool certifies EXECUTABILITY -- would
+    the Vault execute it. The split was never written down, so `=> PASS` and
+    `PASS (static, offline)` were two different claims wearing one word.
+
+    Read together with `TestTheStaticResultDisclaimsWhatItDidNotAuthenticate`,
+    which requires the same run to disclaim executability AT A LIVE BLOCK: the
+    claim this tool makes is the Vault's offline-checkable action predicate
+    (verdict, override, windows, target, value, selector, operation), and what
+    it disclaims is live state (nonce, pause, activation, code). Both have to
+    be on the surface, in words that do not contradict each other, and the
+    baseline has neither.
+    """
+
+    # "certifies EXECUTABILITY", "certifies static, offline executability".
+    CLAIM = r"(?i)certif\w*(\s+\S+){0,4}\s+executab"
+    # `verify.py` and "authenticity" in one breath, either order.
+    SPLIT = (r"(?i)verify\.py(\s+\S+){0,30}\s+authentic"
+             r"|authentic\w*(\s+\S+){0,30}\s+verify\.py")
+
+    def test_the_certifying_output_states_the_claim_and_the_split(self):
+        """FAILS ON BASELINE -- D-087(c). The stdout of a certifying run says
+        which claim it makes and which one it does not, by name."""
+        completed, headline, payload = self.certifying_run()
+        text = " ".join(completed.stdout.split())
+        self.assertRegex(
+            text, self.CLAIM,
+            "the certifying output never says this tool certifies executability")
+        self.assertRegex(
+            text, self.SPLIT,
+            "the certifying output never says that verify.py is the tool that "
+            "certifies authenticity, so the split is still unstated")
+
+    def test_help_states_the_claim_and_the_split(self):
+        """FAILS ON BASELINE -- D-087(c). `--help` reprints the module
+        docstring; that docstring says "a successful run is a statement about
+        STATIC AUTHENTICITY", which is A's claim wearing B's name."""
+        completed = subprocess.run(
+            [sys.executable, PREDICATE, "--help"], capture_output=True, text=True)
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        text = " ".join(completed.stdout.split())
+        self.assertRegex(text, self.CLAIM,
+                         "--help never says this tool certifies executability")
+        self.assertRegex(text, self.SPLIT,
+                         "--help never names verify.py as the authenticity verifier")
 
 
 # ---------------------------------------------------------------------------

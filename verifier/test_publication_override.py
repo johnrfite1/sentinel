@@ -246,7 +246,10 @@ class OverrideTestCase(PublicationTestCase):
         b.policy["validAfter"] = str(live - 3600)
         b.policy["validUntil"] = str(live + 7200)
         b.action["deadline"] = str(live + 7200)
-        b.seal()
+        # `seal_resynced`: the §5.6 projections restate the mandateHash,
+        # policyHash and deadline this helper just moved, and `seal()` alone
+        # leaves them stale (see `Bundle.seal_resynced` in test_publication_verifier).
+        b.seal_resynced()
         # `case-1-allow` ships no §5.5 credential and needs none: it is staged
         # live only as the automatic-arm comparison in
         # `TestTheCertifyingRunSaysWhichPathItCertified`.
@@ -584,7 +587,10 @@ class TestOverrideBindsToOneExactAction(OverrideTestCase):
         binding."""
         bundle = self.bundle(seal=False)
         bundle.action["actionNonce"] = "1"
-        bundle.seal().seal_override()
+        # `evidence.normalizedAction.actionNonce` must move with the action, or
+        # the §5.6 arm refuses the bundle for describing nonce 0 -- which would
+        # make this control fail for a reason unrelated to the override binding.
+        bundle.seal_resynced().seal_override()
         self.assertEqual(self.assert_certifies(bundle)["actionNonce"], "1")
 
 

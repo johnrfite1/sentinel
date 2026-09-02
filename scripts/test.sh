@@ -509,6 +509,27 @@ fi
 step "release/ freshness (R-A018-22)"
 ./scripts/check-release-sync.sh || fail=1
 
+# THE TREE IS ALSO EXECUTED, NOT ONLY DIGESTED (2026-09-01: the third "reviewed thing is not
+# the shipped thing" in three days, and the first one every guard passed). The Cycle 2 port
+# added `import reasoncodes` and `import refusal` to the verifier; the assembler's
+# `VERIFIER_FILES` did not list them; so the SHIPPED `release/verifier/verify_publication.py`
+# died on import. The step above reported CLEAN — the tree WAS byte-identical to what the
+# assembler produces, the assembler was faithfully producing a broken tree — and this file
+# reported GATE PASSED, because every stage in it runs the SOURCE verifier and none runs the
+# release copy. Nothing anywhere executed the shipped file; the release tree's own cold demo
+# found it. This step assembles into a temporary directory (never `release/`, with the same
+# before/after digest proof as the step above), runs the shipped verifier from INSIDE that
+# tree with PYTHONPATH unset, walks its import closure, and requires its verdict on two
+# bundles to match source. Measured ~2 s on this host. Same placement, for the same reason:
+# it needs the Foundry artifact the Solidity stage produces, and refuses without it.
+#
+# READ ITS OUTPUT. It prints what it did NOT reach on every run — the release's cold demo
+# (npm ci + forge build + Anvil is too heavy for the fast gate, so `release/README.md`'s own
+# cold-demo step remains the only thing that exercises the shipped TypeScript and contracts),
+# dynamic imports the AST walk cannot see, and every bundle other than the one it runs.
+step "release/ executes (the shipped verifier is run, not only digested)"
+./scripts/check-release-executes.sh || fail=1
+
 # Ordered after the Solidity stage on purpose: the TypeScript suite deploys the compiled
 # artifacts from contracts/out and runs the signer against the real vault, so it needs the
 # build the previous stage produces. It also spawns Anvil, which the same toolchain supplies.
