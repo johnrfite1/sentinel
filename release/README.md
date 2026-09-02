@@ -234,14 +234,17 @@ without an authenticated owner override, because the Vault would refuse them.
 
 The repository this tree was assembled from carries a second, older verifier,
 `verifier/verify.py`, which is **not in this tree**. Its claim is
-**authenticity**: is this bundle genuinely what the signer produced. It passes
-a BLOCK receipt and an override-less REVIEW receipt, correctly, because both
-are authentic; and it evaluates no validity window at all, so an expired
-receipt is still an authentic one there. Its `=> PASS` and this tool's `PASS
-(static, offline)` are two different claims that once shared one word. The
-split is deliberate, was ruled at D-087(c), and each tool now says in its own
-output which claim it makes. It is stated here so a reader who meets both does
-not take one's PASS for the other's.
+**authenticity**: is this bundle genuinely what the signer produced; and it
+evaluates no validity window at all, so an expired receipt is still an
+authentic one there. A BLOCK receipt and an override-less REVIEW receipt are
+authentic, and since D-090(a) that tool reports them as exactly that --
+`=> AUTHENTIC, NOT EXECUTABLE`, exit status 3 -- rather than as a `=> PASS`,
+because they are verdicts the Vault refuses and an exit 0 for them lied to
+scripts. Its `=> PASS` (exit 0: ALLOW, or REVIEW with a verified owner
+override) and this tool's `PASS (static, offline)` remain two different claims
+that once shared one word. The split is deliberate, was ruled at D-087(c), and
+each tool says in its own output which claim it makes. It is stated here so a
+reader who meets both does not take one's PASS for the other's.
 
 The verifier enforces one fail-closed predicate:
 

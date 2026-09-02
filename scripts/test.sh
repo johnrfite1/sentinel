@@ -836,7 +836,9 @@ fi
 # diagnostic and +6 for H-8's zero-bundle discovery sweep)**. Ratcheted in the SAME edit as the
 # suite it bounds, which is the rule this line exists to enforce and the rule it has broken
 # three times.
-VERIFIER_MIN_TESTS=221
+# -> 221 -> **239 (D-090(a): +18 for TestExitContractD090, the exit contract written by an
+# independent author before any implementer touched verify.py, plus two rewritten assertions)**.
+VERIFIER_MIN_TESTS=239
 VERIFIER_MIN_SAMPLES=7
 VERIFIER_MIN_TAMPER=78
 # A MODE FLOOR, because a pair count alone rewards padding (A-049): `tamper cases` counts
@@ -963,7 +965,18 @@ VERIFIERRUN
         fi
     done
 
-    s_out="$(python3 verifier/verify.py --domain fixtures/samples/domain.json --all fixtures/samples 2>&1)" || v_fail=1
+    # D-090(a): THE WALK MUST EXIT 3, EXACTLY. Four of the seven shipped bundles are BLOCK receipts
+    # by design, and verify.py now reports a verdict the Vault refuses as AUTHENTIC, NOT EXECUTABLE
+    # with exit 3 -- so the corpus is authentic end to end (7/7 below) and not executable. 0 here is
+    # a FAILURE, not a pass: on this corpus it means either the BLOCK samples are gone or the Cycle 2
+    # defect (`=> PASS`, exit 0, for a BLOCK receipt) is back. 1 and 2 fail as they always did.
+    # Deliberately not `0|3`.
+    s_status=0
+    s_out="$(python3 verifier/verify.py --domain fixtures/samples/domain.json --all fixtures/samples 2>&1)" || s_status=$?
+    if [ "$s_status" -ne 3 ]; then
+        echo "  D-010 WALK EXITED $s_status — the D-090(a) contract requires exactly 3 on this corpus"
+        v_fail=1
+    fi
     v_samples="$(printf '%s\n' "$s_out" | sed -n 's#^\([0-9][0-9]*\)/[0-9][0-9]* sample(s) verified.*#\1#p' | tail -1)"
 
     t_out="$(python3 verifier/verify.py --domain fixtures/samples/domain.json --all fixtures/samples --tamper all 2>&1)" || v_fail=1
@@ -975,7 +988,7 @@ VERIFIERRUN
     # gate log, and capturing the output DELETED the one channel that would have exposed the
     # defeat above. Foundry and TypeScript both print their skip counts on every run; this stage
     # now says the same thing in one line.
-    echo "  suite ${v_tests:-0} (floor $VERIFIER_MIN_TESTS) · verdict ${v_verdict:-NONE} · samples ${v_samples:-0} (floor $VERIFIER_MIN_SAMPLES) · tamper ${v_tamper:-0} cases / ${v_modes:-0} modes (floors $VERIFIER_MIN_TAMPER/$VERIFIER_MIN_TAMPER_MODES)"
+    echo "  suite ${v_tests:-0} (floor $VERIFIER_MIN_TESTS) · verdict ${v_verdict:-NONE} · samples ${v_samples:-0} (floor $VERIFIER_MIN_SAMPLES) · walk exit ${s_status} (want 3) · tamper ${v_tamper:-0} cases / ${v_modes:-0} modes (floors $VERIFIER_MIN_TAMPER/$VERIFIER_MIN_TAMPER_MODES)"
 
     for probe in "tests:${v_tests:-0}:$VERIFIER_MIN_TESTS" \
                  "samples:${v_samples:-0}:$VERIFIER_MIN_SAMPLES" \

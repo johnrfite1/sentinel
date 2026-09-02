@@ -17,30 +17,46 @@ established one."
     python3 verifier/verify.py --tamper --domain <deployment-domain.json> fixtures/samples/case-1-allow
     python3 verifier/verify.py --all --domain <deployment-domain.json> fixtures/samples
 
-WHAT A PASS FROM THIS TOOL MEANS, AND WHAT IT DOES NOT (D-087(c), 2026-09-01)
-----------------------------------------------------------------------------
+WHAT THIS TOOL CERTIFIES, AND WHAT IT DOES NOT (D-087(c), 2026-09-01; D-090(a), 2026-09-02)
+-------------------------------------------------------------------------------------------
 This verifier certifies AUTHENTICITY: that the bundle is genuinely what the
 named signer produced -- every hash recomputes, every signature recovers to the
 trust root the verifying party names under --domain, every internal binding
 holds, and the evidence describes what it says it describes.  It does NOT
 certify EXECUTABILITY -- whether the Vault would execute the action -- and it
-makes no claim about the verdict's consequence.  So a REVIEW receipt with no
-override and a BLOCK receipt both `=> PASS` here, correctly: both are
-authentic, and neither is executable.  The verifier that answers the other
-question is `verifier/verify_publication.py`, which refuses both.  `=> PASS`
-from this tool and `PASS (static, offline)` from that one are two different
-claims that previously shared one word; the split is deliberate, was ruled at
-D-087(c), and is stated on both surfaces so that neither is read as the other.
+carries no executability condition (D-088).  The verifier that answers that
+question is `verifier/verify_publication.py`.
+
+A BLOCK receipt and a REVIEW receipt with no override are both AUTHENTIC, and
+both are verdicts SentinelVault refuses.  Until D-090(a) this tool printed
+`=> PASS` and exited 0 for them -- true of the claim, and a lie to any script
+reading the exit status; the Crucible Adversary sustained that as a Critical at
+Cycle 2.  The recipient-facing word and the exit status now follow the gpgv
+model: the claim is unchanged, the reporting is not.
+
+    => PASS: AUTHENTIC              exit 0   ALLOW; REVIEW with a verified owner
+                                             override; a §5.5.1 refusal record
+    => FAIL                         exit 1   a check did not hold: bad hash, bad
+                                             signature, bad binding, bad override
+    (nothing verified)              exit 2   --all found no bundles, or the path
+                                             could not be enumerated (H-8)
+    => AUTHENTIC, NOT EXECUTABLE    exit 3   BLOCK; REVIEW with no override.json.
+                                             Neither a certification nor a refusal.
+
+Precedence, single bundle and aggregate alike: 1 beats 3 beats 0.  A BLOCK
+receipt whose signature does not recover is a refusal, not an authentic
+not-executable one.  The classification reads only the SIGNED verdict and
+whether an override.json is present; it is not an executability check, and
+`PASS (static, offline)` from the publication verifier remains a different
+claim from `=> PASS` here.
 
 THIS TOOL EVALUATES NO VALIDITY WINDOW.  It has no clock.  `issuedAt`,
 `expiresAt`, the mandate's and policy's validity windows, the action deadline
 and the override window are checked for shape and for binding, never against
 the present instant.  An expired receipt is therefore still an authentic one
-and still passes here.  Currency -- like nonce freshness and executability at
-a block -- is the publication verifier's question, not this tool's, and a
-reader who needs it must run that tool.
-
-Exit status is 0 only if every check passes.
+and is still reported as such here.  Currency -- like nonce freshness and
+executability at a block -- is the publication verifier's question, not this
+tool's, and a reader who needs it must run that tool.
 """
 
 import argparse
@@ -71,6 +87,12 @@ from secp256k1 import (  # noqa: E402
 # REPORT.md F-4 recorded the gap before §5.9 existed. That finding caused the
 # warning. The claim that "the spec never states this" is no longer true.
 VERDICT_NAMES = {0: "BLOCK", 1: "REVIEW", 2: "ALLOW"}
+
+# D-090(a): the recipient-facing word for an authentic bundle whose verdict the Vault
+# refuses. It contains AUTHENTIC because the claim is unchanged, and neither PASS nor
+# FAIL because those are the two words a script already greps for. Pinned by
+# test_verifier.TestExitContractD090, which was written before this constant existed.
+NOT_EXECUTABLE_WORD = "AUTHENTIC, NOT EXECUTABLE"
 
 GREEN, RED, YELLOW, DIM, RESET = "\033[32m", "\033[31m", "\033[33m", "\033[2m", "\033[0m"
 
@@ -2234,7 +2256,58 @@ def _byte_diff(actual, expected):
     return f"one is a prefix of the other: lengths {len(actual)} vs {len(expected)}"
 
 
+def _not_executable(sample_dir):
+    """D-090(a): the verdict-and-override classification of an AUTHENTIC bundle.
+
+    Called only once verify_sample() has returned ok=True, so the verdict read here is
+    the SIGNED one: it sits inside the §5.4 struct the signature recovered over against
+    the named trust root, and _verdict_check() has already found that it decodes and
+    matches the case label. The directory name is never consulted.
+
+    Returns None for a bundle whose verdict the Vault would consider -- ALLOW; REVIEW
+    beside an override.json, which ok=True means was verified against this exact
+    receipt (§5.5); or a §5.5.1 refusal record, which carries no verdict to execute --
+    and otherwise (verdict name, reason) for the headline. This is NOT an executability
+    check: no operation, no window, no nonce, no clock (D-088 stands). It reads two
+    facts the verifier already authenticated, so that the exit status stops saying 0
+    for a verdict SentinelVault refuses at both entry points.
+    """
+    receipt_path = os.path.join(sample_dir, "receipt.json")
+    if not os.path.isfile(receipt_path):
+        return None
+    doc = _read_json(receipt_path)
+    receipt = doc.get("receipt")
+    if doc.get("refused") or not isinstance(receipt, dict):
+        return None                       # a §5.5.1 refusal record: nothing to execute
+    try:
+        verdict = VERDICT_NAMES.get(int(receipt.get("verdict")))
+    except (TypeError, ValueError):
+        return None                       # unreachable with ok=True: _verdict_check failed
+    if verdict == "BLOCK":
+        return "BLOCK", (
+            "SentinelVault refuses a BLOCK receipt at both entry points, and §5.5 says a "
+            "block receipt cannot be overridden. Nothing a recipient adds to this bundle "
+            "makes it executable.")
+    if verdict == "REVIEW" and not os.path.isfile(os.path.join(sample_dir, "override.json")):
+        return "REVIEW", (
+            "the bundle carries no override.json. SentinelVault executes a REVIEW receipt "
+            "only with an owner-signed override naming this exact receipt, action and "
+            "nonce (§5.5). The cure is that override, placed beside receipt.json; this "
+            "tool then verifies it too.")
+    return None
+
+
 def run(sample_dir, domain_path=None, tamper=None, quiet=False, verbose=True):
+    """Verify one bundle and print its headline. Returns (ok, checks, executable).
+
+    `ok` is AUTHENTICITY, exactly as verify_sample() returns it. `executable` is the
+    D-090(a) classification of an authentic bundle -- False for a BLOCK receipt or a
+    REVIEW receipt with no override.json -- and is True whenever `ok` is False or a
+    tamper mode ran, because the classification is only meaningful for a bundle that
+    verified. The word and the exit status are decided here and in main(), not in
+    verify_sample(): the library answer stays authenticity, and the tamper self-test's
+    "correctly still verified" on a BLOCK sample depends on that.
+    """
     label = os.path.basename(os.path.abspath(sample_dir))
     try:
         ok, checks = verify_sample(sample_dir, domain_path, tamper)
@@ -2242,11 +2315,11 @@ def run(sample_dir, domain_path=None, tamper=None, quiet=False, verbose=True):
         if not quiet:
             print(f"{label} {_color('[tamper: ' + tamper + ']', YELLOW)}")
             print(f"  => {_color('N/A', YELLOW)}: {exc}\n")
-        return True, []
+        return True, [], True
     except Exception as exc:  # noqa: BLE001 - a crash is a verification failure
         if not quiet:
             print(f"{label}: {_color('ERROR', RED)} {type(exc).__name__}: {exc}")
-        return False, [Check("verification ran to completion", False, str(exc))]
+        return False, [Check("verification ran to completion", False, str(exc))], True
 
     if not quiet:
         suffix = f" {_color('[tamper: ' + tamper + ']', YELLOW)}" if tamper else ""
@@ -2268,10 +2341,24 @@ def run(sample_dir, domain_path=None, tamper=None, quiet=False, verbose=True):
                 note = ""
             print(f"  => tamper self-test {outcome}: {verdict} "
                   f"the mutated {tamper}{note}\n")
-        return as_expected, checks
+        return as_expected, checks, True
 
+    # D-090(a): classify AFTER authenticity is settled, and only then. A bundle that did
+    # not verify is a refusal whatever its verdict says -- 1 beats 3 -- so a forged BLOCK
+    # cannot hide behind the not-executable word.
+    not_executable = _not_executable(sample_dir) if ok else None
     if not quiet:
-        if ok:
+        if not_executable:
+            verdict, why = not_executable
+            print(f"  => {_color(NOT_EXECUTABLE_WORD, YELLOW)}: the signed verdict is {verdict} "
+                  f"-- {why}\n"
+                  "     Exit status 3: neither a certification nor a refusal. Hashes, "
+                  "signatures and bindings hold against the named trust root, so this is "
+                  "genuinely the signer's decision, and the decision is one SentinelVault "
+                  "refuses. This tool still evaluates no validity window (no clock) and "
+                  "certifies nothing about execution; for executability, run "
+                  "verifier/verify_publication.py.\n")
+        elif ok:
             # D-087(c): say which claim this is. `=> PASS` here and `PASS (static,
             # offline)` from verify_publication.py were two different claims wearing
             # one word. This tool has no clock and evaluates no validity window.
@@ -2282,15 +2369,15 @@ def run(sample_dir, domain_path=None, tamper=None, quiet=False, verbose=True):
                   "For those, run verifier/verify_publication.py.\n")
         else:
             print(f"  => {_color('FAIL', RED)}\n")
-    return ok, checks
+    return ok, checks, not_executable is None
 
 
 def run_tamper_suite(sample_dir, domain_path=None, quiet=False, verbose=False):
     """Every tamper mode must produce its expected outcome."""
     results = []
     for mode in TAMPER_MODES:
-        as_expected, _ = run(sample_dir, domain_path, tamper=mode,
-                             quiet=quiet, verbose=verbose)
+        as_expected, _checks, _executable = run(sample_dir, domain_path, tamper=mode,
+                                                quiet=quiet, verbose=verbose)
         results.append(as_expected)
     return all(results)
 
@@ -2382,8 +2469,16 @@ def main(argv=None):
 
     if args.tamper == "all":
         oks = [run_tamper_suite(t, root, verbose=False) for t, root in targets]
+        not_executable = []
     else:
-        oks = [run(t, root, args.tamper)[0] for t, root in targets]
+        results = [run(t, root, args.tamper) for t, root in targets]
+        oks = [ok for ok, _checks, _executable in results]
+        # D-090(a). run() reports executable=True for any tampered run, so a single
+        # tamper mode never lands here; only an authentic, untampered bundle can be
+        # NOT EXECUTABLE. Same rule for `--all` and for several positional bundles --
+        # this file has twice repaired one invocation shape and left the other open.
+        not_executable = [t for (t, _root), (ok, _checks, executable) in zip(targets, results)
+                          if ok and not executable]
     failed = [t for (t, _root), ok in zip(targets, oks) if not ok]
     passed = len(oks) - len(failed)
     # "verified" means AUTHENTIC and nothing more (D-087(c)). The phrase
@@ -2395,7 +2490,16 @@ def main(argv=None):
           f"{'' if args.tamper else ' as AUTHENTIC. Executability and validity windows are not evaluated by this tool (no clock); an expired receipt is still an authentic one -- see verifier/verify_publication.py.'}")
     for target in failed:
         print(f"  {_color('FAILED', RED)}: {target}")
-    return 1 if failed else 0
+    for target in not_executable:
+        print(f"  {_color('NOT EXECUTABLE', YELLOW)}: {target}")
+    if not_executable:
+        print(f"  {len(not_executable)} of the {passed} authentic sample(s) carry a verdict "
+              "SentinelVault refuses -- BLOCK, or REVIEW with no override.json -- and are "
+              "listed above as NOT EXECUTABLE (D-090(a)). Exit status 3 says so; a refused "
+              "sample, if any, takes precedence and the status is 1.")
+    # 1 beats 3 beats 0: a refusal anywhere in the run is a refusal; otherwise one
+    # authentic-not-executable bundle makes the run not executable; otherwise PASS.
+    return 1 if failed else 3 if not_executable else 0
 
 
 if __name__ == "__main__":

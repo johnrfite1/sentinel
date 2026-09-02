@@ -20,12 +20,16 @@ content arms ported under D-087 (§5.6 projections, §5.4 reason codes, §5.7.1
 signer-attested conformance).  A REVIEW receipt with no override and a BLOCK
 receipt are both refused here, because the Vault executes neither.
 
-It is NOT the authenticity verifier.  verifier/verify.py certifies AUTHENTICITY
--- that the bundle is genuinely what the named signer produced -- and correctly
-passes both of those bundles, because both are authentic.  `=> PASS` from
-verify.py and `PASS (static, offline)` from this tool are two different claims
-that used to share one word; the split is deliberate, was ruled at D-087(c),
-and is stated on both surfaces so that neither is read as the other.
+It is NOT the authenticity verifier.  verifier/verify.py (not shipped in the
+release tree) certifies AUTHENTICITY -- that the bundle is genuinely what the
+named signer produced -- and finds both of those bundles authentic; since
+D-090(a) it reports each as `=> AUTHENTIC, NOT EXECUTABLE` with exit status 3
+rather than as a PASS, so that its exit code does not say "pass" to a script
+for a verdict the Vault refuses.  `=> PASS: AUTHENTIC` from verify.py (ALLOW,
+or REVIEW with a valid owner override) and `PASS (static, offline)` from this
+tool remain two different claims that used to share one word; the split is
+deliberate, was ruled at D-087(c), and is stated on both surfaces so that
+neither is read as the other.
 
 "Executability" here is the Vault's OFFLINE-CHECKABLE predicate and nothing
 more.  Whether the Vault would execute this bundle at any actual block also
@@ -1348,8 +1352,9 @@ def main(argv=None):
           "SentinelVault's offline-checkable action predicate accepts this bundle at the "
           "entry point named above. It is not the authenticity verifier: verify.py "
           "certifies AUTHENTICITY, that the bundle is genuinely what the signer produced, "
-          "and passes a REVIEW receipt with no override and a BLOCK receipt, both of which "
-          "this tool refuses.")
+          "and reports a BLOCK receipt or a REVIEW receipt with no override -- both of "
+          "which this tool refuses -- as AUTHENTIC, NOT EXECUTABLE with exit status 3, "
+          "not as a PASS (D-090(a)).")
     print("NOT ESTABLISHED by this run: " + "; ".join(NOT_ESTABLISHED) + ".")
     print(json.dumps(result, sort_keys=True))
     return 0

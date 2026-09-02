@@ -113,3 +113,12 @@ python3 verifier/verify.py --domain <deployment-domain.json> bundles/case-3-wron
 The `bundles/domain.json` shipped here is presenter-supplied. Passing it will print PASS, and that PASS certifies the hashing and the signature recovery but **says nothing about signer identity**. This packet ships no out-of-band deployment record, so as delivered it cannot demonstrate the trust-root property it is proudest of.
 
 Without `--domain` the tool reports diagnostics and does not PASS. A BLOCK receipt should still verify: BLOCK is a signed decision, not a missing artifact.
+
+> **Dated note, 2026-09-02 (D-090(a)) — read before running the commands above.** This packet is
+> the historical v0.2 comprehension packet reviewed at Gate 8 (D-080), and the `verifier/verify.py`
+> inside it is that frozen copy: on a BLOCK receipt it prints a bare `=> PASS` and exits `0`,
+> certifying authenticity only. The repository's current `verifier/verify.py` reports the same
+> bundle as `=> AUTHENTIC, NOT EXECUTABLE` with exit status `3`, and the enforcement release's
+> `verify_publication.py` refuses it with exit `1`. Do not read this packet's `PASS` on a BLOCK
+> receipt as "SentinelVault would execute this" — it would not, at either entry point. The lab's
+> first surface is the repository's root `README.md`, not this file.

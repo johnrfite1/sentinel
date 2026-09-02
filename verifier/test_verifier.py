@@ -7,8 +7,11 @@ Stdlib unittest only, no third-party test runner:
     python3 -m unittest discover -s verifier -v
 """
 
+import contextlib
+import io
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -414,13 +417,20 @@ class TestSamples(unittest.TestCase):
         self.assertEqual(seen, {0, 1, 2},
                          "samples must pin all three verdict encodings")
 
-    def test_cli_exit_code_zero(self):
+    def test_cli_exit_code_over_the_shipped_corpus_is_3_not_0(self):
+        # Was `test_cli_exit_code_zero`, asserting 0, from D-010 until D-090(a) made
+        # that assertion the defect: four of the seven bundles are BLOCK receipts, so
+        # a run over the corpus that exits 0 is a run whose exit status lies to a
+        # script about a verdict the Vault refuses. The corpus is still authentic end
+        # to end -- TestExitContractD090 pins the 7/7 count and the per-bundle words
+        # -- and exit 0 over a corpus of ALLOW / overridden-REVIEW bundles is pinned
+        # there too, so this is not "non-zero is fine".
         with open(os.devnull, "w") as devnull:
             saved, sys.stdout = sys.stdout, devnull
             try:
                 self.assertEqual(
                     verify.main(["--domain", os.path.join(SAMPLES, "domain.json"),
-                                 "--all", SAMPLES]), 0)
+                                 "--all", SAMPLES]), EXIT_NOT_EXECUTABLE)
             finally:
                 sys.stdout = saved
 
@@ -1777,12 +1787,19 @@ class TestAllOverZeroBundles(unittest.TestCase):
             capture_output=True, text=True)
         return proc.returncode, proc.stdout + proc.stderr
 
-    def test_a_nonempty_corpus_still_verifies_and_exits_zero(self):
+    def test_a_nonempty_corpus_still_verifies_and_is_not_reported_as_empty(self):
         # THE CONTROL John asked to preserve. Without it, "always fail" satisfies
-        # every assertion below.
+        # every assertion below. Its JOB is unchanged: a real corpus must be
+        # distinguishable from an empty one by exit status and by the count line.
+        # Its VALUE changed at D-090(a): the corpus carries four BLOCK receipts, so
+        # the aggregate is 3 (authentic, not executable), not 0 -- and 3 is neither
+        # of the two "nothing was verified" codes this class exists to pin. The
+        # rest of the D-090(a) contract is in TestExitContractD090.
         rc, out = self._run(SAMPLES)
-        self.assertEqual(rc, 0, out)
+        self.assertEqual(rc, EXIT_NOT_EXECUTABLE, out)
+        self.assertNotIn(rc, (1, 2))
         self.assertIn("7/7 sample(s) verified", out)
+        self.assertNotIn("NO BUNDLE DIRECTORIES FOUND", out)
 
     def test_an_empty_directory_exits_nonzero(self):
         tmp = tempfile.mkdtemp()
@@ -3416,6 +3433,453 @@ class TestVerifierPropertiesNotCorpusProperties(unittest.TestCase):
             self.assertEqual(_norm(recovered), _norm(doc["ownerAddress"]))
             return
         self.fail("no override sample found; this test would assert nothing")
+
+
+# ---------------------------------------------------------------------------
+# D-090(a): the recipient-facing exit contract
+# ---------------------------------------------------------------------------
+
+# THE WORD. D-090(a) requires "a distinct word" for a receipt that is authentic and
+# that the Vault will not execute; the ruling leaves the word open, and this file
+# pins it so that the implementer, the README lane and any script that greps the
+# headline agree on one string. It contains AUTHENTIC because the claim `verify.py`
+# makes is unchanged (D-087(c), D-088); it contains neither PASS nor FAIL because
+# those are the two words a script already reads.
+NOT_EXECUTABLE_WORD = "AUTHENTIC, NOT EXECUTABLE"
+
+# THE EXIT CODES. 0 and 1 are the codes `verify.py` has always had; 2 is the code it
+# already reserves for "nothing was verified" (H-8, D-056(a)). 3 is chosen for
+# "authentic, not executable" to parallel verify_publication.py's three-state
+# contract, where 3 is "NOT CERTIFIED, and not a refusal either ... treating 3 as
+# either a pass or a failure misreads it". That sentence is exactly the property
+# D-090(a) wants here: a script that treats this state as a pass submits a receipt
+# the Vault refuses (the Adversary's finding), and a script that treats it as a
+# failure says the signature did not hold, which is false. The two verifiers ship
+# side by side, so a caller who learns one code table has learned the other.
+EXIT_PASS = 0
+EXIT_REFUSED = 1
+EXIT_NOTHING_VERIFIED = 2
+EXIT_NOT_EXECUTABLE = 3
+
+
+def _strip_ansi(text):
+    return re.sub(r"\x1b\[[0-9;]*m", "", text)
+
+
+def _headline_blocks(out):
+    """Every `=> ...` headline with its continuation lines, up to the next blank line.
+
+    `run()` prints one headline per sample after the check list; a continuation
+    line is indented and belongs to the headline above it. Returned stripped of
+    colour and leading whitespace so the assertions read the words, not the layout.
+    """
+    blocks, current = [], None
+    for line in _strip_ansi(out).splitlines():
+        stripped = line.strip()
+        if stripped.startswith("=>"):
+            current = [stripped]
+            blocks.append(current)
+        elif current is not None:
+            if stripped:
+                current.append(stripped)
+            else:
+                current = None
+    return ["\n".join(b) for b in blocks]
+
+
+class TestExitContractD090(unittest.TestCase):
+    """D-090(a), written before any implementer touched verify.py (D-058(1)).
+
+    THE DEFECT, sustained by the Crucible Adversary at Cycle 2: `verify.py` printed
+    `=> PASS: AUTHENTIC` and `1/1 sample(s) verified as AUTHENTIC`, exit 0, for a
+    BLOCK receipt and for a REVIEW receipt with no override -- verdicts SentinelVault
+    refuses at both entry points and verify_publication.py refuses. The disclosure
+    printed beside it does not repair that: "disclaimers do not make those predicates
+    equivalent", and `gpg --verify`'s exit 0 is explicitly not the script-facing
+    claim, which is why `gpgv` exists.
+
+    THE RULED CONTRACT. `verify.py` keeps certifying AUTHENTICITY -- D-088's exemption
+    from `operation == CALL` stands, there is still no clock and no window check --
+    but it no longer emits a recipient-facing PASS or exit 0 for a BLOCK receipt or an
+    un-overridden REVIEW receipt. ALLOW, and REVIEW with a valid owner override, keep
+    PASS / exit 0. Refusals keep FAIL / exit 1.
+
+    WHERE THE CLASSIFICATION LIVES. `verify_sample()` returns `(ok, checks)` and `ok`
+    is authenticity: every in-process test in this file consumes it that way, and so
+    does the tamper self-test, whose "correctly still verified" on a BLOCK sample
+    under `reasons-reorder` would become WRONGLY REJECTED if `ok` started meaning
+    executability. So `ok` stays authenticity (pinned below), and the word and the
+    exit code are the reporting layer's -- `run()` and `main()` -- which is the
+    surface the Adversary struck.
+
+    THE AGGREGATE. `--all` and a multi-bundle positional run are one invocation
+    shape each, and this file has twice found a repair that closed the single-bundle
+    path and left the other open (H-8; A-058's `--all` branch). The rule is the same
+    for both: 1 if any bundle was refused, else 3 if any bundle is authentic-not-
+    executable, else 0. The shipped corpus carries four such bundles by design, so
+    `--all fixtures/samples` exits 3 -- and the gate's D-010 stage, which today
+    treats any non-zero status as a failure, must learn that (see the report that
+    accompanies this class; scripts/test.sh is not this file's to edit).
+    """
+
+    BLOCK_SAMPLE = os.path.join(SAMPLES, "case-2-injection-block")
+    ALLOW_SAMPLE = os.path.join(SAMPLES, "case-1-allow")
+    DOMAIN = os.path.join(SAMPLES, "domain.json")
+
+    # -- helpers -----------------------------------------------------------------
+
+    def _cli(self, *args):
+        """verify.main() in-process, stdout and stderr captured. Returns (rc, text)."""
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
+            rc = verify.main(list(args))
+        return rc, _strip_ansi(buf.getvalue())
+
+    def _proc(self, *args):
+        """The process exit status a script actually reads."""
+        proc = subprocess.run(
+            [sys.executable, os.path.join(REPO, "verifier", "verify.py"), *args],
+            capture_output=True, text=True)
+        return proc.returncode, _strip_ansi(proc.stdout + proc.stderr)
+
+    def _tmp(self):
+        tmp = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, tmp)
+        return tmp
+
+    def _staged(self, sample):
+        """A copy of a shipped sample under a fresh parent, domain.json beside it."""
+        return stage(os.path.join(SAMPLES, sample), self._tmp())
+
+    def _staged_with_verdict(self, verdict_num, verdict_name, source="case-1-allow"):
+        """`source` re-labelled to `verdict_name` and made wholly self-consistent.
+
+        The directory keeps the source's NAME, so a classifier reading the label off
+        the path rather than the signed receipt is caught. evidence.verdict, the
+        receipt's verdict enum and meta.json's label all move together, the evidence
+        is re-canonicalised and re-hashed, and the receipt is re-signed with the
+        published signer key -- the same steps as TestEvidenceDescribesTheBundle's
+        harness, so every hash and signature check passes and only the verdict
+        differs from the shipped ALLOW.
+        """
+        target = self._staged(source)
+        ev = read_json(target, "evidence.json")
+        ev["verdict"] = verdict_name
+        with open(os.path.join(target, "evidence.json"), "w") as h:
+            json.dump(ev, h)
+        canon = jcs.canonicalize(ev)
+        with open(os.path.join(target, "evidence.canonical.json"), "wb") as h:
+            h.write(canon)
+        digest = "0x" + keccak256(canon).hex()
+        with open(os.path.join(target, "evidence.hash"), "w") as h:
+            h.write(digest + "\n")
+        meta = read_json(target, "meta.json")
+        meta["verdict"] = verdict_name
+        write_json(os.path.join(target, "meta.json"), meta)
+        doc = read_json(target, "receipt.json")
+        doc["receipt"]["evidenceHash"] = digest
+        doc["receipt"]["verdict"] = str(verdict_num)   # §5.4 uint8, canonical decimal string
+        doc["signature"] = sign_digest(
+            eip712.receipt_digest(read_json(SAMPLES, "domain.json"), doc["receipt"]),
+            SIGNER_KEY)
+        write_json(os.path.join(target, "receipt.json"), doc)
+        return target
+
+    def _add_owner_override(self, target):
+        """A §5.5 override for `target`'s receipt, signed by the mandate principal.
+
+        Derived from the shipped override rather than hand-built, for the reason
+        TestVerifierPropertiesNotCorpusProperties gives: a hand-built payload can
+        fail to hash for reasons that have nothing to do with the property under
+        test.
+        """
+        body = read_json(target, "receipt.json")["receipt"]
+        template = read_json(OVERRIDE_SAMPLE, "override.json")["override"]
+        override = dict(template)
+        override["reviewReceiptHash"] = "0x" + eip712.receipt_struct_hash(body).hex()
+        for field in ("actionHash", "mandateHash", "policyHash"):
+            override[field] = body[field]
+        override["actionNonce"] = str(read_json(target, "action.json")["actionNonce"])
+        domain = read_json(SAMPLES, "domain.json")
+        key = verify._OWNER_TEST_KEY
+        write_json(os.path.join(target, "override.json"), {
+            "override": override,
+            "ownerSignature": sign_digest(eip712.override_digest(domain, override), key),
+            "ownerAddress": public_key_to_address(point_mul(key, G)),
+        })
+
+    @staticmethod
+    def _corrupt_hex(value):
+        # Flip one nibble inside the s component. r stays a curve point and s stays
+        # low, so the signature is well-formed and recovers to the WRONG address: the
+        # refusal comes from the recovery check itself, not from a shape check
+        # noticing a malformed signature (A-056: a mutation caught by a different
+        # check than the one it targets is worth nothing).
+        i = 2 + 64 + 24
+        return value[:i] + ("0" if value[i] != "0" else "1") + value[i + 1:]
+
+    def _corrupt_receipt_signature(self, target):
+        doc = read_json(target, "receipt.json")
+        doc["signature"] = self._corrupt_hex(doc["signature"])
+        write_json(os.path.join(target, "receipt.json"), doc)
+
+    def _corrupt_override_signature(self, target):
+        doc = read_json(target, "override.json")
+        doc["ownerSignature"] = self._corrupt_hex(doc["ownerSignature"])
+        write_json(os.path.join(target, "override.json"), doc)
+
+    def _assert_not_executable(self, rc, out, verdict_word, extra_words=()):
+        """The whole of the new contract, for one bundle."""
+        self.assertEqual(rc, EXIT_NOT_EXECUTABLE,
+                         f"an authentic {verdict_word} receipt must exit "
+                         f"{EXIT_NOT_EXECUTABLE}, got {rc}")
+        blocks = _headline_blocks(out)
+        self.assertEqual(len(blocks), 1, f"expected one headline, got {blocks!r}")
+        head = blocks[0]
+        self.assertTrue(head.startswith(f"=> {NOT_EXECUTABLE_WORD}"),
+                        f"the headline word must be {NOT_EXECUTABLE_WORD!r}; got {head!r}")
+        self.assertNotIn("PASS", head.splitlines()[0],
+                         "the recipient-facing word must not contain PASS")
+        self.assertNotIn("FAIL", head.splitlines()[0],
+                         "an authentic bundle is not a refusal; the word must not say FAIL")
+        self.assertIn("AUTHENTIC", head, "the output must still state the bundle is authentic")
+        for word in (verdict_word,) + tuple(extra_words):
+            self.assertIn(word, head, f"the headline must name {word!r}: {head!r}")
+        self.assertNotIn("=> PASS", out, "no `=> PASS` anywhere in the run")
+        self.assertNotIn("=> FAIL", out, "no `=> FAIL` anywhere in the run")
+        # The count line is the authentic count -- the bundle IS authentic -- and the
+        # text after it must carry the state, so `tail -1` does not read "1/1 verified".
+        self.assertIn("1/1 sample(s) verified", out)
+        after_summary = out[out.index("1/1 sample(s) verified"):]
+        self.assertIn("NOT EXECUTABLE", after_summary,
+                      "the summary must say the bundle is not executable")
+
+    def _assert_pass(self, rc, out):
+        self.assertEqual(rc, EXIT_PASS, out)
+        blocks = _headline_blocks(out)
+        self.assertEqual(len(blocks), 1, blocks)
+        self.assertTrue(blocks[0].startswith("=> PASS: AUTHENTIC"), blocks[0])
+        self.assertNotIn(NOT_EXECUTABLE_WORD, out)
+        self.assertNotIn("NOT EXECUTABLE", out)
+        self.assertIn("1/1 sample(s) verified", out)
+
+    def _assert_refused(self, rc, out):
+        self.assertEqual(rc, EXIT_REFUSED, out)
+        blocks = _headline_blocks(out)
+        self.assertEqual(len(blocks), 1, blocks)
+        self.assertTrue(blocks[0].startswith("=> FAIL"), blocks[0])
+        self.assertNotIn(NOT_EXECUTABLE_WORD, out,
+                         "a refusal must not be reported as authentic-not-executable")
+        self.assertIn("0/1 sample(s) verified", out)
+        self.assertIn("FAILED:", out)
+
+    # -- 1. BLOCK -----------------------------------------------------------------
+
+    def test_every_shipped_BLOCK_fixture_is_AUTHENTIC_NOT_EXECUTABLE_and_exits_3(self):
+        index = expected_verdicts()
+        blocks = [d for d in sample_dirs() if index[os.path.basename(d)]["verdict"] == "BLOCK"]
+        self.assertEqual(len(blocks), 4, "the corpus ships four BLOCK receipts")
+        for path in blocks:
+            with self.subTest(sample=os.path.basename(path)):
+                rc, out = self._cli("--domain", self.DOMAIN, path)
+                self._assert_not_executable(rc, out, "BLOCK")
+
+    def test_the_process_exit_status_a_script_reads_is_3_for_the_shipped_BLOCK_receipt(self):
+        # Through the interpreter, not `main()`: this is the status the Adversary
+        # quoted and the one `sys.exit(main())` has to deliver.
+        rc, out = self._proc("--domain", self.DOMAIN, self.BLOCK_SAMPLE)
+        self._assert_not_executable(rc, out, "BLOCK")
+
+    def test_a_staged_BLOCK_built_from_the_ALLOW_bundle_is_classified_by_its_signed_verdict(self):
+        # Same bytes as case-1-allow, same directory NAME as case-1-allow; only the
+        # signed verdict, the evidence's copy of it and the case label say BLOCK.
+        target = self._staged_with_verdict(0, "BLOCK")
+        ok, checks = _verify(target)
+        self.assertTrue(ok, [c.name for c in checks if not c.ok])   # the control
+        rc, out = self._cli("--domain", trust_root(target), target)
+        self._assert_not_executable(rc, out, "BLOCK")
+
+    def test_a_resealed_copy_of_a_shipped_BLOCK_fixture_gets_the_same_contract(self):
+        target = self._staged("case-2-injection-block")
+        reseal(target, read_json(SAMPLES, "domain.json"))
+        rc, out = self._cli("--domain", trust_root(target), target)
+        self._assert_not_executable(rc, out, "BLOCK")
+
+    # -- 2. REVIEW with no override -------------------------------------------------
+
+    def test_the_shipped_REVIEW_fixture_with_its_override_removed_is_NOT_EXECUTABLE_exit_3(self):
+        target = self._staged("case-4-review-failmode-review")
+        os.remove(os.path.join(target, "override.json"))
+        ok, checks = _verify(target)
+        self.assertTrue(ok, [c.name for c in checks if not c.ok])   # authentic without it
+        rc, out = self._cli("--domain", trust_root(target), target)
+        # The cure is an owner override, so the headline names it (R-A018-16(c)).
+        self._assert_not_executable(rc, out, "REVIEW", extra_words=("override",))
+
+    def test_a_staged_REVIEW_built_from_ALLOW_is_exit_3_without_an_override_and_exit_0_with_one(self):
+        # THE PAIR THAT ISOLATES THE OVERRIDE: one bundle, one file added, and the
+        # exit status moves from 3 to 0. Nothing else about the bundle changes.
+        target = self._staged_with_verdict(1, "REVIEW")
+        rc, out = self._cli("--domain", trust_root(target), target)
+        self._assert_not_executable(rc, out, "REVIEW", extra_words=("override",))
+        self._add_owner_override(target)
+        rc, out = self._cli("--domain", trust_root(target), target)
+        self._assert_pass(rc, out)
+
+    # -- 3 and 4. the positive controls ---------------------------------------------
+
+    def test_a_REVIEW_receipt_with_a_valid_owner_override_keeps_PASS_and_exit_0(self):
+        rc, out = self._cli("--domain", self.DOMAIN, OVERRIDE_SAMPLE)
+        self._assert_pass(rc, out)
+        self.assertIn("override targets a REVIEW receipt", out,
+                      "the override checks must have run for this PASS to mean anything")
+
+    def test_an_ALLOW_receipt_keeps_PASS_and_exit_0(self):
+        rc, out = self._cli("--domain", self.DOMAIN, self.ALLOW_SAMPLE)
+        self._assert_pass(rc, out)
+        rc, out = self._proc("--domain", self.DOMAIN, self.ALLOW_SAMPLE)
+        self._assert_pass(rc, out)
+
+    # -- 5. refusals stay FAIL / 1 --------------------------------------------------
+
+    def test_a_tampered_signature_on_a_BLOCK_receipt_is_a_refusal_exit_1_not_3(self):
+        # PRECEDENCE. A BLOCK receipt whose signature does not recover is not an
+        # authentic-not-executable receipt; it is not authentic. 1 must win over 3,
+        # or the new code becomes a place for a forged BLOCK to hide.
+        target = self._staged("case-2-injection-block")
+        self._corrupt_receipt_signature(target)
+        rc, out = self._cli("--domain", trust_root(target), target)
+        self._assert_refused(rc, out)
+        self.assertIn("[FAIL] recovered signer == receipt.signer", out)
+
+    def test_a_tampered_signature_on_an_ALLOW_receipt_is_still_exit_1(self):
+        target = self._staged("case-1-allow")
+        self._corrupt_receipt_signature(target)
+        rc, out = self._cli("--domain", trust_root(target), target)
+        self._assert_refused(rc, out)
+
+    def test_a_REVIEW_whose_override_does_not_recover_is_a_refusal_exit_1_not_3(self):
+        # "REVIEW with no override" is state 3; "REVIEW with a bad override" is a
+        # refusal. They must not share a code: the first is cured by asking the
+        # owner, the second is a credential that did not authenticate.
+        target = self._staged("case-4-review-failmode-review")
+        self._corrupt_override_signature(target)
+        rc, out = self._cli("--domain", trust_root(target), target)
+        self._assert_refused(rc, out)
+        self.assertIn("[FAIL] override signature recovers ownerAddress", out)
+
+    def test_the_four_states_are_distinguishable_by_exit_status_alone(self):
+        # A script reads nothing else. Each state through the interpreter, output
+        # deliberately ignored, and the four codes must be pairwise distinct.
+        tampered = self._staged("case-1-allow")
+        self._corrupt_receipt_signature(tampered)
+        empty = self._tmp()
+        codes = {
+            "ALLOW": self._proc("--domain", self.DOMAIN, self.ALLOW_SAMPLE)[0],
+            "BLOCK": self._proc("--domain", self.DOMAIN, self.BLOCK_SAMPLE)[0],
+            "tampered": self._proc("--domain", trust_root(tampered), tampered)[0],
+            "nothing verified": self._proc("--domain", self.DOMAIN, "--all", empty)[0],
+        }
+        self.assertEqual(codes, {"ALLOW": EXIT_PASS, "BLOCK": EXIT_NOT_EXECUTABLE,
+                                 "tampered": EXIT_REFUSED,
+                                 "nothing verified": EXIT_NOTHING_VERIFIED})
+        self.assertEqual(len(set(codes.values())), 4, codes)
+
+    # -- the API pin ---------------------------------------------------------------
+
+    def test_verify_sample_still_answers_authenticity_for_a_BLOCK_receipt(self):
+        # The library call is what every in-process test here consumes, and what the
+        # tamper self-test's "correctly still verified" reads. A BLOCK receipt is
+        # authentic, so `ok` is True; the reporting layer owns the word and the code.
+        ok, checks = _verify(self.BLOCK_SAMPLE)
+        self.assertTrue(ok, [c.name for c in checks if not c.ok])
+        self.assertFalse(any("EXECUTABLE" in c.name.upper() for c in checks),
+                         "no check named for executability may join the authenticity list "
+                         "(D-088: verify.py carries no executability condition)")
+
+    def test_the_tamper_self_test_on_a_BLOCK_sample_is_untouched(self):
+        # The gate's second arm. `--tamper` replaces the PASS/FAIL headline with the
+        # self-test verdict, and a BLOCK sample under `reasons-reorder` must still be
+        # "correctly still verified". If the classification were pushed below the
+        # tamper branch this exits non-zero and the gate's tamper floor breaks.
+        rc, out = self._cli("--domain", self.DOMAIN, "--tamper", "all", self.BLOCK_SAMPLE)
+        self.assertEqual(rc, EXIT_PASS, out)
+        self.assertIn("1/1 sample(s) behaved as expected under every tamper mode", out)
+        self.assertNotIn(NOT_EXECUTABLE_WORD, out)
+
+    # -- 6. the aggregate ------------------------------------------------------------
+
+    NOT_EXECUTABLE_IN_CORPUS = ("case-2-injection-block", "case-3-wrong-purpose-block",
+                                "case-4-blocked-failmode-failclosed", "edge-single-reason-code")
+    PASSING_IN_CORPUS = ("case-1-allow", "case-4-review-failmode-review", "refusal-vault-paused")
+
+    def _lines_naming(self, out, needle):
+        return [l for l in out.splitlines() if needle in l]
+
+    def test_all_over_the_shipped_corpus_exits_3_and_still_counts_7_of_7_authentic(self):
+        # WHAT THE GATE RUNS, verbatim: scripts/test.sh's D-010 stage. Four of the
+        # seven bundles are BLOCK by design, none is refused, so the aggregate is 3.
+        # The count line keeps the `N/M sample(s) verified` form -- the gate's sed
+        # reads it against VERIFIER_MIN_SAMPLES -- and N is the AUTHENTIC count,
+        # because that is the claim the phrase makes and all seven are authentic.
+        rc, out = self._proc("--domain", self.DOMAIN, "--all", SAMPLES)
+        self.assertEqual(rc, EXIT_NOT_EXECUTABLE, out[-2000:])
+        self.assertRegex(out, r"(?m)^7/7 sample\(s\) verified")
+        self.assertNotIn("FAILED:", out, "nothing in the corpus is refused")
+        self.assertNotIn("=> FAIL", out)
+        summary_at = out.index("7/7 sample(s) verified")
+        after = out[summary_at:]
+        for name in self.NOT_EXECUTABLE_IN_CORPUS:
+            path = os.path.join(SAMPLES, name)
+            named = self._lines_naming(after, path)
+            self.assertTrue(named and all("NOT EXECUTABLE" in l for l in named),
+                            f"{name} must be listed after the summary as NOT EXECUTABLE, "
+                            f"as a refused bundle is listed as FAILED; got {named!r}")
+        for name in self.PASSING_IN_CORPUS:
+            path = os.path.join(SAMPLES, name)
+            self.assertFalse(self._lines_naming(after, path),
+                             f"{name} PASSES and must not be listed after the summary")
+        heads = _headline_blocks(out)
+        self.assertEqual(len(heads), 7)
+        self.assertEqual(sum(h.startswith(f"=> {NOT_EXECUTABLE_WORD}") for h in heads), 4)
+        self.assertEqual(sum(h.startswith("=> PASS: AUTHENTIC") for h in heads), 3)
+
+    def test_all_over_a_corpus_of_executable_shaped_bundles_exits_0(self):
+        # The control for the test above: remove the BLOCK bundles and the aggregate
+        # is a plain PASS. Without this, "always 3" satisfies the shipped-corpus test.
+        tmp = self._tmp()
+        for name in ("case-1-allow", "case-4-review-failmode-review"):
+            shutil.copytree(os.path.join(SAMPLES, name), os.path.join(tmp, name))
+        rc, out = self._proc("--domain", self.DOMAIN, "--all", tmp)
+        self.assertEqual(rc, EXIT_PASS, out[-2000:])
+        self.assertRegex(out, r"(?m)^2/2 sample\(s\) verified")
+        self.assertNotIn("NOT EXECUTABLE", out)
+
+    def test_all_with_one_refused_bundle_exits_1_whatever_else_is_there(self):
+        # 1 beats 3 beats 0 in the aggregate as in the single case: a corpus with a
+        # forged receipt in it is refused, and the forged one is named as FAILED.
+        tmp = self._tmp()
+        for name in ("case-1-allow", "case-2-injection-block", "case-3-wrong-purpose-block"):
+            shutil.copytree(os.path.join(SAMPLES, name), os.path.join(tmp, name))
+        forged = os.path.join(tmp, "case-2-injection-block")
+        self._corrupt_receipt_signature(forged)
+        rc, out = self._proc("--domain", self.DOMAIN, "--all", tmp)
+        self.assertEqual(rc, EXIT_REFUSED, out[-2000:])
+        self.assertRegex(out, r"(?m)^2/3 sample\(s\) verified")
+        self.assertTrue(any("FAILED" in l for l in self._lines_naming(out, forged)),
+                        "the forged bundle must be listed as FAILED")
+
+    def test_several_positional_bundles_follow_the_same_aggregate_rule_as_all(self):
+        # `verify.py a b` is the other multi-bundle shape, and the one a first draft
+        # of the `--all` rule would miss.
+        rc, out = self._cli("--domain", self.DOMAIN, self.ALLOW_SAMPLE, self.BLOCK_SAMPLE)
+        self.assertEqual(rc, EXIT_NOT_EXECUTABLE, out[-1500:])
+        self.assertIn("2/2 sample(s) verified", out)
+        forged = self._staged("case-1-allow")
+        self._corrupt_receipt_signature(forged)
+        rc, out = self._cli("--domain", self.DOMAIN, self.BLOCK_SAMPLE, forged)
+        self.assertEqual(rc, EXIT_REFUSED, out[-1500:])
+        self.assertIn("1/2 sample(s) verified", out)
 
 
 def _norm(a):

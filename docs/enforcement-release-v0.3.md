@@ -203,14 +203,23 @@ The consequences, stated so they are not later reported as defects of either too
 
 | Bundle | `verify.py` | `verify_publication.py` |
 | --- | --- | --- |
-| REVIEW receipt, no override | `=> PASS` (authentic) | `FAIL` (not executable without an authenticated override) |
-| BLOCK receipt | `=> PASS` (authentic) | `FAIL` on both `--execution-path` values |
+| REVIEW receipt, no override | `=> AUTHENTIC, NOT EXECUTABLE`, exit `3` (D-090(a)) | `FAIL` (not executable without an authenticated override) |
+| BLOCK receipt | `=> AUTHENTIC, NOT EXECUTABLE`, exit `3` (D-090(a)) | `FAIL` on both `--execution-path` values |
 | Receipt whose window has closed | `=> PASS` (authentic; no clock) | `FAIL` (not current at the evaluation instant) |
+
+~~The first two `verify.py` cells read `=> PASS` (authentic) until 2026-09-02.~~ **Amended under
+D-090(a):** `verify.py` still certifies only authenticity and still reads no clock, but it no
+longer emits a recipient-facing `PASS` or exit `0` for a verdict the Vault refuses. A BLOCK
+receipt, or a REVIEW receipt with no `override.json`, is reported as authentic and marked
+`NOT EXECUTABLE` with exit status `3` — neither a certification nor a refusal, and distinguishable
+from both by exit code alone. ALLOW, and REVIEW with a valid owner override, keep `=> PASS:
+AUTHENTIC` / exit `0`; refusals keep `=> FAIL` / exit `1`; under `--all`, `1` beats `3` beats `0`.
 
 So *"a BLOCK receipt certifies on neither entry point"* is a statement about the publication
 verifier and the Vault, and is true of them; it was never a statement about `verify.py`, whose
-PASS over a BLOCK receipt is correct for the claim it makes. D-087(c) closes D-II, D-III and D-IV
-as **claim** defects. Unification into one versioned predicate — the Cycle 2 handoff's acceptance
+authenticity claim over a BLOCK receipt is correct for the claim it makes — what D-090(a) changed
+is that its exit status no longer says "pass" to a script for a verdict the Vault refuses. D-087(c)
+closes D-II, D-III and D-IV as **claim** defects. Unification into one versioned predicate — the Cycle 2 handoff's acceptance
 criterion 2 as written — is recorded as the goal for a later batch, not this one: both verifiers
 currently carry checks the other lacks, so neither is the obvious survivor, and `verify.py` is the
 inventory the current batch is porting *from*.
