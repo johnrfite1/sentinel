@@ -3,9 +3,12 @@
 Rewritten at the end of each working session. **This file, not the conversation, is the
 memory.** If it disagrees with anything an agent remembers, this file wins.
 
-Last updated: **2026-09-01 (the Cycle 2 candidate is IN BUILD under D-087; D-085 and D-086
+Last updated: **2026-09-02 (the Cycle 3 candidate is `0bc79a8`, LOCAL and UNPUSHED; D-090
+recorded; the Cycle 2 candidate `cb124fe` was pushed to the PRIVATE remote as backup under D-089;
+publication is not authorised).**
+~~Last updated: 2026-09-01 (the Cycle 2 candidate is IN BUILD under D-087; D-085 and D-086
 recorded; the BLOCK→PASS defect named below is FIXED at `8d47a0b`; publication is not
-authorised).**
+authorised).~~ — superseded.
 ~~Last updated: 2026-08-29 (Crucible Cycle 2 implementation checkpoint authorised / D-081;
 candidate implementation verified and awaiting its authorised local commit; publication is not
 authorised).~~ — superseded; left visible because four commits and three rulings landed under
@@ -81,6 +84,20 @@ no push is authorised. `.serena/` remains gitignored.
 > Crucible lines, do not conflate them:** the enforcement-publication line's four A-018
 > Criticals are still OPEN AT ANVIL (D-083(i)); the lab casting is HALTED pending the new SHA.
 > The block below is struck where it is now false and otherwise stands.
+>
+> **2026-09-02 (later) — THE CYCLE 3 CANDIDATE IS `0bc79a8373ec26398702b47430da48134e7cbfe6`, LOCAL, NOT PUSHED.**
+> Cycle 2 closed both Cycle 1 Criticals and sustained one new one — the first surface routed to
+> `verify.py`, which returned PASS/exit 0 on BLOCK (D-090). Route (a) taken: `verify.py` now
+> reports BLOCK or un-overridden REVIEW as `=> AUTHENTIC, NOT EXECUTABLE`, exit 3 (the `gpgv`
+> model), test-first (`TestExitContractD090`, 18 tests, 221 → 239); root README rewritten with the
+> entry-point paragraph at the top and every pre-Historical command through
+> `verify_publication.py`; the D-010 walk requires exit 3. Fast gate PASSED; 239 · 104/105 · 61 ·
+> 53; sync and execution guards clean. Independently verified, both clauses HOLD (29 commands);
+> three stale passages asserting the old behaviour found and fixed, one of them the shipped
+> `verify_publication.py` docstring, one a dated additive note in the Gate 8 packet's README
+> (reversible). Return note `docs/cycle-3-return-note.md`; register §8. **Forks for John:** §5.5.1
+> refusal records still PASS/0 on `verify.py`; per-check `[PASS]` lines; the packet note. **Not
+> pushed — a push is John's, for this named SHA, after verifying PRIVATE.** Withdraws nothing.
 >
 > **2026-09-02 — THE CYCLE 2 CANDIDATE IS `cb124feaad6b925f683b0739de53970e1700e146`.** Built under
 > D-086/D-087 with test-first separation; fast gate PASSED; 104/105 · 61/61 · 53/53 · 221/221 ·
@@ -344,11 +361,12 @@ The table below is the 2026-08-29 record and is left as written. Since then:
 | | |
 |---|---|
 | Repair batch | **LANDED** — `8d47a0b`, `5d93850`, `5c8c090`, `2318ae3` (2026-08-30). The BLOCK→PASS publication verifier is fixed; R-A018-18/23/24 closed under D-083; the release-sync, suite-floor, vacuity and gate-abort guards are wired; the register's §3 carries dated CLOSED markers |
-| Lab casting, Cycle 1 | **REPORTED on `8d47a0b`**, two Criticals bound. Critical 1 already closed at `5d93850` (D-086(f), needs demonstrating); Critical 2 ruled FIXED by the non-certifying-static route (D-086(e)). **HALTED pending the next SHA**; both Criticals remain the council's to withdraw at Cycle 2 |
+| Lab casting, Cycles 1–2 | Cycle 1's two Criticals **closed at Cycle 2** (chairs reproduced both on `cb124fe`). Cycle 2 **sustained one**: first surface → `verify.py` PASS/0 on BLOCK (D-090). Cap of 2 reached; **Cycle 3 extended by the Smith's written note D-090(c)** |
 | Enforcement line | **Unchanged: HALTED, four A-018 Criticals OPEN AT ANVIL** (D-083(i)) |
 | Review method | **Inventory diff replaces one-at-a-time finding** (D-085(e)). Measured class: 54 + 4 + 4 missing checks, not 6. D-047 is retired; D-055(a) governs (D-085(a)) |
-| Cycle 2 candidate | **IN BUILD under D-087**, ~35 items, one SHA. Test authors and implementers in separate lanes; `release/` assembled once at the end by the coordinator |
-| Next | The candidate lands as one local commit when the coordinator assembles and the gate is green; then the chairs. **No push, no gate signature, no Critical withdrawal, no publication** |
+| Cycle 2 candidate | **LANDED `cb124fe`**, PUSHED to the PRIVATE remote as backup (D-089) |
+| Cycle 3 candidate | **LANDED `0bc79a8`, LOCAL, UNPUSHED.** D-090(a) exit contract + README re-route; independently verified, both clauses HOLD; return note `docs/cycle-3-return-note.md` |
+| Next | John: decide the push of `0bc79a8` (backup, PRIVATE verified first), the §5.5.1 refusal-record fork, the `[PASS]` diagnostic-line fork, and whether the packet note stands; then the orchestrator files D-090 as the SMITH DECISION and Cycle 3 runs on `0bc79a8`. **No gate signature, no Critical withdrawal, no publication** |
 | Publication | **NOT AUTHORISED.** Unchanged. Licence DEFERRED (D-082(c)); `docs/publication-policy.state` is HELD_PRIVATE / UNDECIDED / NONE |
 
 ### WHERE THE PROJECT IS, 2026-08-29

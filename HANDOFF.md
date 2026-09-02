@@ -24,6 +24,16 @@ its code fix is in the current batch. **D-085 reversed D-083(h)** — D-047 is r
 governs, there is no open-ended clean-round loop, and the agent's error that produced D-083(h) is
 recorded with the reversal — and changed the review method to a systematic inventory diff
 (`docs/check-inventory-diff-2026-08-31.md`: the class is 54 + 4 + 4 missing checks, not 6).
+**THE CYCLE 3 CANDIDATE LANDED 2026-09-02 AT `0bc79a8373ec26398702b47430da48134e7cbfe6`, LOCAL AND UNPUSHED.** Cycle 2
+closed both Cycle 1 Criticals and sustained one: the first surface routed to `verify.py`, PASS/exit 0
+on BLOCK (D-090). Route (a): `verify.py` reports BLOCK or un-overridden REVIEW as `=> AUTHENTIC, NOT
+EXECUTABLE`, exit 3, test-first (18 tests, suite 221 → 239); root README rewritten, first surface
+through `verify_publication.py` only, entry-point paragraph on top; the gate's D-010 walk requires
+exit 3. Independently verified — both clauses HOLD — and three stale passages asserting the old
+behaviour fixed, including the shipped `verify_publication.py` docstring and a dated note in the Gate 8
+packet README (reversible). Return note `docs/cycle-3-return-note.md`; register §8; `docs/session-state.md`
+carries the forks that are John's. Push, Critical withdrawal, publication: none authorised.
+
 **THE CYCLE 2 CANDIDATE LANDED 2026-09-02 AT `cb124feaad6b925f683b0739de53970e1700e146`** — both Binding Criticals closed (one demonstrated, one fixed by the non-certifying route), the three missing arms ported, a fourth guard (`check-release-executes.sh`) that RUNS the shipped verifier after it shipped unable to import while every other guard passed, packaging per D-085(f). Return package at `docs/cycle-2-return-package.md`. F-2 ruled exempt at D-088. **D-087 scoped the next candidate to ~35 items** — the §5.6 evidence-projection arm, the
 reason-code arm, four Vault-axis items, §5.7.1 conformance named precisely, the A/B semantic split
 stated on both verifiers, the §5.5.1 refusal arm recognised and refused, release packaging per

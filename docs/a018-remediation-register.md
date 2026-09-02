@@ -1037,3 +1037,45 @@ in whichever is chosen. Not in the Cycle 3 candidate's ruled scope.
 - **The root README now states its prerequisites as tested, not pinned** — Node 26.3.0, Foundry
   1.7.1, Python 3.9.6 — because R-A018-13 (toolchain pinning) is still open and stating a pin that
   does not exist would be the claim-without-control this register is about.
+
+---
+
+## 8. Cycle 3 candidate `0bc79a8` — the sustained Critical's withdrawal condition, closed as written
+
+Recorded 2026-09-02 by the coordinating agent. Return note: `docs/cycle-3-return-note.md`.
+Withdraws nothing; the Critical is the council's.
+
+**What landed.** D-090(a): `verify.py` reports a BLOCK receipt or an un-overridden REVIEW as
+`=> AUTHENTIC, NOT EXECUTABLE`, exit 3 — the `gpgv` model; PASS/0 and FAIL/1 unchanged for the
+other states; `1 > 3 > 0`. Written test-first (`TestExitContractD090`, 18 tests, 221 → 239) by an
+independent author before the implementer touched `verify.py`; the D-010 walk in `test.sh`
+requires exit 3 from `--all`, deliberately not `0|3`. D-090(b),(d): root README rewritten, first
+surface through `verify_publication.py` only, entry-point paragraph at the top, reviewer-packet
+section labelled Historical.
+
+**What the independent verifier found beyond the condition, and what was done.** Three passages
+still asserted the withdrawn behaviour: the `docs/enforcement-release-v0.3.md` consequences
+table (struck in place, amended); the `verify_publication.py` docstring, **which ships in the
+release tree** (rewritten, re-assembled, guards clean); and `reviewer-packet/README.md`, which
+routed to the packet's frozen v0.2 `verify.py` with no disclosure (a dated additive note added;
+nothing in the packet struck, rewritten or regenerated — reversible, the Smith may strike it).
+The lesson is the one this register already records under §THE PATTERN: **a contract change is
+not landed until every surface that described the old contract has been re-measured against the
+new one** — the README lane did this for its file; the docstring of the *other* verifier and the
+authority document the README cites were not on anyone's list until a fresh agent walked every
+`verify.py` mention.
+
+**Disclosed, not changed — forks for John, not the build team.**
+- **§5.5.1 refusal records still get `=> PASS: AUTHENTIC` / exit 0 from `verify.py`**
+  (`fixtures/samples/refusal-vault-paused`). Outside D-090(a)'s text (BLOCK or un-overridden
+  REVIEW); the test author did not extend the ruling. If extended, it is the same classifier
+  branch plus a test, and the D-010 walk's expected exit is unaffected (already 3).
+- **Per-check `[PASS]` diagnostic lines** still print in a BLOCK run; only the headline and
+  summary carry the new word. A `grep -q PASS` matches. Renaming the prefix touches 239 tests.
+- **The packet's `verify.py`** stays the Gate 8 artifact and still exits 0 on BLOCK, disclosed in
+  three places on the root README and once in the packet.
+
+**Still open from earlier entries:** R-A018-13 (toolchain pinning), R-A018-26 (e2e clock flake),
+R-A018-27 (`release/demo-out/` untracked), the two carried dead assertions in `test_verifier.py`
+(`ACCEPT V6` on `test_key_sorting_is_utf16_code_units` is one of them and the vacuity guard still
+names it), `check-review-scope.sh` failing at HEAD on 435 unassigned `release/` files.
