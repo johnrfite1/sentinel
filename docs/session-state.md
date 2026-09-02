@@ -85,8 +85,10 @@ no push is authorised. `.serena/` remains gitignored.
 > **2026-09-02 — THE CYCLE 2 CANDIDATE IS `cb124feaad6b925f683b0739de53970e1700e146`.** Built under
 > D-086/D-087 with test-first separation; fast gate PASSED; 104/105 · 61/61 · 53/53 · 221/221 ·
 > 557/557 · 105/105; every guard clean including the new `check-release-executes.sh`. Return
-> package for the council at `docs/cycle-2-return-package.md`. F-2 ruled exempt (D-088). Nothing
-> pushed; repo PRIVATE; licence DEFERRED. The lab casting's Cycle 2 is the next external event.
+> package for the council at `docs/cycle-2-return-package.md`. F-2 ruled exempt (D-088). ~~Nothing
+> pushed~~ **PUSHED 2026-09-02 at John's explicit direction (D-089) to the PRIVATE remote — backup,
+> not publication (D-044(a)); visibility verified PRIVATE before the push.** Repo PRIVATE; licence
+> DEFERRED. The lab casting's Cycle 2 is the next external event.
 >
 > **2026-08-30 — THE CRUCIBLE LINE IS HALTED; A REMEDIATION SET IS PROPOSED, ~~NOT AGREED AND NOT
 > STARTED~~.** **Corrected 2026-09-01: it was not agreed as a register, but its §3 items were

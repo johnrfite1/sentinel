@@ -150,6 +150,9 @@ Measured at commit time, 2026-09-02:
 
 - `gh repo view johnrfite1/sentinel --json visibility` → **`PRIVATE`**
 - `git rev-parse origin/step-3/isolated-signer` → `70f4b4d`; **nothing pushed**; 11 commits local
+  — **as measured when this package was written. Superseded the same day:** John directed a push to
+  the PRIVATE remote as backup (D-089); visibility was verified PRIVATE before it. Not publication.
+  The candidate `cb124fe` is unchanged by a push.
 - No `LICENSE*` at the repository root; rights mode `UNDECIDED`; **licence DEFERRED under D-082(c)**
 - No deployment, no release, no visibility action. `docs/publication-policy.state` is `HELD_PRIVATE`.
 

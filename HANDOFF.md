@@ -28,9 +28,10 @@ recorded with the reversal — and changed the review method to a systematic inv
 reason-code arm, four Vault-axis items, §5.7.1 conformance named precisely, the A/B semantic split
 stated on both verifiers, the §5.5.1 refusal arm recognised and refused, release packaging per
 D-085(f), and the 2026-08-30 round's confirmed findings — and that build is what is in flight.
-**Still true and unchanged:** nothing is pushed (`git log --oneline
-origin/step-3/isolated-signer..HEAD` — count it, never quote it), no Critical is withdrawn, no
-gate is signed, publication is not authorised, and the licence is DEFERRED under D-082(c). Start
+**Still true and unchanged:** no Critical is withdrawn, no gate is signed, publication is not
+authorised, and the licence is DEFERRED under D-082(c). ~~Nothing is pushed~~ **PUSHED 2026-09-02
+at John's direction (D-089), to the PRIVATE remote as backup, not publication — measure with
+`git rev-parse origin/step-3/isolated-signer`, never quote it.** Start
 at `docs/session-state.md` §1.
 
 **2026-08-30 — CYCLE 2 IS HALTED; A PROPOSED REMEDIATION SET IS DRAFTED AT
