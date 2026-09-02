@@ -1065,15 +1065,22 @@ new one** — the README lane did this for its file; the docstring of the *other
 authority document the README cites were not on anyone's list until a fresh agent walked every
 `verify.py` mention.
 
-**Disclosed, not changed — forks for John, not the build team.**
-- **§5.5.1 refusal records still get `=> PASS: AUTHENTIC` / exit 0 from `verify.py`**
-  (`fixtures/samples/refusal-vault-paused`). Outside D-090(a)'s text (BLOCK or un-overridden
-  REVIEW); the test author did not extend the ruling. If extended, it is the same classifier
-  branch plus a test, and the D-010 walk's expected exit is unaffected (already 3).
-- **Per-check `[PASS]` diagnostic lines** still print in a BLOCK run; only the headline and
-  summary carry the new word. A `grep -q PASS` matches. Renaming the prefix touches 239 tests.
-- **The packet's `verify.py`** stays the Gate 8 artifact and still exits 0 on BLOCK, disclosed in
-  three places on the root README and once in the packet.
+**The three forks, ruled by John the same day (D-091).**
+- **§5.5.1 refusal records — EXTENDED, D-091(a), built into the final candidate.** `verify.py`
+  had still printed `=> PASS: AUTHENTIC` / exit 0 on `fixtures/samples/refusal-vault-paused`;
+  it now reports the record as `=> AUTHENTIC, NOT EXECUTABLE`, exit 3. Same D-058(1) shape: a
+  second independent test author (`TestExitContractD091`, 13 tests, 8 red against the frozen
+  `0bc79a8` verifier; two old-contract tests rewritten), a second implementer confined to
+  `verify.py`, a second verifier. Suite 239 → 252, floor raised; `--all fixtures/samples` now lists
+  five `NOT EXECUTABLE` bundles. The `--all` summary sentence was reworded because the BLOCK
+  wording ("carry a verdict SentinelVault refuses") would have been false of a record that carries
+  no verdict — the implementer caught that, not the tests.
+- **Per-check `[PASS]` diagnostic lines — STAND, disclosed (D-091(b)).** The contract is the
+  headline and the exit status. Listed as a strike surface in the return note.
+- **The dated note in the packet README — STANDS (D-091(c)).** The packet is not regenerated.
+
+**Push of the final Cycle 3 SHA authorised as backup (D-091(d))**, PRIVATE verified immediately
+before; not publication.
 
 **Still open from earlier entries:** R-A018-13 (toolchain pinning), R-A018-26 (e2e clock flake),
 R-A018-27 (`release/demo-out/` untracked), the two carried dead assertions in `test_verifier.py`

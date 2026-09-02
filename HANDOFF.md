@@ -24,7 +24,13 @@ its code fix is in the current batch. **D-085 reversed D-083(h)** — D-047 is r
 governs, there is no open-ended clean-round loop, and the agent's error that produced D-083(h) is
 recorded with the reversal — and changed the review method to a systematic inventory diff
 (`docs/check-inventory-diff-2026-08-31.md`: the class is 54 + 4 + 4 missing checks, not 6).
-**THE CYCLE 3 CANDIDATE LANDED 2026-09-02 AT `0bc79a8373ec26398702b47430da48134e7cbfe6`, LOCAL AND UNPUSHED.** Cycle 2
+**THE FINAL CYCLE 3 CANDIDATE IS `81edee1a770648345401ea782b4928c382d3602f` (2026-09-02), PUSHED TO THE PRIVATE
+REMOTE AS BACKUP UNDER D-091(d).** It adds D-091(a) to `0bc79a8`: a §5.5.1 refusal record is now
+`=> AUTHENTIC, NOT EXECUTABLE`, exit 3, from `verify.py` — test-first in a second lane, suite 239 → 252,
+independently verified (HOLDS). D-091 also ruled the `[PASS]` diagnostic lines stand and the packet note
+stands. Cycle 3 runs on `81edee1`.
+
+**THE FIRST CYCLE 3 CANDIDATE LANDED 2026-09-02 AT `0bc79a8373ec26398702b47430da48134e7cbfe6`** (superseded by `81edee1`). Cycle 2
 closed both Cycle 1 Criticals and sustained one: the first surface routed to `verify.py`, PASS/exit 0
 on BLOCK (D-090). Route (a): `verify.py` reports BLOCK or un-overridden REVIEW as `=> AUTHENTIC, NOT
 EXECUTABLE`, exit 3, test-first (18 tests, suite 221 → 239); root README rewritten, first surface

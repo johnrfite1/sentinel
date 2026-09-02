@@ -3,9 +3,8 @@
 Rewritten at the end of each working session. **This file, not the conversation, is the
 memory.** If it disagrees with anything an agent remembers, this file wins.
 
-Last updated: **2026-09-02 (the Cycle 3 candidate is `0bc79a8`, LOCAL and UNPUSHED; D-090
-recorded; the Cycle 2 candidate `cb124fe` was pushed to the PRIVATE remote as backup under D-089;
-publication is not authorised).**
+Last updated: **2026-09-02 (the final Cycle 3 candidate is `81edee1`, PUSHED to the PRIVATE remote as
+backup under D-091(d); D-090 and D-091 recorded; publication is not authorised).**
 ~~Last updated: 2026-09-01 (the Cycle 2 candidate is IN BUILD under D-087; D-085 and D-086
 recorded; the BLOCK→PASS defect named below is FIXED at `8d47a0b`; publication is not
 authorised).~~ — superseded.
@@ -85,7 +84,17 @@ no push is authorised. `.serena/` remains gitignored.
 > Criticals are still OPEN AT ANVIL (D-083(i)); the lab casting is HALTED pending the new SHA.
 > The block below is struck where it is now false and otherwise stands.
 >
-> **2026-09-02 (later) — THE CYCLE 3 CANDIDATE IS `0bc79a8373ec26398702b47430da48134e7cbfe6`, LOCAL, NOT PUSHED.**
+> **2026-09-02 (latest) — THE FINAL CYCLE 3 CANDIDATE IS `81edee1a770648345401ea782b4928c382d3602f`, PUSHED AS BACKUP (D-091(d)).**
+> John ruled the three forks below (D-091): §5.5.1 refusal records EXTENDED into the contract —
+> `verify.py` now reports a signed refusal record as `=> AUTHENTIC, NOT EXECUTABLE`, exit 3, built
+> test-first in a second lane (`TestExitContractD091`, 13 tests, suite 239 → 252, floor raised) and
+> verified by a third independent agent (HOLDS; vacuity checked empirically, 10/14 red against the
+> old code); the `[PASS]` diagnostic lines STAND, disclosed; the packet note STANDS. `--all
+> fixtures/samples` lists five NOT EXECUTABLE bundles. Gate PASSED at floor 252; guards clean.
+> Return note `docs/cycle-3-return-note.md` names `81edee1` as the candidate to file. **Next external
+> event: the orchestrator files D-090 as the SMITH DECISION and Cycle 3 runs on `81edee1`.**
+>
+> **2026-09-02 (later) — THE FIRST CYCLE 3 CANDIDATE WAS `0bc79a8373ec26398702b47430da48134e7cbfe6`** (superseded by `81edee1` above).
 > Cycle 2 closed both Cycle 1 Criticals and sustained one new one — the first surface routed to
 > `verify.py`, which returned PASS/exit 0 on BLOCK (D-090). Route (a) taken: `verify.py` now
 > reports BLOCK or un-overridden REVIEW as `=> AUTHENTIC, NOT EXECUTABLE`, exit 3 (the `gpgv`
@@ -365,8 +374,8 @@ The table below is the 2026-08-29 record and is left as written. Since then:
 | Enforcement line | **Unchanged: HALTED, four A-018 Criticals OPEN AT ANVIL** (D-083(i)) |
 | Review method | **Inventory diff replaces one-at-a-time finding** (D-085(e)). Measured class: 54 + 4 + 4 missing checks, not 6. D-047 is retired; D-055(a) governs (D-085(a)) |
 | Cycle 2 candidate | **LANDED `cb124fe`**, PUSHED to the PRIVATE remote as backup (D-089) |
-| Cycle 3 candidate | **LANDED `0bc79a8`, LOCAL, UNPUSHED.** D-090(a) exit contract + README re-route; independently verified, both clauses HOLD; return note `docs/cycle-3-return-note.md` |
-| Next | John: decide the push of `0bc79a8` (backup, PRIVATE verified first), the §5.5.1 refusal-record fork, the `[PASS]` diagnostic-line fork, and whether the packet note stands; then the orchestrator files D-090 as the SMITH DECISION and Cycle 3 runs on `0bc79a8`. **No gate signature, no Critical withdrawal, no publication** |
+| Cycle 3 candidate | **FINAL `81edee1`, PUSHED as backup (D-091(d)).** `0bc79a8` closed the condition as written (verified, both clauses HOLD); `81edee1` adds D-091(a) refusal records (verified, HOLDS). Return note `docs/cycle-3-return-note.md` |
+| Next | The orchestrator files D-090 as the SMITH DECISION and Cycle 3 runs on `81edee1`. **No gate signature, no Critical withdrawal, no publication** |
 | Publication | **NOT AUTHORISED.** Unchanged. Licence DEFERRED (D-082(c)); `docs/publication-policy.state` is HELD_PRIVATE / UNDECIDED / NONE |
 
 ### WHERE THE PROJECT IS, 2026-08-29
