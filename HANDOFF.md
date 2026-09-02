@@ -24,7 +24,7 @@ its code fix is in the current batch. **D-085 reversed D-083(h)** — D-047 is r
 governs, there is no open-ended clean-round loop, and the agent's error that produced D-083(h) is
 recorded with the reversal — and changed the review method to a systematic inventory diff
 (`docs/check-inventory-diff-2026-08-31.md`: the class is 54 + 4 + 4 missing checks, not 6).
-**D-087 scoped the next candidate to ~35 items** — the §5.6 evidence-projection arm, the
+**THE CYCLE 2 CANDIDATE LANDED 2026-09-02 AT `cb124feaad6b925f683b0739de53970e1700e146`** — both Binding Criticals closed (one demonstrated, one fixed by the non-certifying route), the three missing arms ported, a fourth guard (`check-release-executes.sh`) that RUNS the shipped verifier after it shipped unable to import while every other guard passed, packaging per D-085(f). Return package at `docs/cycle-2-return-package.md`. F-2 ruled exempt at D-088. **D-087 scoped the next candidate to ~35 items** — the §5.6 evidence-projection arm, the
 reason-code arm, four Vault-axis items, §5.7.1 conformance named precisely, the A/B semantic split
 stated on both verifiers, the §5.5.1 refusal arm recognised and refused, release packaging per
 D-085(f), and the 2026-08-30 round's confirmed findings — and that build is what is in flight.
