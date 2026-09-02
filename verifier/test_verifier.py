@@ -2667,15 +2667,22 @@ class TestRefusalBundle(unittest.TestCase):
         ):
             self.assertIn(expected, names)
 
-    def test_the_cli_exits_zero_on_a_signed_refusal(self):
+    def test_the_cli_exits_3_on_a_signed_refusal_not_0(self):
+        # Was `test_the_cli_exits_zero_on_a_signed_refusal`, asserting 0, until
+        # D-091(a) made that assertion the defect: a signed refusal is AUTHENTIC and
+        # there is nothing in it for SentinelVault to execute, so it takes the same
+        # word and exit status as a BLOCK receipt (D-090(a)). This bundle uses the
+        # `refusal.json` envelope, which the corpus sample does not, so the
+        # classification is pinned on both shapes (TestExitContractD091 has the other).
         target = self.stage_refusal()
-        with open(os.devnull, "w") as devnull:
-            saved, sys.stdout = sys.stdout, devnull
-            try:
-                self.assertEqual(
-                    verify.main(["--domain", trust_root(target), target]), 0)
-            finally:
-                sys.stdout = saved
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            rc = verify.main(["--domain", trust_root(target), target])
+        out = _strip_ansi(buf.getvalue())
+        self.assertEqual(rc, EXIT_NOT_EXECUTABLE, out[-1500:])
+        self.assertNotIn("=> PASS", out)
+        self.assertIn(f"=> {NOT_EXECUTABLE_WORD}", out)
+        self.assertIn("1/1 sample(s) verified", out)
 
     def test_the_flat_envelope_verifies_identically(self):
         # §5.5.1: "SignedRefusalRecord contains RefusalRecord plus
@@ -3520,6 +3527,13 @@ class TestExitContractD090(unittest.TestCase):
     `--all fixtures/samples` exits 3 -- and the gate's D-010 stage, which today
     treats any non-zero status as a failure, must learn that (see the report that
     accompanies this class; scripts/test.sh is not this file's to edit).
+
+    D-091(a) (2026-09-02) EXTENDED THIS CONTRACT to the §5.5.1 refusal record, which
+    this class had left on the PASS side: "Refusals keep FAIL / exit 1" above means
+    REFUSED bundles -- a check that did not hold -- not a signed refusal record, which
+    is authentic and carries nothing to execute. The corpus therefore lists FIVE
+    NOT EXECUTABLE bundles, not four; the aggregate test below was rewritten to say
+    so, and TestExitContractD091 pins the refusal record's own contract.
     """
 
     BLOCK_SAMPLE = os.path.join(SAMPLES, "case-2-injection-block")
@@ -3809,19 +3823,23 @@ class TestExitContractD090(unittest.TestCase):
 
     # -- 6. the aggregate ------------------------------------------------------------
 
+    # D-091(a): the §5.5.1 refusal record moved from the PASSING list to this one. It
+    # was the seventh "PASS" until John ruled it reports as a BLOCK receipt does.
     NOT_EXECUTABLE_IN_CORPUS = ("case-2-injection-block", "case-3-wrong-purpose-block",
-                                "case-4-blocked-failmode-failclosed", "edge-single-reason-code")
-    PASSING_IN_CORPUS = ("case-1-allow", "case-4-review-failmode-review", "refusal-vault-paused")
+                                "case-4-blocked-failmode-failclosed", "edge-single-reason-code",
+                                "refusal-vault-paused")
+    PASSING_IN_CORPUS = ("case-1-allow", "case-4-review-failmode-review")
 
     def _lines_naming(self, out, needle):
         return [l for l in out.splitlines() if needle in l]
 
     def test_all_over_the_shipped_corpus_exits_3_and_still_counts_7_of_7_authentic(self):
         # WHAT THE GATE RUNS, verbatim: scripts/test.sh's D-010 stage. Four of the
-        # seven bundles are BLOCK by design, none is refused, so the aggregate is 3.
-        # The count line keeps the `N/M sample(s) verified` form -- the gate's sed
-        # reads it against VERIFIER_MIN_SAMPLES -- and N is the AUTHENTIC count,
-        # because that is the claim the phrase makes and all seven are authentic.
+        # seven bundles are BLOCK by design and a fifth is a §5.5.1 refusal record
+        # (D-091(a)); none is refused, so the aggregate is 3. The count line keeps
+        # the `N/M sample(s) verified` form -- the gate's sed reads it against
+        # VERIFIER_MIN_SAMPLES -- and N is the AUTHENTIC count, because that is the
+        # claim the phrase makes and all seven are authentic.
         rc, out = self._proc("--domain", self.DOMAIN, "--all", SAMPLES)
         self.assertEqual(rc, EXIT_NOT_EXECUTABLE, out[-2000:])
         self.assertRegex(out, r"(?m)^7/7 sample\(s\) verified")
@@ -3841,8 +3859,9 @@ class TestExitContractD090(unittest.TestCase):
                              f"{name} PASSES and must not be listed after the summary")
         heads = _headline_blocks(out)
         self.assertEqual(len(heads), 7)
-        self.assertEqual(sum(h.startswith(f"=> {NOT_EXECUTABLE_WORD}") for h in heads), 4)
-        self.assertEqual(sum(h.startswith("=> PASS: AUTHENTIC") for h in heads), 3)
+        # 4 -> 5 and 3 -> 2 at D-091(a): the refusal record is the fifth.
+        self.assertEqual(sum(h.startswith(f"=> {NOT_EXECUTABLE_WORD}") for h in heads), 5)
+        self.assertEqual(sum(h.startswith("=> PASS: AUTHENTIC") for h in heads), 2)
 
     def test_all_over_a_corpus_of_executable_shaped_bundles_exits_0(self):
         # The control for the test above: remove the BLOCK bundles and the aggregate
@@ -3880,6 +3899,318 @@ class TestExitContractD090(unittest.TestCase):
         rc, out = self._cli("--domain", self.DOMAIN, self.BLOCK_SAMPLE, forged)
         self.assertEqual(rc, EXIT_REFUSED, out[-1500:])
         self.assertIn("1/2 sample(s) verified", out)
+
+
+class TestExitContractD091(unittest.TestCase):
+    """D-091(a), written before any implementer touched verify.py (D-058(1)).
+
+    THE GAP D-090(a) LEFT. `verify.py` printed `=> PASS: AUTHENTIC` and exited 0 on
+    `fixtures/samples/refusal-vault-paused`, measured at 0bc79a8 on 2026-09-02. A
+    §5.5.1 SignedRefusalRecord is a signed refusal TO ISSUE a receipt: it is
+    authentic -- digest, signature, signer identity and every binding hold against
+    the named trust root -- and there is nothing in it for SentinelVault to execute,
+    which is why verify_publication.py refuses it (D-087(d)). That is exactly the
+    shape D-090(a) took the PASS word away from: a bundle that is genuinely the
+    signer's and that the Vault will not run. The refusal record was left on the
+    PASS side of that ruling only because it carries no verdict for `_not_executable`
+    to read.
+
+    THE RULED CONTRACT. An authentic refusal record reports the way an authentic
+    BLOCK receipt does: headline `=> AUTHENTIC, NOT EXECUTABLE: ...`, exit status 3,
+    `NOT EXECUTABLE: <path>` after the summary, and the summary counting it as
+    AUTHENTIC. The headline must say what the bundle IS -- a §5.5.1 refusal record --
+    and not borrow the BLOCK sentence: a refusal record has no signed verdict, so
+    "the signed verdict is BLOCK" would be a false diagnostic of the H-5 kind. The
+    exact wording is the implementer's; this class pins the prefix and the two words
+    `refusal` and `§5.5.1`.
+
+    WHAT DOES NOT MOVE. `verify_sample()` still answers authenticity (D-090(a)'s
+    API pin, re-pinned here for the refusal record). A tampered refusal record is a
+    refusal, `=> FAIL` / exit 1 -- 1 beats 3 beats 0, single bundle and aggregate
+    alike. A refusal record with an `override.json` beside it is already refused
+    (D-052(b): an unexamined §5.5 credential riding with a refusal) and stays
+    refused; it must not become NOT EXECUTABLE, because a refused bundle is not an
+    authentic one. The `--tamper` self-test is untouched: `refusal-*` modes are
+    "correctly rejected", the receipt-only modes are N/A, and the run exits 0.
+
+    THE AGGREGATE. `--all fixtures/samples` now lists FIVE bundles as NOT EXECUTABLE
+    -- the four BLOCK receipts and the refusal record -- and still exits 3 with
+    `7/7 sample(s) verified as AUTHENTIC`. TestExitContractD090's corpus test was
+    rewritten to five; this class pins the refusal record's line by name, and the
+    two multi-bundle shapes (positional and `--all`) each with the refusal record in
+    them, because this file has twice found a repair that closed one invocation
+    shape and left the other open.
+    """
+
+    REFUSAL_SAMPLE = os.path.join(SAMPLES, "refusal-vault-paused")
+    ALLOW_SAMPLE = os.path.join(SAMPLES, "case-1-allow")
+    BLOCK_SAMPLE = os.path.join(SAMPLES, "case-2-injection-block")
+    DOMAIN = os.path.join(SAMPLES, "domain.json")
+
+    # The check a corrupted refusal signature must fail on, verbatim from verify.py.
+    # Named so that the refusal comes from the recovery check itself (A-056), not
+    # from a shape check noticing a malformed signature.
+    REFUSAL_RECOVERY_CHECK = "the signature recovers the record's declared signer"
+    # D-052(b)'s check, verbatim, for the stray-override case.
+    REFUSAL_OVERRIDE_CHECK = "a §5.5.1 refusal bundle carries no §5.5 owner override"
+
+    # -- helpers (the D-090 class's, by reference, so the two classes cannot drift) --
+
+    _cli = TestExitContractD090._cli
+    _proc = TestExitContractD090._proc
+    _tmp = TestExitContractD090._tmp
+    _staged = TestExitContractD090._staged
+    _corrupt_hex = staticmethod(TestExitContractD090._corrupt_hex)
+    _corrupt_receipt_signature = TestExitContractD090._corrupt_receipt_signature
+    _lines_naming = TestExitContractD090._lines_naming
+
+    def _corrupt_refusal_signature(self, target):
+        # The corpus envelope: receipt.json -> refusalRecord -> {record, signature,
+        # reasonCodes}. Same nibble-flip as the receipt case: well-formed, low-s,
+        # recovers to the WRONG address.
+        doc = read_json(target, "receipt.json")
+        envelope = doc["refusalRecord"]
+        envelope["signature"] = self._corrupt_hex(envelope["signature"])
+        write_json(os.path.join(target, "receipt.json"), doc)
+
+    def _assert_refusal_not_executable(self, rc, out, count="1/1"):
+        """The whole of the D-091(a) contract for one refusal record."""
+        self.assertEqual(rc, EXIT_NOT_EXECUTABLE,
+                         f"an authentic §5.5.1 refusal record must exit "
+                         f"{EXIT_NOT_EXECUTABLE}, got {rc}")
+        blocks = _headline_blocks(out)
+        self.assertEqual(len(blocks), 1, f"expected one headline, got {blocks!r}")
+        head = blocks[0]
+        first = head.splitlines()[0]
+        self.assertTrue(head.startswith(f"=> {NOT_EXECUTABLE_WORD}"),
+                        f"the headline word must be {NOT_EXECUTABLE_WORD!r}; got {head!r}")
+        self.assertNotIn("PASS", first, "the recipient-facing word must not contain PASS")
+        self.assertNotIn("FAIL", first,
+                         "an authentic refusal record is not a refused bundle; no FAIL")
+        self.assertIn("AUTHENTIC", head, "the output must still state the record is authentic")
+        # What it IS. The implementer words the reason; it must name the artifact.
+        # "refusal record", not the bare word: the D-090(a) continuation line already
+        # says "neither a certification nor a refusal", so "refusal" alone is vacuous.
+        self.assertIn("refusal record", head.lower(),
+                      f"the headline must say this is a refusal record: {head!r}")
+        self.assertIn("§5.5.1", head,
+                      f"the headline must cite §5.5.1, as the BLOCK headline cites §5.5: {head!r}")
+        # What it is NOT. A refusal record carries no signed verdict, so the BLOCK
+        # and REVIEW sentences from D-090(a) would be false diagnostics here (H-5).
+        for borrowed in ("the signed verdict is BLOCK", "the signed verdict is REVIEW"):
+            self.assertNotIn(borrowed, head,
+                             "a refusal record must not be reported with a receipt's verdict")
+        self.assertNotIn("=> PASS", out, "no `=> PASS` anywhere in the run")
+        self.assertNotIn("=> FAIL", out, "no `=> FAIL` anywhere in the run")
+        # The count line is the AUTHENTIC count -- the record IS authentic -- and the
+        # text after it must carry the state, so `tail -1` does not read "verified".
+        summary = f"{count} sample(s) verified"
+        self.assertIn(summary, out)
+        after_summary = out[out.index(summary):]
+        self.assertIn("NOT EXECUTABLE", after_summary,
+                      "the summary must say the record is not executable")
+        self.assertNotIn("FAILED:", after_summary, "nothing here is refused")
+
+    def _assert_refused(self, rc, out, count="0/1"):
+        self.assertEqual(rc, EXIT_REFUSED, out[-1500:])
+        blocks = _headline_blocks(out)
+        self.assertEqual(len(blocks), 1, blocks)
+        self.assertTrue(blocks[0].startswith("=> FAIL"), blocks[0])
+        self.assertNotIn(NOT_EXECUTABLE_WORD, out,
+                         "a refused bundle must not be reported as authentic-not-executable")
+        self.assertNotIn("NOT EXECUTABLE", out)
+        self.assertIn(f"{count} sample(s) verified", out)
+        self.assertIn("FAILED:", out)
+
+    # -- 1. the single refusal record --------------------------------------------------
+
+    def test_every_shipped_refusal_record_is_AUTHENTIC_NOT_EXECUTABLE_and_exits_3(self):
+        # THE DEFECT, measured: `=> PASS: AUTHENTIC`, exit 0, at 0bc79a8.
+        dirs = refusal_sample_dirs()
+        self.assertTrue(dirs, "§5.5.1 is untested by any artifact again")
+        self.assertIn(self.REFUSAL_SAMPLE, dirs)
+        for path in dirs:
+            with self.subTest(sample=os.path.basename(path)):
+                ok, checks = _verify(path)
+                self.assertTrue(ok, [c.name for c in checks if not c.ok])   # the control
+                rc, out = self._cli("--domain", self.DOMAIN, path)
+                self._assert_refusal_not_executable(rc, out)
+                self.assertTrue(
+                    self._lines_naming(out[out.index("1/1 sample(s) verified"):], path),
+                    "the NOT EXECUTABLE line after the summary must name the bundle's path")
+
+    def test_the_process_exit_status_a_script_reads_is_3_for_the_shipped_refusal_record(self):
+        # Through the interpreter, not `main()`: the status `sys.exit(main())` delivers.
+        rc, out = self._proc("--domain", self.DOMAIN, self.REFUSAL_SAMPLE)
+        self._assert_refusal_not_executable(rc, out)
+
+    def test_a_staged_copy_of_the_refusal_record_under_another_parent_gets_the_same_contract(self):
+        # Same bytes, fresh parent, the test asserting its own trust root: the
+        # classification must read the bundle, not the corpus path.
+        target = self._staged("refusal-vault-paused")
+        rc, out = self._cli("--domain", trust_root(target), target)
+        self._assert_refusal_not_executable(rc, out)
+
+    def test_a_refusal_record_and_a_BLOCK_receipt_share_exit_3_and_the_headline_tells_them_apart(self):
+        # The ruling puts both on 3. A script reads only the status, so the two are
+        # deliberately NOT distinguishable there; a reader is, by the headline, which
+        # names the artifact in each case and must not describe one as the other.
+        rc_r, out_r = self._proc("--domain", self.DOMAIN, self.REFUSAL_SAMPLE)
+        rc_b, out_b = self._proc("--domain", self.DOMAIN, self.BLOCK_SAMPLE)
+        self.assertEqual((rc_r, rc_b), (EXIT_NOT_EXECUTABLE, EXIT_NOT_EXECUTABLE))
+        head_r = _headline_blocks(out_r)[0]
+        head_b = _headline_blocks(out_b)[0]
+        self.assertIn("refusal record", head_r.lower())
+        self.assertIn("§5.5.1", head_r)
+        # The BLOCK headline says "neither a certification nor a refusal" already, so
+        # the bare word cannot separate them; the artifact name and the section can.
+        self.assertNotIn("refusal record", head_b.lower(),
+                         "the BLOCK headline must not have been rewritten to describe a refusal record")
+        self.assertNotIn("§5.5.1", head_b)
+        self.assertIn("the signed verdict is BLOCK", head_b,
+                      "the D-090(a) BLOCK headline is unchanged by D-091(a)")
+        self.assertNotIn("the signed verdict is BLOCK", head_r)
+
+    def test_run_classifies_the_refusal_record_as_authentic_and_not_executable(self):
+        # The seam D-090(a) chose: run() returns (ok, checks, executable), with `ok`
+        # still authenticity and `executable` the reporting layer's classification.
+        # For a refusal record that is (True, ..., False).
+        with contextlib.redirect_stdout(io.StringIO()):
+            ok, checks, executable = verify.run(self.REFUSAL_SAMPLE, self.DOMAIN, quiet=True)
+        self.assertTrue(ok, [c.name for c in checks if not c.ok])
+        self.assertFalse(executable, "run() must classify an authentic refusal record as "
+                                     "not executable, as it does a BLOCK receipt")
+
+    # -- 2. the aggregate --------------------------------------------------------------
+
+    def test_all_over_the_shipped_corpus_lists_five_NOT_EXECUTABLE_including_the_refusal_record(self):
+        # WHAT THE GATE RUNS. Four BLOCK receipts plus the refusal record: five lines,
+        # exit 3, 7/7 authentic. README.md and scripts/test.sh say "four" today and
+        # will need to say five (reported, not edited, by this lane).
+        rc, out = self._proc("--domain", self.DOMAIN, "--all", SAMPLES)
+        self.assertEqual(rc, EXIT_NOT_EXECUTABLE, out[-2000:])
+        self.assertRegex(out, r"(?m)^7/7 sample\(s\) verified")
+        self.assertNotIn("FAILED:", out)
+        after = out[out.index("7/7 sample(s) verified"):]
+        listed = [l for l in after.splitlines() if l.strip().startswith("NOT EXECUTABLE:")]
+        self.assertEqual(len(listed), 5, f"five NOT EXECUTABLE lines, got {listed!r}")
+        named = self._lines_naming(after, self.REFUSAL_SAMPLE)
+        self.assertTrue(named and all("NOT EXECUTABLE" in l for l in named),
+                        f"the refusal record must be listed as NOT EXECUTABLE; got {named!r}")
+        heads = _headline_blocks(out)
+        self.assertEqual(len(heads), 7)
+        self.assertEqual(sum(h.startswith(f"=> {NOT_EXECUTABLE_WORD}") for h in heads), 5)
+        self.assertEqual(sum(h.startswith("=> PASS: AUTHENTIC") for h in heads), 2)
+
+    def test_all_over_a_corpus_of_only_the_refusal_record_exits_3(self):
+        # The `--all` discovery path with nothing but the refusal record in it: the
+        # classification must apply on this path as on the positional one.
+        tmp = self._tmp()
+        shutil.copytree(self.REFUSAL_SAMPLE, os.path.join(tmp, "refusal-vault-paused"))
+        rc, out = self._proc("--domain", self.DOMAIN, "--all", tmp)
+        self._assert_refusal_not_executable(rc, out)
+
+    def test_the_refusal_record_beside_an_ALLOW_bundle_exits_3_in_either_order(self):
+        # Positional multi-bundle: 3 beats 0, whichever bundle comes first, and only
+        # the refusal record is listed after the summary.
+        for order in ((self.REFUSAL_SAMPLE, self.ALLOW_SAMPLE),
+                      (self.ALLOW_SAMPLE, self.REFUSAL_SAMPLE)):
+            with self.subTest(order=[os.path.basename(p) for p in order]):
+                rc, out = self._cli("--domain", self.DOMAIN, *order)
+                self.assertEqual(rc, EXIT_NOT_EXECUTABLE, out[-1500:])
+                self.assertIn("2/2 sample(s) verified", out)
+                after = out[out.index("2/2 sample(s) verified"):]
+                self.assertTrue(self._lines_naming(after, self.REFUSAL_SAMPLE))
+                self.assertFalse(self._lines_naming(after, self.ALLOW_SAMPLE),
+                                 "the ALLOW bundle PASSES and is not listed after the summary")
+                heads = _headline_blocks(out)
+                self.assertEqual(sum(h.startswith("=> PASS: AUTHENTIC") for h in heads), 1)
+                self.assertEqual(sum(h.startswith(f"=> {NOT_EXECUTABLE_WORD}") for h in heads), 1)
+
+    def test_the_refusal_record_beside_a_tampered_bundle_exits_1_not_3(self):
+        # 1 beats 3: a forged receipt anywhere in the run is a refusal of the run,
+        # and the forged bundle -- not the refusal record -- is the one named FAILED.
+        forged = self._staged("case-1-allow")
+        self._corrupt_receipt_signature(forged)
+        rc, out = self._cli("--domain", self.DOMAIN, self.REFUSAL_SAMPLE, forged)
+        self.assertEqual(rc, EXIT_REFUSED, out[-1500:])
+        self.assertIn("1/2 sample(s) verified", out)
+        after = out[out.index("1/2 sample(s) verified"):]
+        self.assertTrue(any("FAILED" in l for l in self._lines_naming(after, forged)))
+        self.assertFalse(any("FAILED" in l for l in self._lines_naming(after, self.REFUSAL_SAMPLE)),
+                         "the authentic refusal record must not be listed as FAILED")
+
+    # -- 3. refusals of the refusal record stay FAIL / 1 --------------------------------
+
+    def test_a_tampered_signature_on_the_refusal_record_is_a_refusal_exit_1_not_3(self):
+        # PRECEDENCE, single bundle. A refusal record whose signature does not
+        # recover is not an authentic-not-executable record; it is not authentic.
+        # 1 must win over 3, or the new branch becomes a place for a forged
+        # refusal to hide -- the same argument D-090(a) made for a forged BLOCK.
+        target = self._staged("refusal-vault-paused")
+        self._corrupt_refusal_signature(target)
+        ok, _checks = _verify(target)
+        self.assertFalse(ok, "the control: the corrupted record must not verify")
+        rc, out = self._cli("--domain", trust_root(target), target)
+        self._assert_refused(rc, out)
+        self.assertIn(f"[FAIL] {self.REFUSAL_RECOVERY_CHECK}", out)
+
+    def test_a_refusal_record_with_a_stray_override_beside_it_is_refused_not_NOT_EXECUTABLE(self):
+        # MEASURED at 0bc79a8, before this ruling: verify.py already refuses this
+        # bundle -- `=> FAIL`, exit 1, on D-052(b)'s check -- because an unexamined
+        # §5.5 credential riding beside a refusal is not a certifiable shape. The
+        # analogous BLOCK bundle with a foreign override.json is also refused, on the
+        # override binding checks (pinned below as the control). D-091(a) must not
+        # move either into the new state: 1 beats 3, and a refused bundle is not an
+        # authentic one whatever else is in the directory.
+        target = self._staged("refusal-vault-paused")
+        shutil.copy(os.path.join(OVERRIDE_SAMPLE, "override.json"),
+                    os.path.join(target, "override.json"))
+        rc, out = self._cli("--domain", trust_root(target), target)
+        self._assert_refused(rc, out)
+        self.assertIn(f"[FAIL] {self.REFUSAL_OVERRIDE_CHECK}", out)
+        # The control: the same foreign override beside a BLOCK receipt.
+        block = self._staged("case-2-injection-block")
+        shutil.copy(os.path.join(OVERRIDE_SAMPLE, "override.json"),
+                    os.path.join(block, "override.json"))
+        rc, out = self._cli("--domain", trust_root(block), block)
+        self._assert_refused(rc, out)
+        self.assertIn("[FAIL] override targets a REVIEW receipt, not a BLOCK (§5.5)", out)
+
+    # -- 4. what does not move ----------------------------------------------------------
+
+    def test_verify_sample_still_answers_authenticity_for_the_refusal_record(self):
+        # The library call every in-process test consumes, and what the tamper
+        # self-test's "correctly rejected" reads. A refusal record is authentic, so
+        # `ok` is True; the reporting layer owns the word and the code (D-090(a)).
+        ok, checks = _verify(self.REFUSAL_SAMPLE)
+        self.assertTrue(ok, [c.name for c in checks if not c.ok])
+        self.assertFalse(any("EXECUTABLE" in c.name.upper() for c in checks),
+                         "no check named for executability may join the authenticity list "
+                         "(D-088: verify.py carries no executability condition)")
+
+    def test_the_tamper_self_test_on_the_refusal_sample_is_untouched(self):
+        # MEASURED at 0bc79a8 and pinned unchanged: `--tamper all` exits 0 with every
+        # refusal-* mode "correctly rejected"; a receipt-only mode is N/A and exits 0;
+        # a reason-code mode is N/A on a sample with zero reason codes and exits 0.
+        # `--tamper` replaces the headline with the self-test verdict, so the
+        # NOT EXECUTABLE word must never appear on this arm.
+        rc, out = self._cli("--domain", self.DOMAIN, "--tamper", "all", self.REFUSAL_SAMPLE)
+        self.assertEqual(rc, EXIT_PASS, out[-2000:])
+        self.assertIn("1/1 sample(s) behaved as expected under every tamper mode", out)
+        self.assertIn("correctly rejected the mutated refusal-signature", out)
+        self.assertNotIn("WRONGLY", out)
+        self.assertNotIn(NOT_EXECUTABLE_WORD, out)
+        self.assertNotIn("NOT EXECUTABLE", out)
+        for mode in ("signature", "reasons-reorder"):
+            with self.subTest(mode=mode):
+                rc, out = self._cli("--domain", self.DOMAIN, "--tamper", mode,
+                                    self.REFUSAL_SAMPLE)
+                self.assertEqual(rc, EXIT_PASS, out[-2000:])
+                self.assertIn("=> N/A", out)
+                self.assertNotIn(NOT_EXECUTABLE_WORD, out)
+                self.assertNotIn("=> PASS", out)
+                self.assertNotIn("=> FAIL", out)
 
 
 def _norm(a):

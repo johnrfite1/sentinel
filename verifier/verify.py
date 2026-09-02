@@ -17,8 +17,8 @@ established one."
     python3 verifier/verify.py --tamper --domain <deployment-domain.json> fixtures/samples/case-1-allow
     python3 verifier/verify.py --all --domain <deployment-domain.json> fixtures/samples
 
-WHAT THIS TOOL CERTIFIES, AND WHAT IT DOES NOT (D-087(c), 2026-09-01; D-090(a), 2026-09-02)
--------------------------------------------------------------------------------------------
+WHAT THIS TOOL CERTIFIES, AND WHAT IT DOES NOT (D-087(c), 2026-09-01; D-090(a), D-091(a), 2026-09-02)
+----------------------------------------------------------------------------------------------------
 This verifier certifies AUTHENTICITY: that the bundle is genuinely what the
 named signer produced -- every hash recomputes, every signature recovers to the
 trust root the verifying party names under --domain, every internal binding
@@ -35,18 +35,29 @@ Cycle 2.  The recipient-facing word and the exit status now follow the gpgv
 model: the claim is unchanged, the reporting is not.
 
     => PASS: AUTHENTIC              exit 0   ALLOW; REVIEW with a verified owner
-                                             override; a §5.5.1 refusal record
+                                             override
     => FAIL                         exit 1   a check did not hold: bad hash, bad
                                              signature, bad binding, bad override
     (nothing verified)              exit 2   --all found no bundles, or the path
                                              could not be enumerated (H-8)
-    => AUTHENTIC, NOT EXECUTABLE    exit 3   BLOCK; REVIEW with no override.json.
+    => AUTHENTIC, NOT EXECUTABLE    exit 3   BLOCK; REVIEW with no override.json;
+                                             a §5.5.1 refusal record (D-091(a)).
                                              Neither a certification nor a refusal.
+
+A §5.5.1 SignedRefusalRecord is the signer's signed refusal TO ISSUE a receipt.
+It is authentic on the same terms as a receipt -- digest, signature, signer
+identity and every binding hold against the named trust root -- and it carries
+no verdict, so there is nothing in it for SentinelVault to execute.  Until
+D-091(a) it sat on the exit-0 row only because the classification read a
+verdict it does not have; it now takes the same word and status as a BLOCK
+receipt, and the headline says which of the two the bundle is.
 
 Precedence, single bundle and aggregate alike: 1 beats 3 beats 0.  A BLOCK
 receipt whose signature does not recover is a refusal, not an authentic
-not-executable one.  The classification reads only the SIGNED verdict and
-whether an override.json is present; it is not an executability check, and
+not-executable one, and so is a refusal record whose signature does not
+recover.  The classification reads only which signed artifact the bundle
+presents, the SIGNED verdict when that artifact is a receipt, and whether an
+override.json is present; it is not an executability check, and
 `PASS (static, offline)` from the publication verifier remains a different
 claim from `=> PASS` here.
 
@@ -2257,39 +2268,59 @@ def _byte_diff(actual, expected):
 
 
 def _not_executable(sample_dir):
-    """D-090(a): the verdict-and-override classification of an AUTHENTIC bundle.
+    """D-090(a), D-091(a): the classification of an AUTHENTIC bundle.
 
-    Called only once verify_sample() has returned ok=True, so the verdict read here is
-    the SIGNED one: it sits inside the §5.4 struct the signature recovered over against
-    the named trust root, and _verdict_check() has already found that it decodes and
-    matches the case label. The directory name is never consulted.
+    Called only once verify_sample() has returned ok=True, so everything read here is
+    what the signature recovered over against the named trust root: the §5.4 verdict
+    sits inside the struct the receipt's signature covers, and _verdict_check() has
+    already found that it decodes and matches the case label; a §5.5.1 record is
+    located by the same `_locate_refusal` verify_sample() used, and ok=True means
+    _refusal_checks() verified the one it found. The directory name is never consulted.
 
-    Returns None for a bundle whose verdict the Vault would consider -- ALLOW; REVIEW
-    beside an override.json, which ok=True means was verified against this exact
-    receipt (§5.5); or a §5.5.1 refusal record, which carries no verdict to execute --
-    and otherwise (verdict name, reason) for the headline. This is NOT an executability
-    check: no operation, no window, no nonce, no clock (D-088 stands). It reads two
-    facts the verifier already authenticated, so that the exit status stops saying 0
-    for a verdict SentinelVault refuses at both entry points.
+    Returns None for a bundle SentinelVault would consider -- ALLOW, or REVIEW beside an
+    override.json, which ok=True means was verified against this exact receipt (§5.5)
+    -- and otherwise (kind, lead) for the headline, where `kind` is the verdict name
+    or "REFUSAL RECORD" and `lead` is the sentence that follows the NOT EXECUTABLE
+    word. The lead names what the bundle IS: a receipt's lead states its signed
+    verdict; a refusal record has no verdict, so its lead says the signer declined to
+    issue a receipt (D-091(a)), and never borrows the receipt sentence (H-5). This is
+    NOT an executability check: no operation, no window, no nonce, no clock (D-088
+    stands). It reads facts the verifier already authenticated, so that the exit
+    status stops saying 0 for a bundle SentinelVault will not execute.
     """
+    # Load the way verify_sample() loads: receipt.json when present, and an empty
+    # document beside a refusal.json, which is the one shape with no receipt to read.
     receipt_path = os.path.join(sample_dir, "receipt.json")
-    if not os.path.isfile(receipt_path):
-        return None
-    doc = _read_json(receipt_path)
+    if os.path.isfile(receipt_path):
+        doc = _read_json(receipt_path)
+    elif os.path.isfile(os.path.join(sample_dir, "refusal.json")):
+        doc = {}
+    else:
+        return None                       # unreachable with ok=True: nothing was presented
+    # D-091(a). A located record is the verified one: ok=True means verify_sample()
+    # took the §5.5.1 arm on exactly this record and every check on it held.
+    located, errors = _locate_refusal(sample_dir, doc)
+    if located and not errors:
+        return "REFUSAL RECORD", (
+            "this is a §5.5.1 refusal record, not a receipt -- the signer declined to "
+            "issue a receipt for this action, and a refusal record carries no verdict, "
+            "so there is nothing in this bundle for SentinelVault to execute.")
     receipt = doc.get("receipt")
     if doc.get("refused") or not isinstance(receipt, dict):
-        return None                       # a §5.5.1 refusal record: nothing to execute
+        return None                       # unreachable with ok=True: no signed artifact
     try:
         verdict = VERDICT_NAMES.get(int(receipt.get("verdict")))
     except (TypeError, ValueError):
         return None                       # unreachable with ok=True: _verdict_check failed
     if verdict == "BLOCK":
         return "BLOCK", (
+            "the signed verdict is BLOCK -- "
             "SentinelVault refuses a BLOCK receipt at both entry points, and §5.5 says a "
             "block receipt cannot be overridden. Nothing a recipient adds to this bundle "
             "makes it executable.")
     if verdict == "REVIEW" and not os.path.isfile(os.path.join(sample_dir, "override.json")):
         return "REVIEW", (
+            "the signed verdict is REVIEW -- "
             "the bundle carries no override.json. SentinelVault executes a REVIEW receipt "
             "only with an owner-signed override naming this exact receipt, action and "
             "nonce (§5.5). The cure is that override, placed beside receipt.json; this "
@@ -2301,10 +2332,10 @@ def run(sample_dir, domain_path=None, tamper=None, quiet=False, verbose=True):
     """Verify one bundle and print its headline. Returns (ok, checks, executable).
 
     `ok` is AUTHENTICITY, exactly as verify_sample() returns it. `executable` is the
-    D-090(a) classification of an authentic bundle -- False for a BLOCK receipt or a
-    REVIEW receipt with no override.json -- and is True whenever `ok` is False or a
-    tamper mode ran, because the classification is only meaningful for a bundle that
-    verified. The word and the exit status are decided here and in main(), not in
+    D-090(a) classification of an authentic bundle -- False for a BLOCK receipt, a
+    REVIEW receipt with no override.json, or a §5.5.1 refusal record (D-091(a)) -- and
+    is True whenever `ok` is False or a tamper mode ran, because the classification is
+    only meaningful for a bundle that verified. The word and the exit status are decided here and in main(), not in
     verify_sample(): the library answer stays authenticity, and the tamper self-test's
     "correctly still verified" on a BLOCK sample depends on that.
     """
@@ -2349,13 +2380,21 @@ def run(sample_dir, domain_path=None, tamper=None, quiet=False, verbose=True):
     not_executable = _not_executable(sample_dir) if ok else None
     if not quiet:
         if not_executable:
-            verdict, why = not_executable
-            print(f"  => {_color(NOT_EXECUTABLE_WORD, YELLOW)}: the signed verdict is {verdict} "
-                  f"-- {why}\n"
-                  "     Exit status 3: neither a certification nor a refusal. Hashes, "
-                  "signatures and bindings hold against the named trust root, so this is "
-                  "genuinely the signer's decision, and the decision is one SentinelVault "
-                  "refuses. This tool still evaluates no validity window (no clock) and "
+            kind, lead = not_executable
+            if kind == "REFUSAL RECORD":
+                # D-091(a). Its own continuation: a refusal record is not a decision
+                # SentinelVault refuses, it is the absence of any decision to submit.
+                held = ("Digest, signature, signer identity and every binding hold "
+                        "against the named trust root, so this is genuinely the signer's "
+                        "refusal to issue a receipt, and no receipt is what the bundle "
+                        "carries.")
+            else:
+                held = ("Hashes, signatures and bindings hold against the named trust "
+                        "root, so this is genuinely the signer's decision, and the "
+                        "decision is one SentinelVault refuses.")
+            print(f"  => {_color(NOT_EXECUTABLE_WORD, YELLOW)}: {lead}\n"
+                  f"     Exit status 3: neither a certification nor a refusal. {held} "
+                  "This tool still evaluates no validity window (no clock) and "
                   "certifies nothing about execution; for executability, run "
                   "verifier/verify_publication.py.\n")
         elif ok:
@@ -2493,10 +2532,11 @@ def main(argv=None):
     for target in not_executable:
         print(f"  {_color('NOT EXECUTABLE', YELLOW)}: {target}")
     if not_executable:
-        print(f"  {len(not_executable)} of the {passed} authentic sample(s) carry a verdict "
-              "SentinelVault refuses -- BLOCK, or REVIEW with no override.json -- and are "
-              "listed above as NOT EXECUTABLE (D-090(a)). Exit status 3 says so; a refused "
-              "sample, if any, takes precedence and the status is 1.")
+        print(f"  {len(not_executable)} of the {passed} authentic sample(s) present nothing "
+              "SentinelVault would execute -- a BLOCK receipt, a REVIEW receipt with no "
+              "override.json, or a §5.5.1 refusal record that issues no receipt at all -- "
+              "and are listed above as NOT EXECUTABLE (D-090(a), D-091(a)). Exit status 3 "
+              "says so; a refused sample, if any, takes precedence and the status is 1.")
     # 1 beats 3 beats 0: a refusal anywhere in the run is a refusal; otherwise one
     # authentic-not-executable bundle makes the run not executable; otherwise PASS.
     return 1 if failed else 3 if not_executable else 0

@@ -240,7 +240,8 @@ authentic one there. A BLOCK receipt and an override-less REVIEW receipt are
 authentic, and since D-090(a) that tool reports them as exactly that --
 `=> AUTHENTIC, NOT EXECUTABLE`, exit status 3 -- rather than as a `=> PASS`,
 because they are verdicts the Vault refuses and an exit 0 for them lied to
-scripts. Its `=> PASS` (exit 0: ALLOW, or REVIEW with a verified owner
+scripts; D-091(a) extends the same treatment to a §5.5.1 refusal record, a
+signed refusal to issue any receipt, which this tool also refuses. Its `=> PASS` (exit 0: ALLOW, or REVIEW with a verified owner
 override) and this tool's `PASS (static, offline)` remain two different claims
 that once shared one word. The split is deliberate, was ruled at D-087(c), and
 each tool says in its own output which claim it makes. It is stated here so a

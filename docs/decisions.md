@@ -475,3 +475,17 @@ v_modes="$(printf '%s\n' "$t_out" | grep -oE 'the mutated [a-z-]+' | sed … | w
 **(d) THE ENTRY-POINT PARAGRAPH JOINS THE CANDIDATE.** Two of the five advisory Criticals — AC8 (a navigable record with a stated entry point) and AC6 (headline claims mapping to shipped controls) — are the concise mechanism / limitations / status / archive-map paragraph owed since Cycle 1. The README is being rewritten under (b); the paragraph is the same edit to the same file. **Not in scope:** the remaining advisories, unless a clause of the entry paragraph discharges one incidentally.
 
 **WHAT THIS ENTRY DOES NOT DO.** It withdraws no Critical — the sustained one is the council's at Cycle 3. It authorises no publication, deployment, or visibility change. **The licence remains DEFERRED under D-082(c).** Pushing remains backup-only on John's direction per D-089.
+
+- **D-091 (2026-09-02) — THE CYCLE 3 CANDIDATE'S THREE FORKS ARE RULED, AND THE PUSH OF THE FINAL CYCLE 3 SHA IS AUTHORISED AS BACKUP. Ruled by John, 2026-09-02, in a facilitated walkthrough with the agent's recommendations stated and taken. The agent RECORDS these and makes none of them.**
+
+**Context.** The Cycle 3 candidate `0bc79a8373ec26398702b47430da48134e7cbfe6` closes the D-090 withdrawal condition as written; an independent verifier found both clauses HOLD (29 commands) and surfaced three matters outside the condition's text (`docs/cycle-3-return-note.md` §5, register §8).
+
+**(a) D-090(a) IS EXTENDED TO §5.5.1 REFUSAL RECORDS.** `verify.py` printed `=> PASS: AUTHENTIC` / exit 0 on `fixtures/samples/refusal-vault-paused`. A refusal record is a signed refusal to issue a receipt — nothing for SentinelVault to execute, and `verify_publication.py` refuses it — so exit 0 is the same lie to a script that D-090(a) removed for BLOCK. It is reported as `=> AUTHENTIC, NOT EXECUTABLE`, exit 3, under the same precedence; the authenticity claim and the tamper self-test are unchanged. Built now, test-first under D-058(1), so the SHA filed with the orchestrator carries it and no cycle is spent on it. **Rejected — hold as disclosed:** keeps D-090(c)'s scope literal at the price of an obvious strike surface. **Rejected — a separate later ruling:** the same fix, later, with a cycle in between.
+
+**(b) THE PER-CHECK `[PASS]` DIAGNOSTIC LINES STAND, DISCLOSED.** A BLOCK run still prints them; the contract is the `=>` headline and the exit status, which is what a script reads. Renaming the prefix across the 239-test suite for a `grep -q PASS` hypothetical is not taken. Disclosed in the return note as a strike surface. **Rejected — rename the prefix; quiet the lines by default.**
+
+**(c) THE DATED NOTE IN `reviewer-packet/README.md` STANDS.** Additive, dated, nothing in the Gate 8 artifact (D-080) struck, rewritten or regenerated. Without it a recipient of the packet directory alone gets exit 0 on a BLOCK with no disclosure. **Rejected — strike it and restore the D-080 bytes; regenerate the packet.**
+
+**(d) PUSH OF THE FINAL CYCLE 3 SHA IS AUTHORISED, AS BACKUP.** Once (a) lands and is verified, the agent pushes `step-3/isolated-signer` to the private remote, verifying PRIVATE immediately before. Per D-044(a) and D-089 this is backup, not publication; the visibility is not changed. **Rejected — push now and again after the rebuild; hold.**
+
+**WHAT THIS ENTRY DOES NOT DO.** It withdraws no Critical, signs no gate, authorises no publication, deployment or visibility change. **The licence remains DEFERRED under D-082(c).**

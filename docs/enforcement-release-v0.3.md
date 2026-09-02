@@ -205,15 +205,17 @@ The consequences, stated so they are not later reported as defects of either too
 | --- | --- | --- |
 | REVIEW receipt, no override | `=> AUTHENTIC, NOT EXECUTABLE`, exit `3` (D-090(a)) | `FAIL` (not executable without an authenticated override) |
 | BLOCK receipt | `=> AUTHENTIC, NOT EXECUTABLE`, exit `3` (D-090(a)) | `FAIL` on both `--execution-path` values |
+| §5.5.1 refusal record (no receipt issued) | `=> AUTHENTIC, NOT EXECUTABLE`, exit `3` (D-091(a)) | `FAIL` (recognised and refused; nothing to execute) |
 | Receipt whose window has closed | `=> PASS` (authentic; no clock) | `FAIL` (not current at the evaluation instant) |
 
 ~~The first two `verify.py` cells read `=> PASS` (authentic) until 2026-09-02.~~ **Amended under
 D-090(a):** `verify.py` still certifies only authenticity and still reads no clock, but it no
-longer emits a recipient-facing `PASS` or exit `0` for a verdict the Vault refuses. A BLOCK
-receipt, or a REVIEW receipt with no `override.json`, is reported as authentic and marked
-`NOT EXECUTABLE` with exit status `3` — neither a certification nor a refusal, and distinguishable
-from both by exit code alone. ALLOW, and REVIEW with a valid owner override, keep `=> PASS:
-AUTHENTIC` / exit `0`; refusals keep `=> FAIL` / exit `1`; under `--all`, `1` beats `3` beats `0`.
+longer emits a recipient-facing `PASS` or exit `0` for anything the Vault would not execute. A
+BLOCK receipt, a REVIEW receipt with no `override.json`, or — under D-091(a), same day — a §5.5.1
+refusal record, is reported as authentic and marked `NOT EXECUTABLE` with exit status `3` —
+neither a certification nor a rejection, and distinguishable from both by exit code alone. ALLOW,
+and REVIEW with a valid owner override, keep `=> PASS: AUTHENTIC` / exit `0`; a bundle that fails
+any check keeps `=> FAIL` / exit `1`; under `--all`, `1` beats `3` beats `0`.
 
 So *"a BLOCK receipt certifies on neither entry point"* is a statement about the publication
 verifier and the Vault, and is true of them; it was never a statement about `verify.py`, whose

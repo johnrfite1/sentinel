@@ -98,20 +98,21 @@ The release ships one verifier, `verifier/verify_publication.py`, and its claim 
 for. It refuses a BLOCK receipt, and a REVIEW receipt without an authenticated owner override,
 because the Vault would refuse them. Its certifying output carries its own `CLAIM:` line:
 
-> CLAIM: this tool certifies EXECUTABILITY, statically and offline -- that SentinelVault's offline-checkable action predicate accepts this bundle at the entry point named above. It is not the authenticity verifier: verify.py certifies AUTHENTICITY, that the bundle is genuinely what the signer produced, and reports a BLOCK receipt or a REVIEW receipt with no override -- both of which this tool refuses -- as AUTHENTIC, NOT EXECUTABLE with exit status 3, not as a PASS (D-090(a)).
+> CLAIM: this tool certifies EXECUTABILITY, statically and offline -- that SentinelVault's offline-checkable action predicate accepts this bundle at the entry point named above. It is not the authenticity verifier: verify.py certifies AUTHENTICITY, that the bundle is genuinely what the signer produced, and reports a BLOCK receipt, a REVIEW receipt with no override, or a §5.5.1 refusal record -- all of which this tool refuses -- as AUTHENTIC, NOT EXECUTABLE with exit status 3, not as a PASS (D-090(a), D-091(a)).
 
 The repository carries that second, older verifier at `verifier/verify.py`, which the release
 tree does not ship. Its claim is **authenticity**: is this bundle genuinely what the signer
 produced. It evaluates no validity window and certifies nothing about execution. Under
-D-090(a), landed 2026-09-02, it no longer exits `0` for a verdict the Vault refuses: a BLOCK
-receipt, or a REVIEW receipt with no `override.json`, prints `=> AUTHENTIC, NOT EXECUTABLE: …`
-and exits `3` — neither a certification nor a refusal — while ALLOW, and REVIEW with a valid
-owner override, keep `=> PASS: AUTHENTIC` and exit `0`, and a refusal keeps `=> FAIL` and exit
-`1`. Under `--all`, `1` beats `3` beats `0`. Measured on this commit:
+D-090(a) and D-091(a), landed 2026-09-02, it no longer exits `0` for anything the Vault would
+not execute: a BLOCK receipt, a REVIEW receipt with no `override.json`, or a §5.5.1 refusal
+record (a signed refusal to issue a receipt at all) prints `=> AUTHENTIC, NOT EXECUTABLE: …` and
+exits `3` — neither a certification nor a rejection — while ALLOW, and REVIEW with a valid owner
+override, keep `=> PASS: AUTHENTIC` and exit `0`, and a bundle that fails a check keeps `=> FAIL`
+and exit `1`. Under `--all`, `1` beats `3` beats `0`. Measured on this commit:
 `python3 verifier/verify.py --domain fixtures/samples/domain.json fixtures/samples/case-2-injection-block`
 exits `3` and lists `NOT EXECUTABLE: fixtures/samples/case-2-injection-block`; `--all
-fixtures/samples` reports `7/7 sample(s) verified as AUTHENTIC`, lists four `NOT EXECUTABLE`
-bundles, and exits `3`. The split is ruled at D-087(c) and stated in
+fixtures/samples` reports `7/7 sample(s) verified as AUTHENTIC`, lists five `NOT EXECUTABLE`
+bundles (four BLOCK receipts and the refusal record), and exits `3`. The split is ruled at D-087(c) and stated in
 `docs/enforcement-release-v0.3.md`, "Two verifiers, two claims".
 
 ## What is not established, and where that is written down

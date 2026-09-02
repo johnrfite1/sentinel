@@ -22,10 +22,11 @@ receipt are both refused here, because the Vault executes neither.
 
 It is NOT the authenticity verifier.  verifier/verify.py (not shipped in the
 release tree) certifies AUTHENTICITY -- that the bundle is genuinely what the
-named signer produced -- and finds both of those bundles authentic; since
-D-090(a) it reports each as `=> AUTHENTIC, NOT EXECUTABLE` with exit status 3
-rather than as a PASS, so that its exit code does not say "pass" to a script
-for a verdict the Vault refuses.  `=> PASS: AUTHENTIC` from verify.py (ALLOW,
+named signer produced -- and finds both of those bundles authentic, as it
+does a §5.5.1 refusal record; since D-090(a) and D-091(a) it reports each of
+the three as `=> AUTHENTIC, NOT EXECUTABLE` with exit status 3 rather than as
+a PASS, so that its exit code does not say "pass" to a script for anything
+the Vault would not execute.  `=> PASS: AUTHENTIC` from verify.py (ALLOW,
 or REVIEW with a valid owner override) and `PASS (static, offline)` from this
 tool remain two different claims that used to share one word; the split is
 deliberate, was ruled at D-087(c), and is stated on both surfaces so that
@@ -1352,9 +1353,9 @@ def main(argv=None):
           "SentinelVault's offline-checkable action predicate accepts this bundle at the "
           "entry point named above. It is not the authenticity verifier: verify.py "
           "certifies AUTHENTICITY, that the bundle is genuinely what the signer produced, "
-          "and reports a BLOCK receipt or a REVIEW receipt with no override -- both of "
-          "which this tool refuses -- as AUTHENTIC, NOT EXECUTABLE with exit status 3, "
-          "not as a PASS (D-090(a)).")
+          "and reports a BLOCK receipt, a REVIEW receipt with no override, or a §5.5.1 "
+          "refusal record -- all of which this tool refuses -- as AUTHENTIC, NOT "
+          "EXECUTABLE with exit status 3, not as a PASS (D-090(a), D-091(a)).")
     print("NOT ESTABLISHED by this run: " + "; ".join(NOT_ESTABLISHED) + ".")
     print(json.dumps(result, sort_keys=True))
     return 0
