@@ -91,7 +91,8 @@ no push is authorised. `.serena/` remains gitignored.
 > verified by a third independent agent (HOLDS; vacuity checked empirically, 10/14 red against the
 > old code); the `[PASS]` diagnostic lines STAND, disclosed; the packet note STANDS. `--all
 > fixtures/samples` lists five NOT EXECUTABLE bundles. Gate PASSED at floor 252; guards clean.
-> Return note `docs/cycle-3-return-note.md` names `81edee1` as the candidate to file. **Next external
+> Return note `docs/cycle-3-return-note.md` names `81edee1` as the candidate to file. Orchestrator
+> brief drafted for John's review at `docs/cycle-3-orchestrator-brief.md`. **Next external
 > event: the orchestrator files D-090 as the SMITH DECISION and Cycle 3 runs on `81edee1`.**
 >
 > **2026-09-02 (later) — THE FIRST CYCLE 3 CANDIDATE WAS `0bc79a8373ec26398702b47430da48134e7cbfe6`** (superseded by `81edee1` above).
