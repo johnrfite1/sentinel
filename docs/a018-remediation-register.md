@@ -1014,3 +1014,26 @@ into **one** replacement candidate rather than trickling it.
 The §5 `From` enum has seven values and none is the build team, so a halted line whose closure
 conditions are all build work has no defined channel for the builder to answer on. The Conscience
 recommends a non-seat `BUILDER` / `RESPONDENT` artifact path in a future protocol revision.
+
+### R-A018-27 — Following the README's own commands leaves `release/demo-out/` untracked, and the sync guard walks it — NEW, low
+
+Found 2026-09-02 by the README lane. The first-surface instructions (inherited verbatim from
+`release/README.md`) say `npm --prefix ts run cold-demo -- --output "$PWD/demo-out"` from inside
+`release/`, so a recipient who follows them leaves `release/demo-out/` on disk, untracked and not
+gitignored. `check-release-sync.sh` walks `release/` with `rglob`, so its manifest pass then lists
+`demo-out/**` as present-but-unlisted. **Closes when** the demo's default output lands outside
+`release/`, or `release/demo-out/` is gitignored and the sync guard excludes it — a one-line change
+in whichever is chosen. Not in the Cycle 3 candidate's ruled scope.
+
+### Three facts recorded so they are not later mistaken for defects
+
+- **`reviewer-packet/verifier/verify.py` diverges from `verifier/verify.py` by design.** It is the
+  frozen v0.2 Gate 8 artifact (D-080) — 42 diff lines at HEAD, more once D-090(a) lands. It is not
+  regenerated, and the README now says so. It prints a bare `=> PASS`; the root copy prints the
+  D-087(c) authenticity claim.
+- **`scripts/check-review-scope.sh` fails at HEAD** on 435 tracked files under `release/` assigned
+  to no reviewer. Pre-existing — reproduced on an untouched clone — and hand-run only, deliberately
+  not gate-wired (D-057(4)).
+- **The root README now states its prerequisites as tested, not pinned** — Node 26.3.0, Foundry
+  1.7.1, Python 3.9.6 — because R-A018-13 (toolchain pinning) is still open and stating a pin that
+  does not exist would be the claim-without-control this register is about.
