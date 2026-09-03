@@ -5,6 +5,11 @@ Prepared by: Claude (Fable), from the facilitated intake session with John
 For: Opus 5 (architect and build director) and its subagents
 Status: Rulings ratified by John 2026-07-27 (canonical record: `docs/decisions.md`). Build authorized through Gate S2. Anything in this brief marked "agent note" is elaboration, not ratified text.
 
+**2026-09-03 — D-093: THE SMITH ACCEPTED EXISTENTIAL ASSUMPTIONS 1, 4 AND 5 WITH STATED RISK** on one
+unaided named-audience cold read (MSG-041; the handoff is `docs/quench-orchestrator-handoff.md`; the Quench
+artifact is `8dfaa27`). Owed post-Quench (D-093(c)): an archive index and a pruning pass over superseded
+passages, changing no mechanism. Not publication; repository PRIVATE; licence DEFERRED (D-082(c)).
+
 **2026-09-02 (Cycle 3 returned) — ZERO SUSTAINED CRITICALS ON `81edee1`; D-092 RULES A NARROW
 PATCH BEFORE THE QUENCH; THE PATCH HAS LANDED IN THIS COMMIT.** The Adversary, owner of the carried Critical,
 measured both clauses of its withdrawal condition and reported HOLDS, raised no provisional

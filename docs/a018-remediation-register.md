@@ -1128,4 +1128,4 @@ clock, which exit 3 may carry and PASS never could.
 **Still open.** R-A018-13 (toolchain pinning); R-A018-26 (e2e clock flake); R-A018-27
 (`release/demo-out/` untracked); the two carried dead assertions in `test_verifier.py`;
 `check-review-scope.sh` red on 435 unassigned `release/` files; no shipped manifest (D-092(f),
-Quench remainder); AC2 unification deferred (D-087(c)).
+Quench remainder); AC2 unification deferred (D-087(c)); **owed under D-093(c): an archive index and a pruning pass over superseded passages in the record, changing no mechanism** — the cold read's confidence costs (dense governance history, superseded passages, crowded root README).
