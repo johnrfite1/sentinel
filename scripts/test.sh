@@ -838,7 +838,7 @@ fi
 # three times.
 # -> 221 -> **239 (D-090(a): +18 for TestExitContractD090, the exit contract written by an
 # independent author before any implementer touched verify.py, plus two rewritten assertions)**.
-VERIFIER_MIN_TESTS=252
+VERIFIER_MIN_TESTS=278
 VERIFIER_MIN_SAMPLES=7
 VERIFIER_MIN_TAMPER=78
 # A MODE FLOOR, because a pair count alone rewards padding (A-049): `tamper cases` counts
@@ -965,10 +965,11 @@ VERIFIERRUN
         fi
     done
 
-    # D-090(a)/D-091(a): THE WALK MUST EXIT 3, EXACTLY. Four of the seven shipped bundles are BLOCK
-    # receipts and one is a §5.5.1 refusal record, by design, and verify.py now reports anything the
-    # Vault would not execute as AUTHENTIC, NOT EXECUTABLE with exit 3 -- so the corpus is authentic
-    # end to end (7/7 below) and five of seven are not executable. 0 here is a FAILURE, not a pass:
+    # D-090(a)/D-091(a)/D-092(c): THE WALK MUST EXIT 3, EXACTLY. Four of the seven shipped bundles are
+    # BLOCK receipts, one is a §5.5.1 refusal record, and the remaining two (ALLOW, overridden REVIEW)
+    # expired at epoch 1788059884 (2026-08-30 03:18 UTC) -- verify.py reports every offline-checkable case the Vault refuses as
+    # AUTHENTIC, NOT EXECUTABLE with exit 3, so the corpus is authentic end to end (7/7 below) and
+    # seven of seven are not executable today. 0 here is a FAILURE, not a pass:
     # on this corpus it means either those samples are gone or the Cycle 2 defect (`=> PASS`, exit
     # 0, for a BLOCK receipt) is back. 1 and 2 fail as they always did.
     # Deliberately not `0|3`.

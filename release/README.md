@@ -234,9 +234,12 @@ without an authenticated owner override, because the Vault would refuse them.
 
 The repository this tree was assembled from carries a second, older verifier,
 `verifier/verify.py`, which is **not in this tree**. Its claim is
-**authenticity**: is this bundle genuinely what the signer produced; and it
-evaluates no validity window at all, so an expired receipt is still an
-authentic one there. A BLOCK receipt and an override-less REVIEW receipt are
+**authenticity**: is this bundle genuinely what the signer produced. Since
+D-092(c) it also compares the receipt's and override's validity windows to
+the unauthenticated host clock and reports an expired bundle as
+`=> AUTHENTIC, NOT EXECUTABLE`, exit 3 -- a classification, not a
+certification; an expired receipt is still an authentic one there. A BLOCK
+receipt and an override-less REVIEW receipt are
 authentic, and since D-090(a) that tool reports them as exactly that --
 `=> AUTHENTIC, NOT EXECUTABLE`, exit status 3 -- rather than as a `=> PASS`,
 because they are verdicts the Vault refuses and an exit 0 for them lied to

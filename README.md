@@ -1,6 +1,42 @@
 # Sentinel
 
-Sentinel is a testnet lab that binds one exact EVM call to a human-signed mandate. An untrusted agent proposes a call; an evaluator compares the decoded call and its simulated effects at a recorded block to the mandate; an isolated signer attests the verdict in a signed receipt; and `SentinelVault` executes the exact attested bytes on an ALLOW receipt, executes a REVIEW receipt only alongside a separate owner-signed override, and reverts a BLOCK receipt at both entry points, altered calldata, and a replayed nonce. What that establishes is narrow, and the tools say so themselves: the release's offline verifier certifies only that the Vault's offline-checkable predicate accepts a bundle, and prints a `NOT ESTABLISHED` line beside every certifying result — no chain is read, so deployed code identity and nonce freshness are not established; the clock is unauthenticated; the calldata arguments are never decoded by the verifier or the Vault, only by the signer's evaluator; and the Vault's native-value ceiling is per action, bounding neither aggregate loss nor token allowances, which no contract here caps. Sentinel is not a detector, not a production wallet, and not a deployment: the fixtures and the cold demo run on a local Anvil, and testnet-only is documented rather than enforced. Status at this revision (2026-09-02): a pre-publication candidate under external adversarial review, held private, publication not authorised, licence deferred; `docs/session-state.md` is the live status and wins over anything written here. Where the record lives: the mechanism in `contracts/` and `verifier/`; the limitations in the verifier's own `NOT ESTABLISHED` output, `release/README.md` and `docs/enforcement-release-v0.3.md`; the status in `docs/session-state.md`; and the archive — every ruling, register and review arc, kept because the history is part of what is evaluated — in `docs/decisions.md`, `docs/a018-remediation-register.md`, `docs/v1-1-register.md` and the `docs/review-*/` directories.
+Sentinel is a testnet lab that binds one exact EVM call to a human-signed mandate:
+
+- an untrusted agent proposes a call;
+- an evaluator compares the decoded call and its simulated effects at a recorded block to the
+  mandate;
+- an isolated signer attests the verdict in a signed receipt; and
+- `SentinelVault` executes the exact attested bytes on an ALLOW receipt, executes a REVIEW
+  receipt only alongside a separate owner-signed override, and reverts a BLOCK receipt at both
+  entry points, altered calldata, and a replayed nonce.
+
+What that establishes is narrow, and the tools say so themselves. The release's offline verifier
+certifies only that the Vault's offline-checkable predicate accepts a bundle, and prints a
+`NOT ESTABLISHED` line beside every certifying result:
+
+- no chain is read, so deployed code identity and nonce freshness are not established;
+- the clock is unauthenticated;
+- the calldata arguments are never decoded by the verifier or the Vault, only by the signer's
+  evaluator; and
+- the Vault's native-value ceiling is per action, bounding neither aggregate loss nor token
+  allowances, which no contract here caps.
+
+Sentinel is not a detector, not a production wallet, and not a deployment: the fixtures and the
+cold demo run on a local Anvil, and testnet-only is documented rather than enforced.
+
+Status at this revision (2026-09-02): a pre-publication candidate under external adversarial
+review, held private, publication not authorised, licence deferred. `docs/session-state.md` is
+the live status and wins over anything written here.
+
+Where the record lives:
+
+- the mechanism in `contracts/` and `verifier/`;
+- the limitations in the verifier's own `NOT ESTABLISHED` output, `release/README.md` and
+  `docs/enforcement-release-v0.3.md`;
+- the status in `docs/session-state.md`; and
+- the archive — every ruling, register and review arc, kept because the history is part of what
+  is evaluated — in `docs/decisions.md`, `docs/a018-remediation-register.md`,
+  `docs/v1-1-register.md` and the `docs/review-*/` directories.
 
 This project is distinct from Uppsala Security's Sentinel Protocol and from sentinel.co's Cosmos network. Those names collide; they are not affiliation. Named here because competitor overlap is a claimed property of the artifact, not because a legal conclusion has been drawn.
 
@@ -91,6 +127,14 @@ Exit codes: `0` certifying, `1` refused with a `FAIL:` line on stderr, and `3` �
 and not a refusal — only under `--evaluation-time`. A script that treats any non-zero status as
 a failure, or any non-`1` status as a pass, misreads the third.
 
+A certifying run of `verify_publication.py` requires a signed deployment manifest and the
+address of the authority that signed it, and no signed deployment manifest ships anywhere in this
+repository. The only one available is the one the cold demo generates, signed by a lab authority
+the demo itself labels non-production, and the receipts written beside it expire five minutes
+after signing. A recipient with Python alone — no Node, no Foundry, no Anvil — can therefore run
+only the repository's `verifier/verify.py` on the checked-in fixtures, and that tool certifies
+authenticity, never executability (D-092(f)).
+
 ### Two verifiers, two claims
 
 The release ships one verifier, `verifier/verify_publication.py`, and its claim is
@@ -102,17 +146,23 @@ because the Vault would refuse them. Its certifying output carries its own `CLAI
 
 The repository carries that second, older verifier at `verifier/verify.py`, which the release
 tree does not ship. Its claim is **authenticity**: is this bundle genuinely what the signer
-produced. It evaluates no validity window and certifies nothing about execution. Under
-D-090(a) and D-091(a), landed 2026-09-02, it no longer exits `0` for anything the Vault would
-not execute: a BLOCK receipt, a REVIEW receipt with no `override.json`, or a §5.5.1 refusal
-record (a signed refusal to issue a receipt at all) prints `=> AUTHENTIC, NOT EXECUTABLE: …` and
-exits `3` — neither a certification nor a rejection — while ALLOW, and REVIEW with a valid owner
-override, keep `=> PASS: AUTHENTIC` and exit `0`, and a bundle that fails a check keeps `=> FAIL`
-and exit `1`. Under `--all`, `1` beats `3` beats `0`. Measured on this commit:
-`python3 verifier/verify.py --domain fixtures/samples/domain.json fixtures/samples/case-2-injection-block`
-exits `3` and lists `NOT EXECUTABLE: fixtures/samples/case-2-injection-block`; `--all
-fixtures/samples` reports `7/7 sample(s) verified as AUTHENTIC`, lists five `NOT EXECUTABLE`
-bundles (four BLOCK receipts and the refusal record), and exits `3`. The split is ruled at D-087(c) and stated in
+produced. It certifies nothing about execution. Under D-090(a), D-091(a) and D-092(c), all
+landed 2026-09-02, it no longer exits `0` for the offline-checkable cases the Vault refuses: a
+BLOCK receipt, a REVIEW receipt with no `override.json`, a §5.5.1 refusal record (a signed
+refusal to issue a receipt at all), or a receipt or override **outside its validity window by the
+host clock** prints `=> AUTHENTIC, NOT EXECUTABLE: …` and exits `3` — neither a certification nor
+a refusal by the tool (the refusal-record path says "rejection", D-092(d)) — while a live ALLOW, and a live REVIEW with a valid live owner override, keep
+`=> PASS: AUTHENTIC` and exit `0`, and a bundle that fails a check keeps `=> FAIL` and exit `1`.
+Under `--all`, `1` beats `3` beats `0`. The host clock is unauthenticated and the tool says so on
+every verification run; it takes no caller-supplied instant, so no flag restores exit `0` on an expired
+receipt. An expired receipt is still an authentic one and is still counted as such. Measured on
+this commit: `python3 verifier/verify.py --domain fixtures/samples/domain.json
+fixtures/samples/case-2-injection-block` exits `3` and lists `NOT EXECUTABLE:
+fixtures/samples/case-2-injection-block`; `--all fixtures/samples` reports `7/7 sample(s)
+verified as AUTHENTIC`, lists all seven as `NOT EXECUTABLE` (four BLOCK receipts, the refusal
+record, and the ALLOW and overridden-REVIEW fixtures, whose windows closed at `expiresAt` 1788059884, 2026-08-30 03:18 UTC), and
+exits `3`. Every shipped fixture is therefore non-executable today; a `PASS` from this tool is
+only reachable on a bundle whose window contains the moment you run it. The split is ruled at D-087(c) and stated in
 `docs/enforcement-release-v0.3.md`, "Two verifiers, two claims".
 
 ## What is not established, and where that is written down
@@ -132,9 +182,9 @@ that asserts it.
 authoritative over anything an agent or a reader remembers. `docs/publication-policy.state` is
 the machine-checked publication state (`HELD_PRIVATE`, rights `UNDECIDED`); `scripts/check-rename-gate.sh`
 refuses if the repository's visibility stops matching it. The licence is deliberately deferred
-(D-082(c)) and no agent may select one. The Crucible review record is in
-`docs/cycle-2-orchestrator-brief.md` and `docs/cycle-2-return-package.md`; the rulings that
-followed are D-088 through D-090 in `docs/decisions.md`.
+(D-082(c)) and no agent may select one. The Crucible review record is in `docs/cycle-2-orchestrator-brief.md`, `docs/cycle-2-return-package.md`,
+`docs/cycle-3-orchestrator-brief.md`, `docs/cycle-3-return-note.md` and `docs/cycle-3-patch-return-note.md`;
+the rulings that followed are D-088 through D-092 in `docs/decisions.md`.
 
 ## Historical: the v0.2 comprehension packet reviewed at Gate 8 (`reviewer-packet/`)
 
@@ -218,7 +268,7 @@ A verified receipt does not prove that the target code is benign. A code-hash mi
 
 It does not prove that the agent was honest, or that a prompt was or was not injected. The agent’s story never enters the bound fields.
 
-It does not prove the receipt is still valid. Receipts carry `issuedAt` / `expiresAt` — a 300-second window in these fixtures — and the authenticity verifier does not check them against a clock. An expired receipt still verifies.
+It does not prove the receipt is still valid. Receipts carry `issuedAt` / `expiresAt` — a 300-second window in these fixtures — and the packet's frozen copy of the verifier does not check them against a clock, so there an expired receipt still prints `=> PASS`. The repository's current `verifier/verify.py` does compare the window to the unauthenticated host clock and reports an expired receipt as `=> AUTHENTIC, NOT EXECUTABLE`, exit `3` (D-092(c)).
 
 It does not prove anything about any other product.
 
@@ -226,23 +276,25 @@ It does not prove signer identity unless the `--domain` file came from a deploym
 
 ### The authenticity verifier, and what a PASS in this packet means
 
-`verify.py` re-checks a signed receipt against a trust root the verifying party asserts. From
-the repository root:
+`verify.py` re-checks a signed receipt against a trust root the verifying party asserts. The
+packet's invocation, described rather than given: from the repository root, run the packet's own
+copy of the verifier (the `verify.py` under `reviewer-packet/verifier/`) with its `--domain`
+option pointing at the packet's `bundles/domain.json` and the ALLOW bundle,
+`bundles/case-1-allow`, as the positional argument. No command is given here to copy.
 
-```
-python3 reviewer-packet/verifier/verify.py --domain reviewer-packet/bundles/domain.json reviewer-packet/bundles/case-1-allow
-python3 reviewer-packet/verifier/verify.py --domain reviewer-packet/bundles/domain.json reviewer-packet/bundles/case-3-wrong-purpose-block
-```
-
-Until 2026-09-02 these two lines read `verifier/verify.py … bundles/case-1-allow`, a path that
-resolves only inside `reviewer-packet/`; they are corrected to resolve from the root so that
-they run as written from a fresh clone.
+This section carried two fenced commands until 2026-09-02. Before that date they read
+`verifier/verify.py … bundles/case-1-allow`, a path that resolves only inside
+`reviewer-packet/`, so they did not run from the root; the Cycle 3 candidate corrected the paths,
+which made the second of them — the packet verifier on the BLOCK bundle, printing `=> PASS` and
+exiting `0` — copy-pasteable for the first time, and three Crucible chairs failed the candidate
+on that line. Under D-092(a) the BLOCK command is deleted and the surviving ALLOW command is
+rendered as the prose above, so that nothing in this Historical section runs as written.
 
 `--domain` must name the deployment’s own `domain.json`, taken from the deployment record. Without it, a `domain.json` found inside or beside the bundle is loaded for diagnostics but can never carry a PASS — a presenter must not choose what “the signer” means.
 
-The `bundles/domain.json` shipped here is presenter-supplied, which is why the commands above name it explicitly. Passing it will print PASS, and that PASS certifies the hashing and the signature recovery but **says nothing about signer identity**. This packet ships no out-of-band deployment record, so as delivered it cannot demonstrate the trust-root property it is proudest of.
+The `bundles/domain.json` shipped here is presenter-supplied, which is why the invocation described above names it explicitly. Passing it will print PASS, and that PASS certifies the hashing and the signature recovery but **says nothing about signer identity**. This packet ships no out-of-band deployment record, so as delivered it cannot demonstrate the trust-root property it is proudest of.
 
-Without `--domain` the tool reports diagnostics and does not PASS. A BLOCK receipt still verifies as authentic: BLOCK is a signed decision, not a missing artifact, and this verifier certifies that the decision is authentic, not that it is executable. Do not expect exit `0` from the current tool for that, though. Two copies exist and they differ on this commit, measured on Case 3: `reviewer-packet/verifier/verify.py` — the copy the two commands above invoke — predates D-087(c) and D-090(a), prints a bare `=> PASS`, and exits `0`; `verifier/verify.py` at the repository root prints `=> AUTHENTIC, NOT EXECUTABLE: the signed verdict is BLOCK …`, counts it in `1/1 sample(s) verified as AUTHENTIC`, lists it as `NOT EXECUTABLE: reviewer-packet/bundles/case-3-wrong-purpose-block`, and exits `3` (D-090(a)). The packet copy is the stale one; the root copy is the contract.
+Without `--domain` the tool reports diagnostics and does not PASS. A BLOCK receipt still verifies as authentic: BLOCK is a signed decision, not a missing artifact, and this verifier certifies that the decision is authentic, not that it is executable. Do not expect exit `0` from the current tool for that, though. Two copies exist and they differ on this commit, measured on Case 3: `reviewer-packet/verifier/verify.py` — the copy the invocation described above uses — predates D-087(c) and D-090(a), prints a bare `=> PASS`, and exits `0`; `verifier/verify.py` at the repository root prints `=> AUTHENTIC, NOT EXECUTABLE: the signed verdict is BLOCK …`, counts it in `1/1 sample(s) verified as AUTHENTIC`, lists it as `NOT EXECUTABLE: reviewer-packet/bundles/case-3-wrong-purpose-block`, and exits `3` (D-090(a)). The packet copy is the stale one; the root copy is the contract.
 
 ## In this repository
 

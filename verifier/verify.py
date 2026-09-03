@@ -17,8 +17,8 @@ established one."
     python3 verifier/verify.py --tamper --domain <deployment-domain.json> fixtures/samples/case-1-allow
     python3 verifier/verify.py --all --domain <deployment-domain.json> fixtures/samples
 
-WHAT THIS TOOL CERTIFIES, AND WHAT IT DOES NOT (D-087(c), 2026-09-01; D-090(a), D-091(a), 2026-09-02)
-----------------------------------------------------------------------------------------------------
+WHAT THIS TOOL CERTIFIES, AND WHAT IT DOES NOT (D-087(c), 2026-09-01; D-090(a), D-091(a), D-092(c), 2026-09-02)
+--------------------------------------------------------------------------------------------------------------
 This verifier certifies AUTHENTICITY: that the bundle is genuinely what the
 named signer produced -- every hash recomputes, every signature recovers to the
 trust root the verifying party names under --domain, every internal binding
@@ -41,8 +41,11 @@ model: the claim is unchanged, the reporting is not.
     (nothing verified)              exit 2   --all found no bundles, or the path
                                              could not be enumerated (H-8)
     => AUTHENTIC, NOT EXECUTABLE    exit 3   BLOCK; REVIEW with no override.json;
-                                             a §5.5.1 refusal record (D-091(a)).
-                                             Neither a certification nor a refusal.
+                                             a §5.5.1 refusal record (D-091(a));
+                                             a receipt, or an override, outside its
+                                             validity window by the host clock
+                                             (D-092(c)). Neither a certification
+                                             nor a refusal.
 
 A §5.5.1 SignedRefusalRecord is the signer's signed refusal TO ISSUE a receipt.
 It is authentic on the same terms as a receipt -- digest, signature, signer
@@ -56,18 +59,30 @@ Precedence, single bundle and aggregate alike: 1 beats 3 beats 0.  A BLOCK
 receipt whose signature does not recover is a refusal, not an authentic
 not-executable one, and so is a refusal record whose signature does not
 recover.  The classification reads only which signed artifact the bundle
-presents, the SIGNED verdict when that artifact is a receipt, and whether an
-override.json is present; it is not an executability check, and
-`PASS (static, offline)` from the publication verifier remains a different
-claim from `=> PASS` here.
+presents, the SIGNED verdict when that artifact is a receipt, whether an
+override.json is present, and -- since D-092(c) -- whether the receipt's and
+the override's validity windows contain the host instant; it is not an
+executability check, and `PASS (static, offline)` from the publication
+verifier remains a different claim from `=> PASS` here.
 
-THIS TOOL EVALUATES NO VALIDITY WINDOW.  It has no clock.  `issuedAt`,
-`expiresAt`, the mandate's and policy's validity windows, the action deadline
-and the override window are checked for shape and for binding, never against
-the present instant.  An expired receipt is therefore still an authentic one
-and is still reported as such here.  Currency -- like nonce freshness and
-executability at a block -- is the publication verifier's question, not this
-tool's, and a reader who needs it must run that tool.
+THE HOST CLOCK, AND WHAT IT MAY INFORM (D-092(c), 2026-09-02).  This tool
+certifies authenticity.  It classifies executability offline against the
+host clock, which is unauthenticated: the receipt's validity window --
+`issuedAt <= now < expiresAt`, the predicate SentinelVault and the publication
+verifier apply -- and the override's window, where an override.json carries
+one, are compared to the instant this machine reports.  An authentic bundle
+whose window does not contain that instant (expired, or not yet valid) is
+reported `=> AUTHENTIC, NOT EXECUTABLE`, exit 3, with both endpoints and the
+host instant printed.  An expired receipt is still an authentic one and is
+still counted as such.  Exit 3 is neither a certification nor a refusal,
+which is why an unauthenticated clock may inform it where it could never
+inform a PASS: `=> PASS` says the bundle is authentic and that its window
+contained the host instant when this tool ran, nothing more.  The tool takes
+NO caller-supplied instant -- no flag, no environment variable, no parameter
+-- so nothing can restore exit 0 on an expired receipt.  It certifies nothing
+about execution: the mandate's and policy's windows, the action deadline,
+nonce freshness and executability at a block are the publication verifier's
+questions, and a reader who needs them must run that tool.
 """
 
 import argparse
@@ -75,6 +90,7 @@ import copy
 import json
 import os
 import sys
+import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -970,8 +986,12 @@ def _refusal_checks(sample_dir, located, receipt_doc, evidence, evidence_hash,
             "shape for a receipt. Nothing on this path examines the override, so accepting "
             "it would certify a §5.5 credential that was never verified."))
 
+    # D-092(d): on this path `evidence.verdict` is the verdict the signer was ASKED for
+    # and declined to issue; the record attests none. The §5.7.1 comparison still runs
+    # (the requested verdict's parameters are what the refusal is about), labelled so.
     out.extend(_evidence_describes_the_bundle(
-        evidence, _sibling("action.json"), _sibling("mandate.json"), _sibling("policy.json")))
+        evidence, _sibling("action.json"), _sibling("mandate.json"), _sibling("policy.json"),
+        verdict_label="requested verdict ALLOW"))
     return out
 
 
@@ -1407,8 +1427,14 @@ def _calldata_check(action):
                  f"computed {computed}\naction   {action.get('dataHash')}")
 
 
-def _allow_conforms_to_the_mandate(evidence, mandate, policy):
+def _allow_conforms_to_the_mandate(evidence, mandate, policy, label="ALLOW"):
     """§5.7.1's decoded-parameter checks, from the verifier's own side.
+
+    `label` is the prefix on every check name here. On the receipt path it is the
+    signed verdict, `ALLOW`. On the §5.5.1 path the signer attested NO verdict --
+    `evidence.verdict` is the verdict that was REQUESTED and refused -- so the caller
+    passes `requested verdict ALLOW`, and a bare `[PASS] ALLOW:` never prints on a
+    refusal record (D-092(d)). The check itself is the same on both paths.
 
     Derived from the published §5.7.1 list ("Decoded parameters against the mandate":
     EVAL_PURCHASE_RESOURCE, _BENEFICIARY, _DURATION, _RECURRENCE, EVAL_APPROVAL_SPENDER,
@@ -1430,29 +1456,29 @@ def _allow_conforms_to_the_mandate(evidence, mandate, policy):
     dsp = evidence.get("decodedSelectorAndParameters")
     if not isinstance(dsp, dict):
         out.append(Check(
-            "ALLOW: evidence carries a signer-attested decoded-parameter record", False,
+            f"{label}: evidence carries a signer-attested decoded-parameter record", False,
             "absent" if dsp is None else f"got {type(dsp).__name__}"))
         return out
     params = dsp.get("parameters")
     if not isinstance(params, dict):
         out.append(Check(
-            "ALLOW: the decoded record carries a parameters object", False,
+            f"{label}: the decoded record carries a parameters object", False,
             "absent" if params is None else f"got {type(params).__name__}"))
         return out
     if not isinstance(mandate, dict):
         out.append(Check(
-            "ALLOW: a mandate is present to compare the decoded parameters against", False,
+            f"{label}: a mandate is present to compare the decoded parameters against", False,
             "no mandate.json in the bundle"))
         return out
 
     if str(dsp.get("decoded")).lower() not in ("true", "1"):
-        out.append(Check("ALLOW: the calldata was decoded", False,
+        out.append(Check(f"{label}: the calldata was decoded", False,
                          f"decoded={dsp.get('decoded')!r}; an undecoded call cannot be ALLOWed"))
         return out
 
     if _norm_hex(dsp.get("selector")) != _norm_hex(mandate.get("selector")):
         out.append(Check(
-            "ALLOW: the decoded selector is the one the mandate authorises", False,
+            f"{label}: the decoded selector is the one the mandate authorises", False,
             f"decoded {dsp.get('selector')!r} vs mandate {mandate.get('selector')!r}"))
 
     schema, wrong = dsp.get("schema"), []
@@ -1487,13 +1513,14 @@ def _allow_conforms_to_the_mandate(evidence, mandate, policy):
         wrong.append(f"schema {schema!r} is not one this verifier can check conformance for")
 
     out.append(Check(
-        "ALLOW: the signer-attested decoded parameters conform to the mandate (§5.7.1)",
+        f"{label}: the signer-attested decoded parameters conform to the mandate (§5.7.1)",
         not wrong,
         "; ".join(wrong) if wrong else f"{schema}: every §5.7.1 purpose field agrees"))
     return out
 
 
-def _evidence_describes_the_bundle(evidence, action, mandate, policy):
+def _evidence_describes_the_bundle(evidence, action, mandate, policy,
+                                   verdict_label="ALLOW"):
     """§5.6's `normalizedAction` and `expectedEffects` must describe the presented documents.
 
     A-069. Both are projections, so this is derivation and not judgement — see the note at the
@@ -1580,7 +1607,7 @@ def _evidence_describes_the_bundle(evidence, action, mandate, policy):
     # comparison runs on EVERY verification path rather than on the one a reviewer probed.
     # "Which paths does this check NOT run on?" is the question that produced this placement
     # (docs/repair-protocol.md step 2).
-    out.extend(_allow_conforms_to_the_mandate(evidence, mandate, policy))
+    out.extend(_allow_conforms_to_the_mandate(evidence, mandate, policy, verdict_label))
 
     expected = evidence.get("expectedEffects")
     if not isinstance(expected, dict):
@@ -2267,7 +2294,7 @@ def _byte_diff(actual, expected):
     return f"one is a prefix of the other: lengths {len(actual)} vs {len(expected)}"
 
 
-def _not_executable(sample_dir):
+def _not_executable(sample_dir, now):
     """D-090(a), D-091(a): the classification of an AUTHENTIC bundle.
 
     Called only once verify_sample() has returned ok=True, so everything read here is
@@ -2278,15 +2305,32 @@ def _not_executable(sample_dir):
     _refusal_checks() verified the one it found. The directory name is never consulted.
 
     Returns None for a bundle SentinelVault would consider -- ALLOW, or REVIEW beside an
-    override.json, which ok=True means was verified against this exact receipt (§5.5)
-    -- and otherwise (kind, lead) for the headline, where `kind` is the verdict name
-    or "REFUSAL RECORD" and `lead` is the sentence that follows the NOT EXECUTABLE
-    word. The lead names what the bundle IS: a receipt's lead states its signed
-    verdict; a refusal record has no verdict, so its lead says the signer declined to
-    issue a receipt (D-091(a)), and never borrows the receipt sentence (H-5). This is
-    NOT an executability check: no operation, no window, no nonce, no clock (D-088
-    stands). It reads facts the verifier already authenticated, so that the exit
-    status stops saying 0 for a bundle SentinelVault will not execute.
+    override.json, which ok=True means was verified against this exact receipt (§5.5),
+    either one inside its validity window by the host clock -- and otherwise
+    (kind, lead) for the headline, where `kind` is the verdict name, "REFUSAL RECORD",
+    "WINDOW" or "OVERRIDE WINDOW", and `lead` is the sentence that follows the NOT
+    EXECUTABLE word. The lead names what the bundle IS: a receipt's lead states its
+    signed verdict; a refusal record has no verdict, so its lead says the signer
+    declined to issue a receipt (D-091(a)), and never borrows the receipt sentence
+    (H-5); a window lead prints the window that was missed and the host instant.
+
+    Precedence inside exit 3: verdict first, window second. A BLOCK is not executable
+    whatever the clock says, and the cure for an un-overridden REVIEW is still the
+    override, so those leads stand and the window is not mentioned (D-092(c)).
+
+    THE HOST CLOCK (D-092(c)). `now` is the instant run() read from `time.time()` --
+    exactly once per run, the only clock this tool consults, and nothing a caller can
+    supply: run() takes no such parameter, and this private helper receives the one
+    read so that the status it classifies on and every line run() prints agree. It is
+    UNAUTHENTICATED: it is whatever this machine reports. That is why it may inform
+    exit 3, which is neither
+    a certification nor a refusal, and why it is never a check inside verify_sample():
+    an expired receipt is still an authentic one. The predicate is the publication
+    verifier's and the Vault's, `issuedAt <= now < expiresAt`, applied to the receipt
+    and, when an override.json is present, to the override. D-088 otherwise stands:
+    no operation, no nonce, no block state -- this is a classification, not an
+    executability check, and it reads facts the verifier already authenticated so
+    that the exit status stops saying 0 for a bundle SentinelVault will not execute.
     """
     # Load the way verify_sample() loads: receipt.json when present, and an empty
     # document beside a refusal.json, which is the one shape with no receipt to read.
@@ -2318,14 +2362,88 @@ def _not_executable(sample_dir):
             "SentinelVault refuses a BLOCK receipt at both entry points, and §5.5 says a "
             "block receipt cannot be overridden. Nothing a recipient adds to this bundle "
             "makes it executable.")
-    if verdict == "REVIEW" and not os.path.isfile(os.path.join(sample_dir, "override.json")):
+    override_path = os.path.join(sample_dir, "override.json")
+    if verdict == "REVIEW" and not os.path.isfile(override_path):
         return "REVIEW", (
             "the signed verdict is REVIEW -- "
             "the bundle carries no override.json. SentinelVault executes a REVIEW receipt "
             "only with an owner-signed override naming this exact receipt, action and "
             "nonce (§5.5). The cure is that override, placed beside receipt.json; this "
             "tool then verifies it too.")
+
+    # D-092(c). The verdict is one the Vault considers; now the window, by the host
+    # clock. Receipt first: when the receipt's own window is missed, the override's
+    # window is not the reason and is not mentioned (the shipped override's window
+    # is 0..4000000000, and printing it beside an expired receipt would misdirect).
+    windows = _validity_windows(sample_dir)
+    receipt_window = windows["receipt"]
+    if receipt_window and not _inside(receipt_window, now):
+        issued_at, expires_at = receipt_window
+        beside = (" (an override.json is present and was verified)"
+                  if verdict == "REVIEW" else "")
+        return "WINDOW", (
+            f"the receipt is outside its validity window by the host clock -- "
+            f"issuedAt {issued_at} <= now {now} < expiresAt {expires_at} does not hold, "
+            f"so the receipt (signed verdict {verdict}{beside}) is "
+            f"{_window_state(receipt_window, now)}. SentinelVault refuses a receipt "
+            "outside its window at both entry points, whatever its verdict. The host "
+            "clock is unauthenticated: `now` is what this machine reports, not a "
+            "certified time, and this tool takes no other.")
+    override_window = windows["override"]
+    if override_window and not _inside(override_window, now):
+        issued_at, expires_at = override_window
+        return "OVERRIDE WINDOW", (
+            f"the override is outside its validity window by the host clock -- the §5.5 "
+            f"override beside this {verdict} receipt carries "
+            f"issuedAt {issued_at} <= now {now} < expiresAt {expires_at}, which does not "
+            f"hold, so the override is {_window_state(override_window, now)} while the "
+            "receipt's own window is live. SentinelVault executes a REVIEW receipt only "
+            "with an owner-signed override that is current (§5.5). The host clock is "
+            "unauthenticated: `now` is what this machine reports, not a certified time, "
+            "and this tool takes no other.")
     return None
+
+
+def _inside(window, now):
+    """`issuedAt <= now < expiresAt` -- verbatim the publication verifier's predicate
+    (verify_publication.py, the receipt and the override alike) and the Vault's."""
+    issued_at, expires_at = window
+    return issued_at <= now < expires_at
+
+
+def _window_state(window, now):
+    return "not yet valid" if now < window[0] else "expired"
+
+
+def _validity_windows(sample_dir):
+    """The receipt's and the override's validity windows, as the bundle carries them.
+
+    D-092(c). Reads no clock -- run() reads `time.time()` exactly once per run and
+    passes that instant wherever a window is compared or printed, so the two windows,
+    the classification and the printed predicate all share one `now`. Returns
+    {"receipt", "override"}, each
+    window an `(issuedAt, expiresAt)` pair of ints or None when the file, the body or
+    a well-typed uint64 is absent. Called only once verify_sample() has returned
+    ok=True, so an absent or malformed window is unreachable for a receipt (the
+    struct would not have encoded); the None arms keep this a reporting helper that
+    cannot crash a run rather than a check.
+    """
+    def window(path, key):
+        if not os.path.isfile(path):
+            return None
+        try:
+            body = _read_json(path).get(key)
+            if not isinstance(body, dict):
+                return None
+            return (eip712.parse_uint("uint64", body["issuedAt"]),
+                    eip712.parse_uint("uint64", body["expiresAt"]))
+        except (KeyError, TypeError, ValueError, eip712.EncodingError):
+            return None
+
+    return {
+        "receipt": window(os.path.join(sample_dir, "receipt.json"), "receipt"),
+        "override": window(os.path.join(sample_dir, "override.json"), "override"),
+    }
 
 
 def run(sample_dir, domain_path=None, tamper=None, quiet=False, verbose=True):
@@ -2333,9 +2451,10 @@ def run(sample_dir, domain_path=None, tamper=None, quiet=False, verbose=True):
 
     `ok` is AUTHENTICITY, exactly as verify_sample() returns it. `executable` is the
     D-090(a) classification of an authentic bundle -- False for a BLOCK receipt, a
-    REVIEW receipt with no override.json, or a §5.5.1 refusal record (D-091(a)) -- and
-    is True whenever `ok` is False or a tamper mode ran, because the classification is
-    only meaningful for a bundle that verified. The word and the exit status are decided here and in main(), not in
+    REVIEW receipt with no override.json, a §5.5.1 refusal record (D-091(a)), or a
+    receipt or override outside its validity window by the host clock (D-092(c)) --
+    and is True whenever `ok` is False or a tamper mode ran, because the
+    classification is only meaningful for a bundle that verified. The word and the exit status are decided here and in main(), not in
     verify_sample(): the library answer stays authenticity, and the tamper self-test's
     "correctly still verified" on a BLOCK sample depends on that.
     """
@@ -2377,48 +2496,92 @@ def run(sample_dir, domain_path=None, tamper=None, quiet=False, verbose=True):
     # D-090(a): classify AFTER authenticity is settled, and only then. A bundle that did
     # not verify is a refusal whatever its verdict says -- 1 beats 3 -- so a forged BLOCK
     # cannot hide behind the not-executable word.
-    not_executable = _not_executable(sample_dir) if ok else None
+    # D-092(c): THE ONE CLOCK READ PER RUN. The instant is taken here, once, and
+    # handed to the classification and to every printed line, so the exit status and
+    # the predicate a reader sees (`issuedAt <= now < expiresAt`) can never disagree.
+    # A second read for the PASS continuation once let the tool exit 0 while printing
+    # a `now` equal to `expiresAt` -- a predicate that was false as printed.
+    now = int(time.time())
+    not_executable = _not_executable(sample_dir, now) if ok else None
     if not quiet:
+        # D-092(c): what this tool is and is not, said once under every headline. It
+        # certifies authenticity; the window classification is made offline against
+        # the host clock, which is unauthenticated; nothing about execution is certified.
+        scope = ("This tool certifies authenticity only; it classifies executability "
+                 "offline against the host clock, which is unauthenticated, and "
+                 "certifies nothing about execution. For executability at the Vault, "
+                 "run verifier/verify_publication.py.")
         if not_executable:
             kind, lead = not_executable
+            # D-092(d): a refusal record IS the signer's refusal, so its continuation
+            # may not say "nor a refusal"; a receipt's may, as D-090(a) worded it.
+            neither = "neither a certification nor a refusal"
             if kind == "REFUSAL RECORD":
                 # D-091(a). Its own continuation: a refusal record is not a decision
                 # SentinelVault refuses, it is the absence of any decision to submit.
+                neither = "neither a certification nor a rejection"
                 held = ("Digest, signature, signer identity and every binding hold "
                         "against the named trust root, so this is genuinely the signer's "
                         "refusal to issue a receipt, and no receipt is what the bundle "
                         "carries.")
+            elif kind in ("WINDOW", "OVERRIDE WINDOW"):
+                # D-092(c). The decision is one the Vault would consider; only the
+                # window, by the host clock, has been missed.
+                held = ("Hashes, signatures and bindings hold against the named trust "
+                        "root, so this is genuinely the signer's decision; what has been "
+                        "missed is a validity window, by a host clock this tool cannot "
+                        "authenticate.")
             else:
                 held = ("Hashes, signatures and bindings hold against the named trust "
                         "root, so this is genuinely the signer's decision, and the "
                         "decision is one SentinelVault refuses.")
             print(f"  => {_color(NOT_EXECUTABLE_WORD, YELLOW)}: {lead}\n"
-                  f"     Exit status 3: neither a certification nor a refusal. {held} "
-                  "This tool still evaluates no validity window (no clock) and "
-                  "certifies nothing about execution; for executability, run "
-                  "verifier/verify_publication.py.\n")
+                  f"     Exit status 3: {neither}. {held} {scope}\n")
         elif ok:
             # D-087(c): say which claim this is. `=> PASS` here and `PASS (static,
             # offline)` from verify_publication.py were two different claims wearing
-            # one word. This tool has no clock and evaluates no validity window.
+            # one word. D-092(c): a PASS also says the window contained the host
+            # instant -- printed, so a reader sees what the unauthenticated clock said.
+            carried = _validity_windows(sample_dir)
+            windows = []
+            for name in ("receipt", "override"):
+                if carried[name]:
+                    windows.append(f"the {name}'s issuedAt {carried[name][0]} <= now "
+                                   f"{now} < expiresAt {carried[name][1]}")
             print(f"  => {_color('PASS', GREEN)}: AUTHENTIC -- hashes, signatures and bindings "
                   "hold against the named trust root.\n"
-                  "     NOT evaluated by this tool: executability at the Vault, and every "
-                  "validity window (no clock; an expired receipt is still an authentic one). "
-                  "For those, run verifier/verify_publication.py.\n")
+                  f"     The validity window contains the host instant ({'; '.join(windows)}) "
+                  "-- classified offline against the host clock, which is unauthenticated, "
+                  "so that is not a certification of execution. NOT evaluated by this "
+                  "tool: executability at the Vault -- nonce, block state, the mandate's "
+                  "and policy's windows, the action deadline. For those, run "
+                  "verifier/verify_publication.py.\n")
         else:
             print(f"  => {_color('FAIL', RED)}\n")
     return ok, checks, not_executable is None
 
 
 def run_tamper_suite(sample_dir, domain_path=None, quiet=False, verbose=False):
-    """Every tamper mode must produce its expected outcome."""
+    """Every applicable tamper mode must produce its expected outcome.
+
+    Returns (all_as_expected, applicable, not_applicable): the second and third are
+    the counts of modes that RAN and of modes skipped as N/A on this sample, so the
+    summary main() prints states what was measured rather than "every mode"
+    (D-092(e)). A mode is N/A when the sample has nothing for it to mutate; run()
+    reports that as (True, [], True), and an empty check list is what tells it apart
+    here -- a mode that ran always carries at least the trust-root check.
+    """
     results = []
+    applicable = not_applicable = 0
     for mode in TAMPER_MODES:
-        as_expected, _checks, _executable = run(sample_dir, domain_path, tamper=mode,
-                                                quiet=quiet, verbose=verbose)
+        as_expected, checks, _executable = run(sample_dir, domain_path, tamper=mode,
+                                               quiet=quiet, verbose=verbose)
+        if as_expected and not checks:
+            not_applicable += 1
+        else:
+            applicable += 1
         results.append(as_expected)
-    return all(results)
+    return all(results), applicable, not_applicable
 
 
 def main(argv=None):
@@ -2435,7 +2598,11 @@ def main(argv=None):
                              "material the presenter chose.")
     parser.add_argument("--tamper", nargs="?", const="all", choices=("all",) + TAMPER_MODES,
                         help="self-test: mutate the artifact and require verification to FAIL "
-                             "(default 'all' runs every mode)")
+                             "(default 'all' runs every mode). A mode the sample has nothing "
+                             "for is reported N/A and counted; the summary states the "
+                             "applicable and N/A counts. Exit 0 means every applicable mode "
+                             "behaved as expected -- a self-test contract, saying nothing "
+                             "about executability")
     parser.add_argument("--all", action="store_true",
                         help="treat each argument as a directory of sample directories")
     parser.add_argument("--print-types", action="store_true",
@@ -2506,12 +2673,20 @@ def main(argv=None):
         # "something was checked and failed" for anything reading the status.
         return 2
 
+    applicable = not_applicable = 0
     if args.tamper == "all":
-        oks = [run_tamper_suite(t, root, verbose=False) for t, root in targets]
+        suites = [run_tamper_suite(t, root, verbose=False) for t, root in targets]
+        oks = [ok for ok, _applicable, _na in suites]
+        applicable = sum(a for _ok, a, _na in suites)
+        not_applicable = sum(na for _ok, _a, na in suites)
         not_executable = []
     else:
         results = [run(t, root, args.tamper) for t, root in targets]
         oks = [ok for ok, _checks, _executable in results]
+        if args.tamper:
+            # One mode per target; N/A is run()'s (True, [], True), as in run_tamper_suite.
+            not_applicable = sum(1 for ok, checks, _e in results if ok and not checks)
+            applicable = len(results) - not_applicable
         # D-090(a). run() reports executable=True for any tampered run, so a single
         # tamper mode never lands here; only an authentic, untampered bundle can be
         # NOT EXECUTABLE. Same rule for `--all` and for several positional bundles --
@@ -2523,10 +2698,20 @@ def main(argv=None):
     # "verified" means AUTHENTIC and nothing more (D-087(c)). The phrase
     # `N/N sample(s) verified` is kept intact because the test suite asserts on it;
     # the qualifier follows it on the same line so a reader cannot take the count
-    # without the claim's limit.
-    print(f"{passed}/{len(oks)} sample(s) "
-          f"{'behaved as expected under every tamper mode' if args.tamper else 'verified'}"
-          f"{'' if args.tamper else ' as AUTHENTIC. Executability and validity windows are not evaluated by this tool (no clock); an expired receipt is still an authentic one -- see verifier/verify_publication.py.'}")
+    # without the claim's limit. D-092(e): the tamper summary states the counts it
+    # measured -- modes that ran and modes skipped as N/A -- and never says "every".
+    if args.tamper:
+        print(f"{passed}/{len(oks)} sample(s) passed the tamper self-test: "
+              f"{applicable} applicable mode run(s) behaved as expected (rejected, or for "
+              f"reasons-reorder still verified) and {not_applicable} inapplicable mode "
+              "run(s) were skipped as N/A. Exit 0 is the self-test contract (see --help); "
+              "it says nothing about executability.")
+    else:
+        print(f"{passed}/{len(oks)} sample(s) verified as AUTHENTIC. Executability is "
+              "classified offline against the host clock, which is unauthenticated, and "
+              "is not certified by this tool (validity windows only; an expired receipt "
+              "is still an authentic one) -- for executability at the Vault, run "
+              "verifier/verify_publication.py.")
     for target in failed:
         print(f"  {_color('FAILED', RED)}: {target}")
     for target in not_executable:
@@ -2534,9 +2719,11 @@ def main(argv=None):
     if not_executable:
         print(f"  {len(not_executable)} of the {passed} authentic sample(s) present nothing "
               "SentinelVault would execute -- a BLOCK receipt, a REVIEW receipt with no "
-              "override.json, or a §5.5.1 refusal record that issues no receipt at all -- "
-              "and are listed above as NOT EXECUTABLE (D-090(a), D-091(a)). Exit status 3 "
-              "says so; a refused sample, if any, takes precedence and the status is 1.")
+              "override.json, a §5.5.1 refusal record that issues no receipt at all, or a "
+              "receipt or override outside its validity window by the unauthenticated host "
+              "clock -- and are listed above as NOT EXECUTABLE (D-090(a), D-091(a), "
+              "D-092(c)). Exit status 3 says so; a refused sample, if any, takes "
+              "precedence and the status is 1.")
     # 1 beats 3 beats 0: a refusal anywhere in the run is a refusal; otherwise one
     # authentic-not-executable bundle makes the run not executable; otherwise PASS.
     return 1 if failed else 3 if not_executable else 0

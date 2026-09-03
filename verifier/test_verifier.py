@@ -8,6 +8,7 @@ Stdlib unittest only, no third-party test runner:
 """
 
 import contextlib
+import inspect
 import io
 import json
 import os
@@ -16,6 +17,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -89,6 +91,38 @@ def reseal(target, domain):
         eip712.receipt_digest(domain, doc["receipt"]), SIGNER_KEY)
     write_json(os.path.join(target, "receipt.json"), doc)
     return doc
+
+
+def live_window(now=None):
+    """A receipt window that contains the host instant: opened a minute ago, an hour left.
+
+    D-092(c) (2026-09-02). Every shipped receipt fixture expired on 2026-08-29
+    (`expiresAt` 1788059884), so a test that needs `=> PASS` / exit 0 can no longer
+    read it off the corpus; it MINTS a bundle whose window contains now. The margin
+    on each side is large against the run time of one test and small against the
+    fixtures' 300-second lifetime, so a bundle minted here is live for the whole of
+    the test that minted it and would not have been live yesterday.
+    """
+    now = int(time.time()) if now is None else int(now)
+    return now - 60, now + 3600
+
+
+def rewindow(target, issued_at, expires_at, domain=None):
+    """Move a staged receipt.json's validity window and re-seal it (D-092(c)).
+
+    `issuedAt` and `expiresAt` sit inside the §5.4 struct the signature covers, so
+    the receipt is re-signed with the published signer key afterwards; nothing else
+    in the bundle copies the window (measured: the two timestamps occur only in
+    receipt.json), so no other hash moves. ORDER MATTERS beside an override: §5.5's
+    `reviewReceiptHash` is the receipt's hashStruct, which this changes, so call
+    this BEFORE `_add_owner_override`, never after.
+    """
+    domain = read_json(SAMPLES, "domain.json") if domain is None else domain
+    doc = read_json(target, "receipt.json")
+    doc["receipt"]["issuedAt"] = str(int(issued_at))     # §5.4 uint64, canonical decimal
+    doc["receipt"]["expiresAt"] = str(int(expires_at))
+    write_json(os.path.join(target, "receipt.json"), doc)
+    return reseal(target, domain)
 
 
 def all_sample_dirs():
@@ -3534,6 +3568,16 @@ class TestExitContractD090(unittest.TestCase):
     is authentic and carries nothing to execute. The corpus therefore lists FIVE
     NOT EXECUTABLE bundles, not four; the aggregate test below was rewritten to say
     so, and TestExitContractD091 pins the refusal record's own contract.
+
+    D-092(c) (2026-09-02) AMENDED "there is still no clock and no window check"
+    above: verify.py now compares the receipt's window (and the override's) to the
+    HOST clock and reports an authentic bundle outside it as NOT EXECUTABLE, exit 3.
+    Every shipped receipt fixture expired on 2026-08-29, so the positive controls in
+    this class -- the ALLOW and overridden-REVIEW PASS / exit 0 cases -- could no
+    longer read PASS off the corpus. They were rewritten to MINT a live bundle
+    (`live_window`, `rewindow`) and the corpus aggregate below now counts SEVEN
+    NOT EXECUTABLE and zero PASS. TestExitContractD092 pins the window contract
+    itself; the tests here keep pinning the verdict/override contract, on live bundles.
     """
 
     BLOCK_SAMPLE = os.path.join(SAMPLES, "case-2-injection-block")
@@ -3734,6 +3778,10 @@ class TestExitContractD090(unittest.TestCase):
         # THE PAIR THAT ISOLATES THE OVERRIDE: one bundle, one file added, and the
         # exit status moves from 3 to 0. Nothing else about the bundle changes.
         target = self._staged_with_verdict(1, "REVIEW")
+        # D-092(c): the source fixture is expired, so the window is moved to contain
+        # now BEFORE the override is derived (the override binds the receipt's
+        # hashStruct). With that done, the override is again the only thing that moves.
+        rewindow(target, *live_window())
         rc, out = self._cli("--domain", trust_root(target), target)
         self._assert_not_executable(rc, out, "REVIEW", extra_words=("override",))
         self._add_owner_override(target)
@@ -3741,17 +3789,26 @@ class TestExitContractD090(unittest.TestCase):
         self._assert_pass(rc, out)
 
     # -- 3 and 4. the positive controls ---------------------------------------------
+    # Rewritten under D-092(c): the shipped ALLOW and overridden-REVIEW fixtures are
+    # expired and now exit 3 (pinned in TestExitContractD092), so PASS is read off a
+    # bundle minted live. The shipped override's own window (0 .. 4000000000) is
+    # live; only the receipt's had closed.
 
     def test_a_REVIEW_receipt_with_a_valid_owner_override_keeps_PASS_and_exit_0(self):
-        rc, out = self._cli("--domain", self.DOMAIN, OVERRIDE_SAMPLE)
+        target = self._staged_with_verdict(1, "REVIEW")
+        rewindow(target, *live_window())
+        self._add_owner_override(target)
+        rc, out = self._cli("--domain", trust_root(target), target)
         self._assert_pass(rc, out)
         self.assertIn("override targets a REVIEW receipt", out,
                       "the override checks must have run for this PASS to mean anything")
 
     def test_an_ALLOW_receipt_keeps_PASS_and_exit_0(self):
-        rc, out = self._cli("--domain", self.DOMAIN, self.ALLOW_SAMPLE)
+        target = self._staged("case-1-allow")
+        rewindow(target, *live_window())
+        rc, out = self._cli("--domain", trust_root(target), target)
         self._assert_pass(rc, out)
-        rc, out = self._proc("--domain", self.DOMAIN, self.ALLOW_SAMPLE)
+        rc, out = self._proc("--domain", trust_root(target), target)
         self._assert_pass(rc, out)
 
     # -- 5. refusals stay FAIL / 1 --------------------------------------------------
@@ -3787,9 +3844,11 @@ class TestExitContractD090(unittest.TestCase):
         # deliberately ignored, and the four codes must be pairwise distinct.
         tampered = self._staged("case-1-allow")
         self._corrupt_receipt_signature(tampered)
+        live = self._staged("case-1-allow")          # D-092(c): the shipped one is expired
+        rewindow(live, *live_window())
         empty = self._tmp()
         codes = {
-            "ALLOW": self._proc("--domain", self.DOMAIN, self.ALLOW_SAMPLE)[0],
+            "ALLOW": self._proc("--domain", trust_root(live), live)[0],
             "BLOCK": self._proc("--domain", self.DOMAIN, self.BLOCK_SAMPLE)[0],
             "tampered": self._proc("--domain", trust_root(tampered), tampered)[0],
             "nothing verified": self._proc("--domain", self.DOMAIN, "--all", empty)[0],
@@ -3818,28 +3877,35 @@ class TestExitContractD090(unittest.TestCase):
         # tamper branch this exits non-zero and the gate's tamper floor breaks.
         rc, out = self._cli("--domain", self.DOMAIN, "--tamper", "all", self.BLOCK_SAMPLE)
         self.assertEqual(rc, EXIT_PASS, out)
-        self.assertIn("1/1 sample(s) behaved as expected under every tamper mode", out)
+        # D-092(e) rewrote the summary sentence (TestExitContractD092 pins its counts);
+        # what this test keeps is that the run summarises 1/1 and never says NOT EXECUTABLE.
+        self.assertRegex(out, r"(?m)^1/1 sample\(s\) ")
         self.assertNotIn(NOT_EXECUTABLE_WORD, out)
 
     # -- 6. the aggregate ------------------------------------------------------------
 
     # D-091(a): the §5.5.1 refusal record moved from the PASSING list to this one. It
     # was the seventh "PASS" until John ruled it reports as a BLOCK receipt does.
+    # D-092(c): the last two moved too -- the ALLOW and the overridden REVIEW are
+    # authentic and EXPIRED, and the corpus now carries nothing that PASSES. The
+    # positive control for the aggregate is minted live, below.
     NOT_EXECUTABLE_IN_CORPUS = ("case-2-injection-block", "case-3-wrong-purpose-block",
                                 "case-4-blocked-failmode-failclosed", "edge-single-reason-code",
-                                "refusal-vault-paused")
-    PASSING_IN_CORPUS = ("case-1-allow", "case-4-review-failmode-review")
+                                "refusal-vault-paused",
+                                "case-1-allow", "case-4-review-failmode-review")
+    PASSING_IN_CORPUS = ()
 
     def _lines_naming(self, out, needle):
         return [l for l in out.splitlines() if needle in l]
 
     def test_all_over_the_shipped_corpus_exits_3_and_still_counts_7_of_7_authentic(self):
         # WHAT THE GATE RUNS, verbatim: scripts/test.sh's D-010 stage. Four of the
-        # seven bundles are BLOCK by design and a fifth is a §5.5.1 refusal record
-        # (D-091(a)); none is refused, so the aggregate is 3. The count line keeps
-        # the `N/M sample(s) verified` form -- the gate's sed reads it against
-        # VERIFIER_MIN_SAMPLES -- and N is the AUTHENTIC count, because that is the
-        # claim the phrase makes and all seven are authentic.
+        # seven bundles are BLOCK by design, a fifth is a §5.5.1 refusal record
+        # (D-091(a)), and the remaining two expired on 2026-08-29 (D-092(c)); none is
+        # refused, so the aggregate is 3. The count line keeps the `N/M sample(s)
+        # verified` form -- the gate's sed reads it against VERIFIER_MIN_SAMPLES --
+        # and N is the AUTHENTIC count, because that is the claim the phrase makes
+        # and all seven are authentic.
         rc, out = self._proc("--domain", self.DOMAIN, "--all", SAMPLES)
         self.assertEqual(rc, EXIT_NOT_EXECUTABLE, out[-2000:])
         self.assertRegex(out, r"(?m)^7/7 sample\(s\) verified")
@@ -3847,6 +3913,7 @@ class TestExitContractD090(unittest.TestCase):
         self.assertNotIn("=> FAIL", out)
         summary_at = out.index("7/7 sample(s) verified")
         after = out[summary_at:]
+        self.assertEqual(len(self.NOT_EXECUTABLE_IN_CORPUS), 7)
         for name in self.NOT_EXECUTABLE_IN_CORPUS:
             path = os.path.join(SAMPLES, name)
             named = self._lines_naming(after, path)
@@ -3859,20 +3926,27 @@ class TestExitContractD090(unittest.TestCase):
                              f"{name} PASSES and must not be listed after the summary")
         heads = _headline_blocks(out)
         self.assertEqual(len(heads), 7)
-        # 4 -> 5 and 3 -> 2 at D-091(a): the refusal record is the fifth.
-        self.assertEqual(sum(h.startswith(f"=> {NOT_EXECUTABLE_WORD}") for h in heads), 5)
-        self.assertEqual(sum(h.startswith("=> PASS: AUTHENTIC") for h in heads), 2)
+        # 4 -> 5 at D-091(a) (the refusal record), 5 -> 7 at D-092(c) (the two expired).
+        self.assertEqual(sum(h.startswith(f"=> {NOT_EXECUTABLE_WORD}") for h in heads), 7)
+        self.assertEqual(sum(h.startswith("=> PASS: AUTHENTIC") for h in heads), 0)
+        self.assertNotIn("=> PASS", out, "nothing in the shipped corpus PASSES any more")
 
     def test_all_over_a_corpus_of_executable_shaped_bundles_exits_0(self):
-        # The control for the test above: remove the BLOCK bundles and the aggregate
-        # is a plain PASS. Without this, "always 3" satisfies the shipped-corpus test.
+        # The control for the test above: a corpus of live ALLOW and overridden-REVIEW
+        # bundles is a plain PASS. Without this, "always 3" satisfies the shipped-corpus
+        # test. Minted, not copied (D-092(c)): a copy of the shipped pair is expired.
         tmp = self._tmp()
-        for name in ("case-1-allow", "case-4-review-failmode-review"):
-            shutil.copytree(os.path.join(SAMPLES, name), os.path.join(tmp, name))
-        rc, out = self._proc("--domain", self.DOMAIN, "--all", tmp)
+        allow = stage(self.ALLOW_SAMPLE, tmp)
+        rewindow(allow, *live_window())
+        review = self._staged_with_verdict(1, "REVIEW")
+        rewindow(review, *live_window())
+        self._add_owner_override(review)
+        shutil.move(review, os.path.join(tmp, "case-4-review-minted-live"))
+        rc, out = self._proc("--domain", os.path.join(tmp, "domain.json"), "--all", tmp)
         self.assertEqual(rc, EXIT_PASS, out[-2000:])
         self.assertRegex(out, r"(?m)^2/2 sample\(s\) verified")
         self.assertNotIn("NOT EXECUTABLE", out)
+        self.assertEqual(sum(h.startswith("=> PASS: AUTHENTIC") for h in _headline_blocks(out)), 2)
 
     def test_all_with_one_refused_bundle_exits_1_whatever_else_is_there(self):
         # 1 beats 3 beats 0 in the aggregate as in the single case: a corpus with a
@@ -3890,10 +3964,15 @@ class TestExitContractD090(unittest.TestCase):
 
     def test_several_positional_bundles_follow_the_same_aggregate_rule_as_all(self):
         # `verify.py a b` is the other multi-bundle shape, and the one a first draft
-        # of the `--all` rule would miss.
-        rc, out = self._cli("--domain", self.DOMAIN, self.ALLOW_SAMPLE, self.BLOCK_SAMPLE)
+        # of the `--all` rule would miss. The ALLOW is minted live (D-092(c)): with the
+        # shipped, expired one both bundles would be 3 on their own and "3 beats 0"
+        # would be measured by nothing.
+        live = self._staged("case-1-allow")
+        rewindow(live, *live_window())
+        rc, out = self._cli("--domain", self.DOMAIN, live, self.BLOCK_SAMPLE)
         self.assertEqual(rc, EXIT_NOT_EXECUTABLE, out[-1500:])
         self.assertIn("2/2 sample(s) verified", out)
+        self.assertEqual(sum(h.startswith("=> PASS: AUTHENTIC") for h in _headline_blocks(out)), 1)
         forged = self._staged("case-1-allow")
         self._corrupt_receipt_signature(forged)
         rc, out = self._cli("--domain", self.DOMAIN, self.BLOCK_SAMPLE, forged)
@@ -4083,24 +4162,26 @@ class TestExitContractD091(unittest.TestCase):
 
     # -- 2. the aggregate --------------------------------------------------------------
 
-    def test_all_over_the_shipped_corpus_lists_five_NOT_EXECUTABLE_including_the_refusal_record(self):
-        # WHAT THE GATE RUNS. Four BLOCK receipts plus the refusal record: five lines,
-        # exit 3, 7/7 authentic. README.md and scripts/test.sh say "four" today and
-        # will need to say five (reported, not edited, by this lane).
+    def test_all_over_the_shipped_corpus_lists_seven_NOT_EXECUTABLE_including_the_refusal_record(self):
+        # WHAT THE GATE RUNS. Four BLOCK receipts plus the refusal record were five
+        # lines at D-091(a); D-092(c) added the two expired receipts, so SEVEN lines,
+        # exit 3, 7/7 authentic. README.md and scripts/test.sh say "five" today and
+        # will need to say seven (reported, not edited, by this lane). Was
+        # `..._lists_five_...` until D-092(c).
         rc, out = self._proc("--domain", self.DOMAIN, "--all", SAMPLES)
         self.assertEqual(rc, EXIT_NOT_EXECUTABLE, out[-2000:])
         self.assertRegex(out, r"(?m)^7/7 sample\(s\) verified")
         self.assertNotIn("FAILED:", out)
         after = out[out.index("7/7 sample(s) verified"):]
         listed = [l for l in after.splitlines() if l.strip().startswith("NOT EXECUTABLE:")]
-        self.assertEqual(len(listed), 5, f"five NOT EXECUTABLE lines, got {listed!r}")
+        self.assertEqual(len(listed), 7, f"seven NOT EXECUTABLE lines, got {listed!r}")
         named = self._lines_naming(after, self.REFUSAL_SAMPLE)
         self.assertTrue(named and all("NOT EXECUTABLE" in l for l in named),
                         f"the refusal record must be listed as NOT EXECUTABLE; got {named!r}")
         heads = _headline_blocks(out)
         self.assertEqual(len(heads), 7)
-        self.assertEqual(sum(h.startswith(f"=> {NOT_EXECUTABLE_WORD}") for h in heads), 5)
-        self.assertEqual(sum(h.startswith("=> PASS: AUTHENTIC") for h in heads), 2)
+        self.assertEqual(sum(h.startswith(f"=> {NOT_EXECUTABLE_WORD}") for h in heads), 7)
+        self.assertEqual(sum(h.startswith("=> PASS: AUTHENTIC") for h in heads), 0)
 
     def test_all_over_a_corpus_of_only_the_refusal_record_exits_3(self):
         # The `--all` discovery path with nothing but the refusal record in it: the
@@ -4112,17 +4193,19 @@ class TestExitContractD091(unittest.TestCase):
 
     def test_the_refusal_record_beside_an_ALLOW_bundle_exits_3_in_either_order(self):
         # Positional multi-bundle: 3 beats 0, whichever bundle comes first, and only
-        # the refusal record is listed after the summary.
-        for order in ((self.REFUSAL_SAMPLE, self.ALLOW_SAMPLE),
-                      (self.ALLOW_SAMPLE, self.REFUSAL_SAMPLE)):
+        # the refusal record is listed after the summary. The ALLOW is minted live
+        # (D-092(c)): the shipped one is expired and would be listed too.
+        live = self._staged("case-1-allow")
+        rewindow(live, *live_window())
+        for order in ((self.REFUSAL_SAMPLE, live), (live, self.REFUSAL_SAMPLE)):
             with self.subTest(order=[os.path.basename(p) for p in order]):
                 rc, out = self._cli("--domain", self.DOMAIN, *order)
                 self.assertEqual(rc, EXIT_NOT_EXECUTABLE, out[-1500:])
                 self.assertIn("2/2 sample(s) verified", out)
                 after = out[out.index("2/2 sample(s) verified"):]
                 self.assertTrue(self._lines_naming(after, self.REFUSAL_SAMPLE))
-                self.assertFalse(self._lines_naming(after, self.ALLOW_SAMPLE),
-                                 "the ALLOW bundle PASSES and is not listed after the summary")
+                self.assertFalse(self._lines_naming(after, live),
+                                 "the live ALLOW bundle PASSES and is not listed after the summary")
                 heads = _headline_blocks(out)
                 self.assertEqual(sum(h.startswith("=> PASS: AUTHENTIC") for h in heads), 1)
                 self.assertEqual(sum(h.startswith(f"=> {NOT_EXECUTABLE_WORD}") for h in heads), 1)
@@ -4197,7 +4280,8 @@ class TestExitContractD091(unittest.TestCase):
         # NOT EXECUTABLE word must never appear on this arm.
         rc, out = self._cli("--domain", self.DOMAIN, "--tamper", "all", self.REFUSAL_SAMPLE)
         self.assertEqual(rc, EXIT_PASS, out[-2000:])
-        self.assertIn("1/1 sample(s) behaved as expected under every tamper mode", out)
+        # D-092(e) rewrote the summary sentence (TestExitContractD092 pins its counts).
+        self.assertRegex(out, r"(?m)^1/1 sample\(s\) ")
         self.assertIn("correctly rejected the mutated refusal-signature", out)
         self.assertNotIn("WRONGLY", out)
         self.assertNotIn(NOT_EXECUTABLE_WORD, out)
@@ -4208,6 +4292,650 @@ class TestExitContractD091(unittest.TestCase):
                                     self.REFUSAL_SAMPLE)
                 self.assertEqual(rc, EXIT_PASS, out[-2000:])
                 self.assertIn("=> N/A", out)
+                self.assertNotIn(NOT_EXECUTABLE_WORD, out)
+                self.assertNotIn("=> PASS", out)
+                self.assertNotIn("=> FAIL", out)
+
+
+class TestExitContractD092(unittest.TestCase):
+    """D-092(c), (d), (e), written before any implementer touched verify.py (D-058(1)).
+
+    THE DEFECT (c), measured at 02458d2 on 2026-09-02. `verify.py` reads no clock.
+    `fixtures/samples/case-1-allow` and `case-4-review-failmode-review` both carry
+    `issuedAt` 1788059584 / `expiresAt` 1788059884 -- a window that closed on
+    2026-08-29 -- and `verify.py --domain fixtures/samples/domain.json <bundle>`
+    printed `=> PASS: AUTHENTIC`, exit 0, on each. SentinelVault (`SentinelVault.sol`
+    ~:393-397) refuses both on the window, and so does verify_publication.py
+    (`issuedAt <= evaluationTime < expiresAt`, host clock). D-090(a) took the PASS
+    word away from a bundle the Vault refuses on its VERDICT; this is the one
+    remaining offline-checkable refusal it still exited 0 for.
+
+    THE RULED CONTRACT (c). `verify.py` compares the receipt's validity window --
+    and the override's, when an override.json is present (§5.5's payload carries
+    `issuedAt` / `expiresAt`; measured on the shipped override) -- to the HOST clock,
+    with exactly the publication verifier's predicate: `issuedAt <= now < expiresAt`.
+    An authentic bundle whose window does not contain the host instant is
+    `=> AUTHENTIC, NOT EXECUTABLE: ...`, exit 3, `NOT EXECUTABLE: <path>` after the
+    summary, counted authentic; the headline NAMES THE WINDOW and states that the
+    host clock is unauthenticated. Not-yet-valid is the same class as expired.
+    Precedence: 1 beats 3 beats 0 as before, and within 3 a BLOCK, an un-overridden
+    REVIEW or a refusal record keeps its D-090(a)/D-091(a) headline over the window.
+    A LIVE ALLOW, or a LIVE REVIEW with a LIVE override, keeps `=> PASS` / exit 0.
+
+    WHAT DOES NOT MOVE. The authenticity certification: `verify_sample()` still
+    returns authenticity, an expired receipt is still an authentic one, the tamper
+    self-test on an expired fixture still exits 0. NO CALLER-SUPPLIED INSTANT: the
+    host clock is the only clock, so no flag, environment variable or library
+    parameter can restore exit 0 on an expired receipt (the publication verifier's
+    `--evaluation-time` is a non-certifying diagnostic mode; this tool gets none).
+    The "no clock" / "evaluates no validity window" sentences in the output are now
+    false and must go; what replaces them must disclose the host clock as
+    unauthenticated.
+
+    HOW A PASS IS TESTED NOW. No shipped receipt is live, so every test that needs
+    exit 0 MINTS a bundle: a staged copy re-windowed around the host instant and
+    re-signed with the published signer key (`live_window`, `rewindow`), and for
+    REVIEW an override derived from the shipped one with its own window set and
+    re-signed by the mandate principal. The pair "minted live -> PASS / 0, same
+    bundle re-windowed into the past -> 3" isolates the window as the only thing
+    that moved.
+
+    THE AGGREGATE. `--all fixtures/samples` lists SEVEN NOT EXECUTABLE bundles --
+    four BLOCK, one refusal record, two expired -- still `7/7 sample(s) verified as
+    AUTHENTIC`, exit 3, and nothing in the shipped corpus PASSES any more.
+
+    (d) TWO WORDING PINS on the refusal-record path (`refusal-vault-paused`): the
+    per-check line `[PASS] ALLOW: the signer-attested decoded parameters conform to
+    the mandate (§5.7.1)` labels ALLOW as the REQUESTED verdict -- a refusal record
+    attests no verdict, and a bare `[PASS] ALLOW:` on a refusal reads as one -- and
+    the continuation under the refusal headline reads `neither a certification nor
+    a rejection` (a refusal record IS a refusal; "nor a refusal" contradicts the
+    line above it). The BLOCK path may keep its wording.
+
+    (e) `--tamper` SUMMARY HONESTY. `--tamper all` on `case-2-injection-block` ran
+    10 applicable modes and skipped 20 as N/A (14 / 16 on the refusal sample) and
+    summarised "behaved as expected under every tamper mode". The summary now states
+    the applicable count and the N/A count as numbers that match the per-mode lines
+    actually printed, and says `self-test`; exit 0 stays (a self-test contract,
+    stated in `--help`).
+    """
+
+    ALLOW_SAMPLE = os.path.join(SAMPLES, "case-1-allow")
+    REVIEW_SAMPLE = os.path.join(SAMPLES, "case-4-review-failmode-review")
+    BLOCK_SAMPLE = os.path.join(SAMPLES, "case-2-injection-block")
+    REFUSAL_SAMPLE = os.path.join(SAMPLES, "refusal-vault-paused")
+    DOMAIN = os.path.join(SAMPLES, "domain.json")
+
+    # Measured on the shipped ALLOW and overridden-REVIEW fixtures; asserted by the
+    # premise test below rather than assumed, so a regenerated corpus is noticed.
+    SHIPPED_WINDOW = (1788059584, 1788059884)
+    DAY = 86400
+
+    # The claims the old output made and the new one may not (case-insensitive).
+    OLD_CLAIMS = ("no clock", "evaluates no validity window", "evaluate no validity window")
+    CLOCK_DISCLOSURE = re.compile(r"unauthenticated|not (?:an )?authenticated")
+
+    # D-092(d): the §5.7.1 conformance check, minus its `ALLOW:` label.
+    CONFORMANCE_TAIL = "the signer-attested decoded parameters conform to the mandate (§5.7.1)"
+
+    # "and similar": every spelling of a caller-supplied instant this lane could think
+    # of. argparse rejects an unknown option with status 2 and names it.
+    INSTANT_FLAGS = ("--evaluation-time", "--evaluation_time", "--now", "--at", "--time",
+                     "--clock", "--epoch", "--instant", "--as-of")
+    INSTANT_ENV = ("SENTINEL_EVALUATION_TIME", "SENTINEL_NOW", "EVALUATION_TIME",
+                   "VERIFY_NOW", "SOURCE_DATE_EPOCH")
+    INSTANT_PARAM = re.compile(r"time|now|instant|clock|epoch|evaluat", re.IGNORECASE)
+
+    # -- helpers (the D-090 / D-091 classes', by reference, so the three cannot drift) --
+
+    _cli = TestExitContractD090._cli
+    _proc = TestExitContractD090._proc
+    _tmp = TestExitContractD090._tmp
+    _staged = TestExitContractD090._staged
+    _staged_with_verdict = TestExitContractD090._staged_with_verdict
+    _add_owner_override = TestExitContractD090._add_owner_override
+    _corrupt_hex = staticmethod(TestExitContractD090._corrupt_hex)
+    _corrupt_receipt_signature = TestExitContractD090._corrupt_receipt_signature
+    _corrupt_override_signature = TestExitContractD090._corrupt_override_signature
+    _lines_naming = TestExitContractD090._lines_naming
+    _assert_pass = TestExitContractD090._assert_pass
+    _assert_refused = TestExitContractD090._assert_refused
+    _assert_refusal_not_executable = TestExitContractD091._assert_refusal_not_executable
+
+    @staticmethod
+    def _now():
+        return int(time.time())
+
+    @staticmethod
+    def _receipt_window(target):
+        body = read_json(target, "receipt.json")["receipt"]
+        return int(body["issuedAt"]), int(body["expiresAt"])
+
+    @staticmethod
+    def _override_window(target):
+        body = read_json(target, "override.json")["override"]
+        return int(body["issuedAt"]), int(body["expiresAt"])
+
+    def _minted(self, verdict=None, window=None, source="case-1-allow"):
+        """A staged copy of `source`, optionally re-verdicted, re-windowed and re-sealed.
+
+        `verdict` is `(num, name)` as `_staged_with_verdict` takes it; `window` is
+        `(issuedAt, expiresAt)` and defaults to one containing the host instant.
+        """
+        target = (self._staged(source) if verdict is None
+                  else self._staged_with_verdict(*verdict, source=source))
+        rewindow(target, *(live_window() if window is None else window))
+        return target
+
+    def _add_windowed_override(self, target, window):
+        """The D-090 owner override, with its §5.5 window set to `window` and re-signed."""
+        self._add_owner_override(target)
+        doc = read_json(target, "override.json")
+        doc["override"]["issuedAt"] = str(int(window[0]))
+        doc["override"]["expiresAt"] = str(int(window[1]))
+        doc["ownerSignature"] = sign_digest(
+            eip712.override_digest(read_json(SAMPLES, "domain.json"), doc["override"]),
+            verify._OWNER_TEST_KEY)
+        write_json(os.path.join(target, "override.json"), doc)
+
+    def _assert_clock_disclosed(self, out, where="the output"):
+        low = out.lower()
+        for claim in self.OLD_CLAIMS:
+            self.assertNotIn(claim, low,
+                             f"{where} still claims {claim!r}; under D-092(c) the tool reads "
+                             "the host clock, so that sentence is false")
+        self.assertIn("host clock", low, f"{where} must say which clock it read")
+        self.assertRegex(low, self.CLOCK_DISCLOSURE,
+                         f"{where} must disclose the host clock as unauthenticated")
+
+    def _assert_window_not_executable(self, rc, out, window, extra_words=(), forbidden=()):
+        """The whole of the D-092(c) contract for one authentic bundle outside its window."""
+        self.assertEqual(rc, EXIT_NOT_EXECUTABLE,
+                         f"an authentic bundle outside its window must exit "
+                         f"{EXIT_NOT_EXECUTABLE}, got {rc}")
+        blocks = _headline_blocks(out)
+        self.assertEqual(len(blocks), 1, f"expected one headline, got {blocks!r}")
+        head = blocks[0]
+        first = head.splitlines()[0]
+        self.assertTrue(head.startswith(f"=> {NOT_EXECUTABLE_WORD}"),
+                        f"the headline word must be {NOT_EXECUTABLE_WORD!r}; got {head!r}")
+        self.assertNotIn("PASS", first, "the recipient-facing word must not contain PASS")
+        self.assertNotIn("FAIL", first, "an authentic bundle is not a refusal; no FAIL")
+        self.assertIn("AUTHENTIC", head, "the output must still state the bundle is authentic")
+        # NAMES THE WINDOW: both endpoints, as the uint64 decimal strings the receipt
+        # carries and the publication verifier prints (`got {issuedAt} <= {now} < {expiresAt}`).
+        for endpoint in window:
+            self.assertIn(str(endpoint), head,
+                          f"the headline must name the window that failed ({window}): {head!r}")
+        self.assertIn("window", head.lower(), f"the headline must say it is the window: {head!r}")
+        self._assert_clock_disclosed(head, "the headline")
+        for word in extra_words:
+            self.assertIn(word, head, f"the headline must say {word!r}: {head!r}")
+        # H-5: a false diagnostic is worse than none. An expired ALLOW is not a BLOCK,
+        # and an expired REVIEW beside its override does not "carry no override.json".
+        for phrase in ("the signed verdict is BLOCK", "carries no override.json") + tuple(forbidden):
+            self.assertNotIn(phrase, head,
+                             f"the headline borrows a sentence that is false here: {phrase!r}")
+        self.assertNotIn("=> PASS", out, "no `=> PASS` anywhere in the run")
+        self.assertNotIn("=> FAIL", out, "no `=> FAIL` anywhere in the run")
+        self.assertIn("1/1 sample(s) verified", out, "the count is the AUTHENTIC count")
+        after_summary = out[out.index("1/1 sample(s) verified"):]
+        self.assertIn("NOT EXECUTABLE", after_summary,
+                      "the summary must say the bundle is not executable")
+        self.assertNotIn("FAILED:", after_summary, "nothing here is refused")
+        self._assert_clock_disclosed(out, "the run's output")
+
+    # -- 0. the premise, measured ------------------------------------------------------
+
+    def test_the_shipped_receipt_fixtures_are_expired_and_the_shipped_override_is_live(self):
+        # If the corpus is ever regenerated with live receipts, every "shipped fixture
+        # exits 3" test below would fail for the wrong reason; this names the reason.
+        now = self._now()
+        for path in sample_dirs():
+            with self.subTest(sample=os.path.basename(path)):
+                issued, expires = self._receipt_window(path)
+                self.assertLess(issued, expires)
+                self.assertLessEqual(expires, now, f"{path} is not expired at {now}")
+        for path in (self.ALLOW_SAMPLE, self.REVIEW_SAMPLE):
+            self.assertEqual(self._receipt_window(path), self.SHIPPED_WINDOW)
+        issued, expires = self._override_window(self.REVIEW_SAMPLE)
+        self.assertTrue(issued <= now < expires,
+                        "the shipped override's own window is live; only the receipt's closed")
+        self.assertIn("issuedAt", read_json(self.REVIEW_SAMPLE, "override.json")["override"],
+                      "§5.5's payload carries a window, so the override's is checked too")
+
+    # -- 1. the shipped, expired fixtures ------------------------------------------------
+
+    def test_the_shipped_ALLOW_fixture_is_AUTHENTIC_NOT_EXECUTABLE_and_exits_3(self):
+        # THE DEFECT, measured: `=> PASS: AUTHENTIC`, exit 0, at 02458d2.
+        ok, checks = _verify(self.ALLOW_SAMPLE)
+        self.assertTrue(ok, [c.name for c in checks if not c.ok])   # the control: authentic
+        rc, out = self._cli("--domain", self.DOMAIN, self.ALLOW_SAMPLE)
+        self._assert_window_not_executable(rc, out, self.SHIPPED_WINDOW,
+                                           forbidden=("the signed verdict is REVIEW",))
+        self.assertTrue(self._lines_naming(out[out.index("1/1 sample(s) verified"):],
+                                           self.ALLOW_SAMPLE),
+                        "the NOT EXECUTABLE line after the summary must name the bundle's path")
+
+    def test_the_process_exit_status_a_script_reads_is_3_for_the_shipped_ALLOW_fixture(self):
+        # Through the interpreter, not `main()`: the status `sys.exit(main())` delivers.
+        rc, out = self._proc("--domain", self.DOMAIN, self.ALLOW_SAMPLE)
+        self._assert_window_not_executable(rc, out, self.SHIPPED_WINDOW)
+
+    def test_the_shipped_overridden_REVIEW_fixture_is_exit_3_on_the_receipt_window_not_the_override(self):
+        # The override's window (0 .. 4000000000) contains now; the receipt's does not.
+        # So the headline names the RECEIPT's window, and must not say the bundle
+        # carries no override -- it carries a valid, live one, and the override checks
+        # must still have run.
+        rc, out = self._cli("--domain", self.DOMAIN, self.REVIEW_SAMPLE)
+        self._assert_window_not_executable(rc, out, self.SHIPPED_WINDOW,
+                                           forbidden=("the signed verdict is REVIEW",))
+        self.assertIn("override targets a REVIEW receipt", out,
+                      "the override checks still run on an expired REVIEW receipt")
+        self.assertNotIn("4000000000", _headline_blocks(out)[0],
+                         "the override's window is live and is not the reason")
+
+    # -- 2. the pair that isolates the window ---------------------------------------------
+
+    def test_a_live_ALLOW_keeps_PASS_and_exit_0_and_the_same_bundle_expired_exits_3(self):
+        target = self._minted()
+        rc, out = self._cli("--domain", trust_root(target), target)
+        self._assert_pass(rc, out)
+        self._assert_clock_disclosed(out, "the PASS output")
+        rc, out = self._proc("--domain", trust_root(target), target)
+        self._assert_pass(rc, out)
+        # One bundle, two timestamps moved, nothing else: 0 -> 3.
+        now = self._now()
+        closed = (now - 2 * 3600, now - 3600)
+        rewindow(target, *closed)
+        ok, checks = _verify(target)
+        self.assertTrue(ok, [c.name for c in checks if not c.ok])   # still authentic
+        rc, out = self._cli("--domain", trust_root(target), target)
+        self._assert_window_not_executable(rc, out, closed)
+        rc, out = self._proc("--domain", trust_root(target), target)
+        self._assert_window_not_executable(rc, out, closed)
+
+    def test_a_receipt_not_yet_valid_is_the_same_class_as_an_expired_one(self):
+        now = self._now()
+        future = (now + self.DAY, now + 2 * self.DAY)
+        target = self._minted(window=future)
+        ok, checks = _verify(target)
+        self.assertTrue(ok, [c.name for c in checks if not c.ok])
+        rc, out = self._cli("--domain", trust_root(target), target)
+        self._assert_window_not_executable(rc, out, future)
+
+    def test_the_window_is_issuedAt_inclusive_and_expiresAt_exclusive_like_the_publication_verifier(self):
+        # `issuedAt <= now < expiresAt`, verbatim from verify_publication.py. The host
+        # instant only moves forward, so an instant read BEFORE the run bounds it:
+        # issuedAt == t0 is inside (t0 <= now), expiresAt == t0 is outside (now < t0 fails).
+        t0 = self._now()
+        at_issue = self._minted(window=(t0, t0 + self.DAY))
+        rc, out = self._cli("--domain", trust_root(at_issue), at_issue)
+        self._assert_pass(rc, out)
+        at_expiry = self._minted(window=(t0 - self.DAY, t0))
+        rc, out = self._cli("--domain", trust_root(at_expiry), at_expiry)
+        self._assert_window_not_executable(rc, out, (t0 - self.DAY, t0))
+
+    # -- 3. REVIEW: the receipt's window and the override's ---------------------------------
+
+    def test_a_live_REVIEW_with_a_live_override_is_PASS_and_without_one_is_exit_3_naming_the_override(self):
+        target = self._minted(verdict=(1, "REVIEW"))
+        rc, out = self._cli("--domain", trust_root(target), target)
+        # Live but un-overridden: D-090(a)'s headline, not the window's.
+        self.assertEqual(rc, EXIT_NOT_EXECUTABLE, out[-1500:])
+        head = _headline_blocks(out)[0]
+        self.assertIn("the signed verdict is REVIEW", head)
+        self.assertIn("override", head)
+        self._add_windowed_override(target, live_window())
+        rc, out = self._cli("--domain", trust_root(target), target)
+        self._assert_pass(rc, out)
+        self.assertIn("override targets a REVIEW receipt", out)
+        rc, out = self._proc("--domain", trust_root(target), target)
+        self._assert_pass(rc, out)
+
+    def test_a_live_REVIEW_whose_override_window_has_closed_exits_3_naming_the_override_window(self):
+        now = self._now()
+        for label, window in (("closed", (now - 2 * 3600, now - 3600)),
+                              ("not yet open", (now + self.DAY, now + 2 * self.DAY))):
+            with self.subTest(override_window=label):
+                target = self._minted(verdict=(1, "REVIEW"))
+                self._add_windowed_override(target, window)
+                ok, checks = _verify(target)
+                self.assertTrue(ok, [c.name for c in checks if not c.ok])   # authentic
+                rc, out = self._cli("--domain", trust_root(target), target)
+                self._assert_window_not_executable(rc, out, window, extra_words=("override",),
+                                                   forbidden=("the signed verdict is REVIEW",))
+                # The receipt's own window is live and is not the reason.
+                issued, expires = self._receipt_window(target)
+                self.assertTrue(issued <= self._now() < expires)
+
+    def test_an_expired_REVIEW_with_a_live_override_is_exit_3_on_the_receipt_window(self):
+        now = self._now()
+        closed = (now - 2 * 3600, now - 3600)
+        target = self._minted(verdict=(1, "REVIEW"), window=closed)
+        self._add_windowed_override(target, live_window())
+        rc, out = self._cli("--domain", trust_root(target), target)
+        self._assert_window_not_executable(rc, out, closed,
+                                           forbidden=("the signed verdict is REVIEW",))
+        self.assertIn("override targets a REVIEW receipt", out)
+
+    # -- 4. precedence inside exit 3, and 1 over 3 ---------------------------------------------
+
+    def test_a_BLOCK_verdict_takes_precedence_over_the_window_in_the_headline(self):
+        # The shipped BLOCK is expired AND a BLOCK; the lead sentence is the BLOCK one.
+        # A BLOCK minted live is 3 for the verdict alone, with the same lead: the
+        # window is not what demotes a BLOCK.
+        for label, target in (("shipped, expired", self.BLOCK_SAMPLE),
+                              ("minted, live", self._minted(verdict=(0, "BLOCK")))):
+            with self.subTest(block=label):
+                rc, out = self._cli("--domain", trust_root(target) if label.startswith("minted")
+                                    else self.DOMAIN, target)
+                self.assertEqual(rc, EXIT_NOT_EXECUTABLE, out[-1500:])
+                first = _headline_blocks(out)[0].splitlines()[0]
+                self.assertTrue(
+                    first.startswith(f"=> {NOT_EXECUTABLE_WORD}: the signed verdict is BLOCK"),
+                    f"the BLOCK sentence leads, whatever the window says: {first!r}")
+                self._assert_clock_disclosed(out, "the run's output")
+
+    def test_an_un_overridden_REVIEW_takes_precedence_over_the_window_in_the_headline(self):
+        # Expired AND un-overridden: the cure the headline names is still the override
+        # (R-A018-16(c)); the window is the second thing wrong, not the first.
+        target = self._staged("case-4-review-failmode-review")
+        os.remove(os.path.join(target, "override.json"))
+        self.assertLess(self._receipt_window(target)[1], self._now())
+        rc, out = self._cli("--domain", trust_root(target), target)
+        self.assertEqual(rc, EXIT_NOT_EXECUTABLE, out[-1500:])
+        head = _headline_blocks(out)[0]
+        first = head.splitlines()[0]
+        self.assertTrue(
+            first.startswith(f"=> {NOT_EXECUTABLE_WORD}: the signed verdict is REVIEW"),
+            f"the REVIEW sentence leads, whatever the window says: {first!r}")
+        self.assertIn("override", head)
+
+    def test_the_refusal_record_headline_is_unchanged_by_the_window_rule(self):
+        # A §5.5.1 record carries an issuedAt and no expiresAt: there is no receipt
+        # window to compare, and D-091(a)'s headline stands word for word in its lead.
+        rc, out = self._cli("--domain", self.DOMAIN, self.REFUSAL_SAMPLE)
+        self._assert_refusal_not_executable(rc, out)
+        first = _headline_blocks(out)[0].splitlines()[0]
+        self.assertTrue(first.startswith(f"=> {NOT_EXECUTABLE_WORD}: this is a §5.5.1 refusal record"),
+                        first)
+        for word in ("expired", "window", "1788059584"):
+            self.assertNotIn(word, first, "a refusal record has no window to have missed")
+        self._assert_clock_disclosed(out, "the run's output")
+
+    def test_a_refusal_of_any_check_beats_the_window_exit_1_not_3(self):
+        # 1 beats 3: an expired bundle whose signature does not recover is a refusal,
+        # not an authentic-not-executable one, on the receipt and on the override.
+        expired_allow = self._staged("case-1-allow")
+        self._corrupt_receipt_signature(expired_allow)
+        rc, out = self._cli("--domain", trust_root(expired_allow), expired_allow)
+        self._assert_refused(rc, out)
+        self.assertNotIn("NOT EXECUTABLE", out)
+        expired_review = self._staged("case-4-review-failmode-review")
+        self._corrupt_override_signature(expired_review)
+        rc, out = self._cli("--domain", trust_root(expired_review), expired_review)
+        self._assert_refused(rc, out)
+        self.assertNotIn("NOT EXECUTABLE", out)
+        # And a live bundle that is refused is refused: the window earns nothing.
+        live = self._minted()
+        self._corrupt_receipt_signature(live)
+        rc, out = self._cli("--domain", trust_root(live), live)
+        self._assert_refused(rc, out)
+
+    # -- 5. no caller-supplied instant -------------------------------------------------------
+
+    def test_no_flag_supplies_the_instant(self):
+        # The one flag that would restore exit 0 on an expired receipt. argparse
+        # rejects an unknown option with status 2 -- pinned as "rejected", not merely
+        # "does not exit 0", so that a future `--evaluation-time` that is parsed and
+        # ignored is also caught (it would exit 3 and pass a weaker assertion).
+        inside = str(self.SHIPPED_WINDOW[0] + 1)
+        for flag in self.INSTANT_FLAGS:
+            with self.subTest(flag=flag):
+                rc, out = self._proc(flag, inside, "--domain", self.DOMAIN, self.ALLOW_SAMPLE)
+                self.assertEqual(rc, 2, f"{flag} must be rejected by the parser: {out[-800:]}")
+                self.assertIn("unrecognized arguments", out)
+                self.assertNotIn("=> PASS", out)
+                rc, out = self._proc(f"{flag}={inside}", "--domain", self.DOMAIN, self.ALLOW_SAMPLE)
+                self.assertEqual(rc, 2, out[-800:])
+        rc, out = self._proc("--help")
+        self.assertEqual(rc, 0)
+        self.assertNotRegex(out.lower(), r"evaluation[- _]time",
+                            "--help must not advertise a caller-supplied instant")
+
+    def test_no_environment_variable_supplies_the_instant(self):
+        inside = str(self.SHIPPED_WINDOW[0] + 1)
+        for name in self.INSTANT_ENV:
+            with self.subTest(env=name):
+                env = dict(os.environ)
+                env[name] = inside
+                proc = subprocess.run(
+                    [sys.executable, os.path.join(REPO, "verifier", "verify.py"),
+                     "--domain", self.DOMAIN, self.ALLOW_SAMPLE],
+                    capture_output=True, text=True, env=env)
+                out = _strip_ansi(proc.stdout + proc.stderr)
+                self._assert_window_not_executable(proc.returncode, out, self.SHIPPED_WINDOW)
+
+    def test_no_library_entry_point_takes_an_instant(self):
+        # `verify_sample`, `run` and `main` are the seams a caller reaches. None may
+        # grow a parameter that names an instant; the clock is read inside.
+        for func in (verify.verify_sample, verify.run, verify.main):
+            with self.subTest(func=func.__name__):
+                params = list(inspect.signature(func).parameters)
+                offending = [p for p in params if self.INSTANT_PARAM.search(p)]
+                self.assertEqual(offending, [],
+                                 f"{func.__name__} takes a caller-supplied instant: {params}")
+
+    # -- 6. the claims the output makes ---------------------------------------------------------
+
+    def test_the_output_no_longer_claims_no_clock_and_discloses_the_host_clock(self):
+        # Every headline path and the summary line, plus --help (the module docstring,
+        # which is the epilog and today says "THIS TOOL EVALUATES NO VALIDITY WINDOW.
+        # It has no clock.").
+        live = self._minted()
+        runs = {
+            "expired ALLOW": self._cli("--domain", self.DOMAIN, self.ALLOW_SAMPLE),
+            "expired overridden REVIEW": self._cli("--domain", self.DOMAIN, self.REVIEW_SAMPLE),
+            "BLOCK": self._cli("--domain", self.DOMAIN, self.BLOCK_SAMPLE),
+            "refusal record": self._cli("--domain", self.DOMAIN, self.REFUSAL_SAMPLE),
+            "live ALLOW (PASS)": self._cli("--domain", trust_root(live), live),
+            "--all over the corpus": self._proc("--domain", self.DOMAIN, "--all", SAMPLES),
+        }
+        for label, (_rc, out) in runs.items():
+            with self.subTest(run=label):
+                self._assert_clock_disclosed(out, f"the {label} output")
+                summary = [l for l in out.splitlines() if re.match(r"^\d+/\d+ sample\(s\) verified", l)]
+                self.assertEqual(len(summary), 1, summary)
+                self._assert_clock_disclosed(summary[0], f"the {label} summary line")
+        rc, out = self._proc("--help")
+        self.assertEqual(rc, 0)
+        low = out.lower()
+        for claim in self.OLD_CLAIMS:
+            self.assertNotIn(claim, low, f"--help still claims {claim!r}")
+        self.assertNotIn("evaluates no validity window", low)
+        self.assertIn("host clock", low, "--help must say the tool reads the host clock")
+
+    # -- 7. what does not move ------------------------------------------------------------------
+
+    def test_verify_sample_still_answers_authenticity_for_an_expired_receipt(self):
+        # The library call every in-process test consumes, and what the tamper
+        # self-test's "correctly still verified" reads. An expired receipt is
+        # authentic, so `ok` is True, and the window is NOT an authenticity check:
+        # no check named for it may join the list.
+        for path in (self.ALLOW_SAMPLE, self.REVIEW_SAMPLE):
+            with self.subTest(sample=os.path.basename(path)):
+                ok, checks = _verify(path)
+                self.assertTrue(ok, [c.name for c in checks if not c.ok])
+                names = [c.name.lower() for c in checks]
+                self.assertFalse(any("executable" in n or "host clock" in n or "expired" in n
+                                     for n in names),
+                                 f"the window classification is the reporting layer's, not "
+                                 f"verify_sample()'s: {names}")
+        # The seam D-090(a) chose: run() returns (ok, checks, executable).
+        with contextlib.redirect_stdout(io.StringIO()):
+            ok, checks, executable = verify.run(self.ALLOW_SAMPLE, self.DOMAIN, quiet=True)
+        self.assertTrue(ok, [c.name for c in checks if not c.ok])
+        self.assertFalse(executable, "run() must classify an expired receipt as not executable")
+        live = self._minted()
+        with contextlib.redirect_stdout(io.StringIO()):
+            ok, checks, executable = verify.run(live, trust_root(live), quiet=True)
+        self.assertTrue(ok, [c.name for c in checks if not c.ok])
+        self.assertTrue(executable, "run() must classify a live ALLOW as executable-shaped")
+
+    def test_the_tamper_self_test_on_the_expired_fixtures_still_exits_0(self):
+        # The gate's second arm runs `--all fixtures/samples --tamper all` and takes
+        # any non-zero status as a failure. If the window check were pushed into
+        # verify_sample(), `reasons-reorder` on the expired ALLOW would be WRONGLY
+        # REJECTED and the gate would break.
+        for path in (self.ALLOW_SAMPLE, self.REVIEW_SAMPLE):
+            with self.subTest(sample=os.path.basename(path)):
+                rc, out = self._cli("--domain", self.DOMAIN, "--tamper", "all", path)
+                self.assertEqual(rc, EXIT_PASS, out[-2000:])
+                self.assertIn("tamper self-test PASS", out)
+                self.assertNotIn("WRONGLY", out)
+                self.assertNotIn(NOT_EXECUTABLE_WORD, out)
+                self.assertNotIn("NOT EXECUTABLE", out)
+                if path == self.REVIEW_SAMPLE:
+                    # The must-still-verify mode. case-1-allow commits to zero reason
+                    # codes, so `reasons-reorder` is N/A there; case-4 commits to two,
+                    # and an expired receipt under a pure reorder must still verify.
+                    self.assertIn("correctly still verified", out)
+        # The gate's own command: every shipped BLOCK is expired too, and each must
+        # still be "correctly still verified" under a reorder.
+        rc, out = self._cli("--domain", self.DOMAIN, "--all", SAMPLES, "--tamper", "all")
+        self.assertEqual(rc, EXIT_PASS, out[-2000:])
+        self.assertIn("correctly still verified", out)
+        self.assertNotIn("WRONGLY", out)
+        self.assertRegex(out, r"(?m)^7/7 sample\(s\) ")
+
+    # -- 8. the aggregate --------------------------------------------------------------------------
+
+    def test_all_over_the_shipped_corpus_lists_seven_NOT_EXECUTABLE_four_BLOCK_one_refusal_two_expired(self):
+        # WHAT THE GATE RUNS. README.md, scripts/test.sh and docs say "five" today and
+        # will need to say seven (reported, not edited, by this lane).
+        rc, out = self._proc("--domain", self.DOMAIN, "--all", SAMPLES)
+        self.assertEqual(rc, EXIT_NOT_EXECUTABLE, out[-2000:])
+        self.assertRegex(out, r"(?m)^7/7 sample\(s\) verified")
+        self.assertNotIn("FAILED:", out)
+        self.assertNotIn("=> PASS", out)
+        after = out[out.index("7/7 sample(s) verified"):]
+        listed = [l for l in after.splitlines() if l.strip().startswith("NOT EXECUTABLE:")]
+        self.assertEqual(len(listed), 7, f"seven NOT EXECUTABLE lines, got {listed!r}")
+        for path in (self.ALLOW_SAMPLE, self.REVIEW_SAMPLE):
+            named = self._lines_naming(after, path)
+            self.assertTrue(named and all("NOT EXECUTABLE" in l for l in named),
+                            f"{path} is expired and must be listed; got {named!r}")
+        heads = _headline_blocks(out)
+        self.assertEqual(len(heads), 7)
+        self.assertTrue(all(h.startswith(f"=> {NOT_EXECUTABLE_WORD}") for h in heads))
+        firsts = [h.splitlines()[0] for h in heads]
+        self.assertEqual(sum("the signed verdict is BLOCK" in f for f in firsts), 4)
+        self.assertEqual(sum("refusal record" in f.lower() for f in firsts), 1)
+        window_heads = [h for h in heads
+                        if "the signed verdict is BLOCK" not in h.splitlines()[0]
+                        and "refusal record" not in h.splitlines()[0].lower()]
+        self.assertEqual(len(window_heads), 2)
+        for h in window_heads:
+            for endpoint in self.SHIPPED_WINDOW:
+                self.assertIn(str(endpoint), h)
+
+    def test_a_live_ALLOW_beside_an_expired_one_exits_3_and_only_the_expired_one_is_listed(self):
+        # 3 beats 0, positional in both orders and under --all; the live bundle PASSES
+        # and is not listed after the summary.
+        live = self._minted()
+        for order in ((live, self.ALLOW_SAMPLE), (self.ALLOW_SAMPLE, live)):
+            with self.subTest(order=[os.path.basename(p) for p in order]):
+                rc, out = self._cli("--domain", self.DOMAIN, *order)
+                self.assertEqual(rc, EXIT_NOT_EXECUTABLE, out[-1500:])
+                self.assertIn("2/2 sample(s) verified", out)
+                after = out[out.index("2/2 sample(s) verified"):]
+                self.assertTrue(self._lines_naming(after, self.ALLOW_SAMPLE))
+                self.assertFalse(self._lines_naming(after, live))
+                heads = _headline_blocks(out)
+                self.assertEqual(sum(h.startswith("=> PASS: AUTHENTIC") for h in heads), 1)
+                self.assertEqual(sum(h.startswith(f"=> {NOT_EXECUTABLE_WORD}") for h in heads), 1)
+        tmp = self._tmp()
+        shutil.copytree(live, os.path.join(tmp, "minted-live"))
+        shutil.copytree(self.ALLOW_SAMPLE, os.path.join(tmp, "case-1-allow"))
+        rc, out = self._proc("--domain", self.DOMAIN, "--all", tmp)
+        self.assertEqual(rc, EXIT_NOT_EXECUTABLE, out[-1500:])
+        self.assertRegex(out, r"(?m)^2/2 sample\(s\) verified")
+        after = out[out.index("2/2 sample(s) verified"):]
+        self.assertTrue(self._lines_naming(after, os.path.join(tmp, "case-1-allow")))
+        self.assertFalse(self._lines_naming(after, os.path.join(tmp, "minted-live")))
+
+    def test_an_expired_bundle_beside_a_refused_one_exits_1(self):
+        tmp = self._tmp()
+        shutil.copytree(self.ALLOW_SAMPLE, os.path.join(tmp, "case-1-allow"))
+        forged = os.path.join(tmp, "forged")
+        shutil.copytree(self.ALLOW_SAMPLE, forged)
+        self._corrupt_receipt_signature(forged)
+        rc, out = self._proc("--domain", self.DOMAIN, "--all", tmp)
+        self.assertEqual(rc, EXIT_REFUSED, out[-1500:])
+        self.assertRegex(out, r"(?m)^1/2 sample\(s\) verified")
+        self.assertTrue(any("FAILED" in l for l in self._lines_naming(out, forged)))
+
+    # -- 9. D-092(d): two wording pins on the refusal-record path -------------------------------
+
+    def test_the_refusal_bundle_labels_ALLOW_as_the_requested_verdict_on_the_conformance_line(self):
+        # Measured at 02458d2: `[PASS] ALLOW: the signer-attested decoded parameters
+        # conform to the mandate (§5.7.1)` on a bundle in which the signer attested no
+        # verdict at all. The check itself stays (the requested verdict's parameters are
+        # still compared); its label says whose verdict ALLOW is.
+        rc, out = self._cli("--domain", self.DOMAIN, self.REFUSAL_SAMPLE)
+        self.assertEqual(rc, EXIT_NOT_EXECUTABLE, out[-1500:])
+        lines = [l for l in out.splitlines() if self.CONFORMANCE_TAIL in l]
+        self.assertEqual(len(lines), 1, f"the §5.7.1 conformance line must still print once: {lines!r}")
+        self.assertIn("[PASS]", lines[0], "the check still holds on this bundle")
+        self.assertIn("requested", lines[0].lower(),
+                      f"ALLOW must be labelled as the REQUESTED verdict: {lines[0]!r}")
+        bare = [l for l in out.splitlines() if re.match(r"^\s*\[PASS\] ALLOW:", l)]
+        self.assertEqual(bare, [], f"no bare `[PASS] ALLOW:` on a refusal record: {bare!r}")
+
+    def test_the_refusal_record_continuation_reads_neither_a_certification_nor_a_rejection(self):
+        # Measured at 02458d2: "Exit status 3: neither a certification nor a refusal."
+        # under a headline that says the bundle IS the signer's refusal.
+        rc, out = self._cli("--domain", self.DOMAIN, self.REFUSAL_SAMPLE)
+        self.assertEqual(rc, EXIT_NOT_EXECUTABLE, out[-1500:])
+        head = _headline_blocks(out)[0]
+        self.assertIn("neither a certification nor a rejection", head, head)
+        self.assertNotIn("nor a refusal", head,
+                         "a refusal record is a refusal; the continuation may not deny it")
+        # The BLOCK path is not held to this by the ruling; pinned only as "still exit 3".
+        rc, _out = self._cli("--domain", self.DOMAIN, self.BLOCK_SAMPLE)
+        self.assertEqual(rc, EXIT_NOT_EXECUTABLE)
+
+    # -- 10. D-092(e): --tamper summary honesty ---------------------------------------------------
+
+    # Measured at 02458d2 with `grep -c`: per-mode lines actually printed.
+    TAMPER_COUNTS = {"case-2-injection-block": (10, 20), "refusal-vault-paused": (14, 16)}
+
+    def test_the_tamper_summary_states_applicable_and_NA_counts_that_match_the_lines_printed(self):
+        self.assertEqual(sum(self.TAMPER_COUNTS["case-2-injection-block"]), len(verify.TAMPER_MODES))
+        self.assertEqual(sum(self.TAMPER_COUNTS["refusal-vault-paused"]), len(verify.TAMPER_MODES))
+        for name, (want_applicable, want_na) in self.TAMPER_COUNTS.items():
+            with self.subTest(sample=name):
+                rc, out = self._cli("--domain", self.DOMAIN, "--tamper", "all",
+                                    os.path.join(SAMPLES, name))
+                self.assertEqual(rc, EXIT_PASS, out[-2000:])          # (e): exit 0 stays
+                applicable = [l for l in out.splitlines() if "=> tamper self-test" in l]
+                na = [l for l in out.splitlines() if l.strip().startswith("=> N/A")]
+                self.assertEqual((len(applicable), len(na)), (want_applicable, want_na),
+                                 "the per-mode lines are the measurement the summary must match")
+                self.assertTrue(all("PASS" in l for l in applicable), applicable)
+                self.assertNotIn("WRONGLY", out)
+                summary = [l for l in out.splitlines() if re.match(r"^1/1 sample\(s\)", l)]
+                self.assertEqual(len(summary), 1, f"one run summary line: {summary!r}")
+                line = summary[0]
+                self.assertIn("self-test", line, f"the run headline must say self-test: {line!r}")
+                numbers = {int(n) for n in re.findall(r"\b\d+\b", line[len("1/1"):])}
+                self.assertIn(want_applicable, numbers,
+                              f"the summary must state the applicable count {want_applicable}: {line!r}")
+                self.assertIn(want_na, numbers,
+                              f"the summary must state the N/A count {want_na}: {line!r}")
+                self.assertNotIn("every tamper mode", line,
+                                 f"{want_na} modes did not run; the summary may not say every: {line!r}")
                 self.assertNotIn(NOT_EXECUTABLE_WORD, out)
                 self.assertNotIn("=> PASS", out)
                 self.assertNotIn("=> FAIL", out)

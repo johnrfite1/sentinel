@@ -26,7 +26,7 @@ named signer produced -- and finds both of those bundles authentic, as it
 does a §5.5.1 refusal record; since D-090(a) and D-091(a) it reports each of
 the three as `=> AUTHENTIC, NOT EXECUTABLE` with exit status 3 rather than as
 a PASS, so that its exit code does not say "pass" to a script for anything
-the Vault would not execute.  `=> PASS: AUTHENTIC` from verify.py (ALLOW,
+the Vault refuses on offline-checkable grounds.  `=> PASS: AUTHENTIC` from verify.py (ALLOW,
 or REVIEW with a valid owner override) and `PASS (static, offline)` from this
 tool remain two different claims that used to share one word; the split is
 deliberate, was ruled at D-087(c), and is stated on both surfaces so that

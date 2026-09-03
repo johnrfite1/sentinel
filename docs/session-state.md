@@ -3,8 +3,10 @@
 Rewritten at the end of each working session. **This file, not the conversation, is the
 memory.** If it disagrees with anything an agent remembers, this file wins.
 
-Last updated: **2026-09-02 (the final Cycle 3 candidate is `81edee1`, PUSHED to the PRIVATE remote as
-backup under D-091(d); D-090 and D-091 recorded; publication is not authorised).**
+Last updated: **2026-09-02 (Cycle 3 returned on `81edee1` with zero sustained Criticals; D-092 recorded;
+the D-092 narrow patch has LANDED in this commit, verified, named by parent and subject below; publication is not authorised).**
+~~Last updated: 2026-09-02 (the final Cycle 3 candidate is `81edee1`, PUSHED to the PRIVATE remote as
+backup under D-091(d); D-090 and D-091 recorded; publication is not authorised).~~ — superseded.
 ~~Last updated: 2026-09-01 (the Cycle 2 candidate is IN BUILD under D-087; D-085 and D-086
 recorded; the BLOCK→PASS defect named below is FIXED at `8d47a0b`; publication is not
 authorised).~~ — superseded.
@@ -79,29 +81,52 @@ no push is authorised. `.serena/` remains gitignored.
 > non-certifying-static route, with Binding Critical 1 already closed at `5d93850` and needing
 > demonstration; **D-087** scoped the next candidate to ~35 items and ruled §5.7.1 (port the
 > attested-record comparison, named precisely), the A/B split (stated on both verifiers;
-> `verify.py` discloses it has no clock), and the §5.5.1 arm (recognise and refuse). **Two
+> ~~`verify.py` discloses it has no clock~~ — amended D-092(c): it classifies against the unauthenticated host clock), and the §5.5.1 arm (recognise and refuse). **Two
 > Crucible lines, do not conflate them:** the enforcement-publication line's four A-018
 > Criticals are still OPEN AT ANVIL (D-083(i)); the lab casting is HALTED pending the new SHA.
 > The block below is struck where it is now false and otherwise stands.
 >
-> **2026-09-02 (latest) — THE FINAL CYCLE 3 CANDIDATE IS `81edee1a770648345401ea782b4928c382d3602f`, PUSHED AS BACKUP (D-091(d)).**
+> **2026-09-02 (Cycle 3 returned) — ZERO SUSTAINED CRITICALS ON `81edee1`; D-092 RULES A NARROW
+> PATCH BEFORE THE QUENCH; THE PATCH HAS LANDED IN THIS COMMIT.** The Adversary measured both clauses of its
+> withdrawal condition and reported HOLDS; it raised no provisional Critical, so the ledger closed
+> with zero sustained Criticals (MSG-034). Subtractor, Catalyst and Conscience reported FAIL on
+> `README.md:234` — a fenced command running the frozen packet verifier on a BLOCK bundle,
+> `=> PASS` / exit `0` — graded a Major residue by the Adversary. Eighteen findings in all. D-092
+> rules a narrow patch, (a)–(g), before the Quench: the Historical section keeps no runnable
+> command; the packet note moves above the packet's commands; `verify.py` gains a host-clock
+> executability classification; `[PASS]`-line and `--tamper` wording; the no-manifest limitation
+> stated in the README; and the Conscience Major 3 / Major 5 corrections to this file, `HANDOFF.md`
+> and the README's entry paragraph. D-092 also binds two build-team errors: a candidate's status
+> documents land in the SAME commit as its code, and nothing in the README's Historical section may
+> be copy-pasteable. **Patch status: LANDED in this commit and independently verified — D-092(c), (d), (e) HOLD under two fresh verifiers (`docs/cycle-3-patch-return-note.md` §5); suite 252 → 278, fast gate PASSED at floor 278; sync and execution guards clean.
+> The patch commit is the child of `02458d2` on `step-3/isolated-signer`, subject beginning `D-092 patch`; measure it with `git log --oneline 02458d2..HEAD`. This block is IN that commit, which is why it names no SHA.** Then fresh agents reproduce every chair's
+> failing command on the new SHA, a short return note maps each finding to its change, and the
+> Smith takes the Quench decision on that SHA without a further cycle (D-092(g)). No push,
+> publication, visibility change, gate signature or Critical withdrawal is authorised by D-092;
+> licence DEFERRED (D-082(c)).
+>
+> **2026-09-02 (earlier; superseded as latest by the block above) — THE FINAL CYCLE 3 CANDIDATE IS `81edee1a770648345401ea782b4928c382d3602f`, PUSHED AS BACKUP (D-091(d)).**
 > John ruled the three forks below (D-091): §5.5.1 refusal records EXTENDED into the contract —
 > `verify.py` now reports a signed refusal record as `=> AUTHENTIC, NOT EXECUTABLE`, exit 3, built
 > test-first in a second lane (`TestExitContractD091`, 13 tests, suite 239 → 252, floor raised) and
 > verified by a third independent agent (HOLDS; vacuity checked empirically, 10/14 red against the
 > old code); the `[PASS]` diagnostic lines STAND, disclosed; the packet note STANDS. `--all
-> fixtures/samples` lists five NOT EXECUTABLE bundles. Gate PASSED at floor 252; guards clean.
+> fixtures/samples` lists five NOT EXECUTABLE bundles (at `81edee1`; seven since D-092(c)). Gate PASSED at floor 252; guards clean.
 > Return note `docs/cycle-3-return-note.md` names `81edee1` as the candidate to file. Orchestrator
-> brief drafted for John's review at `docs/cycle-3-orchestrator-brief.md`. **Next external
-> event: the orchestrator files D-090 as the SMITH DECISION and Cycle 3 runs on `81edee1`.**
+> brief drafted for John's review at `docs/cycle-3-orchestrator-brief.md`. ~~**Next external
+> event: the orchestrator files D-090 as the SMITH DECISION and Cycle 3 runs on `81edee1`.**~~
+> **Happened — Cycle 3 ran and returned; see the block above and D-092.**
 >
 > **2026-09-02 (later) — THE FIRST CYCLE 3 CANDIDATE WAS `0bc79a8373ec26398702b47430da48134e7cbfe6`** (superseded by `81edee1` above).
 > Cycle 2 closed both Cycle 1 Criticals and sustained one new one — the first surface routed to
 > `verify.py`, which returned PASS/exit 0 on BLOCK (D-090). Route (a) taken: `verify.py` now
 > reports BLOCK or un-overridden REVIEW as `=> AUTHENTIC, NOT EXECUTABLE`, exit 3 (the `gpgv`
 > model), test-first (`TestExitContractD090`, 18 tests, 221 → 239); root README rewritten with the
-> entry-point paragraph at the top and every pre-Historical command through
-> `verify_publication.py`; the D-010 walk requires exit 3. Fast gate PASSED; 239 · 104/105 · 61 ·
+> entry-point paragraph at the top and ~~every pre-Historical command through
+> `verify_publication.py`~~ (**corrected 2026-09-02 under D-092, Conscience Major 3:** every fenced *verifier*
+> command before the Historical section is `verify_publication.py`; one inline measured `verify.py`
+> example remains under "Two verifiers, two claims" and exits 3; after D-092(a) the Historical
+> section carries no runnable command); the D-010 walk requires exit 3. Fast gate PASSED; 239 · 104/105 · 61 ·
 > 53; sync and execution guards clean. Independently verified, both clauses HOLD (29 commands);
 > three stale passages asserting the old behaviour found and fixed, one of them the shipped
 > `verify_publication.py` docstring, one a dated additive note in the Gate 8 packet's README
@@ -375,8 +400,9 @@ The table below is the 2026-08-29 record and is left as written. Since then:
 | Enforcement line | **Unchanged: HALTED, four A-018 Criticals OPEN AT ANVIL** (D-083(i)) |
 | Review method | **Inventory diff replaces one-at-a-time finding** (D-085(e)). Measured class: 54 + 4 + 4 missing checks, not 6. D-047 is retired; D-055(a) governs (D-085(a)) |
 | Cycle 2 candidate | **LANDED `cb124fe`**, PUSHED to the PRIVATE remote as backup (D-089) |
-| Cycle 3 candidate | **FINAL `81edee1`, PUSHED as backup (D-091(d)).** `0bc79a8` closed the condition as written (verified, both clauses HOLD); `81edee1` adds D-091(a) refusal records (verified, HOLDS). Return note `docs/cycle-3-return-note.md` |
-| Next | The orchestrator files D-090 as the SMITH DECISION and Cycle 3 runs on `81edee1`. **No gate signature, no Critical withdrawal, no publication** |
+| Cycle 3 candidate | **`81edee1` REVIEWED — Cycle 3 returned 2026-09-02: zero sustained Criticals (Adversary HOLDS); Subtractor, Catalyst and Conscience FAIL on `README.md:234`; eighteen findings.** `0bc79a8` closed the condition as written (verified, both clauses HOLD); `81edee1` added D-091(a) refusal records (verified, HOLDS) and was PUSHED as backup (D-091(d)). Return note `docs/cycle-3-return-note.md`; result and rulings at D-092 |
+| D-092 patch | **LANDED, verified** — narrow, (a)–(g), before the Quench; the child of `02458d2`, subject `D-092 patch …`. Code and status documents land in ONE commit. **child of `02458d2`, subject `D-092 patch …`; LANDED and verified.** No code change is claimed landed |
+| Next | **The Smith's Quench decision on the patch commit** (D-092(g)); the Existential Untested assumptions (1, 4, 5) must be explicitly accepted with stated risk or the artifact does not ship. Push of the patch commit is NOT authorised by D-092; that is John's, for the named commit, PRIVATE verified first. **No gate signature, no publication** |
 | Publication | **NOT AUTHORISED.** Unchanged. Licence DEFERRED (D-082(c)); `docs/publication-policy.state` is HELD_PRIVATE / UNDECIDED / NONE |
 
 ### WHERE THE PROJECT IS, 2026-08-29

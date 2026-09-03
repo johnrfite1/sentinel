@@ -1086,3 +1086,46 @@ before; not publication.
 R-A018-27 (`release/demo-out/` untracked), the two carried dead assertions in `test_verifier.py`
 (`ACCEPT V6` on `test_key_sorting_is_utf16_code_units` is one of them and the vacuity guard still
 names it), `check-review-scope.sh` failing at HEAD on 435 unassigned `release/` files.
+
+---
+
+## 9. Cycle 3 returned; the D-092 patch
+
+Recorded 2026-09-02 by the coordinating agent. Return note: `docs/cycle-3-patch-return-note.md`.
+
+**The result.** Zero sustained Criticals. The Adversary measured its own withdrawal condition on
+`81edee1` and reported HOLDS; Subtractor, Catalyst and Conscience reported FAILS on one fenced
+line, `README.md:234`, which ran the frozen packet verifier on a BLOCK bundle. Eighteen advisory
+findings. D-092 rules a narrow patch before the Quench.
+
+**Two build-team errors, in D-092 and repeated here so this register carries them.**
+1. **The Cycle 3 README lane made the route to `=> PASS` / exit 0 on a BLOCK receipt
+   copy-pasteable for the first time.** At `be6894a` the packet commands did not run from the root
+   (placeholder, packet-relative path). "Correcting" them into runnable form was the defect. The
+   lane's brief said *every claim maps to output you ran*; it did not say *no runnable route to
+   the frozen verifier*, and the coordinator did not check the Historical section after the lane
+   returned. A README lane brief now states what must NOT be runnable.
+2. **Status documents one commit behind the candidate.** `81edee1` carried a session-state and a
+   handoff that named `0bc79a8` and listed D-091(a) as open, because the re-pointing commit came
+   after. The chairs read the file the README calls authoritative and found it contradicting the
+   tool. **A candidate's status documents land in its own commit, and name it by parent and
+   subject, not by a SHA that cannot exist yet.**
+
+**What landed (D-092).** (a) `:234` deleted, Historical section prose-only; (b) packet note moved
+above the commands; (c) `verify.py` classifies expiry and not-yet-valid windows — receipt and
+override — against the unauthenticated host clock as `NOT EXECUTABLE`, exit 3, with no
+caller-supplied instant; test-first, `TestExitContractD092` (26), suite 252 → 278; every shipped
+fixture is exit 3 today, PASS reachable only on a live bundle, which the tests mint; (d) two
+refusal-path wording fixes; (e) `--tamper` summary honest by count; (f) manifest disclosure in
+the README; (g) the false status sentences struck and corrected; the entry paragraph split; the
+release doc's "for anything the Vault would not execute" overclaim (the coordinator's own
+sentence, one commit old) struck and corrected.
+
+**Amended ruling.** D-087(c)'s consequence "no clock" is amended by D-092(c). `verify.py` still
+authenticates no clock and certifies nothing about execution; it now *classifies* against the host
+clock, which exit 3 may carry and PASS never could.
+
+**Still open.** R-A018-13 (toolchain pinning); R-A018-26 (e2e clock flake); R-A018-27
+(`release/demo-out/` untracked); the two carried dead assertions in `test_verifier.py`;
+`check-review-scope.sh` red on 435 unassigned `release/` files; no shipped manifest (D-092(f),
+Quench remainder); AC2 unification deferred (D-087(c)).

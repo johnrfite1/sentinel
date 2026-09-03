@@ -5,6 +5,23 @@ Prepared by: Claude (Fable), from the facilitated intake session with John
 For: Opus 5 (architect and build director) and its subagents
 Status: Rulings ratified by John 2026-07-27 (canonical record: `docs/decisions.md`). Build authorized through Gate S2. Anything in this brief marked "agent note" is elaboration, not ratified text.
 
+**2026-09-02 (Cycle 3 returned) — ZERO SUSTAINED CRITICALS ON `81edee1`; D-092 RULES A NARROW
+PATCH BEFORE THE QUENCH; THE PATCH HAS LANDED IN THIS COMMIT.** The Adversary, owner of the carried Critical,
+measured both clauses of its withdrawal condition and reported HOLDS, raised no provisional
+Critical, and the ledger closed with zero sustained Criticals (MSG-034). Subtractor, Catalyst and
+Conscience reported FAIL on one line, `README.md:234` — a fenced command running the frozen packet
+verifier on a BLOCK bundle, `=> PASS` / exit `0` — which the Adversary graded a Major residue.
+D-092 rules a narrow patch: the Historical section loses that command and keeps no runnable one
+(a); the packet README's dated note moves above its commands (b); `verify.py` gains a host-clock
+executability classification (c); two `[PASS]`-line wording fixes (d); the `--tamper` summary (e);
+the no-manifest limitation stated in the README (f); and the Conscience Major 3 and Major 5
+corrections to this file, `docs/session-state.md` and the README's entry paragraph (g). Two
+build-team errors are recorded in D-092 and bind the patch: status documents land in the SAME
+commit as the code, and nothing in the README's Historical section may be copy-pasteable. **Patch status: LANDED in this commit and independently verified — D-092(c), (d), (e) HOLD under two fresh verifiers (`docs/cycle-3-patch-return-note.md` §5); suite 252 → 278, fast gate PASSED at floor 278; sync and execution guards clean. The patch commit is the child of `02458d2` on `step-3/isolated-signer`, subject beginning `D-092 patch`; measure it with `git log --oneline 02458d2..HEAD`. This block is IN that commit, which is why it names no SHA.** Then: independent verification by fresh agents reproducing every chair's
+failing command on the new SHA, a short return note, and the Smith's Quench decision on that SHA
+without a further cycle (D-092(g)). D-092 authorises no push, publication, visibility change or
+gate signature; the licence remains DEFERRED (D-082(c)).
+
 **2026-09-01 — THE PUBLICATION-SURFACE REPAIR BATCH LANDED (`8d47a0b`, `5d93850`, `5c8c090`,
 `2318ae3`), THE LAB CASTING'S CYCLE 1 REPORTED, AND THE CYCLE 2 CANDIDATE IS IN BUILD UNDER
 D-087.** The 2026-08-30 block below stands as the record of that morning; the present-tense
@@ -33,8 +50,11 @@ stands. Cycle 3 runs on `81edee1`.
 **THE FIRST CYCLE 3 CANDIDATE LANDED 2026-09-02 AT `0bc79a8373ec26398702b47430da48134e7cbfe6`** (superseded by `81edee1`). Cycle 2
 closed both Cycle 1 Criticals and sustained one: the first surface routed to `verify.py`, PASS/exit 0
 on BLOCK (D-090). Route (a): `verify.py` reports BLOCK or un-overridden REVIEW as `=> AUTHENTIC, NOT
-EXECUTABLE`, exit 3, test-first (18 tests, suite 221 → 239); root README rewritten, first surface
-through `verify_publication.py` only, entry-point paragraph on top; the gate's D-010 walk requires
+EXECUTABLE`, exit 3, test-first (18 tests, suite 221 → 239); root README rewritten, ~~first surface
+through `verify_publication.py` only~~ (**corrected 2026-09-02 under D-092, Conscience Major 3:** every
+fenced *verifier* command before the README's Historical section is `verify_publication.py`; one inline
+measured `verify.py` example remains under "Two verifiers, two claims" and exits `3`; and after
+D-092(a) the Historical section carries no runnable command), entry-point paragraph on top; the gate's D-010 walk requires
 exit 3. Independently verified — both clauses HOLD — and three stale passages asserting the old
 behaviour fixed, including the shipped `verify_publication.py` docstring and a dated note in the Gate 8
 packet README (reversible). Return note `docs/cycle-3-return-note.md`; register §8; `docs/session-state.md`

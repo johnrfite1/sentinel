@@ -190,9 +190,13 @@ statement; each tool's own docstring and output now carry it too.
   signer produced: every hash recomputes, every signature recovers to the trust root the
   verifying party names under `--domain`, every internal binding holds, and the evidence
   describes what it says it describes. It makes no claim about what the Vault would do with the
-  receipt. **It has no clock and evaluates no validity window** — `issuedAt`, `expiresAt`, the
-  mandate, policy and override windows and the action deadline are checked for shape and
-  binding, never against the present instant.
+  receipt. ~~**It has no clock and evaluates no validity window**~~ **Amended under D-092(c),
+  2026-09-02:** it compares the receipt's window, and the override's where one is present, to
+  the *unauthenticated host clock* and classifies an authentic bundle outside its window as
+  `NOT EXECUTABLE`, exit `3` — a classification, never a certification, and it takes no
+  caller-supplied instant. The mandate, policy and override windows and the action deadline are
+  still checked for shape and binding only; executability at a block remains the publication
+  verifier's question.
 - **`verifier/verify_publication.py` (the one the release tree ships) certifies
   EXECUTABILITY**, statically and offline: would `SentinelVault` execute this bundle at the entry
   point it is presented for. It reads the verdict, evaluates every window at a stated instant,
@@ -206,16 +210,21 @@ The consequences, stated so they are not later reported as defects of either too
 | REVIEW receipt, no override | `=> AUTHENTIC, NOT EXECUTABLE`, exit `3` (D-090(a)) | `FAIL` (not executable without an authenticated override) |
 | BLOCK receipt | `=> AUTHENTIC, NOT EXECUTABLE`, exit `3` (D-090(a)) | `FAIL` on both `--execution-path` values |
 | §5.5.1 refusal record (no receipt issued) | `=> AUTHENTIC, NOT EXECUTABLE`, exit `3` (D-091(a)) | `FAIL` (recognised and refused; nothing to execute) |
-| Receipt whose window has closed | `=> PASS` (authentic; no clock) | `FAIL` (not current at the evaluation instant) |
+| Receipt whose window has closed | ~~`=> PASS` (authentic; no clock)~~ `=> AUTHENTIC, NOT EXECUTABLE`, exit `3`, by the unauthenticated host clock (D-092(c)) | `FAIL` (not current at the evaluation instant) |
 
 ~~The first two `verify.py` cells read `=> PASS` (authentic) until 2026-09-02.~~ **Amended under
-D-090(a):** `verify.py` still certifies only authenticity and still reads no clock, but it no
-longer emits a recipient-facing `PASS` or exit `0` for anything the Vault would not execute. A
-BLOCK receipt, a REVIEW receipt with no `override.json`, or — under D-091(a), same day — a §5.5.1
-refusal record, is reported as authentic and marked `NOT EXECUTABLE` with exit status `3` —
-neither a certification nor a rejection, and distinguishable from both by exit code alone. ALLOW,
-and REVIEW with a valid owner override, keep `=> PASS: AUTHENTIC` / exit `0`; a bundle that fails
-any check keeps `=> FAIL` / exit `1`; under `--all`, `1` beats `3` beats `0`.
+D-090(a):** `verify.py` still certifies only authenticity, but it no longer emits a
+recipient-facing `PASS` or exit `0` for ~~anything the Vault would not execute~~ **the
+offline-checkable cases the Vault refuses** (the earlier phrasing overclaimed: until D-092(c) an
+expired receipt still passed — Subtractor, Cycle 3). A BLOCK receipt, a REVIEW receipt with no
+`override.json`, — under D-091(a), same day — a §5.5.1 refusal record, or — under D-092(c), same
+day — a receipt or override outside its validity window by the unauthenticated host clock, is
+reported as authentic and marked `NOT EXECUTABLE` with exit status `3` — neither a certification
+nor a rejection, and distinguishable from both by exit code alone. A live ALLOW, and a live REVIEW
+with a valid live owner override, keep `=> PASS: AUTHENTIC` / exit `0`; a bundle that fails any
+check keeps `=> FAIL` / exit `1`; under `--all`, `1` beats `3` beats `0`. What `verify.py` still
+does not evaluate: the mandate's and policy's windows, the action deadline, nonce freshness and
+executability at a block.
 
 So *"a BLOCK receipt certifies on neither entry point"* is a statement about the publication
 verifier and the Vault, and is true of them; it was never a statement about `verify.py`, whose
