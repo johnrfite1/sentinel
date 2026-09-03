@@ -5,6 +5,8 @@ Prepared by: Claude (Fable), from the facilitated intake session with John
 For: Opus 5 (architect and build director) and its subagents
 Status: Rulings ratified by John 2026-07-27 (canonical record: `docs/decisions.md`). Build authorized through Gate S2. Anything in this brief marked "agent note" is elaboration, not ratified text.
 
+**2026-09-03 — D-094: ASSUMPTION 2 AMENDED TO THE ARCHITECTURE (PLAUSIBLE, STATED RISK); 3 AND 8 ACCEPTED WITH STATED RISK** — no register assumption remains Untested (`docs/quench-orchestrator-handoff-2.md`).
+
 **2026-09-03 — D-093: THE SMITH ACCEPTED EXISTENTIAL ASSUMPTIONS 1, 4 AND 5 WITH STATED RISK** on one
 unaided named-audience cold read (MSG-041; the handoff is `docs/quench-orchestrator-handoff.md`; the Quench
 artifact is `8dfaa27`). Owed post-Quench (D-093(c)): an archive index and a pruning pass over superseded
