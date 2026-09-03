@@ -3,7 +3,7 @@
 Rewritten at the end of each working session. **This file, not the conversation, is the
 memory.** If it disagrees with anything an agent remembers, this file wins.
 
-Last updated: **2026-09-03 (D-093 and D-094: every register assumption disposed — 1, 4, 5 accepted on one
+Last updated: **2026-09-03 (D-093–D-096: the Quench on `8dfaa27` is ANSWERED — every register assumption disposed — 1, 4, 5 accepted on one
 unaided cold read, MSG-041; 2 amended to the architecture, Plausible; 3 and 8 accepted; handoffs at
 `docs/quench-orchestrator-handoff.md` and `-2.md`; the Quench artifact is
 `8dfaa27`, pushed as backup; publication is not authorised; licence DEFERRED).**
@@ -406,7 +406,7 @@ The table below is the 2026-08-29 record and is left as written. Since then:
 | Cycle 2 candidate | **LANDED `cb124fe`**, PUSHED to the PRIVATE remote as backup (D-089) |
 | Cycle 3 candidate | **`81edee1` REVIEWED — Cycle 3 returned 2026-09-02: zero sustained Criticals (Adversary HOLDS); Subtractor, Catalyst and Conscience FAIL on `README.md:234`; eighteen findings.** `0bc79a8` closed the condition as written (verified, both clauses HOLD); `81edee1` added D-091(a) refusal records (verified, HOLDS) and was PUSHED as backup (D-091(d)). Return note `docs/cycle-3-return-note.md`; result and rulings at D-092 |
 | D-092 patch | **LANDED, verified** — narrow, (a)–(g), before the Quench; the child of `02458d2`, subject `D-092 patch …`. Code and status documents land in ONE commit. **child of `02458d2`, subject `D-092 patch …`; LANDED and verified.** No code change is claimed landed |
-| Next | **The orchestrator files D-095 and completes the Quench on `8dfaa27`** — remaining items are John's live: no unresolved Criticals, surviving pre-mortem, one-line decision note, Temper trigger (any further checklist item — the Temper trigger among them — is John's to answer directly). Owed post-Quench under D-093(c): an archive index and a pruning pass over superseded passages, no mechanism change. Previously: the Existential Untested assumptions (1, 4, 5) must be explicitly accepted with stated risk or the artifact does not ship. Push of the patch commit is NOT authorised by D-092; that is John's, for the named commit, PRIVATE verified first. **No gate signature, no publication** |
+| Next | **The Quench is answered (D-093–D-096); the orchestrator files D-096, records the Quench in the Gate Decisions table and closes the session.** Temper trigger: the first external evaluator engagement. Owed after: the D-093(c) archive index and pruning pass; the licence (D-082(c)); the visibility decision (any further checklist item — the Temper trigger among them — is John's to answer directly). Owed post-Quench under D-093(c): an archive index and a pruning pass over superseded passages, no mechanism change. Previously: the Existential Untested assumptions (1, 4, 5) must be explicitly accepted with stated risk or the artifact does not ship. Push of the patch commit is NOT authorised by D-092; that is John's, for the named commit, PRIVATE verified first. **No gate signature, no publication** |
 | Publication | **NOT AUTHORISED.** Unchanged. Licence DEFERRED (D-082(c)); `docs/publication-policy.state` is HELD_PRIVATE / UNDECIDED / NONE |
 
 ### WHERE THE PROJECT IS, 2026-08-29

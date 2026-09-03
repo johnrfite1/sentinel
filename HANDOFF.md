@@ -5,6 +5,8 @@ Prepared by: Claude (Fable), from the facilitated intake session with John
 For: Opus 5 (architect and build director) and its subagents
 Status: Rulings ratified by John 2026-07-27 (canonical record: `docs/decisions.md`). Build authorized through Gate S2. Anything in this brief marked "agent note" is elaboration, not ratified text.
 
+**2026-09-03 — D-096: THE QUENCH IS ANSWERED** — no unresolved Criticals; surviving pre-mortem named (Catalyst C1, record density); decision note recorded; Temper trigger = the first external evaluator engagement. A private artifact is Quenched; publication, visibility and licence remain undecided (`docs/quench-orchestrator-handoff-4.md`).
+
 **2026-09-03 — D-095: ACCEPTANCE CRITERIA RULED** — AC1, 3–7, 10 met; AC8 half met, half owed (D-093(c)); AC9 struck; AC2 clauses 2–4 met, clause 1 waived for A-033 with stated risk (`docs/quench-orchestrator-handoff-3.md`).
 
 **2026-09-03 — D-094: ASSUMPTION 2 AMENDED TO THE ARCHITECTURE (PLAUSIBLE, STATED RISK); 3 AND 8 ACCEPTED WITH STATED RISK** — no register assumption remains Untested (`docs/quench-orchestrator-handoff-2.md`).
