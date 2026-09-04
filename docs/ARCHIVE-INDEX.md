@@ -1,8 +1,10 @@
 # Archive index
 
 A map of the Sentinel record for a reader who did not live through it. Written 2026-09-03 under
-D-093(c). It links; it does not restate — nothing here is a claim about the mechanism that the
-linked documents do not make themselves, and it carries no number that a script derives.
+D-093(c). It links rather than restating: nothing here is a claim about the mechanism that the
+linked documents do not make themselves, and it carries no number that a script derives. The one
+exception is the appendix, which holds two `README.md` passages replaced on 2026-09-03 verbatim,
+so that nothing removed from a live file exists only in git history.
 
 ## 1. What the record is, and why it is kept
 
@@ -16,6 +18,11 @@ map: nothing was deleted to make it, `docs/decisions.md` did not change, and eve
 out of a live file is preserved verbatim under `docs/archive/`.
 
 ## 2. Start here — the current state, in five files, in order
+
+This is the reading order for **the state and the record**: what is true now, what was ruled, and
+why. It is not the way in to the artifact itself. To *run* something, take `README.md`'s own
+"Start here" section, which routes through `release/` and its cold demo; that section and this list
+are two entry points to two different questions, and neither supersedes the other.
 
 1. `docs/session-state.md` — the live status. It declares itself authoritative over anything an
    agent or a reader remembers; its top block is the state as of 2026-09-03.
