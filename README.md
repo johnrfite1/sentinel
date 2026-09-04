@@ -24,9 +24,10 @@ certifies only that the Vault's offline-checkable predicate accepts a bundle, an
 Sentinel is not a detector, not a production wallet, and not a deployment: the fixtures and the
 cold demo run on a local Anvil, and testnet-only is documented rather than enforced.
 
-Status at this revision (2026-09-02): a pre-publication candidate under external adversarial
-review, held private, publication not authorised, licence deferred. `docs/session-state.md` is
-the live status and wins over anything written here.
+Status at this revision (2026-09-03): a private artifact, Quenched on `8dfaa27` (D-096, 2026-09-03)
+after the Crucible's lab casting returned no unresolved Criticals; not published, publication not
+authorised, licence deferred (D-082(c)). `docs/session-state.md` is the live status and wins over
+anything written here.
 
 Where the record lives:
 
@@ -37,6 +38,8 @@ Where the record lives:
 - the archive — every ruling, register and review arc, kept because the history is part of what
   is evaluated — in `docs/decisions.md`, `docs/a018-remediation-register.md`,
   `docs/v1-1-register.md` and the `docs/review-*/` directories.
+
+The map of that record, written for a reader who did not live through it, is `docs/ARCHIVE-INDEX.md`.
 
 This project is distinct from Uppsala Security's Sentinel Protocol and from sentinel.co's Cosmos network. Those names collide; they are not affiliation. Named here because competitor overlap is a claimed property of the artifact, not because a legal conclusion has been drawn.
 
@@ -183,8 +186,10 @@ authoritative over anything an agent or a reader remembers. `docs/publication-po
 the machine-checked publication state (`HELD_PRIVATE`, rights `UNDECIDED`); `scripts/check-rename-gate.sh`
 refuses if the repository's visibility stops matching it. The licence is deliberately deferred
 (D-082(c)) and no agent may select one. The Crucible review record is in `docs/cycle-2-orchestrator-brief.md`, `docs/cycle-2-return-package.md`,
-`docs/cycle-3-orchestrator-brief.md`, `docs/cycle-3-return-note.md` and `docs/cycle-3-patch-return-note.md`;
-the rulings that followed are D-088 through D-092 in `docs/decisions.md`.
+`docs/cycle-3-orchestrator-brief.md`, `docs/cycle-3-return-note.md`, `docs/cycle-3-patch-return-note.md`
+and the four Quench handoffs `docs/quench-orchestrator-handoff.md`, `-2.md`, `-3.md` and `-4.md`;
+the rulings that followed are D-088 through D-096 in `docs/decisions.md`. The whole record is
+mapped in `docs/ARCHIVE-INDEX.md`.
 
 ## Historical: the v0.2 comprehension packet reviewed at Gate 8 (`reviewer-packet/`)
 
@@ -304,6 +309,7 @@ These links are for people working in the repository. They are not part of a sta
 - **Enforcement release v0.3:** [docs/enforcement-release-v0.3.md](docs/enforcement-release-v0.3.md) and the generated [release/README.md](release/README.md)
 - **Build handoff:** [HANDOFF.md](HANDOFF.md)
 - **Decision log:** [docs/decisions.md](docs/decisions.md)
+- **Archive index:** [docs/ARCHIVE-INDEX.md](docs/ARCHIVE-INDEX.md) — the map of the record for a reader who did not live through it
 - **Session state (read first when resuming):** [docs/session-state.md](docs/session-state.md)
 - **Registers:** [docs/a018-remediation-register.md](docs/a018-remediation-register.md), [docs/v1-1-register.md](docs/v1-1-register.md)
 - **Icon:** [assets/icon.png](assets/icon.png) — standard mark (nested chamber, cyan alignment line)
