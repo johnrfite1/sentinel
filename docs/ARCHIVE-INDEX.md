@@ -138,6 +138,13 @@ closed arc, kept because the history is part of what is evaluated.
 Outside `docs/`: `reviewer-packet/` is the frozen Gate 8 artefact (D-091(c), D-092(b): no packet
 byte moves); `release/` is generated and guarded by `check-release-sync.sh`.
 
+The review directories are large on purpose. `docs/review-2026-08-19-d057-targeted/batch-cards/`
+alone holds several hundred files — the raw logs, patches and reviewer JSON that the batch cards
+cite as their evidence — and `docs/review-2026-08-16/artifacts/atk/` holds the generated attack
+vectors beside the scripts that generate them. They are kept as they were produced, unedited,
+because the README's central claim is that the defects were found by independent review, and
+these files are what that claim rests on. Nothing in them is needed to run or verify the artifact.
+
 ## 5. Where the archived history of the two status files lives
 
 - `docs/archive/session-state-history.md` — every dated block moved out of `docs/session-state.md`

@@ -5,9 +5,10 @@ domains: ["ai_security", "agentic_systems", "blockchain_security", "product_desi
 project: "sentinel_protocol_lab"
 summary: "Narrowed proposal for a vendor-neutral mandate-to-effects conformance lab for agent-proposed EVM actions."
 depends_on:
-  - "../vault/Protocol Stack/Layer 1 - Domain Protocols/L1 - AI - Agentic Security.md"
-  - "../vault/Protocol Stack/Layer 1 - Domain Protocols/L1 - AI - Courtroom Verification.md"
-  - "../vault/Protocol Stack/Layer 1 - Domain Protocols/L1 - AI Operations - Bounded Autonomy.md"
+  # Three domain-protocol notes in the author's private notebook (agentic security, courtroom
+  # verification, bounded autonomy). Not in this repository; the paths were removed before
+  # publication (2026-09-04). The proposal stands on its own text.
+  - "private notes, not in this repository"
 extracted_from: []
 extracted_to: []
 review_date: "2026-08-09"

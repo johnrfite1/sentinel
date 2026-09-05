@@ -9,12 +9,13 @@ a community project, and there is no roadmap to contribute against.
 tree; a correction to a factual error in the docs, with the command that shows it.
 
 **What will not be merged:** changes to the mechanism, the verifiers or the tests without a prior
-conversation — every one of those is under a recorded ruling in `docs/decisions.md`, and the
-project's own rule is that agents propose and the author decides. Please open an issue first.
+conversation — every one of those is under a recorded ruling in `docs/decisions.md`. The project
+was built with LLM agents working under the author's rulings, and its standing rule is that agents
+propose and the author decides; the same applies to a pull request. Please open an issue first.
 
 **Before you run anything:** read `README.md` top to bottom, then `release/README.md`. The fast
 gate is `./scripts/test.sh` and needs Node (see `.nvmrc`), Foundry (`forge`, `anvil`) and
-Python 3.8+ with no third-party packages; it says what it did not run.
+Python 3.9+ with no third-party packages; it says what it did not run.
 
 **Licence:** Apache-2.0 (`LICENSE`, `NOTICE`). By contributing you agree your contribution is
 licensed the same way.

@@ -24,7 +24,7 @@ certifies only that the Vault's offline-checkable predicate accepts a bundle, an
 Sentinel is not a detector, not a production wallet, and not a deployment: the fixtures and the
 cold demo run on a local Anvil, and testnet-only is documented rather than enforced.
 
-Status at this revision (2026-09-03): a private artifact, Quenched on `8dfaa27` (D-096, 2026-09-03)
+Status at this revision (2026-09-04): a private artifact, Quenched on `8dfaa27` (D-096, 2026-09-03)
 after the Crucible's lab casting returned no unresolved Criticals; not published, publication not
 authorised; licensed Apache-2.0 (D-097, 2026-09-04). `docs/session-state.md` is the live status and wins over
 anything written here.
@@ -41,15 +41,17 @@ Where the record lives:
 
 The map of that record, written for a reader who did not live through it, is `docs/ARCHIVE-INDEX.md`.
 
-This project is distinct from Uppsala Security's Sentinel Protocol and from sentinel.co's Cosmos network. Those names collide; they are not affiliation. Named here because competitor overlap is a claimed property of the artifact, not because a legal conclusion has been drawn.
+This project is distinct from Uppsala Security's Sentinel Protocol and from sentinel.co's Cosmos network. The names collide; there is no affiliation. It is said here so the collision is disclosed, not as a legal conclusion.
 
 > The agent proposes. Sentinel evaluates. The isolated signer attests. SentinelVault enforces.
 
-Sentinel is not a detector. It does not infer danger from bytecode, from a story an agent told, or from how a call “looks.” It checks whether one exact EVM call matches a human-signed mandate, against simulated effects at a recorded block, and it permits execution only of that exact attested call.
+It does not infer danger from bytecode, from a story an agent told, or from how a call “looks.” It checks whether one exact EVM call matches a human-signed mandate, against simulated effects at a recorded block, and it permits execution only of that exact attested call.
 
 ## Start here: the enforcement release under `release/`
 
-`release/` is the generated enforcement release candidate, v0.3. It is not a publication decision
+`release/` is the generated enforcement release candidate, v0.3 — produced by
+`scripts/assemble-enforcement-release.py` and held byte-identical to a fresh assembly by
+`scripts/check-release-sync.sh`. It is not a publication decision
 or a production deployment. It carries the onchain and trust-root evidence that the historical
 comprehension packet further down deliberately lacks:
 
@@ -67,8 +69,9 @@ comprehension packet further down deliberately lacks:
 ### Run the cold demo
 
 Prerequisites: Node with native TypeScript type stripping, Foundry (`forge` and `anvil`), and
-Python 3.8+ with no third-party packages. The sequence below was run from a fresh clone of this
-commit with Node 26.3.0, Foundry 1.7.1 and Python 3.9.6. From the repository root:
+Python 3.9+ with no third-party packages. `.nvmrc` and `.tool-versions` pin the versions the
+author runs (Node 26.3.0, Python 3.9.6); `ts/package.json` declares the Node floor (24); Foundry
+1.7.1 is the tested version and has no per-repository pin. From the repository root:
 
 ```sh
 cd release
@@ -91,8 +94,7 @@ NOT A TRUST ROOT`.
 what it ships, what it does not bound, and how to verify what the demo just produced: its
 "Independent verification" section carries the `verify_publication.py` invocations for
 `demo-out/sample` and the BLOCK bundle beside it, the five-minute receipt lifetime, and the
-exit-code contract. This file no longer restates them; the reader is sent there. Two things to
-know before opening it. No signed deployment manifest ships anywhere in this repository: the only
+exit-code contract. They are not repeated here. Two things to know before opening it. No signed deployment manifest ships anywhere in this repository: the only
 one is the one the demo generates and signs with a lab authority it labels non-production, so
 verifying against the address it prints is a self-consistency loop, not independent
 authentication. And a recipient with Python alone — no Node, no Foundry, no Anvil — can
@@ -155,7 +157,7 @@ fixed-key bundles, a static dashboard and an older copy of the authenticity veri
 own `verifier/verify.py` predates the exit contract and prints a bare `=> PASS`, exit `0`, on a
 BLOCK receipt that the repository's `verifier/verify.py` reports `AUTHENTIC, NOT EXECUTABLE`, exit
 `3`; the packet's README carries a dated note saying so before its commands. D-090(b) re-ranked it
-below the release. The section this file carried about it moved verbatim to `docs/archive/readme-historical-section-2026-09-04.md`.
+below the release. Its history is in `docs/archive/readme-historical-section-2026-09-04.md`.
 
 ## In this repository
 
@@ -166,7 +168,7 @@ These links are for people working in the repository. They are not part of a sta
 - **Build handoff:** [HANDOFF.md](HANDOFF.md)
 - **Decision log:** [docs/decisions.md](docs/decisions.md)
 - **Archive index:** [docs/ARCHIVE-INDEX.md](docs/ARCHIVE-INDEX.md) — the map of the record for a reader who did not live through it
-- **Session state (read first when resuming):** [docs/session-state.md](docs/session-state.md)
+- **Operating record (agent-facing; its top block is the live status):** [docs/session-state.md](docs/session-state.md)
 - **Registers:** [docs/a018-remediation-register.md](docs/a018-remediation-register.md), [docs/v1-1-register.md](docs/v1-1-register.md)
 - **Icon:** [assets/icon.png](assets/icon.png) — standard mark (nested chamber, cyan alignment line)
 

@@ -457,7 +457,13 @@ What does run: `forge test --root contracts` (one adversarial test file,
 negative controls, the verifier invocations above, and `npm --prefix ts run
 typecheck` against the shipped sources. The npm scripts for tools that are not
 in this tree are removed from the shipped `package.json` rather than left to
-fail on a missing file. A green result from any of these is evidence for what
+fail on a missing file. The shipped `package.json` still lists every dependency
+of the repository's TypeScript workspace, including `@anthropic-ai/sdk`, because
+it has to match the shipped `package-lock.json` for `npm ci` to run at all;
+nothing under this tree's `ts/src` imports that package (it belongs to the
+repository's labelling spike, which is not shipped), and the cold demo makes no
+network call. Splitting the workspace so the release carries only what it
+imports is recorded as open work. A green result from any of these is evidence for what
 it exercised and nothing wider.
 
 Vendored dependencies ship with their notices: `contracts/lib/forge-std/`
