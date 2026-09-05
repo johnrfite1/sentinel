@@ -96,6 +96,15 @@ if [ -z "${SENTINEL_GATE_TOKEN:-}" ] || [ "$_gate_from_fd" -eq 0 ]; then
     fi
 
     # Read-only descriptor, then UNLINK. After this line the body is nameless.
+    #
+    # The MODE matters, and it cost a CI failure to learn why. macOS resolves /dev/fd/9 to
+    # this read-only descriptor, so a child cannot write through it. Linux resolves it through
+    # /proc and REOPENS the inode with fresh flags -- unlinked or not -- so a child could
+    # truncate the running body if the inode were owner-writable. It is not: 0400 before the
+    # descriptor is taken makes that reopen fail with EACCES on every platform this runs on.
+    # The immutability self-test (scripts/check-gate-immutability.sh, probe 3) is what caught
+    # it, on the first Linux run.
+    chmod 0400 "$_gate_tmp"
     exec 9<"$_gate_tmp"
     rm -f "$_gate_tmp"
 
