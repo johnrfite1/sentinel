@@ -144,6 +144,11 @@ cite as their evidence — and `docs/review-2026-08-16/artifacts/atk/` holds the
 vectors beside the scripts that generate them. They are kept as they were produced, unedited,
 because the README's central claim is that the defects were found by independent review, and
 these files are what that claim rests on. Nothing in them is needed to run or verify the artifact.
+One exception to "unedited", made before publication on 2026-09-05 and marked in place: four
+passages in which reviewers described the agent harness's *personal* context — a private memory
+file's path and contents, another project's name, a laptop's hostname — were replaced by
+`[redacted before publication: personal context, 2026-09-05]`. Nothing about the review, its
+findings or its evidence was touched; only the author's personal context left the record.
 
 ## 5. Where the archived history of the two status files lives
 
