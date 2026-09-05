@@ -59,13 +59,14 @@
 #   second remote added later must not slip past a guard hardcoded to `origin`.
 #
 # ---------------------------------------------------------------------------------------
-# CURRENT STATE, ruled by John on 2026-08-30 and transcribed as D-082(b)/(c). Publication is
-# not authorised. Gate 8 passed with limits under D-080, and D-048 makes a clean result a
+# CURRENT STATE. Publication AUTHORISED by John at D-099 (2026-09-04); the visibility change is
+# his own act in the GitHub UI, after the CI gate was green on the private repository.
+# ~~Ruled by John on 2026-08-30 and transcribed as D-082(b)/(c). Publication is not authorised.~~ Gate 8 passed with limits under D-080, and D-048 makes a clean result a
 # precondition rather than a trigger. ~~The licence is deliberately held~~ — resolved to
 # Apache-2.0 at D-097 (2026-09-04); the rights mode below records it. Publication is still a
 # separate ruling and SMITH_DECISION stays NONE until it is made.
 
-PUBLICATION_STATE=HELD_PRIVATE
+PUBLICATION_STATE=AUTHORIZED_PUBLIC
 RIGHTS_MODE=OPEN_SOURCE
-SMITH_DECISION=NONE
+SMITH_DECISION=D-099
 CANONICAL_REPOSITORY=github.com/johnrfite1/sentinel

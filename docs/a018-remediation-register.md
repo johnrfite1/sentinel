@@ -1131,6 +1131,8 @@ clock, which exit 3 may carry and PASS never could.
 
 **R-A018-28 — the release's `package.json` lists `@anthropic-ai/sdk`, which nothing in the release imports — NEW, low.** Found 2026-09-04 by the pre-publication stranger review. The shipped `package.json` is the workspace's with its scripts reduced, and must match the shipped lockfile for `npm ci` to run; the SDK belongs to the labelling spike, which is not shipped. Disclosed in `release/README.md`. **Closes when** the TypeScript workspace is split so the release carries only the dependencies it imports, with its own lockfile — a workspace change, not a narrow patch.
 
+**Publication, 2026-09-04 (Phase 3, D-099).** The first CI runs, on Linux, found two defects the macOS gate never could: `mktemp -t NAME` (macOS-only; GNU needs the template) at the ablation stage, and — caught by the gate's own immutability self-test, probe 3 — a child process could reach a writable handle on the running gate body, because Linux reopens `/dev/fd/N` through `/proc` with fresh flags and the unlinked inode was still mode 0600. Fixed by `chmod 0400` before the descriptor is taken; self-test 10/10 on both platforms; CI green on `6d43e26`. **A guard that has only ever run on one platform has only been tested on one platform.**
+
 **Still open.** R-A018-28 (above); R-A018-26 (e2e clock flake — it fired once more in the licence commit's first gate run and cleared on re-run; it will show up in CI too); ~~R-A018-27~~ (closed above)
 (`release/demo-out/` untracked); the two carried dead assertions in `test_verifier.py`;
 `check-review-scope.sh` red on 435 unassigned `release/` files; no shipped manifest (D-092(f),
