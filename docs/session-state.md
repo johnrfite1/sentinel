@@ -40,7 +40,7 @@ recorded the decision note and set the Temper trigger. The handoffs are
 **What is and is not authorised.** Publication is **NOT AUTHORISED** and the repository is
 PRIVATE: `docs/publication-policy.state` is `PUBLICATION_STATE=HELD_PRIVATE`,
 `RIGHTS_MODE=UNDECIDED`, `SMITH_DECISION=NONE`, and `scripts/check-rename-gate.sh` judges against
-it. The licence is DEFERRED (D-082(c)): no licence may be added or selected, rights mode ships
+it. ~~The licence is DEFERRED (D-082(c))~~ **The licence is Apache-2.0 (D-097, 2026-09-04)**: `LICENSE` and `NOTICE` at the root, rights mode ships
 `UNDECIDED`, and no agent may select one. D-083(a),(g) stand: audience = technical evaluators,
 venue = GitHub public, visibility unchanged (HELD_PRIVATE), custody RETAINED with the drain
 disclosed. No gate is signed or reopened. Gate signing (D-002) and certification of public
@@ -63,7 +63,7 @@ visibility decision, the licence decision, and completion of the pruning pass.
 **Owed work.** Under D-093(c), post-Quench: an archive index and a pruning pass over superseded
 passages, changing no mechanism — carried out in the working tree of 2026-09-03
 (`docs/ARCHIVE-INDEX.md`, `docs/archive/session-state-history.md`,
-`docs/archive/handoff-history.md`; the commit is John's). John's own: the licence (D-082(c)); the
+`docs/archive/handoff-history.md`; the commit is John's). John's own: ~~the licence (D-082(c))~~ (ruled Apache-2.0 at D-097, 2026-09-04); the
 visibility decision; AC8's summarising half (D-095); any further checklist item, the Temper
 trigger among them.
 
@@ -203,7 +203,7 @@ The 2026-08-29 table this addendum extended is in `docs/archive/session-state-hi
 | Cycle 3 candidate | **`81edee1` REVIEWED — Cycle 3 returned 2026-09-02: zero sustained Criticals (Adversary HOLDS); Subtractor, Catalyst and Conscience FAIL on `README.md:234`; eighteen findings.** `0bc79a8` closed the condition as written (verified, both clauses HOLD); `81edee1` added D-091(a) refusal records (verified, HOLDS) and was PUSHED as backup (D-091(d)). Return note `docs/cycle-3-return-note.md`; result and rulings at D-092 |
 | D-092 patch | **LANDED, verified** — narrow, (a)–(g), before the Quench; the child of `02458d2`, subject `D-092 patch …`. Code and status documents land in ONE commit. No code change is claimed landed |
 | Next | ~~As written on 2026-09-02.~~ **Superseded 2026-09-03 — see the Current state block at the top of this file, which is the authority.** The Quench is answered and D-096 is filed; the archive index and pruning pass owed under D-093(c) were carried out on 2026-09-03. What remains is John's: the licence (D-082(c)), the visibility decision, and the Temper at the first external evaluator engagement. **No gate signature, no publication** |
-| Publication | **NOT AUTHORISED.** Unchanged. Licence DEFERRED (D-082(c)); `docs/publication-policy.state` is HELD_PRIVATE / UNDECIDED / NONE |
+| Publication | **NOT AUTHORISED.** Unchanged. ~~Licence DEFERRED (D-082(c))~~ Licence Apache-2.0 (D-097); `docs/publication-policy.state` is HELD_PRIVATE / UNDECIDED / NONE |
 
 ### THE METHOD THAT NOW GOVERNS REMEDIATION (D-060(1))
 

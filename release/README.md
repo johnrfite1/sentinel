@@ -398,8 +398,9 @@ it exercised and nothing wider.
 Vendored dependencies ship with their notices: `contracts/lib/forge-std/`
 carries `LICENSE-APACHE` and `LICENSE-MIT`, and
 `contracts/lib/openzeppelin-contracts/` carries `LICENSE` (MIT). Those notices
-are the vendors' terms for their code. This tree's own code carries no licence
-grant; that choice is deliberately held and is not made here.
+are the vendors' terms for their code. This tree's own code is licensed under
+the Apache License, Version 2.0 (D-097): `LICENSE` and `NOTICE` ship at this
+tree's root. A licence is not a publication decision and does not make one.
 
 `MANIFEST.sha256` covers every released file other than itself. Publication or
 deployment is a separate user decision; assembling this tree does not push,

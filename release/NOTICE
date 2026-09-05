@@ -1,0 +1,11 @@
+Sentinel
+Copyright 2026 John Fite
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+this work except in compliance with the License. You may obtain a copy of the
+License at http://www.apache.org/licenses/LICENSE-2.0 or in the LICENSE file at
+the root of this repository.
+
+This repository vendors third-party code under its own terms, each carrying its
+own notice: contracts/lib/forge-std (Apache-2.0 or MIT) and
+contracts/lib/openzeppelin-contracts (MIT).

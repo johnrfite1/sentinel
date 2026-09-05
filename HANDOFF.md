@@ -13,7 +13,7 @@ This file is now three things: the handoff's current block, the two sections of 
 **2026-09-03 — D-093: THE SMITH ACCEPTED EXISTENTIAL ASSUMPTIONS 1, 4 AND 5 WITH STATED RISK** on one
 unaided named-audience cold read (MSG-041; the handoff is `docs/quench-orchestrator-handoff.md`; the Quench
 artifact is `8dfaa27`). Owed post-Quench (D-093(c)): an archive index and a pruning pass over superseded
-passages, changing no mechanism. Not publication; repository PRIVATE; licence DEFERRED (D-082(c)).
+passages, changing no mechanism. Not publication; repository PRIVATE; ~~licence DEFERRED (D-082(c))~~ licence Apache-2.0 (D-097, 2026-09-04).
 
 ## Verification partition (autonomy follows verification cost)
 

@@ -27,14 +27,14 @@
 #   and D-082's own preamble says John's text governs wherever the transcription is more
 #   specific. Cite D-082(b) to find the record; do not read it as the source of the authority.
 #
-#   RIGHTS MODE SHIPS `UNDECIDED` BECAUSE THE LICENCE IS DELIBERATELY HELD, NOT BECAUSE THE
-#   FIELD IS UNFILLED (D-082(c)). John has deferred the proprietary-versus-open-source choice
-#   pending a commercial check: a permissive grant on published code cannot be withdrawn, and
-#   a licence protects the expression rather than the approach, so the decision is narrower
-#   than it looks and is his alone. No agent may add or select a licence or resolve the rights
-#   mode. `UNDECIDED` is therefore a POSITION, and the contradiction check below — which
-#   refuses AUTHORIZED_PUBLIC while the rights mode is UNDECIDED — is enforcing a live hold,
-#   not nagging about a blank field.
+#   RIGHTS MODE SHIPPED `UNDECIDED` FROM D-082(c) (2026-08-30) UNTIL D-097 (2026-09-04), AS A
+#   DELIBERATE HOLD, NOT AN UNFILLED FIELD: John deferred the proprietary-versus-open-source
+#   choice pending a commercial check, because a permissive grant on published code cannot be
+#   withdrawn. At D-097 he ruled Apache-2.0 and the state file reads OPEN_SOURCE; `LICENSE` and
+#   `NOTICE` sit at the repository root. The contradiction check below — which refuses
+#   AUTHORIZED_PUBLIC while the rights mode is UNDECIDED — stays as written: it enforced a live
+#   hold then and would enforce one again if the field were ever reset. A resolved rights mode
+#   is NOT a publication decision; PUBLICATION_STATE is judged on its own.
 #
 # WHAT DID NOT CHANGE, because the ruling was explicit that it must not:
 #   * Every case the old guard failed, this one still fails. A public repository under the

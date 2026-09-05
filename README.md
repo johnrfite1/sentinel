@@ -26,7 +26,7 @@ cold demo run on a local Anvil, and testnet-only is documented rather than enfor
 
 Status at this revision (2026-09-03): a private artifact, Quenched on `8dfaa27` (D-096, 2026-09-03)
 after the Crucible's lab casting returned no unresolved Criticals; not published, publication not
-authorised, licence deferred (D-082(c)). `docs/session-state.md` is the live status and wins over
+authorised; licensed Apache-2.0 (D-097, 2026-09-04). `docs/session-state.md` is the live status and wins over
 anything written here.
 
 Where the record lives:
@@ -183,9 +183,9 @@ that asserts it.
 
 `docs/session-state.md` is rewritten at the end of each session and declares itself
 authoritative over anything an agent or a reader remembers. `docs/publication-policy.state` is
-the machine-checked publication state (`HELD_PRIVATE`, rights `UNDECIDED`); `scripts/check-rename-gate.sh`
-refuses if the repository's visibility stops matching it. The licence is deliberately deferred
-(D-082(c)) and no agent may select one. The Crucible review record is in `docs/cycle-2-orchestrator-brief.md`, `docs/cycle-2-return-package.md`,
+the machine-checked publication state (`HELD_PRIVATE`, rights `OPEN_SOURCE`); `scripts/check-rename-gate.sh`
+refuses if the repository's visibility stops matching it. The licence is Apache-2.0 (D-097): `LICENSE`
+and `NOTICE` at the root; publication is a separate ruling and has not been made. The Crucible review record is in `docs/cycle-2-orchestrator-brief.md`, `docs/cycle-2-return-package.md`,
 `docs/cycle-3-orchestrator-brief.md`, `docs/cycle-3-return-note.md`, `docs/cycle-3-patch-return-note.md`
 and the four Quench handoffs `docs/quench-orchestrator-handoff.md`, `-2.md`, `-3.md` and `-4.md`;
 the rulings that followed are D-088 through D-096 in `docs/decisions.md`. The whole record is
@@ -313,3 +313,10 @@ These links are for people working in the repository. They are not part of a sta
 - **Session state (read first when resuming):** [docs/session-state.md](docs/session-state.md)
 - **Registers:** [docs/a018-remediation-register.md](docs/a018-remediation-register.md), [docs/v1-1-register.md](docs/v1-1-register.md)
 - **Icon:** [assets/icon.png](assets/icon.png) — standard mark (nested chamber, cyan alignment line)
+
+## Licence
+
+Apache License, Version 2.0 — see `LICENSE` and `NOTICE` at the repository root (D-097, 2026-09-04).
+Vendored dependencies under `contracts/lib/` carry their own notices. A licence is a grant of rights
+over this code; it is not a publication decision, and this repository is held private until one is
+made.
