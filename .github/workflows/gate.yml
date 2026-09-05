@@ -36,9 +36,11 @@ jobs:
           cache: npm
           cache-dependency-path: ts/package-lock.json
 
+      # The 3.9 line, not the author's exact patch in .tool-versions: the hosted runner has no
+      # build of 3.9.6 for Ubuntu 24.04, and the verifier's floor is the minor version.
       - uses: actions/setup-python@v5
         with:
-          python-version-file: .tool-versions
+          python-version: "3.9"
 
       - name: Install the TypeScript workspace
         run: npm --prefix ts ci
