@@ -3,10 +3,10 @@
 Rewritten at the end of each working session. **This file, not the conversation, is the
 memory.** If it disagrees with anything an agent remembers, this file wins.
 
-Last updated: **2026-09-05 (PUBLIC. D-099 executed through step 6: John changed the visibility in the
-GitHub UI; measured PUBLIC from here; private vulnerability reporting enabled; the full gate PASSED
-against the public remote with the rename gate reporting authorised. `main` is the default branch and
-tracks the working branch.)**
+Last updated: **2026-09-05 (PUBLIC. D-100 history cleanup and presentation published to both branches
+at `190873b`; both GitHub CI runs passed. Fresh public history is clear of the four removed passages,
+but GitHub still serves their old URLs: server-side removal remains outstanding. `main` is the
+default branch and tracks the working branch.)**
 ~~Last updated: 2026-09-04 (D-099: PUBLICATION AUTHORISED — the policy file reads `AUTHORIZED_PUBLIC` /
 `OPEN_SOURCE` / `D-099`; the visibility change is John's own act in the GitHub UI after the CI gate
 was green on the private repository; publication prep Phases 1–2 done, D-097 and D-098 recorded).~~ — superseded.
@@ -26,21 +26,29 @@ Measured remote state: **PUBLIC**, default branch `main`; both public branches w
 statements below saying private, publication not authorized, or visibility still owed describe
 earlier states and are **superseded**, not current instructions.
 
-The review found a privacy issue in history: the four passages redacted at `ab3d302` remain
-anonymously readable in earlier commits. A tested isolated rewrite removes those passages,
-leaves both tip trees unchanged and changes 201 commit IDs. **John approved applying the rewrite
-and publishing the prepared presentation on 2026-09-05 (D-100); execution is in progress.** Sensitive
-passages and the detailed audit evidence are kept outside the repository. GitHub secret
+The review found a privacy issue in history: the four passages redacted at `ab3d302` remained
+anonymously readable in earlier commits. **John approved applying the tested rewrite and
+publishing the presentation on 2026-09-05 (D-100). Both branches were updated atomically to
+`190873b` with explicit force-with-lease checks.** The rewrite changed 201 historical commit IDs
+and left the pre-presentation tip trees unchanged. A fresh anonymous mirror contained none of the
+four passages across 3,219 reachable blobs; its configured Gitleaks scan found no leaks across
+333 commits. These checks do not prove arbitrary private information is absent.
+
+**Privacy removal is not complete:** anonymous checks after the push still retrieved all four
+old unredacted files by their old commit URLs. GitHub Support must address cached views and
+unreachable objects; no server-side purge is claimed. Sensitive passages and detailed audit
+evidence are kept outside the repository. GitHub secret
 scanning and push protection were enabled during this review; private reporting remains on.
 
-Presentation changes are prepared locally in `README.md`, `assets/sentinel-flow.svg` and
+Presentation changes are published in `README.md`, `assets/sentinel-flow.svg` and
 `assets/sentinel-flow-mobile.svg`, with key-handling guidance clarified in `SECURITY.md`.
 The D-098-approved build-method paragraph is retained verbatim. These edits make no new
 product ruling or certification of public claims. The cold demo passed from a fresh public
 clone. The first fast gate emitted `GATE PASSED` but also a `sed` byte-sequence error from the
 existing `assets/icon.png`; that run is not a clean pass. The secret guard completed without
 the error under `LC_ALL=C`; the full byte-safe fast-gate rerun also emitted `GATE PASSED`, with
-557 TypeScript tests passing and no invalid-byte error.
+557 TypeScript tests passing and no invalid-byte error. The full fast gate was rerun on the
+cleaned history and presentation commit, and both public-branch GitHub CI runs also passed.
 The default-locale guard defect is recorded, not repaired by changing its code. The README's
 development command supplies the byte-safe locale. Corpus/deep-profile exclusions still apply.
 Workspace guards passed with existing baselined test-key findings and no new findings.
@@ -48,8 +56,8 @@ Workspace guards passed with existing baselined test-key findings and no new fin
 Rendered README previews were checked in light/dark desktop and mobile layouts. Independent
 visual review found one intermediate-width readability defect; the vertical diagram breakpoint
 was increased to 960px and checked at 601, 768 and 961px. GitHub's Markdown API retained the
-responsive image markup. Publication of the prepared work is now authorized by D-100. Detailed
-audit evidence, the sanitized-history preview, recovery material
+responsive image markup; the live published GitHub README and diagram were also inspected.
+Detailed audit evidence, the sanitized-history preview, recovery material
 and an unsent support-request draft are saved in the workspace's private local backup area.
 
 ## Historical status notes — 2026-09-03, superseded where noted above

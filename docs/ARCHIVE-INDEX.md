@@ -21,15 +21,16 @@ out of a live file is preserved verbatim under `docs/archive/`.
 
 This is the reading order for **the state and the record**: what is true now, what was ruled, and
 why. It is not the way in to the artifact itself. To *run* something, take `README.md`'s own
-"Start here" section, which routes through `release/` and its cold demo; that section and this list
+"Run the demo" section, which routes through `release/` and its cold demo; that section and this list
 are two entry points to two different questions, and neither supersedes the other.
 
 1. `docs/session-state.md` — the live status. It declares itself authoritative over anything an
-   agent or a reader remembers; its top block is the state as of 2026-09-03.
+   agent or a reader remembers; read its latest dated block for current status.
 2. `README.md` — what the artifact is, what it establishes and does not, and the runnable path
    through `release/`.
-3. `docs/decisions.md` — the canonical decision log, D-001…D-096, and it wins. For the rulings in
-   force since the enforcement release read D-082, D-083 and D-088…D-096.
+3. `docs/decisions.md` — the canonical decision log, through D-100, and it wins. For the rulings
+   since the enforcement release read D-082, D-083 and D-088…D-100; D-097…D-100 cover licensing,
+   publication and the approved history cleanup.
 4. `HANDOFF.md` — the standing fence: the Verification partition (what is autonomy *none*) and
    the House rules.
 5. `docs/publication-policy.state` — the machine-read publication state, judged by
@@ -38,7 +39,7 @@ are two entry points to two different questions, and neither supersedes the othe
 ## 3. The eight stories
 
 Decision ranges are by number; the log's physical order is not monotonic. A–E are complete arcs,
-F is halted, G is closed by the Quench, H is open.
+F is closed without satisfaction, G is closed by the Quench, H records the publication decisions.
 
 **A. Intake and the build gates — D-001…D-018 (2026-07-27/28).** Settled the §14 ladder, two
 mid-build gates signed by John alone and non-delegably, the kill criteria, the four delegated
@@ -83,12 +84,13 @@ that became the Quench artifact `8dfaa27`, and the Quench itself — assumptions
 criteria, the decision note and the Temper trigger. Carried by the six `docs/cycle-*` files, the
 four `docs/quench-orchestrator-handoff*.md`, `docs/crucible-session-debrief-2026-09-03.md`.
 
-**H. Licence, venue, audience — the publication posture across arcs (cross-cutting).** Settled,
-so far, that naming lifts while publication stays blocked, that clean results are preconditions
-and never triggers, that the licence was deferred and then ruled Apache-2.0 (D-097, 2026-09-04), that the audience is technical evaluators and
-the venue GitHub public with visibility unchanged, that a backup push is not publication, and
-what the Temper trigger is and is not. Carried by `docs/publication-policy.state`, README
-"Status", `docs/session-state.md` (the current block).
+**H. Licence, venue, audience — the publication posture across arcs (cross-cutting).** The
+earlier publication hold was lifted by D-099 after Apache-2.0 was selected at D-097. The
+repository is public for technical evaluators; D-100 authorizes the history privacy cleanup
+and clearer presentation. Clean results remain preconditions rather than publication triggers,
+and the Temper is still triggered by the first external evaluator engagement. Carried by
+`docs/publication-policy.state`, README, `docs/session-state.md` (the current block) and
+`docs/decisions.md` D-097…D-100.
 
 ## 4. Every `docs/` file and review directory, classified
 
@@ -156,9 +158,10 @@ every commit does not, and two of those files are pinned by a guard.
 **Correction, 2026-09-05:** that redaction changed the current tree only. The earlier claim that
 the personal context "left the record" did not account for Git history. A post-publication
 review confirmed the earlier copies remained publicly retrievable. John approved the tested
-history cleanup under D-100, including its 201 changed commit IDs. Branch cleanup and GitHub's
-cached or unreachable copies are separate checks; removal from the latter must not be claimed
-until verified. Historical commit IDs in this archive describe the pre-cleanup record.
+history cleanup under D-100, including its 201 changed commit IDs. Both public branches were
+updated to `190873b`; a fresh public mirror contains none of the four passages. GitHub still
+served the old file URLs after that update, so removal of cached views and unreachable objects
+remains outstanding. Historical commit IDs in this archive describe the pre-cleanup record.
 
 ## 5. Where the archived history of the two status files lives
 

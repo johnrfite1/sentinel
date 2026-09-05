@@ -614,3 +614,10 @@ the rewrite does not retroactively change the evidence or certify a new review. 
 branches does not prove GitHub's cached or unreachable copies are gone: check those separately
 and carry any required server-side removal as outstanding. Existing private review worktrees
 and backups may retain original history and must not be pushed back into the public repository.
+
+**EXECUTION RECEIPT (agent-measured, 2026-09-05).** The approved atomic update placed both public
+branches at `190873b`. A fresh anonymous mirror contained none of the four passages across
+3,219 reachable blobs; its configured Gitleaks scan found no leaks across 333 commits. Both
+GitHub fast-gate runs passed. Old commit URLs still served the affected unredacted files after
+the push, so GitHub's server-side removal remains outstanding. This receipt records execution
+and measured limits; it is no new user ruling or privacy-clearance claim.
