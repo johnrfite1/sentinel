@@ -60,6 +60,18 @@ nothing; D-048 makes a clean result a precondition, never a trigger. The exit re
 named-audience human reads or runs the artifact outside the Crucible. Rejected as triggers: the
 visibility decision, the licence decision, and completion of the pruning pass.
 
+**Publication prep, Phase 1 (2026-09-04) — DONE in this commit.** The full history was scanned
+(gitleaks, 322 commits: no secret; the hits were a contract address under a `token` key and
+Anvil's published dev key, allow-listed with reasons in `.gitleaks.toml`). Root README trimmed 322
+→ 178 lines: the Historical section is a stub over `docs/archive/readme-historical-section-2026-09-04.md`,
+the restated runnable path is a pointer to `release/README.md`, the dense verifier paragraph is
+one pass. Added `SECURITY.md`, `CONTRIBUTING.md`, `.github/workflows/gate.yml` (the fast gate in
+CI), `.nvmrc`/`.tool-versions`/`engines` (R-A018-13), `release/demo-out/` ignored and skipped by
+the sync guard (R-A018-27), `.claude/` and `.pytest_cache/` ignored. **Phase 2 is John's
+decisions** (default branch, the reviewer packet, the agent-facing status docs, the enforcement
+casting's record, GitHub settings); **Phase 3 is the flip**, in the order: ruling → policy file
+`AUTHORIZED_PUBLIC` with the ruling's number, committed and pushed → visibility → a gate run.
+
 **Owed work.** Under D-093(c), post-Quench: an archive index and a pruning pass over superseded
 passages, changing no mechanism — carried out in the working tree of 2026-09-03
 (`docs/ARCHIVE-INDEX.md`, `docs/archive/session-state-history.md`,

@@ -1,0 +1,47 @@
+# The fast gate, run as `./scripts/test.sh` runs it locally. It prints what it did not run
+# (the deep corpus profile needs `--gate`). The rename gate inside it reads the repository's
+# visibility through `gh`, which is why the job carries the default token.
+name: gate
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+concurrency:
+  group: gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fast-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0   # the gate reads git history and the remote census
+
+      - uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: v1.7.1
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: ts/package-lock.json
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install the TypeScript workspace
+        run: npm --prefix ts ci
+
+      - name: Fast gate
+        run: ./scripts/test.sh

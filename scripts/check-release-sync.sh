@@ -118,6 +118,13 @@ def snapshot(root):
     digested as though it were content."""
     files, links = {}, []
     for path in sorted(root.rglob("*")):
+        # R-A018-27: `release/README.md` tells a recipient to run the cold demo with
+        # `--output "$PWD/demo-out"` from inside release/, so a tree that has been USED as
+        # instructed carries release/demo-out/. It is demo output, gitignored, never assembled
+        # and never shipped; walking it would report a used tree as out of sync. Only that one
+        # top-level name is skipped, and only under the release root.
+        if path.relative_to(root).parts[:1] == ("demo-out",):
+            continue
         if path.is_symlink():
             links.append(path.relative_to(root).as_posix())
             continue

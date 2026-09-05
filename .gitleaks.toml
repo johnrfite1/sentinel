@@ -1,0 +1,20 @@
+# gitleaks configuration. The full history (322 commits at 2026-09-04) was scanned before the
+# repository was prepared for publication: 34 hits, one distinct value, all of them the DemoERC20
+# contract address stored under a JSON key named `token` in the injection fixture and the corpus
+# files derived from it. An EVM address is not a credential. Every key this tree ships is a
+# published local test key (Anvil's dev accounts) or is generated in memory by the demo.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "An EVM address under a JSON `token` key in fixture evidence is a contract address, not a secret"
+regexTarget = "line"
+regexes = ['''"token":\s*"0x[0-9a-fA-F]{40}"''']
+
+[[allowlists]]
+description = "Anvil's published dev-account private keys (accounts #0 and #1), which the fixtures and the isolated-signer test harness use by design; they are printed by `anvil` on every start and control nothing"
+regexTarget = "secret"
+regexes = [
+  '''(?i)^(0x)?ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80$''',
+  '''(?i)^(0x)?59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d$''',
+]

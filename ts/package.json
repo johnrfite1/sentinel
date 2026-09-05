@@ -1,6 +1,9 @@
 {
   "name": "@sentinel/ts",
   "license": "Apache-2.0",
+  "engines": {
+    "node": ">=24.0.0"
+  },
   "private": true,
   "type": "module",
   "scripts": {

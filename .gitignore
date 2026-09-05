@@ -30,3 +30,10 @@ contracts/cache/
 
 # Serena language-server / tool state. Not a project artifact.
 .serena/
+
+# Agent harness state and Python test cache: never shipped, never scanned as source.
+.claude/
+.pytest_cache/
+
+# The cold demo, run as release/README.md instructs, writes here (R-A018-27). Never shipped.
+release/demo-out/
