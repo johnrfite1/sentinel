@@ -873,7 +873,8 @@ VERIFIER_MIN_TAMPER_MODES=30
 # committed before this stage existed, and passes after the regeneration.
 step "§7.3 ablation report is the output of its generator (A-062)"
 if command -v node >/dev/null 2>&1; then
-    ab_tmp="$(mktemp -t sentinel-ablation)"
+    # Template form: GNU mktemp (the CI runner) requires the X's; `-t NAME` alone is macOS-only.
+    ab_tmp="$(mktemp "${TMPDIR:-/tmp}/sentinel-ablation.XXXXXXXX")"
     if node --input-type=module -e "
         const {loadInputs, buildReport} = await import('$(pwd)/ts/src/ablation/report.ts');
         const fs = await import('node:fs');
