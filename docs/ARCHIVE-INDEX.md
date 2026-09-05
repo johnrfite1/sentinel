@@ -148,7 +148,10 @@ One exception to "unedited", made before publication on 2026-09-05 and marked in
 passages in which reviewers described the agent harness's *personal* context — a private memory
 file's path and contents, another project's name, a laptop's hostname — were replaced by
 `[redacted before publication: personal context, 2026-09-05]`. Nothing about the review, its
-findings or its evidence was touched; only the author's personal context left the record.
+findings or its evidence was touched; only the author's personal context left the record. The
+harness's folder-naming form of the author's home directory remains in eleven review artifacts,
+attack logs and pinned labelling-provenance files, by ruling: it reveals nothing the email on
+every commit does not, and two of those files are pinned by a guard.
 
 ## 5. Where the archived history of the two status files lives
 
