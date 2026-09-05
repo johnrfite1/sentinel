@@ -72,7 +72,7 @@ corrected, and Gate 8 PASSED with three limits against the v0.2 packet. Carried 
 
 **F. The enforcement release, its casting halted at the Anvil, and the publication posture —
 D-081…D-084 (2026-08-29/30).** Settled the Cycle 2 enforcement checkpoint, the four A-018
-Criticals sustained and that line HALTED, the licence (deferred at D-082(c), ruled Apache-2.0 at D-097) and state-aware publication guard,
+Criticals sustained and that line HALTED — closed, not satisfied, at D-098(a), the licence (deferred at D-082(c), ruled Apache-2.0 at D-097) and state-aware publication guard,
 and the fresh casting for the lab. Carried by `docs/a018-remediation-register.md`,
 `docs/enforcement-release-v0.3.md`, `docs/publication-policy.state`.
 

@@ -47,6 +47,25 @@ This project is distinct from Uppsala Security's Sentinel Protocol and from sent
 
 It does not infer danger from bytecode, from a story an agent told, or from how a call “looks.” It checks whether one exact EVM call matches a human-signed mandate, against simulated effects at a recorded block, and it permits execution only of that exact attested call.
 
+## How this was built
+
+This project was built with LLM agents working under one person's rulings. The standing rule is
+that agents propose and the author decides: no gate is signed, no design fork resolved and no claim
+about the work made by an agent. Tests were written by an author separate from the implementer
+against a frozen baseline, and a third, fresh agent verified each change. The code was then put
+through three cycles of adversarial review by an external four-chair council, whose findings and
+the author's rulings on them are the record this repository keeps.
+
+A few words the record uses without explaining them elsewhere:
+
+- **Crucible** — the adversarial review protocol: four chairs, cycles, a final Quench.
+- **Smith** — the author, in the protocol's terms; the only party who rules.
+- **Quench** — the protocol's closing gate, where every untested assumption is accepted with a
+  stated risk or the artifact does not ship.
+- **D-nnn** — a numbered ruling in `docs/decisions.md`.
+- **A-nnn** — a numbered finding from a review.
+- **R-A018-nn** — an item in the remediation register.
+
 ## Start here: the enforcement release under `release/`
 
 `release/` is the generated enforcement release candidate, v0.3 — produced by

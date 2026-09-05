@@ -15,8 +15,8 @@ is not bounded on chain. See `release/README.md`, "What this release does not bo
 `docs/enforcement-release-v0.3.md`. Reports that restate these will be acknowledged and closed
 as disclosed.
 
-**How to report:** open a GitHub issue if the repository is public, or email the author (see the
-commit history for the address). Include the command you ran, the output you saw, and the claim
+**How to report:** open a GitHub issue, or — for anything you would rather not post in the open —
+use GitHub's private vulnerability report on this repository's Security tab. Include the command you ran, the output you saw, and the claim
 you believe it contradicts. Expect a reply, not a timeline: this is one person's lab.
 
 **Keys:** every key in this repository is a published local test key or is generated in memory by

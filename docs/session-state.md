@@ -27,7 +27,7 @@ recorded the decision note and set the Temper trigger. The handoffs are
 **Two Crucible lines; do not conflate them.**
 
 - The **enforcement-publication line** (`S-20260829-sentinel-enforcement-publication`) is HALTED:
-  its four A-018 / MSG-022 Criticals are OPEN AT ANVIL (D-083(i)). Its register is
+  ~~its four A-018 / MSG-022 Criticals are OPEN AT ANVIL (D-083(i))~~ **CLOSED, NOT SATISFIED (D-098(a), 2026-09-04): the four Criticals stand as recorded findings, not open work.** Its register is
   `docs/a018-remediation-register.md`; the register's §3 items were authorised piecemeal
   (D-082(a), D-083(j), D-085(f), D-086, D-087) and most are CLOSED with dated markers; §4 is John's.
 - The **lab casting** (`S-20260830-sentinel-conformance-lab-r1`, the fresh casting D-083(g)
@@ -67,9 +67,10 @@ Anvil's published dev key, allow-listed with reasons in `.gitleaks.toml`). Root 
 the restated runnable path is a pointer to `release/README.md`, the dense verifier paragraph is
 one pass. Added `SECURITY.md`, `CONTRIBUTING.md`, `.github/workflows/gate.yml` (the fast gate in
 CI), `.nvmrc`/`.tool-versions`/`engines` (R-A018-13), `release/demo-out/` ignored and skipped by
-the sync guard (R-A018-27), `.claude/` and `.pytest_cache/` ignored. **Phase 2 is John's
-decisions** (default branch, the reviewer packet, the agent-facing status docs, the enforcement
-casting's record, GitHub settings); **Phase 3 is the flip**, in the order: ruling → policy file
+the sync guard (R-A018-27), `.claude/` and `.pytest_cache/` ignored. **Phase 2 — RULED, D-098 (2026-09-04):** `main` fast-forwarded to the working branch; the reviewer packet
+stays, disclosed; the method is owned on the README's first surface ("How this was built" + glossary);
+the enforcement casting is closed, not satisfied; security contact = issues + private vulnerability
+reporting; GitHub description/topics set; the unreferenced image removed. **Phase 3 is the flip**, in the order: ruling → policy file
 `AUTHORIZED_PUBLIC` with the ruling's number, committed and pushed → visibility → a gate run.
 
 **Owed work.** Under D-093(c), post-Quench: an archive index and a pruning pass over superseded
@@ -209,7 +210,7 @@ The 2026-08-29 table this addendum extended is in `docs/archive/session-state-hi
 |---|---|
 | Repair batch | **LANDED** — `8d47a0b`, `5d93850`, `5c8c090`, `2318ae3` (2026-08-30). The BLOCK→PASS publication verifier is fixed; R-A018-18/23/24 closed under D-083; the release-sync, suite-floor, vacuity and gate-abort guards are wired; the register's §3 carries dated CLOSED markers |
 | Lab casting, Cycles 1–2 | Cycle 1's two Criticals **closed at Cycle 2** (chairs reproduced both on `cb124fe`). Cycle 2 **sustained one**: first surface → `verify.py` PASS/0 on BLOCK (D-090). Cap of 2 reached; **Cycle 3 extended by the Smith's written note D-090(c)** |
-| Enforcement line | **Unchanged: HALTED, four A-018 Criticals OPEN AT ANVIL** (D-083(i)) |
+| Enforcement line | ~~**Unchanged: HALTED, four A-018 Criticals OPEN AT ANVIL** (D-083(i))~~ **CLOSED, NOT SATISFIED (D-098(a))** — findings recorded, nothing withdrawn, no open work |
 | Review method | **Inventory diff replaces one-at-a-time finding** (D-085(e)). Measured class: 54 + 4 + 4 missing checks, not 6. D-047 is retired; D-055(a) governs (D-085(a)) |
 | Cycle 2 candidate | **LANDED `cb124fe`**, PUSHED to the PRIVATE remote as backup (D-089) |
 | Cycle 3 candidate | **`81edee1` REVIEWED — Cycle 3 returned 2026-09-02: zero sustained Criticals (Adversary HOLDS); Subtractor, Catalyst and Conscience FAIL on `README.md:234`; eighteen findings.** `0bc79a8` closed the condition as written (verified, both clauses HOLD); `81edee1` added D-091(a) refusal records (verified, HOLDS) and was PUSHED as backup (D-091(d)). Return note `docs/cycle-3-return-note.md`; result and rulings at D-092 |
