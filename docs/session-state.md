@@ -15,7 +15,44 @@ D-055 is MET (D-073). It unlocks nothing. **"Sentinel" is the project name (D-07
 The EIP-712 domain string is also `"Sentinel"` (D-075, recorded late). There is no
 name/domain split. Branch `step-3/isolated-signer`.
 
-## Current state — 2026-09-03
+## Current work — 2026-09-05: post-publication privacy and presentation review
+
+John requested a review of Sentinel and its newly public repository for information that should
+not be public, followed by clearer presentation of purpose, value and use, with graphics allowed.
+This authorizes the presentation work; no product mechanism or gate signature is changed.
+
+Measured remote state: **PUBLIC**, default branch `main`; both public branches were at
+`76c50c9` when reviewed. Publication remains authorized under D-099 / Apache-2.0. The prior
+statements below saying private, publication not authorized, or visibility still owed describe
+earlier states and are **superseded**, not current instructions.
+
+The review found a privacy issue in history: the four passages redacted at `ab3d302` remain
+anonymously readable in earlier commits. A tested isolated rewrite removes those passages,
+leaves both tip trees unchanged and changes 201 commit IDs. **John approved applying the rewrite
+and publishing the prepared presentation on 2026-09-05 (D-100); execution is in progress.** Sensitive
+passages and the detailed audit evidence are kept outside the repository. GitHub secret
+scanning and push protection were enabled during this review; private reporting remains on.
+
+Presentation changes are prepared locally in `README.md`, `assets/sentinel-flow.svg` and
+`assets/sentinel-flow-mobile.svg`, with key-handling guidance clarified in `SECURITY.md`.
+The D-098-approved build-method paragraph is retained verbatim. These edits make no new
+product ruling or certification of public claims. The cold demo passed from a fresh public
+clone. The first fast gate emitted `GATE PASSED` but also a `sed` byte-sequence error from the
+existing `assets/icon.png`; that run is not a clean pass. The secret guard completed without
+the error under `LC_ALL=C`; the full byte-safe fast-gate rerun also emitted `GATE PASSED`, with
+557 TypeScript tests passing and no invalid-byte error.
+The default-locale guard defect is recorded, not repaired by changing its code. The README's
+development command supplies the byte-safe locale. Corpus/deep-profile exclusions still apply.
+Workspace guards passed with existing baselined test-key findings and no new findings.
+
+Rendered README previews were checked in light/dark desktop and mobile layouts. Independent
+visual review found one intermediate-width readability defect; the vertical diagram breakpoint
+was increased to 960px and checked at 601, 768 and 961px. GitHub's Markdown API retained the
+responsive image markup. Publication of the prepared work is now authorized by D-100. Detailed
+audit evidence, the sanitized-history preview, recovery material
+and an unsent support-request draft are saved in the workspace's private local backup area.
+
+## Historical status notes — 2026-09-03, superseded where noted above
 
 **The Quench is complete, and what shipped is a private artifact.** The Quench artifact is
 `8dfaa275a669bd202c3fa45e36dc12cbbe261170` (A-033) — the D-092 patch commit, child of `02458d2`,

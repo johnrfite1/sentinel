@@ -1,51 +1,156 @@
+<img src="assets/icon.png" alt="Sentinel's nested chamber mark with a cyan alignment line" width="80" height="80">
+
 # Sentinel
 
-Sentinel is a testnet lab that binds one exact EVM call to a human-signed mandate:
+**A testnet lab for checking an agent's proposed EVM call against a human-signed mandate.**
 
-- an untrusted agent proposes a call;
-- an evaluator compares the decoded call and its simulated effects at a recorded block to the
-  mandate;
-- an isolated signer attests the verdict in a signed receipt; and
-- `SentinelVault` executes the exact attested bytes on an ALLOW receipt, executes a REVIEW
-  receipt only alongside a separate owner-signed override, and reverts a BLOCK receipt at both
-  entry points, altered calldata, and a replayed nonce.
+An agent can propose a transaction. What connects that proposal to what its owner actually
+authorized? Sentinel makes that connection inspectable: evaluate the decoded call and its
+simulated effects, sign the verdict, and bind execution to the exact attested bytes.
 
-What that establishes is narrow, and the tools say so themselves. The release's offline verifier
-certifies only that the Vault's offline-checkable predicate accepts a bundle, and prints a
-`NOT ESTABLISHED` line beside every certifying result:
+[Run the demo](#run-the-demo) · [How it works](#how-it-works) · [Understand the limits](#what-the-lab-does-not-establish) · [Explore the evidence](#explore-the-repository)
 
-- no chain is read, so deployed code identity and nonce freshness are not established;
-- the clock is unauthenticated;
-- the calldata arguments are never decoded by the verifier or the Vault, only by the signer's
-  evaluator; and
-- the Vault's native-value ceiling is per action, bounding neither aggregate loss nor token
-  allowances, which no contract here caps.
+**Scope:** a local Anvil demonstration for technical evaluators. No production deployment or
+safety for funds is claimed. The Vault has no cumulative-loss cap or onchain token-allowance
+cap; only the evaluator decodes calldata arguments. Testnet-only use is documented, not
+enforced. [Read the full boundaries.](release/README.md#what-this-release-does-not-bound)
 
-Sentinel is not a detector, not a production wallet, and not a deployment: the fixtures and the
-cold demo run on a local Anvil, and testnet-only is documented rather than enforced.
+<picture>
+  <source media="(max-width: 960px)" srcset="assets/sentinel-flow-mobile.svg">
+  <img src="assets/sentinel-flow.svg" alt="An untrusted agent proposes a call; an evaluator compares it with an owner-signed mandate; an isolated signer attests a receipt; SentinelVault checks the exact bytes and execution conditions. ALLOW uses the automatic path, REVIEW requires a separate owner override, and BLOCK reverts on both paths.">
+</picture>
 
-Status at this revision (2026-09-04): public, published under D-099 as a demonstration of the
-author's engineering work; Quenched on `8dfaa27` (D-096, 2026-09-03) after the Crucible's lab
-casting returned no unresolved Criticals; licensed Apache-2.0 (D-097, 2026-09-04). `docs/session-state.md` is the live status and wins over
-anything written here.
+## Why this project exists
 
-Where the record lives:
+Sentinel makes a specific agent-security question reproducible: **does one proposed call conform
+to the owner's mandate, and can a different call be substituted after approval?**
 
-- the mechanism in `contracts/` and `verifier/`;
-- the limitations in the verifier's own `NOT ESTABLISHED` output, `release/README.md` and
-  `docs/enforcement-release-v0.3.md`;
-- the status in `docs/session-state.md`; and
-- the archive — every ruling, register and review arc, kept because the history is part of what
-  is evaluated — in `docs/decisions.md`, `docs/a018-remediation-register.md`,
-  `docs/v1-1-register.md` and the `docs/review-*/` directories.
+The project gives you three things to examine:
 
-The map of that record, written for a reader who did not live through it, is `docs/ARCHIVE-INDEX.md`.
+- **A separation of proposal and signing authority.** The proposer is untrusted. An evaluator
+  checks conformance, and a signer in a separate process issues the signed receipt.
+- **A verifiable record of one decision.** EIP-712 signatures and content hashes bind the
+  mandate, policy, action and evidence. A Python verifier checks the publication bundle offline
+  and explicitly lists what it cannot establish.
+- **Runnable failure cases.** The demo executes an authorized purchase and checks refusals for
+  a redirected beneficiary, a wrong deployment authority, altered calldata and receipt replay.
+  The repository also keeps the tests, adversarial findings and corrections behind its claims.
 
-This project is distinct from Uppsala Security's Sentinel Protocol and from sentinel.co's Cosmos network. The names collide; there is no affiliation. It is said here so the collision is disclosed, not as a legal conclusion.
+This is a conformance lab, not a general detector of malicious contracts or prompt injection.
+The cold demo uses scripted proposals; it needs no LLM account, API key, funded wallet or remote
+RPC service. Package installation requires internet access; the demo runs against local Anvil.
 
-> The agent proposes. Sentinel evaluates. The isolated signer attests. SentinelVault enforces.
+## Run the demo
 
-It does not infer danger from bytecode, from a story an agent told, or from how a call “looks.” It checks whether one exact EVM call matches a human-signed mandate, against simulated effects at a recorded block, and it permits execution only of that exact attested call.
+You need **Node 24+**, **Foundry** (`forge` and `anvil`) and **Python 3.9+**. Python needs no
+third-party packages. The recorded toolchain is Node 26.3.0 and Python 3.9.6
+([version pins](.tool-versions)), with Foundry 1.7.1 used in [CI](.github/workflows/gate.yml).
+
+```sh
+git clone --recurse-submodules https://github.com/johnrfite1/sentinel.git
+cd sentinel/release
+npm --prefix ts ci
+forge build --root contracts
+npm --prefix ts run cold-demo -- --output "$PWD/demo-out"
+```
+
+Already cloned? Start at `cd release` from the repository root. The demo starts a fresh Anvil,
+generates owner, signer and deployment-authority keys in memory, and shuts down its processes
+when it finishes. It does not write private keys. Keep the absolute output path shown above:
+`npm --prefix` runs the script from `ts/`, so a relative output path lands there.
+
+### What you should see
+
+The positive control prints `PASS positive: exact authenticated call executed`. Seven negative
+controls print `PASS negative:` with the specific refusal they expected:
+
+| Control | Expected result |
+| --- | --- |
+| Authorized purchase | The exact call executes. |
+| Beneficiary changed inside the calldata | The evaluator returns BLOCK; both Vault entry points and both publication-verifier paths refuse that receipt (four controls). |
+| Wrong deployment authority | The publication verifier refuses the manifest signature. |
+| Calldata changed after signing | The Vault reverts with `CalldataMismatch()`. |
+| Same receipt presented again | The Vault reverts with `BadNonce()`. |
+
+A negative control passes only when it sees its expected refusal. A crash, missing file or
+transport failure does not count as a successful rejection.
+
+### Inspect and verify the output
+
+| File or directory under `release/demo-out/` | What it contains |
+| --- | --- |
+| `sample/` | The ALLOW bundle: mandate, policy, exact call, evidence and signed receipt. |
+| `sample-block/` | The BLOCK bundle for the redirected-beneficiary action. |
+| `deployment-manifest.json` | The deployment description signed by this run's lab authority. |
+
+Follow the [independent verification commands](release/README.md#independent-verification) to
+check those files yourself. Use the authority address printed at the end of the demo and run
+within **five minutes**: the ALLOW receipt expires 300 seconds after signing. Re-run the demo
+for fresh material if it has expired. The BLOCK bundle is refused for its verdict on either
+execution path even after that window closes.
+
+**The demo's authority is generated by the demo itself.** Verifying against its printed address
+checks self-consistency; it does not independently authenticate a deployment. A real recipient
+must obtain the authority address through a channel the publisher does not control. No signed
+deployment manifest is checked into this repository.
+
+## How it works
+
+1. **The owner signs a mandate.** It names the signer, chain, Vault, target, selector, purpose,
+   beneficiary, value ceiling and validity window, and binds a policy.
+2. **An untrusted proposer supplies a call.** The evaluator compares the decoded arguments and
+   simulated effects at a recorded block with that mandate and policy.
+3. **The isolated signer attests a verdict.** The receipt binds the evaluated action and
+   evidence, including a hash of the calldata bytes.
+4. **The Vault checks execution conditions.** It checks the receipt, exact calldata binding,
+   validity windows, active mandate and policy, allowlists, value ceiling and nonce.
+
+| Verdict | Automatic path: `executeWithReceipt` | Owner path: `executeWithOverride` |
+| --- | --- | --- |
+| **ALLOW** | Accepted if the remaining checks pass | Refused: this path requires REVIEW |
+| **REVIEW** | Refused | Requires a separate valid owner-signed override for this exact receipt and action |
+| **BLOCK** | Refused | Refused; an override cannot make BLOCK executable |
+
+**Example:** the demo authorizes a purchase for the owner. A second proposal keeps the target,
+selector and value, but substitutes another beneficiary inside the calldata. The evaluator
+decodes that change and returns BLOCK. The signer signs the BLOCK verdict, and the Vault refuses
+it. The Vault does not independently decode the beneficiary; trusting the evaluator's decoded
+record remains part of the design.
+
+### Two verifiers, different questions
+
+| Tool | Question it answers | Where to start |
+| --- | --- | --- |
+| [`release/verifier/verify_publication.py`](release/verifier/verify_publication.py) | Does the bundle satisfy the Vault's **offline-checkable** execution predicate for the named entry point? | Fresh demo output. [Commands and exit codes](release/README.md#independent-verification). |
+| [`verifier/verify.py`](verifier/verify.py) | Is this bundle **authentic** under the supplied trust root? This does not certify execution. | Checked-in fixtures; Python alone is sufficient. [CLI and trust-root requirements](verifier/verify.py). |
+
+For the publication verifier, exit **0** means `PASS (static, offline)`, exit **1** means refused,
+and exit **3** under `--evaluation-time` is a diagnostic that certifies nothing.
+
+For the authenticity verifier, exit **3** means `AUTHENTIC, NOT EXECUTABLE`: for example, a BLOCK
+receipt, REVIEW without an override, a signed refusal to issue a receipt, or an expired receipt.
+The checked-in fixtures now fall into that category. These two tools' successful results are
+different claims; neither is proof that a transaction will execute on the live chain.
+
+## What the lab does not establish
+
+These limits are part of the artifact being evaluated:
+
+- **Offline verification does not read chain state.** It cannot establish live deployed code,
+  nonce freshness, current pause or activation state, or actual execution at a block. Its clock
+  is unauthenticated. Every certifying result includes a `NOT ESTABLISHED` explanation.
+- **Only the evaluator decodes calldata arguments.** The verifier and Vault bind the bytes.
+  The publication verifier also compares the signer's attested decoded record with the mandate;
+  that can expose an honest misconfiguration, but cannot expose a signer lying about those bytes.
+- **Native-value limits apply per action.** Valid sequential receipts can drain a funded Vault
+  in a single transaction. `pause` cannot interrupt that transaction. There is no aggregate or
+  rate limit, and no onchain token-allowance cap.
+- **Some policy fields are only hash-bound by the offline verifier.** A signed field is not
+  necessarily an enforced constraint. Manifest lifetime also does not establish revocation.
+
+The [release's full limits](release/README.md#limits-of-that-predicate) and
+[v0.3 design record](docs/enforcement-release-v0.3.md) connect these boundaries to their tests
+and rulings. They are accepted lab boundaries, not claims of production protection.
 
 ## How this was built
 
@@ -56,143 +161,66 @@ against a frozen baseline, and a third, fresh agent verified each change. The co
 through three cycles of adversarial review by an external four-chair council, whose findings and
 the author's rulings on them are the record this repository keeps.
 
-A few words the record uses without explaining them elsewhere:
+The review record includes failures and corrections, not just passing results. Start with the
+[archive index](docs/ARCHIVE-INDEX.md) for a map written for readers new to the project.
+
+<details>
+<summary>Terms used in the review record</summary>
 
 - **Crucible** — the adversarial review protocol: four chairs, cycles, a final Quench.
 - **Smith** — the author, in the protocol's terms; the only party who rules.
 - **Quench** — the protocol's closing gate, where every untested assumption is accepted with a
   stated risk or the artifact does not ship.
-- **D-nnn** — a numbered ruling in `docs/decisions.md`.
+- **D-nnn** — a numbered ruling in [the decision log](docs/decisions.md).
 - **A-nnn** — a numbered finding from a review.
-- **R-A018-nn** — an item in the remediation register.
+- **R-A018-nn** — an item in [the remediation register](docs/a018-remediation-register.md).
 
-## Start here: the enforcement release under `release/`
+</details>
 
-`release/` is the generated enforcement release candidate, v0.3 — produced by
-`scripts/assemble-enforcement-release.py` and held byte-identical to a fresh assembly by
-`scripts/check-release-sync.sh`. It is not a publication decision
-or a production deployment. It carries the onchain and trust-root evidence that the historical
-comprehension packet further down deliberately lacks:
+## Explore the repository
 
-- SentinelVault source, ABI, bytecode, compiler metadata, a focused adversarial test, and a
-  reproducible release manifest;
-- an owner-signed mandate that names the only signer the vault and isolated signer may accept;
-- exclusive validity windows (`issuedAt <= evaluationTime < expiresAt`), authenticated
-  chain/vault identity, exact calldata binding, and nonce consumption;
-- a signed deployment manifest whose authority is supplied out of band rather than nominated by
-  `domain.json`; and
-- a cold Anvil demonstration that creates fresh lab authority for each run, writes no private
-  keys, executes the exact authorized call, and rejects a BLOCK receipt at both Vault entry
-  points and on both verifier paths, wrong authority, altered calldata, and replay.
+| Path | Purpose |
+| --- | --- |
+| [`release/`](release/README.md) | Start here to run v0.3: contract source, ABI, bytecode, compiler metadata, isolated signer/evaluator, demo and publication verifier. Generated by the [assembler](scripts/assemble-enforcement-release.py); [sync-checked](scripts/check-release-sync.sh). |
+| [`contracts/`](contracts/) | Solidity implementation and full contract tests. |
+| [`ts/src/`](ts/src/) | Evaluator, signer, simulation, corpus tooling and demos. |
+| [`verifier/`](verifier/) | Python verification implementations and tests. |
+| [`fixtures/`](fixtures/) | Lab samples and evaluation corpus. Fixed development keys are test fixtures, not deployment authority. |
+| [`docs/ARCHIVE-INDEX.md`](docs/ARCHIVE-INDEX.md) | Map of the decisions, independent reviews, findings and remediation evidence. |
+| [`Sentinel_Lab_Proposal_v0_2.md`](Sentinel_Lab_Proposal_v0_2.md) | Protocol specification, intake rulings and build-start amendments. |
+| [`HANDOFF.md`](HANDOFF.md) · [`docs/session-state.md`](docs/session-state.md) | Agent-facing operating record. Current publication policy is [machine-checked](docs/publication-policy.state): `AUTHORIZED_PUBLIC`, D-099. |
 
-### Run the cold demo
+**Historical packet:** [`reviewer-packet/`](reviewer-packet/README.md) is the frozen v0.2 Gate 8
+comprehension artifact, not the runnable v0.3 release. It includes fixed-key bundles and an older
+authenticity verifier that prints `PASS` on a BLOCK receipt. Its dated warning explains this
+obsolete exit contract. It ships no Vault; start in `release/` for current execution evidence.
 
-Prerequisites: Node with native TypeScript type stripping, Foundry (`forge` and `anvil`), and
-Python 3.9+ with no third-party packages. `.nvmrc` and `.tool-versions` pin the versions the
-author runs (Node 26.3.0, Python 3.9.6); `ts/package.json` declares the Node floor (24); Foundry
-1.7.1 is the tested version and has no per-repository pin. From the repository root:
+### Development checks
+
+From the repository root, after cloning with submodules:
 
 ```sh
-cd release
 npm --prefix ts ci
-forge build --root contracts
-npm --prefix ts run cold-demo -- --output "$PWD/demo-out"
+LC_ALL=C ./scripts/test.sh
 ```
 
-Give `--output` an absolute path: `npm --prefix` runs the script from `ts/`, so a relative one
-lands there. The demo generates owner, isolated-signer and deployment-authority keys in memory,
-deploys to a fresh Anvil, owner-signs and activates a signer-bound mandate, evaluates and signs in
-the separate signer process, verifies the manifest and receipt, executes the exact call, runs
-typed negative controls that each assert the specific refusal they expect, and ends by printing
-the address to use next under the heading `LAB-GENERATED DEPLOYMENT AUTHORITY -- NOT PRODUCTION,
-NOT A TRUST ROOT`.
+The fast gate needs the toolchain above and GitHub CLI (`gh`) access to inspect the public
+repository's visibility. `LC_ALL=C` lets the existing secret guard scan binary assets as bytes;
+macOS `sed` can otherwise report an invalid-byte error while that guard still prints clean.
+The gate reports what it did not run; the deeper profile is `LC_ALL=C ./scripts/test.sh --gate`.
+A passing suite supports only the behavior it exercises.
 
-### Verify what the demo wrote
+The generated release has a smaller test surface: its contract test, typecheck and cold demo.
+`npm --prefix ts test` **inside `release/` intentionally refuses** because the full TypeScript
+tests do not ship there. See [release test coverage](release/README.md#tests-what-runs-in-this-tree-and-what-does-not).
 
-[`release/README.md`](release/README.md) is the release's own first surface and the authority on
-what it ships, what it does not bound, and how to verify what the demo just produced: its
-"Independent verification" section carries the `verify_publication.py` invocations for
-`demo-out/sample` and the BLOCK bundle beside it, the five-minute receipt lifetime, and the
-exit-code contract. They are not repeated here. Two things to know before opening it. No signed deployment manifest ships anywhere in this repository: the only
-one is the one the demo generates and signs with a lab authority it labels non-production, so
-verifying against the address it prints is a self-consistency loop, not independent
-authentication. And a recipient with Python alone — no Node, no Foundry, no Anvil — can
-therefore run only the repository's `verifier/verify.py` on the checked-in fixtures, and that
-tool certifies authenticity, never executability (D-092(f)).
+## Feedback and licence
 
-### Two verifiers, two claims
+Reproductions and corrections to unsupported claims are welcome. Read
+[Contributing](CONTRIBUTING.md) and [Security](SECURITY.md); use
+[private vulnerability reporting](https://github.com/johnrfite1/sentinel/security/advisories/new)
+for sensitive reports.
 
-The release ships one verifier, `verifier/verify_publication.py`, and its claim is
-**executability**: would `SentinelVault` execute this bundle at the entry point it is presented
-for. It refuses a BLOCK receipt, and a REVIEW receipt without an authenticated owner override,
-because the Vault would refuse them. Its contract is `release/README.md`, "Two verifiers, two
-claims" and "Exit codes".
-
-The repository carries a second, older verifier at `verifier/verify.py`, which the release tree
-does not ship. Its claim is **authenticity**: is this bundle genuinely what the signer produced.
-It certifies nothing about execution, and its exit status says which of three things happened.
-`0` means authentic and live: an ALLOW receipt, or a REVIEW receipt with a valid owner override,
-inside its validity window. `3` means authentic but not executable: the hashes, signatures and
-bindings hold against the named trust root, but the bundle is one the Vault refuses — a BLOCK
-receipt, a REVIEW receipt with no `override.json`, a §5.5.1 refusal record, or a receipt or
-override outside its validity window by the host clock, which is unauthenticated and which the
-tool takes no caller-supplied instant to replace. `1` means a check failed. Under `--all`, `1`
-beats `3` beats `0` (the split is ruled at D-087(c); the exit contract at D-090(a), D-091(a) and
-D-092(c)). An expired receipt is still an authentic one and is counted as such. Every shipped
-fixture is exit `3` today: the four BLOCK receipts and the refusal record by their verdict, the
-ALLOW and overridden-REVIEW fixtures because their windows have closed. Measured on this commit
-with the fixtures' own `domain.json` asserted as trust root: `case-2-injection-block` exits `3`
-and is listed `NOT EXECUTABLE`; `--all` over the seven fixtures reports `7/7 sample(s) verified
-as AUTHENTIC`, lists all seven `NOT EXECUTABLE`, and exits `3`. A `PASS` from this tool is
-reachable only on a bundle whose window contains the moment you run it.
-
-## What is not established, and where that is written down
-
-The verifier's `NOT ESTABLISHED` line is the first place to read, because it travels with every
-certifying result. `release/README.md`, "What this release does not bound", states the value
-boundary — the per-action native-value ceiling, the atomic drain that `pause` cannot interrupt,
-and the token-allowance ceiling that sits in the signed policy type and is read by no contract.
-`docs/enforcement-release-v0.3.md` carries the same boundary with its rulings, the signer
-rotation that does not revoke outstanding receipts, and the reason a v0.3 release emits evidence
-tagged v0.2. None of those is an open defect; each is a ruled limit, recorded beside the test
-that asserts it.
-
-## Status
-
-`docs/session-state.md` is rewritten at the end of each session and declares itself
-authoritative over anything an agent or a reader remembers. `docs/publication-policy.state` is
-the machine-checked publication state (`AUTHORIZED_PUBLIC` under D-099, rights `OPEN_SOURCE`);
-`scripts/check-rename-gate.sh` refuses if the repository's visibility stops matching it. The licence is
-Apache-2.0 (D-097): `LICENSE` and `NOTICE` at the root. The Crucible review record is in `docs/cycle-2-orchestrator-brief.md`, `docs/cycle-2-return-package.md`,
-`docs/cycle-3-orchestrator-brief.md`, `docs/cycle-3-return-note.md`, `docs/cycle-3-patch-return-note.md`
-and the four Quench handoffs `docs/quench-orchestrator-handoff.md`, `-2.md`, `-3.md` and `-4.md`;
-the rulings that followed are D-088 through D-096 in `docs/decisions.md`. The whole record is
-mapped in `docs/ARCHIVE-INDEX.md`.
-
-## Historical: the v0.2 comprehension packet reviewed at Gate 8 (`reviewer-packet/`)
-
-`reviewer-packet/` is the frozen v0.2 comprehension packet that passed Gate 8 under D-080: five
-fixed-key bundles, a static dashboard and an older copy of the authenticity verifier, no Vault. Its
-own `verifier/verify.py` predates the exit contract and prints a bare `=> PASS`, exit `0`, on a
-BLOCK receipt that the repository's `verifier/verify.py` reports `AUTHENTIC, NOT EXECUTABLE`, exit
-`3`; the packet's README carries a dated note saying so before its commands. D-090(b) re-ranked it
-below the release. Its history is in `docs/archive/readme-historical-section-2026-09-04.md`.
-
-## In this repository
-
-These links are for people working in the repository. They are not part of a standalone reading of this file.
-
-- **Spec:** [Sentinel_Lab_Proposal_v0_2.md](Sentinel_Lab_Proposal_v0_2.md) — §14.8 records the intake rulings, §14.9 the build-start amendments
-- **Enforcement release v0.3:** [docs/enforcement-release-v0.3.md](docs/enforcement-release-v0.3.md) and the generated [release/README.md](release/README.md)
-- **Build handoff:** [HANDOFF.md](HANDOFF.md)
-- **Decision log:** [docs/decisions.md](docs/decisions.md)
-- **Archive index:** [docs/ARCHIVE-INDEX.md](docs/ARCHIVE-INDEX.md) — the map of the record for a reader who did not live through it
-- **Operating record (agent-facing; its top block is the live status):** [docs/session-state.md](docs/session-state.md)
-- **Registers:** [docs/a018-remediation-register.md](docs/a018-remediation-register.md), [docs/v1-1-register.md](docs/v1-1-register.md)
-- **Icon:** [assets/icon.png](assets/icon.png) — standard mark (nested chamber, cyan alignment line)
-
-## Licence
-
-Apache License, Version 2.0 — see `LICENSE` and `NOTICE` at the repository root (D-097, 2026-09-04).
-Vendored dependencies under `contracts/lib/` carry their own notices. A licence is a grant of rights
-over this code; the publication decision is D-099.
+Public under D-099; licensed [Apache-2.0](LICENSE), with [NOTICE](NOTICE). Vendored dependencies
+carry their own notices. Sentinel is distinct from Uppsala Security's Sentinel Protocol and
+sentinel.co's Cosmos network; there is no affiliation.

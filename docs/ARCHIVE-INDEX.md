@@ -153,6 +153,13 @@ harness's folder-naming form of the author's home directory remains in eleven re
 attack logs and pinned labelling-provenance files, by ruling: it reveals nothing the email on
 every commit does not, and two of those files are pinned by a guard.
 
+**Correction, 2026-09-05:** that redaction changed the current tree only. The earlier claim that
+the personal context "left the record" did not account for Git history. A post-publication
+review confirmed the earlier copies remained publicly retrievable. John approved the tested
+history cleanup under D-100, including its 201 changed commit IDs. Branch cleanup and GitHub's
+cached or unreachable copies are separate checks; removal from the latter must not be claimed
+until verified. Historical commit IDs in this archive describe the pre-cleanup record.
+
 ## 5. Where the archived history of the two status files lives
 
 - `docs/archive/session-state-history.md` — every dated block moved out of `docs/session-state.md`

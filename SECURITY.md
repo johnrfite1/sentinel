@@ -19,6 +19,11 @@ as disclosed.
 use GitHub's private vulnerability report on this repository's Security tab. Include the command you ran, the output you saw, and the claim
 you believe it contradicts. Expect a reply, not a timeline: this is one person's lab.
 
-**Keys:** every key in this repository is a published local test key or is generated in memory by
-the demo and discarded. None controls anything. If you believe you have found one that does,
-report it as above.
+**Keys:** the checked-in private keys are published local development keys used by the test
+fixtures. The cold demo generates fresh keys in memory and discards them. Treat every
+checked-in key as public; never use one as deployment authority or to hold funds. Report a
+suspected credential through private vulnerability reporting, without copying it into an issue.
+
+**Before sharing artifacts:** inspect prose, logs and Git history as well as the current files.
+Secret scanners do not establish the absence of private context. A redaction in the latest
+commit does not remove earlier copies from history or GitHub's cached views.

@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="540" height="1090" viewBox="0 0 540 1090" role="img" aria-labelledby="title description">
+  <title id="title">Sentinel execution flow, vertical layout</title>
+  <desc id="description">An untrusted agent proposes a call. The evaluator compares decoded arguments and simulated effects with the owner-signed mandate. An isolated signer signs the verdict and evidence binding. SentinelVault checks the exact bytes and execution conditions. ALLOW uses the automatic path, REVIEW requires a separate owner override, and BLOCK reverts on both paths. Remaining Vault checks must pass. Only the evaluator decodes arguments. This testnet lab has no cumulative-loss or onchain token-allowance cap.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="9" refY="6" orient="auto" markerUnits="userSpaceOnUse"><path d="M1 1 9 6 1 11" fill="none" stroke="#67e8f9" stroke-width="2"/></marker>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; }
+      .title { font-size: 32px; font-weight: 650; fill: #f1f5f9; }
+      .heading { font-size: 28px; font-weight: 650; fill: #f1f5f9; }
+      .body { font-size: 23px; fill: #cbd5e1; }
+      .label { font-size: 20px; font-weight: 650; fill: #67e8f9; }
+      .flow { fill: none; stroke: #67e8f9; stroke-width: 2; marker-end: url(#arrow); }
+      .card { fill: #152333; stroke: #7a91aa; stroke-width: 1.5; }
+    </style>
+  </defs>
+  <rect width="540" height="1090" rx="18" fill="#0b1522"/>
+  <text x="28" y="48" class="title">From intent</text>
+  <text x="28" y="87" class="title">to exact execution</text>
+  <rect x="28" y="118" width="484" height="125" rx="10" class="card"/>
+  <text x="48" y="148" class="label">01 / PROPOSE</text>
+  <text x="48" y="183" class="heading">Untrusted agent</text>
+  <text x="48" y="218" class="body">Target, value and calldata</text>
+  <path d="M270 243v30" class="flow"/>
+  <rect x="28" y="280" width="484" height="184" rx="10" class="card"/>
+  <text x="48" y="310" class="label">02 / EVALUATE</text>
+  <text x="48" y="345" class="heading">Evaluator</text>
+  <text x="48" y="378" class="body">Decoded arguments + simulated effects</text>
+  <text x="48" y="409" class="body">compared with the</text>
+  <text x="48" y="440" class="body">owner-signed mandate</text>
+  <path d="M270 464v30" class="flow"/>
+  <rect x="28" y="501" width="484" height="125" rx="10" class="card"/>
+  <text x="48" y="531" class="label">03 / ATTEST</text>
+  <text x="48" y="566" class="heading">Isolated signer</text>
+  <text x="48" y="601" class="body">Signed verdict + evidence binding</text>
+  <path d="M270 626v30" class="flow"/>
+  <rect x="28" y="663" width="484" height="152" rx="10" class="card"/>
+  <text x="48" y="693" class="label">04 / CHECK EXECUTION</text>
+  <text x="48" y="728" class="heading">SentinelVault</text>
+  <text x="48" y="761" class="body">Exact bytes, signatures, nonce</text>
+  <text x="48" y="791" class="body">and backstops</text>
+  <text x="28" y="856" class="label">ALLOW</text><text x="124" y="856" class="body">Automatic path*</text>
+  <text x="28" y="893" class="label">REVIEW</text><text x="124" y="893" class="body">Owner override*</text>
+  <text x="28" y="930" class="label">BLOCK</text><text x="124" y="930" class="body">Both paths revert</text>
+  <text x="28" y="969" class="body">* Remaining Vault checks must pass.</text>
+  <text x="28" y="1000" class="body">Only the evaluator decodes arguments.</text>
+  <text x="28" y="1040" class="body">Testnet lab. No cumulative-loss or</text>
+  <text x="28" y="1071" class="body">onchain token-allowance cap.</text>
+</svg>

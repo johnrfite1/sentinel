@@ -1,6 +1,6 @@
 # Sentinel — Decision Log
 
-Canonical record of decisions for the Sentinel build. Agents propose; John decides. Ratified entries are attributed to John. Agent-made calls are logged separately as flagged assumptions and are cheap to reverse. New forks get new entries; history is never rewritten.
+Canonical record of decisions for the Sentinel build. Agents propose; John decides. Ratified entries are attributed to John. Agent-made calls are logged separately as flagged assumptions and are cheap to reverse. New forks get new entries; decision history is preserved. D-100 is a narrow, explicitly authorized exception for four personal-context passages in historical review artifacts, not permission to revise past decisions.
 
 ## Ratified (John)
 
@@ -595,3 +595,22 @@ v_modes="$(printf '%s\n' "$t_out" | grep -oE 'the mutated [a-z-]+' | sed … | w
 **THE ORDER, WHICH IS PART OF THE RULING.** (1) The GitHub credential gains the `workflow` scope so the CI workflow can be pushed — John's act. (2) The agent pushes `step-3/isolated-signer` and `main` and watches the first CI run on the private repository; **if it is not green, execution stops before step 4 and the agent reports.** (3) This ruling. (4) The agent sets the policy file, rewrites the status surfaces, commits and pushes; `main` is fast-forwarded to that commit. (5) **John changes the visibility in the GitHub UI.** (6) The agent enables private vulnerability reporting, runs the gate against the now-public remote, and reports. **Rejected — hold until CI is seen green first** (the ruling is conditional on it anyway); **the agent performs the flip with `gh`** (John sees the confirmation himself).
 
 **WHAT THIS ENTRY DOES NOT DO.** It does not present the artifact as production-ready or safe for value at risk (kill criterion 3 stands; the first surface says testnet lab). It does not reopen any Crucible session. It changes no mechanism, test or verifier. It does not schedule the Temper.
+
+- **D-100 (2026-09-05) — REMOVE THE FOUR PERSONAL-CONTEXT PASSAGES FROM PUBLIC GIT HISTORY AND PUBLISH THE PREPARED PRESENTATION IMPROVEMENTS. Approved by John: "Excellent, I approve and you may execute", after receiving the audit finding, the prepared README/diagrams, and the specific consequence that the cleanup rewrites 201 published commit IDs across both public branches. The agent records and executes this approval.**
+
+**SCOPE.** Apply the tested replacement of the same four passages redacted in the current tree
+before publication. The isolated rewrite changes 201 of 332 historical commit IDs and leaves
+both tip trees byte-identical. Publish it to `main` and `step-3/isolated-signer`, together with
+the prepared README, responsive execution diagrams, security guidance and status corrections.
+This expressly supersedes the earlier redaction commit's choice to retain the unredacted
+history. It changes no protocol behavior, test, verifier, licence, gate signature or existing
+accepted lab boundary. The D-098-approved build-method paragraph remains verbatim.
+
+**EXECUTION AND LIMITS.** Recheck both remote heads and use an atomic update with explicit
+force-with-lease expectations. Keep recovery history and the old-to-new commit mapping private.
+Do not publish the removed text or recovery copies. Historical commit IDs quoted in review
+documents remain citations to the pre-cleanup record and may no longer resolve in a fresh clone;
+the rewrite does not retroactively change the evidence or certify a new review. Rewriting the
+branches does not prove GitHub's cached or unreachable copies are gone: check those separately
+and carry any required server-side removal as outstanding. Existing private review worktrees
+and backups may retain original history and must not be pushed back into the public repository.
