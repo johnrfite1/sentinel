@@ -3,9 +3,13 @@
 Rewritten at the end of each working session. **This file, not the conversation, is the
 memory.** If it disagrees with anything an agent remembers, this file wins.
 
-Last updated: **2026-09-04 (D-099: PUBLICATION AUTHORISED — the policy file reads `AUTHORIZED_PUBLIC` /
+Last updated: **2026-09-05 (PUBLIC. D-099 executed through step 6: John changed the visibility in the
+GitHub UI; measured PUBLIC from here; private vulnerability reporting enabled; the full gate PASSED
+against the public remote with the rename gate reporting authorised. `main` is the default branch and
+tracks the working branch.)**
+~~Last updated: 2026-09-04 (D-099: PUBLICATION AUTHORISED — the policy file reads `AUTHORIZED_PUBLIC` /
 `OPEN_SOURCE` / `D-099`; the visibility change is John's own act in the GitHub UI after the CI gate
-was green on the private repository; publication prep Phases 1–2 done, D-097 and D-098 recorded).**
+was green on the private repository; publication prep Phases 1–2 done, D-097 and D-098 recorded).~~ — superseded.
 ~~Last updated: 2026-09-03 (the D-093(c) archive index and pruning pass: the stacked history that stood in this file is in `docs/archive/session-state-history.md`, verbatim, and the map is `docs/ARCHIVE-INDEX.md`; the Quench on `8dfaa27` is ANSWERED, D-093–D-096; publication is not authorised; licence DEFERRED).~~ — superseded.
 D-055 is MET (D-073). It unlocks nothing. **"Sentinel" is the project name (D-074).**
 The EIP-712 domain string is also `"Sentinel"` (D-075, recorded late). There is no
@@ -75,9 +79,11 @@ stays, disclosed; the method is owned on the README's first surface ("How this w
 the enforcement casting is closed, not satisfied; security contact = issues + private vulnerability
 reporting; GitHub description/topics set; the unreferenced image removed. **Phase 3 — RULED, D-099 (2026-09-04), IN EXECUTION:** CI was green on the private repository
 (Linux run on `6d43e26`, after two portability defects the first runs found — a `mktemp` template and
-a Linux `/dev/fd` reopen hole in the gate supervisor, both fixed and self-tested); this commit sets the
-policy file to `AUTHORIZED_PUBLIC` / `D-099`; John changes the visibility in the GitHub UI; then
-private vulnerability reporting is enabled and the gate is run against the public remote.
+a Linux `/dev/fd` reopen hole in the gate supervisor, both fixed and self-tested); the policy file was set to
+`AUTHORIZED_PUBLIC` / `D-099` at `7e5e449`; a pre-flip privacy sweep found no credentials and redacted four
+personal-context passages by ruling; John changed the visibility on 2026-09-05; private vulnerability
+reporting is enabled; the gate PASSED against the public remote. **DONE.** The Temper trigger is the
+first external evaluator engagement (D-096(d)), which has not yet occurred.
 
 **Owed work.** Under D-093(c), post-Quench: an archive index and a pruning pass over superseded
 passages, changing no mechanism — carried out in the working tree of 2026-09-03
